@@ -2,6 +2,7 @@
  * the Agent log. Each step takes the published-flows context and asserts what a person sees. */
 import assert from 'node:assert/strict';
 import { waitFor } from './browser-support.mjs';
+import { openMyAgent } from './mcp-connection.mjs';
 
 const attempt = 'window.PracticeLive.engine.getAttempt(window.PracticeLive.state)';
 const host = `window.PracticeLive.v4Host(${attempt})`;
@@ -34,8 +35,9 @@ export async function askHowToPrioritise(context) {
 }
 
 /** On the feedback page: a cited document says which document and version it is, and opening
- * it shows the original in view with focus on its title; closing returns to the button. Checked
- * on a short desktop window and at phone width, where the reader sits below the feedback. */
+ * it shows the original in a reading dialog with focus on its title; closing returns to the
+ * button even after feedback refresh. Practice choices remain keyboard reachable afterwards.
+ * Checked on a short desktop window and at phone width. */
 export async function openEvidence(context) {
   const { browser, text, shot } = context;
   const selector = JSON.stringify('.native-feedback button[data-reference-kind="material"]');
@@ -57,9 +59,12 @@ export async function openEvidence(context) {
     await browser.ev(`(() => {
       window.scrollTo(0, 0);
       const button = document.querySelector(${selector});
-      // Cited evidence sits in folded detail; a person unfolds it first.
-      for (let node = button.parentElement; node; node = node.parentElement)
+      // Cited evidence sits in folded detail (a feedback row's basis, 195); a person unfolds it first.
+      for (let node = button.parentElement; node; node = node.parentElement) {
         if (node.tagName === 'DETAILS') node.open = true;
+        if (node.hidden && node.id)
+          document.querySelector('[aria-controls="' + node.id + '"][aria-expanded="false"]')?.click();
+      }
       button.scrollIntoView({ block: 'center' });
       button.focus();
       button.click();
@@ -67,7 +72,7 @@ export async function openEvidence(context) {
     await waitFor(
       browser,
       `document.activeElement?.tagName === 'H2' &&
-        !!document.activeElement.closest('[data-v4-reference-side]')`,
+        !!document.activeElement.closest('dialog[open].sheet')`,
     );
     assert.equal(
       await browser.ev('document.activeElement.textContent'),
@@ -84,33 +89,34 @@ export async function openEvidence(context) {
       5000,
     );
     assert.ok(
-      (await browser.ev(`document.querySelector('[data-v4-reference-side]').innerText.length`)) >
-        40,
+      (await browser.ev(`document.querySelector('dialog[open].sheet').innerText.length`)) > 40,
       'the original text is shown',
     );
-    // The reader shares the column with the practice choices: on a short desktop window the
-    // first choice stays in view, and a choice reached by keyboard comes into view.
-    const choices = JSON.stringify('[data-v4-practice] [data-action="practice-choose"]');
-    await waitFor(browser, `document.querySelectorAll(${choices}).length > 0`, 30000);
-    if (name === 'desktop')
-      assert.ok(
-        await browser.ev(seen(`document.querySelector(${choices})`)),
-        'a practice choice is in view beside the reader',
-      );
-    await browser.ev(`[...document.querySelectorAll(${choices})].at(-1).focus()`);
-    await waitFor(browser, seen('document.activeElement'), 5000);
+    // The new result screen places practice below the feedback, outside the reading dialog.
+    // Check the choices after closing the reader, when they are interactive again.
     await shot(`evidence-${name}`);
     // Refreshing the feedback rebuilds its sections while the reader is open: the evidence
     // button is replaced and its section folds again. Closing still returns focus to it.
     await browser.ev(`document.querySelector(${selector}).dataset.beforeRefresh = 'true'`);
-    await browser.clickText(text('查看最新反馈', 'Refresh feedback'), '.native-feedback button');
+    // A background feedback refresh can replace the opener while its modal reader stays open.
+    await browser.ev(`(() => {
+      const refresh = [...document.querySelectorAll('.native-feedback button')]
+        .find(node => node.textContent.trim() === ${JSON.stringify(text('刷新', 'Refresh'))});
+      refresh.click();
+    })()`);
     await waitFor(
       browser,
       `!document.querySelector(${selector}).dataset.beforeRefresh &&
-        !!document.querySelector('[data-reference-reader]')`,
+        !!document.querySelector('dialog[open].sheet')`,
     );
-    await browser.clickText(text('关闭', 'Close'), '[data-v4-reference-side] button');
+    await browser.clickText(text('关闭', 'Close'), 'dialog[open].sheet button');
     await waitFor(browser, `document.activeElement === document.querySelector(${selector})`);
+    const choices = JSON.stringify('[data-action="practice-choose"]');
+    await waitFor(browser, `document.querySelectorAll(${choices}).length === 2`, 30000);
+    for (const index of [0, 1]) {
+      await browser.ev(`document.querySelectorAll(${choices})[${index}].focus()`);
+      await waitFor(browser, seen('document.activeElement'), 5000);
+    }
   }
   await viewport(browser, original.width, original.height);
 }
@@ -139,9 +145,9 @@ async function viewport(browser, width, height) {
  * Agent log lists only Agent records. */
 export async function readActivity(context) {
   const { browser, text, shot, question } = context;
-  await browser.click('.rail-tabs [data-tab="activity"]');
-  await waitFor(browser, `document.querySelectorAll('.activity .act-item').length > 0`);
-  const lines = await browser.text('.activity .act-item .grow');
+  await browser.click('#ws-toolbar [data-action="records"]');
+  await waitFor(browser, `document.querySelectorAll('.records .rec-item').length > 0`);
+  const lines = await browser.text('.records .rec-item .grow');
   assert.deepEqual(
     lines.filter((line) => /[a-z]+_[a-z_]+/.test(line)),
     [],
@@ -154,20 +160,26 @@ export async function readActivity(context) {
   ])
     assert.ok(lines.includes(expected), `“${expected}” in ${lines.join(' | ')}`);
   assert.equal(
-    await browser.ev(`[...document.querySelectorAll('.activity .act-open')]
+    await browser.ev(`[...document.querySelectorAll('.records .rec-open')]
       .find((button) => button.textContent.includes(${JSON.stringify(question)}))
       ?.dataset.action`),
     'open-run',
   );
   await shot('activity');
-  await browser.click('.rail-tabs [data-tab="agent"]');
-  const log = '[data-agent-activity]';
-  await waitFor(
-    browser,
-    `document.querySelector('${log}')?.innerText.includes(${JSON.stringify(text('签发了授权', 'Granted access'))})`,
-  );
-  const written = await browser.ev(`document.querySelector('${log}').innerText`);
+  await browser.click('.records-head button');
+  await waitFor(browser, `!document.querySelector('.records-drawer[data-state="open"]')`);
+  // The Agent log is the My agent page's transmission stream: sentences, tool names apart.
+  await openMyAgent(browser);
+  const written = await browser.ev(`document.querySelector('[data-agent-page]').innerText`);
   for (const noise of ['工作记录', 'Work record', '查看依据', 'View source', '你 · ', 'You · '])
     assert.ok(!written.includes(noise), `the Agent log lists “${noise}”`);
+  const said = await browser.text('.ag-line .ag-say');
+  assert.deepEqual(
+    said.filter((line) => /[a-z]+_[a-z_]+/.test(line)),
+    [],
+    'no tool or event codes in the Agent sentences',
+  );
   await shot('agent-log');
+  await browser.ev(`location.hash = '#/work'`);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
 }

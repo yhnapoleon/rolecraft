@@ -1,0 +1,39 @@
+/* Shell-wide pieces that live outside a single screen. */
+
+/* Toasts sit at the bottom centre of the main screen: with the right rail on screen, the
+ * centre moves left by half its width, so the rail's input is never covered. */
+:root {
+  --rail-w: 0px;
+}
+@media (min-width: 1280px) {
+  body[data-view="work"] {
+    --rail-w: 368px;
+  }
+}
+/* Phones keep Sonner's own 16px side offsets (its own breakpoint is 600px). */
+@media (min-width: 600px) {
+  .rc-toaster[data-sonner-toaster][data-x-position="center"] {
+    left: calc(50% - var(--rail-w) / 2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Sonner sets the toast's transform inline; reduced motion must still win. */
+  .rc-toaster [data-sonner-toast] {
+    /* biome-ignore lint/complexity/noImportantStyles: beats Sonner's inline animation */
+    transition: opacity 160ms linear !important;
+    /* biome-ignore lint/complexity/noImportantStyles: beats Sonner's inline animation */
+    transform: none !important;
+  }
+}
+
+/* The old #toast, kept as an invisible mirror of the toast on screen (see toast.ts). Rendered,
+ * so its text can be read, but clipped to nothing and out of the way. */
+.toast-mirror {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
+}

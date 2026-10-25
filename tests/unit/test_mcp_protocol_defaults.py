@@ -116,6 +116,8 @@ def test_mcp_instructions_state_the_session_default_in_both_eras() -> None:
     assert discovered == handshake
     assert "session_id is optional" in discovered
     assert "requests.read" in discovered and "request_id" in discovered
+    # Engineer writes are not in requests.read; the Agent is sent to the ticket instead.
+    assert "engineer.tickets.read" in discovered
 
 
 def test_mcp_negotiated_legacy_serves_requests_without_a_handshake() -> None:

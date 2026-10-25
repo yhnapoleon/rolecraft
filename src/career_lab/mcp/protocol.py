@@ -15,6 +15,8 @@ from pydantic import ValidationError
 
 from career_lab.delegations.http_client import RemoteFailure
 
+from .results import agent_view
+
 MODERN = "2026-07-28"
 LEGACY = "2025-11-25"
 VERSION = "io.modelcontextprotocol/protocolVersion"
@@ -24,9 +26,22 @@ INSTRUCTIONS = (
     "RoleCraft workspace tools for one delegated practice session. Only the listed tools are "
     "authorized; server permissions and business rules still apply. session_id is optional "
     "and defaults to the session this connection is authorized for; if given, it must match. "
-    "Start with observation. The JSON-RPC id is not the business request_id: after an unknown "
+    "Start with observation; tools shows which tools are available now. "
+    "The JSON-RPC id is not the business request_id: after an unknown "
     "result keep command.request_id unchanged and read requests.read; re-execution requires "
-    "an explicit user decision."
+    "an explicit user decision. Engineer writes (engineer.reproduce, engineer.trial, "
+    "engineer.submissions.draft) answer inline and are not in requests.read: after an unknown "
+    "result read engineer.tickets.read with that ticket_id, whose latest experiments and drafts "
+    "show whether it was recorded."
+)
+# The per-tool sentence on what to do after an unknown result.
+RECOVER = (
+    "After an unknown result, read requests.read; re-execution requires an explicit user decision."
+)
+ENGINEER_RECOVER = (
+    "After an unknown result, read engineer.tickets.read with the same ticket_id (its latest "
+    "experiments and drafts show whether this was recorded); requests.read does not list engineer "
+    "operations. Re-execution requires an explicit user decision."
 )
 SESSION_DESCRIPTION = (
     "Optional; defaults to the practice session this connection is authorized for. "
@@ -181,7 +196,11 @@ class Protocol:
                         "name": t.name,
                         "description": "Authorized RoleCraft "
                         + t.capability
-                        + " operation. Existing server permissions and business rules apply. Preserve exact citation kind, object_id and version. config_version belongs only on kind=config references; omit it on material/test/product references. After an unknown result, read requests.read; re-execution requires an explicit user decision.",
+                        + " operation. Existing server permissions and business rules apply. "
+                        "Preserve exact citation kind, object_id and version. config_version "
+                        "belongs only on kind=config references; omit it on material/test/product "
+                        "references. "
+                        + (ENGINEER_RECOVER if t.name.startswith("engineer.") else RECOVER),
                         "inputSchema": session_view(t.parameters, bound),
                         "annotations": {
                             "readOnlyHint": t.capability == "read",
@@ -211,7 +230,7 @@ class Protocol:
                 # An explicit session is passed through for the backend's own match check.
                 arguments = {**arguments, "session_id": bound}
             try:
-                result = self.backend.call(name, arguments)
+                result = agent_view(name, arguments, self.backend.call(name, arguments))
                 return self._result(
                     {
                         "content": [
@@ -234,7 +253,15 @@ class Protocol:
                         "structuredContent": {
                             "code": error.code,
                             "status": error.status,
-                            "retry_rule": "Recover the original request read-only. Re-execution requires an explicit user decision; never mint a new request_id to replace an unknown result.",
+                            "retry_rule": (
+                                "Recover read-only with engineer.tickets.read for this ticket; "
+                                "requests.read does not list engineer operations. Re-execution "
+                                "requires an explicit user decision."
+                                if name.startswith("engineer.")
+                                else "Recover the original request read-only. Re-execution "
+                                "requires an explicit user decision; never mint a new "
+                                "request_id to replace an unknown result."
+                            ),
                         },
                         "isError": True,
                     },

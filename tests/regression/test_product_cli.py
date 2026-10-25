@@ -51,8 +51,12 @@ def test_mcp_initialize_reports_installed_package_version() -> None:
             "RoleCraft workspace tools for one delegated practice session. Only the listed tools "
             "are authorized; server permissions and business rules still apply. session_id is "
             "optional and defaults to the session this connection is authorized for; if given, "
-            "it must match. Start with observation. The JSON-RPC id is not the business "
-            "request_id: after an unknown result keep command.request_id unchanged and read "
-            "requests.read; re-execution requires an explicit user decision."
+            "it must match. Start with observation; tools shows which tools are available "
+            "now. The JSON-RPC id is not the business request_id: after an unknown result keep "
+            "command.request_id unchanged and read requests.read; re-execution requires an "
+            "explicit user decision. Engineer writes (engineer.reproduce, engineer.trial, "
+            "engineer.submissions.draft) answer inline and are not in requests.read: after an "
+            "unknown result read engineer.tickets.read with that ticket_id, whose latest "
+            "experiments and drafts show whether it was recorded."
         ),
     }

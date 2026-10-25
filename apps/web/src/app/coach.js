@@ -4,6 +4,7 @@
 // and made bilingual; the backend has no equivalent yet (see the interface requirements).
 import { T, when } from './i18n';
 import { taskTitle } from './vocab.js';
+import { personName } from './people.js';
 
 const capNumbers = (body, cap) =>
   (
@@ -257,21 +258,21 @@ export function observations(a, E, scopeTaskId = null) {
         tone: 'unknown',
         title: T('看不到需求方面的依据', 'No evidence about user needs'),
         observed: T(
-          `「${v.title}」选了范围，但记录里没有查看业务范围，也没有和陈敏讨论。`,
-          `“${v.title}” picks a scope, but the record shows no reading of the business scope and no talk with Chen Min.`,
+          `「${v.title}」选了范围，但记录里没有查看业务范围，也没有和 ${personName('business')} 讨论。`,
+          `“${v.title}” picks a scope, but the record shows no reading of the business scope and no talk with ${personName('business')}.`,
         ),
         basis: T(
           '需求材料一直可读；没读不代表你不了解。',
           'The needs material was always available; not reading it does not mean you do not know.',
         ),
         why: T(
-          '证据里看不到范围是按什么定的。可以引用依据，或者和陈敏确认。',
-          'The record does not show what the scope rests on. Cite evidence or check with Chen Min.',
+          `证据里看不到范围是按什么定的。可以引用依据，或者和 ${personName('business')} 确认。`,
+          `The record does not show what the scope rests on. Cite evidence or check with ${personName('business')}.`,
         ),
         taskId: f.decision.taskId,
         actions: [
           { label: T('看业务范围', 'Read the business scope'), act: 'material', id: 'business' },
-          { label: T('问陈敏', 'Ask Chen Min'), act: 'chat', role: 'business' },
+          { label: T(`问 ${personName('business')}`, `Ask ${personName('business')}`), act: 'chat', role: 'business' },
         ],
       });
   } else
@@ -352,8 +353,8 @@ export function observations(a, E, scopeTaskId = null) {
       tone: 'good',
       title: T('资源到位后，你真的改了配置', 'Once resources arrived, you changed the setup'),
       observed: T(
-        '经理批准资源后，你用上了实时同步。',
-        'After the manager approved resources, you switched to real-time sync.',
+        `${personName('manager')} 批准资源后，你用上了实时同步。`,
+        `After ${personName('manager')} approved resources, you switched to real-time sync.`,
       ),
       basis: T(
         '批准只改变条件；配置是你主动改的。',

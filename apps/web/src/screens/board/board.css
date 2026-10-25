@@ -1,0 +1,1332 @@
+/* The board line (199-board): the work board, the right rail, the document overlay and the
+   test bench's face. Materials follow D: paper is the world's (3px, paper shadow), the
+   instrument face is the tool's (surface, no outline), slots are recesses. Motion uses the
+   three steps (160 / 280 / 520ms) and moves only transform and opacity; the exceptions are
+   named where they are. */
+
+/* ---------- the desk column ---------- */
+.ws .board {
+  max-width: 1180px;
+  padding: 32px 40px 96px;
+  gap: 36px;
+  /* The board redraws in place many times (a reply, an agent call, a poll); it fades in only
+     when the page is entered, which the view transition already does. */
+  animation: none;
+}
+@media (max-width: 720px) {
+  .ws .board {
+    padding: 20px 16px 96px;
+    gap: 28px;
+  }
+}
+
+/* ---------- the event lives in the light, right under the topbar (§2.4) ----------
+   The band spans the whole desk column above the board; the light behind it is the
+   stage's own (material.css). Words left to right: when, what, three keys. */
+.stage-inner > .world-event {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 40px;
+  flex-wrap: nowrap;
+}
+.stage-inner > .world-event .we-when {
+  font: 600 12.5px / 1 var(--sans);
+  color: var(--warn);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.stage-inner > .world-event .we-what {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.stage-inner > .world-event .we-what strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.stage-inner > .world-event .we-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.stage-inner > .world-event .we-actions .btn.small {
+  height: 28px;
+  font-size: 12.5px;
+}
+/* The line draws once, when the change arrives; a redraw of the board shows it standing. */
+.stage-inner > .world-event::before {
+  animation: none;
+}
+.stage-inner > .world-event.arriving::before {
+  animation: event-line var(--slow) cubic-bezier(0.77, 0, 0.175, 1) both;
+  animation-delay: calc(var(--arrive-age, 0ms) * -1);
+}
+.stage-inner > .world-event.pending::before {
+  transform: scaleX(0);
+}
+/* Behind an open dialog the desk stays unlit; the light comes up with the line. */
+.ws .stage-inner:has(.world-event.pending)::before {
+  opacity: 0;
+}
+.stage-inner > .world-event.is-record {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+@media (max-width: 720px) {
+  .stage-inner > .world-event {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 14px 16px;
+  }
+}
+
+/* Amber marks the change left behind: they hang on one after another once the line is drawn
+   (40ms apart, never more than 6px of travel). */
+[data-amber-arrive] {
+  animation: amber-in var(--mid) var(--ease-out) both;
+  animation-delay: calc(var(--slow) + var(--amber-i, 0) * 40ms - var(--amber-age, 0ms));
+}
+@keyframes amber-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+    filter: blur(2px);
+  }
+}
+
+/* ---------- the brief: first screen on a new practice, one line once read ---------- */
+.ws .brief-band:not(.is-rolled) {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
+  gap: 48px;
+}
+.ws .brief-band:not(.is-rolled) .band-letter {
+  padding: 28px 32px 24px;
+  border-radius: var(--r-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.ws .brief-band.is-rolled {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.brief-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 14px;
+  border-radius: var(--r-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.brief-line-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 16px / 1.4 var(--serif);
+  font-variation-settings: "opsz" 16;
+  color: var(--ink);
+}
+.brief-line-read {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 4px 2px;
+  color: var(--ink-2);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .brief-line-read:hover {
+    color: var(--ink);
+    text-decoration-color: currentColor;
+  }
+}
+.brief-line-toggle .i {
+  transition: transform var(--mid) var(--ease-out);
+}
+/* The letter: the brief in serif, signed underneath, the full brief on the same line. */
+.ws .memo {
+  display: grid;
+  gap: 16px;
+}
+.ws .memo blockquote {
+  margin: 0;
+  font: 400 22px / 1.48 var(--serif);
+  font-variation-settings: "opsz" 24;
+  letter-spacing: -0.003em;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+:lang(zh) .ws .memo blockquote,
+.ws .memo blockquote:lang(zh) {
+  letter-spacing: 0;
+}
+.memo-by {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.memo-by b {
+  color: var(--ink);
+  font-weight: 600;
+  margin-right: 6px;
+}
+.memo-by .spacer {
+  flex: 1;
+}
+.memo-by .brief-line-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.memo .intake-note {
+  padding-top: 12px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+/* Small readouts: the same instrument language, one row. */
+.ws .conds.mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 28px;
+  padding: 0 4px;
+}
+.ws .conds.mini .cond {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.ws .conds.mini .cond-label {
+  order: -1;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ws .conds.mini .cond-val {
+  font: 600 14px / 1.2 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.ws .conds.mini .cond-num {
+  font: inherit;
+  font-size: 15px;
+}
+.ws .conds.mini .cond-unit {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin: 0 0 0 3px;
+}
+.ws .conds.mini .cond-unit:first-child {
+  margin: 0 3px 0 0;
+}
+.ws .conds.mini .cond-was {
+  font-size: 11.5px;
+}
+/* The roll (decision 8): the one-line brief settles in from where the letter was; the board
+   below follows by FLIP (screens/board/motion.ts). */
+.brief-band.rolling .brief-line {
+  animation: brief-roll var(--mid) var(--ease-out) both;
+  transform-origin: 0 0;
+}
+.brief-band.rolling .conds.mini {
+  animation: brief-fade var(--mid) var(--ease-out) 60ms both;
+}
+@keyframes brief-roll {
+  from {
+    opacity: 0;
+    transform: scaleY(1.8);
+  }
+}
+@keyframes brief-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (max-width: 720px) {
+  .ws .brief-band:not(.is-rolled) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+  .ws .brief-band:not(.is-rolled) .band-letter {
+    padding: 20px 18px 18px;
+  }
+  .ws .brief-band:not(.is-rolled) blockquote {
+    font-size: 18.5px;
+  }
+  .brief-line {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .brief-line-read {
+    display: none;
+  }
+  .ws .conds.mini {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, auto));
+    justify-content: space-between;
+    gap: 4px 12px;
+  }
+  .ws .conds.mini .cond {
+    display: grid;
+    gap: 2px;
+  }
+}
+
+/* ---------- section heads ---------- */
+.ws .board .sec-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.tray-head h2 {
+  font: 600 13px / 1.3 var(--sans);
+  color: var(--ink-2);
+}
+.records-head h2 {
+  flex: 1;
+  font: 600 15px / 1.3 var(--sans);
+}
+.ws .board .sec-head h2 {
+  font: 600 17px / 1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+.ws .board .sec-count {
+  color: var(--ink-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+:lang(zh) .ws .board .sec-head h2 {
+  letter-spacing: 0;
+}
+
+/* ---------- empty lanes say what they are for (decision 10) ---------- */
+.kanban .cards[data-empty-hint]:not(:has(> .card))::after {
+  content: attr(data-empty-hint);
+  display: block;
+  padding: 18px 10px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+}
+.kanban.is-dragging .cards[data-empty-hint]::after {
+  content: none;
+}
+
+/* ---------- from your agent: the tray (decision 11) ---------- */
+.agent-tray {
+  display: grid;
+  gap: 10px;
+}
+.tray-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tray-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex: none;
+}
+.tray-slot {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line-2);
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.tray-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.tray-paper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 360px;
+  max-width: 560px;
+  padding: 14px 14px 14px 18px;
+  border-radius: var(--r-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.tray-paper-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.tray-kind,
+.tray-meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.tray-title {
+  font: 400 16px / 1.35 var(--serif);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tray-keys {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+/* A returned draft drops onto the tray: a short fall with the paper's own shadow. */
+.tray-paper.landing {
+  animation: tray-land var(--slow) var(--spring) both;
+}
+@keyframes tray-land {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+}
+
+/* ---------- documents: a list under the board (decision 9) ---------- */
+.doc-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.doc-row {
+  appearance: none;
+  width: 100%;
+  border-radius: 0;
+  display: grid;
+  /* The state column has a fixed width, so a row without a state keeps its version in line. */
+  grid-template-columns: 18px minmax(0, 1fr) auto 152px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 6px;
+  border: 0;
+  background: none;
+  box-shadow: inset 0 1px 0 var(--line);
+  color: var(--ink-3);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+.doc-list li:last-child .doc-row {
+  box-shadow:
+    inset 0 1px 0 var(--line),
+    inset 0 -1px 0 var(--line);
+}
+@media (hover: hover) and (pointer: fine) {
+  .doc-row:hover {
+    background: var(--fill);
+  }
+}
+.doc-row:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.doc-row-i {
+  color: var(--ink-3);
+}
+.doc-row-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 15px / 1.35 var(--serif);
+  color: var(--ink);
+}
+.doc-row.is-read .doc-row-title,
+.doc-row.is-cited .doc-row-title {
+  color: var(--ink-2);
+}
+.doc-row-v {
+  font-variant-numeric: tabular-nums;
+}
+.doc-row-state {
+  justify-self: end;
+  display: inline-flex;
+  min-width: 0;
+}
+.doc-unread {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+}
+.doc-unread::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.doc-cited {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-3);
+}
+.doc-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px 0 7px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.doc-agent-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.doc-more {
+  justify-self: start;
+  appearance: none;
+  margin-top: 8px;
+  padding: 6px 6px;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: var(--r-key);
+}
+@media (hover: hover) and (pointer: fine) {
+  .doc-more:hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
+}
+@media (max-width: 720px) {
+  .doc-row {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+  }
+  .doc-row-v {
+    display: none;
+  }
+}
+
+/* ---------- work outside any task: after the board, folded to one line ---------- */
+.unfiled-fold > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--r-key);
+}
+.unfiled-fold > summary::-webkit-details-marker {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .unfiled-fold > summary:hover {
+    background: var(--fill);
+  }
+}
+
+/* ---------- the document overlay (decision 14) ----------
+   It covers the desk column only: the rail stays in use. */
+.ws {
+  position: relative;
+}
+.mat-layer {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  z-index: 30;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mat-loading {
+  display: grid;
+  gap: 10px;
+  padding-top: 8px;
+}
+.mat-loading i {
+  height: 12px;
+  border-radius: 2px;
+  background: var(--fill);
+}
+.mat-loading i:nth-child(3n) {
+  width: 72%;
+}
+.mat-dim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: var(--dim, rgba(17, 23, 21, 0.22));
+  pointer-events: auto;
+  cursor: default;
+}
+:root[data-theme="dark"] .mat-dim {
+  background: rgba(0, 0, 0, 0.42);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mat-dim {
+    background: rgba(0, 0, 0, 0.42);
+  }
+}
+.mat-layer .mat-sheet {
+  top: 0;
+  bottom: 0;
+  width: min(720px, calc(100% - 48px));
+  border-radius: var(--r-paper) 0 0 var(--r-paper);
+  pointer-events: auto;
+}
+.mat-dim[data-state="open"] {
+  animation: fade-only var(--mid) ease both;
+}
+.mat-dim[data-state="closed"] {
+  animation: fade-out 200ms ease both;
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+.mat-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 26px 24px 14px 40px;
+}
+.mat-head > .grow {
+  flex: 1;
+  min-width: 0;
+}
+.mat-title {
+  font: 400 26px / 1.25 var(--serif);
+  font-variation-settings: "opsz" 28;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  outline: none;
+}
+:lang(zh) .mat-title {
+  letter-spacing: 0;
+}
+.mat-title:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.mat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 8px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.mat-meta .warn {
+  color: var(--warn);
+}
+.mat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 40px 40px;
+}
+.mat-body .prose {
+  max-width: 62ch;
+}
+.mat-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 24px 14px 40px;
+  background: var(--paper);
+  box-shadow: inset 0 1px 0 var(--line);
+}
+/* Compare with v1: a quiet switch at the top of the sheet. */
+.mat-compare {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.mat-compare .track {
+  position: relative;
+  width: 26px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  transition: background var(--fast) ease;
+}
+.mat-compare .track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--mid) var(--ease-out);
+}
+.mat-compare[aria-checked="true"] .track {
+  background: var(--primary);
+}
+.mat-compare[aria-checked="true"] .track::after {
+  transform: translateX(10px);
+}
+/* The new version marks its change in place: the old figure struck, the new one set. */
+.mat-body .prose del,
+.mat-body .diff del {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  color: var(--ink-3);
+  background: none;
+}
+.mat-body .prose ins,
+.mat-body .diff ins {
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--warn-tint);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.mat-was {
+  margin: 0 0 14px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+@media (max-width: 1279px) {
+  .mat-layer .mat-sheet {
+    width: min(720px, 100%);
+  }
+}
+@media (max-width: 720px) {
+  .mat-head {
+    padding: 18px 12px 10px 18px;
+  }
+  .mat-title {
+    font-size: 21px;
+  }
+  .mat-body {
+    padding: 4px 18px 32px;
+  }
+  .mat-foot {
+    padding: 10px 12px 12px 18px;
+  }
+}
+
+/* ---------- the rail: people and what needs you ---------- */
+.ws .rail {
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: inset 1px 0 0 var(--line);
+}
+.rail-board {
+  height: 100%;
+  overflow-y: auto;
+  padding: 18px 16px 40px;
+  display: grid;
+  align-content: start;
+  gap: 22px;
+}
+.rail-board .mini-title {
+  margin: 0 0 8px 4px;
+  font: 500 12px / 1.3 var(--sans);
+  color: var(--ink-3);
+}
+.needs-you {
+  display: grid;
+  gap: 8px;
+}
+.needs-note {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--r-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.needs-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.needs-who b {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.needs-note .needs-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.needs-keys {
+  display: flex;
+  gap: 4px;
+}
+.needs-line {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 6px 6px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.needs-line .needs-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.needs-line .mark-agent {
+  justify-self: center;
+}
+.mat-reworded {
+  color: var(--ink-3);
+}
+.mat-layer .mat-sheet:focus-visible,
+.rc-sheet.records-drawer:focus-visible {
+  outline: none;
+}
+
+/* "Needs you" on the desk where the rail is a drawer (B3): one instrument line under the band. */
+.needs-strip {
+  display: none;
+}
+@media (max-width: 1279px) {
+  .needs-strip {
+    appearance: none;
+    display: grid;
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 32px);
+    margin: 12px 16px 0;
+    padding: 9px 10px 9px 12px;
+    border: 0;
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+    color: var(--ink);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .needs-strip-label {
+    font-weight: 600;
+  }
+  .needs-strip-n {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--primary);
+    color: var(--on-primary);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .needs-strip-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-3);
+  }
+  .needs-strip .i {
+    color: var(--ink-3);
+  }
+}
+.needs-sys {
+  color: var(--ink-3);
+}
+.needs-tone {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.needs-tone.is-good {
+  color: var(--good);
+}
+.needs-tone.is-warn {
+  color: var(--warn);
+}
+/* A report handed back (B8): head line, one ink conclusion, keys; the instrument face itself. */
+.needs-report {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px 10px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.needs-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.needs-kicker > span:first-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.needs-kicker time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.needs-conclusion {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.needs-conclusion .needs-tone {
+  margin-top: 1px;
+}
+.needs-report .needs-keys {
+  margin-top: 6px;
+}
+
+/* The Config reading after the settings move on: the figure rolls (number-flow), the value
+   glows in green once and settles back to ink (a colour fade, as the conditions' .lit does). */
+.pb-lit {
+  display: inline-flex;
+  align-items: baseline;
+}
+.pb-roll {
+  font: inherit;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  --number-flow-char-height: 1.3em;
+}
+.pb-lit {
+  animation: reading-lit var(--slow) var(--ease-out) both;
+  animation-delay: calc(var(--lit-age, 0ms) * -1);
+}
+@keyframes reading-lit {
+  from {
+    color: var(--good);
+    text-shadow: 0 0 12px color-mix(in oklab, var(--good) 45%, transparent);
+  }
+}
+/* A new signal: a note is laid on the rail, a line slides in from the rail's edge. */
+.needs-note[data-arriving] {
+  animation: note-lay var(--slow) var(--spring) both;
+}
+.needs-line[data-arriving] {
+  animation: line-in var(--mid) var(--ease-out) both;
+}
+@keyframes note-lay {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) rotate(-0.6deg) scale(0.98);
+  }
+}
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+}
+
+.rail-board .people {
+  display: grid;
+  gap: 2px;
+}
+.rail-board .person {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+}
+.rail-board .person .person-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.rail-board .person.unread .person-line {
+  color: var(--ink);
+}
+.rail-board .person .unread-mark {
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.rail-board .people-sep {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--line);
+}
+
+/* The chat pushes in where the people were (§1.1): the list leaves left, the thread arrives
+   from the right; back reverses it. */
+.rail-push-in {
+  animation: rail-push var(--mid) var(--ease) both;
+}
+.rail-push-back {
+  animation: rail-push-back var(--mid) var(--ease) both;
+}
+@keyframes rail-push {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes rail-push-back {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+/* ---------- the record drawer, opened from the topbar's ⏱ ---------- */
+/* The ui-kit sheet, placed over the rail: under the topbar, the rail's width. */
+.rc-sheet.records-drawer {
+  top: var(--toolbar-h);
+  bottom: 0;
+  width: 368px;
+  max-width: 100%;
+  z-index: 60;
+}
+.records-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px 10px 18px;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.records-body {
+  overflow-y: auto;
+  padding: 8px 10px 40px;
+}
+.rec-day {
+  margin: 14px 8px 4px;
+  font: 500 11.5px / 1 var(--sans);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.records {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rec-open {
+  appearance: none;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+}
+button.rec-open {
+  cursor: pointer;
+}
+.rec-open .i {
+  margin-top: 2px;
+  color: var(--ink-3);
+}
+.rec-open time {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rec-world .i {
+  color: var(--warn);
+}
+.rec-note .i {
+  color: var(--p-technical);
+}
+.unfiled-fold > summary .i {
+  transition: transform var(--mid) var(--ease-out);
+}
+.unfiled-fold[open] > summary .i {
+  transform: rotate(90deg);
+}
+.ws .brief-band:not(.is-rolled) .brief-line-toggle .i {
+  transform: rotate(180deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  button.rec-open:hover {
+    background: var(--fill);
+  }
+}
+
+/* ---------- the test bench's face: an instrument panel with readings, like the product bar ---------- */
+.lab .console {
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.lab .console-head {
+  background: none;
+  padding: 18px 18px 16px 20px;
+}
+.lab .console-name {
+  align-items: baseline;
+}
+.lab .console-role {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.lab .console-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "mark name tools" ". state state";
+  align-items: center;
+  gap: 0 14px;
+}
+.lab .console.is-stale .console-head {
+  background: none;
+  padding: 18px 18px 16px 20px;
+}
+.lab .console-head > .mark {
+  grid-area: mark;
+}
+.lab .console-head > .grow {
+  display: contents;
+}
+.lab .console-name {
+  grid-area: name;
+}
+.lab .console-tools {
+  grid-area: tools;
+}
+.lab .console-head .console-hint,
+.lab .console-head .config-use {
+  grid-column: 2 / -1;
+}
+@media (max-width: 720px) {
+  .lab .console-head {
+    grid-template-areas: "mark name" "tools tools" "state state";
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px 12px;
+  }
+  .lab .console-tools {
+    justify-content: flex-start;
+  }
+}
+.lab .bench-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 30px;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  list-style: none;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.lab .console-head .bench-state {
+  grid-area: state;
+}
+.lab .bench-state .pb-gauge {
+  display: grid;
+  gap: 1px;
+}
+.lab .bench-state .pb-gauge.warn .pb-v {
+  color: var(--warn);
+}
+.lab .console-q {
+  border-radius: var(--r-key);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.lab .console-row .input {
+  border-radius: var(--r-key);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------- pilot settings: segmented choices and plain number fields ---------- */
+.sheet .choices:has(input[type="radio"]) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--surface-2);
+}
+.sheet .choice input:disabled + span {
+  opacity: 0.6;
+}
+.sheet .choices:has(input[type="radio"]) .choice > span {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-3);
+  font-weight: 500;
+  transition:
+    background var(--fast) ease,
+    color var(--fast) ease,
+    box-shadow var(--fast) ease;
+}
+.sheet .choices:has(input[type="checkbox"]) .choice > span {
+  min-height: 32px;
+  padding: 0 12px 0 10px;
+  border-radius: var(--r-key);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+}
+.sheet .choices:has(input[type="radio"]) .choice input:checked + span {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+.sheet .choices:has(input[type="checkbox"]) .choice > span::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1.5px var(--ink-4);
+  flex: none;
+}
+.sheet .choices:has(input[type="checkbox"]) .choice input:checked + span {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+.sheet .choices:has(input[type="checkbox"]) .choice input:checked + span::before {
+  background:
+    var(--primary)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.5L12 5.3' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
+  box-shadow: none;
+}
+:root[data-theme="dark"]
+  .sheet
+  .choices:has(input[type="checkbox"])
+  .choice
+  input:checked
+  + span::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.5L12 5.3' fill='none' stroke='%230e1211' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])
+    .sheet
+    .choices:has(input[type="checkbox"])
+    .choice
+    input:checked
+    + span::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.5L12 5.3' fill='none' stroke='%230e1211' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+.sheet input[type="number"].input {
+  border: 0;
+  border-radius: var(--r-key);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.sheet input[type="number"].input::-webkit-inner-spin-button,
+.sheet input[type="number"].input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.sheet input[type="number"].input:focus {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.sheet .checks-live {
+  border-radius: var(--r-md);
+}
+
+/* ---------- reduced motion: a 160ms fade, nothing travels ---------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-amber-arrive],
+  .tray-paper.landing,
+  .needs-note[data-arriving],
+  .needs-line[data-arriving],
+  .rail-push-in,
+  .rail-push-back,
+  .brief-band.rolling .brief-line,
+  .brief-band.rolling .conds.mini,
+  .pb-lit {
+    animation: fade-only var(--fast) ease both;
+    animation-delay: 0ms;
+  }
+  .stage-inner > .world-event.arriving::before {
+    animation: fade-only var(--fast) ease both;
+  }
+}
+@keyframes fade-only {
+  from {
+    opacity: 0;
+  }
+}

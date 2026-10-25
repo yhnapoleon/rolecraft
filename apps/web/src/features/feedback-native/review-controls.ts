@@ -53,7 +53,7 @@ export function mountReviewControls(
   const element = el('section');
   element.setAttribute('aria-label', t('作品评审', 'Artifact review'));
   const form = el('details');
-  form.append(el('summary', t('工作中先评审作品', 'Review artifacts while working')));
+  form.append(el('summary', t('边做边请人评审', 'Get a review while you work'), 'fb-disclosure'));
   form.append(
     el(
       'p',
@@ -196,7 +196,8 @@ export function mountReviewControls(
     submit,
   );
   const history = el('details');
-  history.append(el('summary', t('查看评审与提交历史', 'Review and submission history')));
+  // The page lists earlier deliveries one row each; this keeps the full record, snapshots included.
+  history.append(el('summary', t('全部交付与评审记录', 'All deliveries and reviews'), 'fb-disclosure'));
   const rows = el('div');
   history.append(rows);
   element.append(form, status, error, history);
@@ -206,6 +207,9 @@ export function mountReviewControls(
     // Work versions and deliveries are named as the evidence buttons name them.
     const catalog = s.references ?? readCatalog(null);
     submit.disabled = disabled;
+    // Once delivered, a review can be asked for again only after a revision starts: the form,
+    // which cannot be used then, stays out of the way.
+    form.hidden = s.status === 'submitted';
     purpose.disabled = question.disabled = decision.disabled = disabled;
     products.replaceChildren(
       ...s.products
@@ -233,7 +237,10 @@ export function mountReviewControls(
             }
             void save();
           });
-          row.append(c, el('span', `${p.title} · v${p.version}`));
+          row.append(
+            c,
+            el('span', `${p.title} · ${t(`第 ${p.version} 版`, `version ${p.version}`)}`),
+          );
           return row;
         }),
     );

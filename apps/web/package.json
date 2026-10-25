@@ -11,15 +11,28 @@
     "test:workbench": "node tests/workbench-state.cjs"
   },
   "dependencies": {
+    "@fontsource-variable/instrument-sans": "5.3.0",
+    "@fontsource-variable/newsreader": "5.3.0",
+    "@number-flow/react": "0.6.2",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.54.0",
+    "motion": "14.1.0",
+    "number-flow": "0.6.2",
+    "radix-ui": "1.7.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "sonner": "2.0.8",
+    "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
+    "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.6.4",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vite": "8.3.2",
     "vitest": "5.0.3"

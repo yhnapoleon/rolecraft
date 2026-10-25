@@ -23,9 +23,8 @@ describe('status line after a submission', () => {
     expect(feedbackNotice(submitted({ awaitingFeedback: true }), 'en')).toBe(
       'Submission saved. Feedback is being generated…',
     );
-    expect(feedbackNotice(submitted({ reports: [earlier, latest] }), 'zh')).toBe(
-      '本次提交已保存，可以看反馈、提出异议或开始修订。',
-    );
+    // With its feedback in, the results cover says what was delivered (195): no sentence.
+    expect(feedbackNotice(submitted({ reports: [earlier, latest] }), 'zh')).toBe('');
   });
   it('does not claim generation when the feedback job failed', () => {
     expect(feedbackNotice(submitted({ failedFeedback: true }), 'zh')).toBe(
@@ -33,6 +32,23 @@ describe('status line after a submission', () => {
     );
     expect(feedbackNotice(submitted({ failedFeedback: true }), 'en')).toBe(
       'Submission saved. Feedback is not ready yet.',
+    );
+  });
+});
+
+describe('status line while the delivery is read again (164 N10)', () => {
+  it('keeps saying the feedback is being generated while the records are read', () => {
+    expect(feedbackNotice(submitted({ busy: true }), 'zh')).toBe('本次提交已保存，反馈正在生成…');
+    expect(feedbackNotice(submitted({ busy: true, awaitingFeedback: true }), 'en')).toBe(
+      'Submission saved. Feedback is being generated…',
+    );
+  });
+  it('still waits for confirmation while submitting, and once feedback is there', () => {
+    expect(
+      feedbackNotice({ status: 'active', busy: true, products: [], reports: [] }, 'zh'),
+    ).toBe('正在等待服务端确认…');
+    expect(feedbackNotice(submitted({ busy: true, reports: [earlier, latest] }), 'zh')).toBe(
+      '正在等待服务端确认…',
     );
   });
 });

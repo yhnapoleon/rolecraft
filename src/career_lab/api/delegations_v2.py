@@ -6,7 +6,7 @@ from career_lab.delegations.service import issue, revoke, ToolService
 from career_lab.delegations.observation import build_observation
 
 
-def install_delegations(registry, *, source_provider=None, max_ttl_seconds=3600, synchronous=None):
+def install_delegations(registry, *, source_provider=None, max_ttl_seconds=86400, synchronous=None):
     registry.register(
         Operation(
             "delegations.create",

@@ -37,9 +37,33 @@ ROUTES = [
     ("DELETE", "/delegations/{delegation_id}", "delegations.revoke"),
     ("GET", "/recognition", "recognition.read"),
     ("GET", "/behavior", "behavior.read"),
+    ("POST", "/engineer/tickets", "engineer.tickets.create"),
+    ("GET", "/engineer/tickets", "engineer.tickets.read"),
+    ("GET", "/engineer/tickets/{ticket_id}", "engineer.tickets.read"),
+    ("POST", "/engineer/tickets/{ticket_id}/reproductions", "engineer.reproduce"),
+    ("POST", "/engineer/tickets/{ticket_id}/trials", "engineer.trial"),
+    ("POST", "/engineer/tickets/{ticket_id}/drafts", "engineer.submissions.draft"),
+    ("POST", "/engineer/tickets/{ticket_id}/signoffs", "engineer.submissions.sign"),
+    ("GET", "/engineer/reviews", "engineer.reviews.read"),
+    ("GET", "/engineer/reviews/{review_id}", "engineer.reviews.read"),
 ]
 # Recognition layer reads (demo edition): served, but kept out of the frozen OpenAPI.
 DEMO_OPERATIONS = {"recognition.read", "behavior.read"}
+# Engineer session operations: served, kept out of the frozen OpenAPI until their DTOs
+# join the public contract. Their reads also take these optional query filters.
+ENGINEER_QUERY_FILTERS = {
+    "engineer.tickets.read": ("ticket_id",),
+    "engineer.reviews.read": ("review_id", "ticket_id"),
+}
+UNPUBLISHED_OPERATIONS = DEMO_OPERATIONS | {
+    "engineer.tickets.create",
+    "engineer.tickets.read",
+    "engineer.reproduce",
+    "engineer.trial",
+    "engineer.submissions.draft",
+    "engineer.submissions.sign",
+    "engineer.reviews.read",
+}
 
 
 def mount_v2_routes(app, gateway, auth_dependency):
@@ -72,6 +96,10 @@ def mount_v2_routes(app, gateway, auth_dependency):
                     params.update(cursor=cursor, limit=limit)
                     if since_seq is not None:
                         params["since_seq"] = since_seq
+                    for key in ENGINEER_QUERY_FILTERS.get(operation, ()):
+                        value = request.query_params.get(key)
+                        if value is not None and key not in params:
+                            params[key] = value
                     return gateway.dispatch(session_id.context, operation, params)
 
             endpoint.__name__ = operation.replace(".", "_")
@@ -82,5 +110,5 @@ def mount_v2_routes(app, gateway, auth_dependency):
             make_endpoint(name, method != "GET"),
             methods=[method],
             response_model=None,
-            include_in_schema=name not in DEMO_OPERATIONS,
+            include_in_schema=name not in UNPUBLISHED_OPERATIONS,
         )

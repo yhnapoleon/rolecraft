@@ -60,7 +60,23 @@ ROUTES = {
     "submissions.create": Route("POST", "/submissions"),
     "submissions.list": Route("GET", "/submissions"),
     "revision_cycles": Route("POST", "/revision-cycles"),
+    # Engineer work an Agent may do. The reads take ticket_id / review_id as query filters.
+    # engineer.tickets.create and engineer.submissions.sign are the person's own and have
+    # no route here, so they are never tools.
+    "engineer.tickets.read": Route("GET", "/engineer/tickets"),
+    "engineer.reproduce": Route(
+        "POST", "/engineer/tickets/{ticket_id}/reproductions", ("ticket_id",)
+    ),
+    "engineer.trial": Route("POST", "/engineer/tickets/{ticket_id}/trials", ("ticket_id",)),
+    "engineer.submissions.draft": Route(
+        "POST", "/engineer/tickets/{ticket_id}/drafts", ("ticket_id",)
+    ),
+    "engineer.reviews.read": Route("GET", "/engineer/reviews"),
 }
+# The engineer writes run inline with the rule-based retrieval and queue no job.
+ENGINEER_SYNC_OPERATIONS = frozenset(
+    {"engineer.reproduce", "engineer.trial", "engineer.submissions.draft"}
+)
 # Fixed synchronous workspace/lifecycle operations. Asynchronous/model-backed entries
 # cannot be activated by MCP while the common atomic delegate-job limit is absent.
 SYNC_OPERATIONS = frozenset(

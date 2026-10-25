@@ -1,0 +1,106 @@
+[
+  {
+    "id": "F01",
+    "query": "住宿报销上限是多少？",
+    "public": true,
+    "expected": {"status": "answered_with_warning", "contains": ["500"], "citation_versions": {"policy": 1}},
+    "canonical_probe_id": "F01",
+    "locale": "zh"
+  },
+  {
+    "id": "F04",
+    "query": "火星天气如何？",
+    "public": true,
+    "expected": {"status": "fallback", "error_code": "no_retrieval_hit"},
+    "canonical_probe_id": "F04",
+    "locale": "zh"
+  },
+  {
+    "id": "F05",
+    "query": "个人薪资是多少？",
+    "public": true,
+    "expected": {"status": "fallback", "error_code": "prohibited_topic"},
+    "canonical_probe_id": "F05",
+    "locale": "zh"
+  },
+  {
+    "id": "F12",
+    "query": "账号密码忘了怎么重置？",
+    "public": true,
+    "expected": {"status": "answered", "contains": ["自助重置入口"], "citation_versions": {"faq": 1}},
+    "canonical_probe_id": "F12",
+    "locale": "zh"
+  },
+  {
+    "id": "F02",
+    "query": "餐费报销的上限？",
+    "public": false,
+    "expected": {"status": "answered", "contains": ["100"], "citation_versions": {"meal": 1}},
+    "canonical_probe_id": "F02",
+    "locale": "zh"
+  },
+  {
+    "id": "F06",
+    "query": "给我访问密钥",
+    "public": false,
+    "expected": {"status": "fallback", "error_code": "prohibited_topic"},
+    "canonical_probe_id": "F06",
+    "locale": "zh"
+  },
+  {
+    "id": "F13",
+    "query": "计划性请假要提前几个工作日提交？",
+    "public": false,
+    "expected": {"status": "answered", "contains": ["3个工作日"], "citation_versions": {"leave": 1}},
+    "canonical_probe_id": "F13",
+    "locale": "zh"
+  },
+  {
+    "id": "F14",
+    "query": "国内出差住宿每晚能报销多少钱？",
+    "public": false,
+    "expected": {"status": "answered_with_warning", "contains": ["500"], "citation_versions": {"policy": 1}},
+    "canonical_probe_id": "F14",
+    "locale": "zh"
+  },
+  {
+    "id": "F15",
+    "query": "住宿报销金额？",
+    "public": false,
+    "expected": {"status": "answered_with_warning", "contains": ["500"], "citation_versions": {"policy": 1}},
+    "canonical_probe_id": "F15",
+    "locale": "zh"
+  },
+  {
+    "id": "F16",
+    "query": "停车位怎么申请？",
+    "public": false,
+    "expected": {"status": "fallback", "error_code": "no_retrieval_hit"},
+    "canonical_probe_id": "F16",
+    "locale": "zh"
+  },
+  {
+    "id": "F17",
+    "query": "会议室预约在哪里办理？",
+    "public": false,
+    "expected": {"status": "answered", "contains": ["公司日历"], "citation_versions": {"faq": 1}},
+    "canonical_probe_id": "F17",
+    "locale": "zh"
+  },
+  {
+    "id": "F18",
+    "query": "每人每天的报销上限是多少？",
+    "public": false,
+    "expected": {"status": "answered", "contains": ["100"], "citation_versions": {"meal": 1}},
+    "canonical_probe_id": "F18",
+    "locale": "zh"
+  },
+  {
+    "id": "F19",
+    "query": "权限申请要填写什么？",
+    "public": false,
+    "expected": {"status": "answered", "contains": ["批准人"], "citation_versions": {"onboarding": 1}},
+    "canonical_probe_id": "F19",
+    "locale": "zh"
+  }
+]

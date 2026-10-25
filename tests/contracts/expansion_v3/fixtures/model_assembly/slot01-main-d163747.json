@@ -3,8 +3,8 @@
   {
    "authorized_with_key": true,
    "body_sha256": [
-    "d38853251ad94f83114edd28c37fb6426af0de073a24c3648c8ac8e6dfa639aa",
-    "161351f9bf106b53b3db7db1be507fb013016187ae3ac6eb27872d93660426ae",
+    "1075dd7ad7fe119d28dcb4890956002130b043f8c2c24de6f258e2d2ebf6f528",
+    "faabb9905e3bbd10d8a4fd4d0ebd58e95e7a1b71e5db3019ca751821e30ee67f",
     "422d7c889baea41e4b0a0a3a3d6f7f489052a1b5f87417137c56a6d1746d7049",
     "8f2ee3047c10862c8f83bfa3ad8c92d28ea6540deba9937db20002dc715b332e",
     "8016d34a2d55ef5c38bba8ce30b9f418a5727f0f4cf435c9dec34d361cabbbf1",
@@ -64,8 +64,8 @@
   {
    "authorized_with_key": true,
    "body_sha256": [
-    "b7f27a55a27a0f0cfe4ea4ef2b9f353d0b8ef9ef73ccc7ce48b74d06712d1833",
-    "68a5cf7e517323f0e044e5f1d0d81fac95ebd2b67492fc4fff64d2ef1e00a249",
+    "d448f0509da324c56f67b72d857cf5c6370620feafbf13be60d234f39bc192a4",
+    "79dfa6858582ca390e0bb147e8cf1c49dc3361c7dd5f10dde58194982edf06b5",
     "e5af544f6f6225e58b71872f48b1873932b8cf4813ba64ad412e83d4dc336863",
     "f981d411d16bd40bdb13c1d07629e9d8fcac4646f2ac64600972f1738016d8df",
     "128ac31e1c710536ec1c9e808751134cc62f3b3e8aabe96aed62379c64df8f38",
@@ -123,5 +123,5 @@
    ]
   }
  ],
- "source": "main d163747, shared CAREER_LAB_KEY_FILE/BASE_URL/MODEL with --provider openai; runs/local/144/probe/slot01_capture.py; bodies normalized by tests/support/model_slots.normalized_body"
+ "source": "main d163747, shared CAREER_LAB_KEY_FILE/BASE_URL/MODEL with --provider openai; runs/local/144/probe/slot01_capture.py; bodies normalized by tests/support/model_slots.normalized_body; the first two digests per language (the colleague turn: role, role_review) re-recorded on 351205c after 193's deliberate colleague-prompt change (28fd903 first person, short, complete sentences; 20a865b the business lead named Chen); the other 19 are main's bytes"
 }

@@ -11,5 +11,10 @@ export interface EventLine {
   /** The task a test event belongs to, when known. */
   taskId?: string | null;
 }
-export function eventLine(attempt: object, event: object): EventLine;
+/** `workLanguage` is the practice's: world lines are told in it; your own actions follow the interface. */
+export function eventLine(
+  attempt: object,
+  event: object,
+  workLanguage?: 'zh' | 'en' | null,
+): EventLine;
 export function isFeedEvent(event: { type: string }): boolean;

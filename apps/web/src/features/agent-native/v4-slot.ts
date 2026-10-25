@@ -1,7 +1,9 @@
 import type { V4Command, CommandInput } from '../../v4-host-operations';
 import type { V4CommandResult, V4HostSnapshot, V4SlotContext, V4SlotHandle } from '../../v4-host';
+import { modelWaitNode } from '../../app/model-status';
 import {
   activities,
+  awaitsModel,
   agentLogLines,
   connections,
   grantInput,
@@ -18,6 +20,11 @@ import {
   type ReturnedWork,
 } from './model';
 import './v4-slot.css';
+
+const READING: [string, string] = [
+  '操作已确认，正在读取实际记录。',
+  'Action confirmed. Reading the actual records.',
+];
 
 /** Hosts supply empty insertion nodes INSIDE the existing Agent rail:
  * connection, activity, returns. Existing manual package/return controls stay host-owned.
@@ -241,7 +248,7 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
               '授权已创建，按下方连接卡接入你的 Agent。',
               'Access created. Connect your agent with the card below.',
             ]
-          : ['操作已确认，正在读取实际记录。', 'Action confirmed. Reading the actual records.'];
+          : READING;
     } else if (
       result.status === 'failed' &&
       (result.result as { definitive?: boolean } | null)?.definitive
@@ -267,7 +274,23 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
       ];
     }
     await saveDraft();
-    if (!destroyed) await refresh();
+    if (destroyed) return;
+    await refresh();
+    // Once the records are read, say what they show instead of "reading" (M4).
+    if (!destroyed && statusText === READING) {
+      statusText = settledText(action);
+      renderControls();
+    }
+  }
+  function settledText(action: string): [string, string] {
+    if (connectionState !== 'verified' || productsFailed)
+      return [
+        '操作已确认；实际记录暂时读不到，点“刷新授权与记录”再看。',
+        'Action confirmed. The records cannot be read now; use “Refresh access and records” to check.',
+      ];
+    if (action === 'delegations.revoke') return ['授权已撤销。', 'Access revoked.'];
+    if (action === 'work_products.adopt') return ['已采用这个版本。', 'This version is adopted.'];
+    return ['', ''];
   }
   async function command<K extends V4Command>(operation: K, input: CommandInput<K>) {
     if (destroyed || locked() || draft.pending || !available(operation)) return;
@@ -517,6 +540,8 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
     }
     renderScope();
   }
+  /** "Rule-checked" is written out; "awaiting model" is the grey mark with its name read aloud. */
+  const waitMark = () => modelWaitNode(document, '', snapshot.uiLanguage);
   let listKey = '';
   function renderLists() {
     if (destroyed) return;
@@ -617,7 +642,12 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
         content.append(open);
       } else content.append(element('p', '', line.text));
       if (line.detail) content.append(element('p', 'meta', line.detail));
-      if (line.marker) content.append(element('p', 'meta', line.marker));
+      if (line.marker && line.waiting) {
+        // The grey mark follows the record's own last line; its name is read with it.
+        const last = content.lastElementChild as HTMLElement;
+        if (last.tagName === 'BUTTON') last.after(waitMark());
+        else last.append(waitMark());
+      } else if (line.marker) content.append(element('p', 'meta', line.marker));
       row.append(content);
       eventList.append(row);
     }
@@ -634,24 +664,26 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
         element(
           'p',
           '',
-          `${product.title || label('Agent 作品', 'Agent work')} · v${product.ref.version}`,
+          `${product.title || label('Agent 作品', 'Agent work')} · ${label(`第 ${product.ref.version} 版`, `version ${product.ref.version}`)}`,
         ),
       );
-      row.append(
-        element(
-          'p',
-          'meta',
-          product.adoption === 'adopted'
-            ? label('此版本已采用', 'This version is adopted')
-            : label('此版本待你检查', 'This version awaits your review'),
-        ),
+      const adoption = element(
+        'p',
+        'meta',
+        product.adoption === 'adopted'
+          ? label('此版本已采用', 'This version is adopted')
+          : label('此版本待你检查', 'This version awaits your review'),
       );
-      const marker = semanticLabel(
-        snapshot.uiLanguage,
-        product.semanticStatus,
-        product.verification,
-      );
-      if (marker) row.append(element('p', 'meta', marker));
+      row.append(adoption);
+      if (awaitsModel(product.semanticStatus)) adoption.append(waitMark());
+      else {
+        const marker = semanticLabel(
+          snapshot.uiLanguage,
+          product.semanticStatus,
+          product.verification,
+        );
+        if (marker) row.append(element('p', 'meta', marker));
+      }
       row.append(button('打开原作', 'Open work', () => host.selectProduct(product.ref)));
       const adopt = button('采用此版本', 'Adopt this version', () => {
         void command('work_products.adopt', {

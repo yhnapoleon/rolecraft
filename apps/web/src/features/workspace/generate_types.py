@@ -48,6 +48,7 @@ HOST_MODELS = WORKSPACE_MODELS + [
     "DelegationListResult",
     "DelegationSummary",
     "DelegationGrant",
+    "AgentActivityResult",
     "BusinessRequest",
     "BusinessDecision",
     "DisclosedFragment",

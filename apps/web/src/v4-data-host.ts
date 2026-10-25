@@ -232,6 +232,7 @@ export class V4DataHost implements V4HostAdapter {
       throw new ApiError('Reference belongs to another session', 404, 'session_binding_mismatch');
     if (operation === 'submissions.rule_check' || operation === 'submissions.rule_check.read')
       return this.ruleCheck(operation, input);
+    if (operation === 'submissions.rule_check.recognition') return this.sentenceCheck(input);
     if (operation === 'workspace_imports') {
       if (input.mode !== 'preview')
         throw new ApiError('Only an import preview is a query', 400, 'invalid_read');
@@ -301,6 +302,22 @@ export class V4DataHost implements V4HostAdapter {
       operation,
       payload: copy(payload),
     });
+  }
+  /** The slower sentence step of the same draft check (recognition layer, read-only). */
+  private async sentenceCheck(input: Input) {
+    const response = await this.readOnlyCommand(
+      '/submission-rule-check/recognition',
+      'submissions.rule_check',
+      input,
+    );
+    const result = obj(response) ? response.result : undefined;
+    if (
+      !obj(result) ||
+      result.session_id !== this.ports.binding.sessionId ||
+      typeof result.enabled !== 'boolean'
+    )
+      throw unconfirmed();
+    return copy(result);
   }
   /** Rule items of a submission: of this input now (draft), or of a saved one (saved). */
   private async ruleCheck(operation: string, input: Input): Promise<SubmissionRuleCheck> {

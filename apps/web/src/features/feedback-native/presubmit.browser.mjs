@@ -44,19 +44,19 @@ async function open(language, surface = 'submission') {
   );
   return browser;
 }
-/** Tick the listed version and pick a decision, as a person would. */
+/** Make sure the listed version is ticked and pick a decision, as a person would. The panel
+ * opens with the latest version of the work already ticked (199 decision 20), so a click here
+ * would untick it. */
 async function choose(browser, decision) {
-  await browser.click('#fixture input[type="checkbox"]');
+  if (!(await browser.ev(`document.querySelector('#fixture input[type="checkbox"]').checked`)))
+    await browser.click('#fixture input[type="checkbox"]');
   await browser.select('#fixture select', decision);
 }
 const requested = (browser, operation) =>
   browser.ev(
     `window.fixture.calls.filter((c) => c.operation === '${operation}').map((c) => ({ decision: c.input.decision, products: c.input.products }))`,
   );
-const submitButton = (language) =>
-  `[...document.querySelectorAll('#fixture button')].find((b) => b.textContent.trim() === '${
-    language === 'en' ? 'Submit selected versions' : '提交选中的版本'
-  }')`;
+const submitButton = (_language) => `document.querySelector('#fixture [data-delivery-submit]')`;
 
 it.each(LANGUAGES)(
   'PRESUBMIT-UI-01 %s: the card sits between the decision and the submit button',
@@ -64,6 +64,10 @@ it.each(LANGUAGES)(
     const t = (zh, en) => (language === 'en' ? en : zh);
     const browser = await open(language);
     try {
+      // The latest version is ticked when the panel opens (199 decision 20); the button names it.
+      expect(
+        await browser.ev(`document.querySelector('#fixture input[type="checkbox"]').checked`),
+      ).toBe(true);
       const around = await browser.ev(`(() => {
         const c = ${card};
         return {
@@ -75,7 +79,7 @@ it.each(LANGUAGES)(
       })()`);
       expect(around).toMatchObject({
         before: t('本次决定', 'Your decision'),
-        after: `BUTTON ${t('提交选中的版本', 'Submit selected versions')}`,
+        after: `BUTTON ${t('提交第 2 版', 'Submit version 2')}`,
         shown: true,
       });
       expect(around.text).toContain(t('选好作品版本和决定后', 'Choose versions and a decision'));
@@ -179,13 +183,18 @@ it.each(LANGUAGES)(
         chosen('launch_narrow'),
         chosen('launch_narrow'),
       ]);
-      // Submitting forgets the choice: a later panel (a new cycle) starts empty.
+      // Submitting forgets the choice: a later panel (a new cycle) starts again from the latest
+      // version ticked and no decision.
       await browser.ev(`${submitButton(language)}.click()`);
       await waitFor(browser, `window.fixture.state.status === 'submitted'`);
       await delay(300);
       await browser.ev(
         `window.fixture.close(); window.fixture.state.status = 'active'; window.fixture.remount()`,
       );
+      expect(await browser.ev(picked)).toEqual({ checked: true, decision: '' });
+      // An emptied choice is remembered too: untick, close, reopen, and it stays unticked.
+      await browser.click('#fixture input[type="checkbox"]');
+      await browser.ev('window.fixture.close(); window.fixture.remount()');
       expect(await browser.ev(picked)).toEqual({ checked: false, decision: '' });
     } finally {
       await browser.close();

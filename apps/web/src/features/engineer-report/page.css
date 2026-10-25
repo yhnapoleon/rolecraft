@@ -1,0 +1,81 @@
+/* #/engineer-report sample page: a title line, a sample switch, the report sheet. */
+.er-page {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+  min-width: 0;
+  margin: 0 auto;
+  padding-top: 12px;
+}
+/* Jump targets stop below the sticky top bar. */
+.er-page,
+.er-page * {
+  scroll-margin-top: calc(var(--toolbar-h) + 16px);
+}
+.er-page__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+/* A file label above the document: quiet, so the report's own verdict is the headline. */
+.er-page__title {
+  margin: 0;
+  font: 600 17px / 1.4 var(--display);
+}
+/* "Sample" is an honesty label: a neutral outline (dashed grey is reserved for "not known"). */
+.er-page__sample {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+.er-page__switch {
+  justify-self: start;
+  max-width: 100%;
+}
+.er-page__switch button {
+  transition:
+    color var(--fast) ease,
+    transform var(--fast) var(--ease);
+}
+.er-page__switch button:active {
+  transform: scale(0.97);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .er-page__switch .thumb {
+    background: var(--surface-3);
+  }
+}
+.er-page__sheet {
+  min-width: 0;
+}
+.er-page__sheet[aria-busy="true"] > .er-report {
+  opacity: 0.6;
+}
+.er-page__note {
+  margin: 0;
+  color: var(--ink-3);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .er-page .er-report.er-enter {
+    animation: er-sheet-in var(--mid) var(--spring) both;
+  }
+}
+@keyframes er-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (max-width: 720px) {
+  .er-page {
+    gap: 14px;
+    padding-top: 4px;
+  }
+}

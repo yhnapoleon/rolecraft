@@ -23,6 +23,7 @@ const reads: Record<string, string> = {
   observation: '/observation',
   tools: '/tools',
   'delegations.list': '/delegations',
+  agent_activity: '/agent-activity',
 };
 export function readRoute(operation: string, input: Input = {}): string {
   let path = reads[operation];
@@ -53,7 +54,7 @@ export function readRoute(operation: string, input: Input = {}): string {
   if (operation === 'workspace_imports.read') path = '/workspace-imports/' + id(input, 'import_id');
   if (!path) return fail();
   const query = new URLSearchParams();
-  for (const key of ['cursor', 'limit', 'since_seq', 'as_of_seq', 'config_version']) {
+  for (const key of ['cursor', 'limit', 'since_seq', 'as_of_seq', 'config_version', 'after']) {
     if (input[key] != null) query.set(key, String(input[key]));
   }
   return path + (query.size ? '?' + query : '');

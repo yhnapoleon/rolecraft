@@ -22,6 +22,8 @@ from fastapi.responses import Response
 
 from career_lab.api.error_boundary import log_failure
 from career_lab.contracts.v2 import ProtocolError
+from career_lab.delegations.activity import ActivityLog
+from career_lab.delegations.catalog import bindings
 from career_lab.delegations.credentials import Credentials
 from career_lab.delegations.http_client import HttpAgentClient, RemoteFailure
 
@@ -39,6 +41,7 @@ CREDENTIAL_CODES = frozenset(
 NAMED_METHODS = {"tools/call": "name", "prompts/get": "name", "resources/read": "uri"}
 BASE64_SENTINEL = re.compile(r"=\?base64\?([A-Za-z0-9+/]*={0,2})\?=")
 JSON_RANGES = frozenset({"application/json", "application/*", "*/*"})
+CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
 
 # JSON-RPC error codes. 1001 and 1002 are shared with stdio; 1003-1005 are application codes
 # outside the JSON-RPC and MCP reserved ranges.
@@ -332,6 +335,12 @@ def too_many(code, message, wait):
 class StreamableHttpEndpoint:
     def __init__(self, app, limits):
         self.store = app.state.v2_store
+        self.registry = app.state.gateway.registry
+        # The person's own record of what their Agent did here; never read by the Agent.
+        self.activity = getattr(app.state, "agent_activity", None) or ActivityLog(
+            self.store.db.engine
+        )
+        app.state.agent_activity = self.activity
         self.limits = limits
         self.transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
         # MCP work runs on its own threads, so it never waits on the routes it calls.
@@ -396,8 +405,12 @@ class StreamableHttpEndpoint:
             credentials=Credentials(INTERNAL_BASE, session_id, token), transport=self.transport
         )
         protocol = Protocol(backend, negotiated=LEGACY if era == "legacy" else None)
+        delegation = auth.executor.delegation_id
+        self.activity.seen(session_id, delegation, client_of(message, era))
         try:
             result = protocol.handle(message)
+            if message["method"] == "tools/call":
+                self.record_call(session_id, delegation, message.get("params"), result)
         except RpcFailure as failure:
             return protocol_failure(failure, era, identifier)
         except RemoteFailure as failure:
@@ -415,6 +428,26 @@ class StreamableHttpEndpoint:
             body = rpc_error(INTERNAL_ERROR, "Internal error", identifier)
             return Reply(500, body, code="mcp_internal_error", error=error)
         return Reply(200, {"jsonrpc": "2.0", "id": identifier, "result": result})
+
+    def record_call(self, session_id, delegation, params, result):
+        name, arguments = params.get("name"), params.get("arguments") or {}
+        binding = bindings(self.registry).get(name)
+        capability = binding.capability if binding is not None else "read"
+        self.activity.called(session_id, delegation, name, capability, arguments, result)
+
+
+def client_of(message, era):
+    """(name, version) a client names itself by: initialize params, or 2026-07-28 metadata."""
+    params = message.get("params") if isinstance(message.get("params"), dict) else {}
+    if era == "handshake":
+        info = params.get("clientInfo")
+    else:
+        meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
+        info = meta.get(CLIENT_INFO)
+    if not isinstance(info, dict) or not isinstance(info.get("name"), str):
+        return None
+    version = info.get("version") if isinstance(info.get("version"), str) else ""
+    return info["name"][:80], version[:40]
 
 
 def respond(request, reply):

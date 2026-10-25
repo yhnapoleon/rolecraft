@@ -2,6 +2,8 @@
 
 - ``GET  /sessions/{sid}/delegations``: the person's own agent delegations. No token is ever returned.
   Agent labels are not part of the frozen grant, so the browser keeps the person's own label locally.
+- ``GET  /sessions/{sid}/agent-activity?after=``: what the person's own Agent did over MCP (each
+  connection and tool call: tool, objects touched, outcome) and whether it is connected now.
 - ``GET /sessions/{sid}/practice?submission_id=``: optional reviewed practice for that feedback
   (evaluation rules).
 - ``POST /sessions/{sid}/practice/choices``: an explicit decline / continue / choose (a suggestion) /
@@ -28,7 +30,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import Column, Integer, MetaData, String, Table, insert, select, update
 from sqlalchemy.engine import Connection
@@ -415,6 +417,28 @@ def mount_v4_extensions(app: FastAPI) -> None:
             },
         }
 
+    @app.get("/sessions/{session_id}/agent-activity", response_model=C.AgentActivityResponse)
+    def agent_activity(
+        session_id: str,
+        credentials: Credentials,
+        after: Annotated[int, Query(ge=0)] = 0,
+    ):
+        auth = _context(store, session_id, credentials)
+        _human(auth)
+        log = getattr(app.state, "agent_activity", None)
+        if log is None:
+            from career_lab.delegations.activity import ActivityLog
+
+            log = app.state.agent_activity = ActivityLog(store.db.engine)
+        from career_lab.delegations.activity import object_titles
+
+        titles = object_titles(store.view(auth))
+        # Same envelope as the gateway's list reads.
+        return {
+            "schema_version": 2,
+            "result": {"schema_version": 2, "result": log.page(session_id, after, titles)},
+        }
+
     @app.get("/sessions/{session_id}/practice", response_model=C.PracticeReadResponse)
     def practice(
         session_id: str,
@@ -451,6 +475,17 @@ def mount_v4_extensions(app: FastAPI) -> None:
         _human(auth)
         checks = _rule_checks(gateway.registry, store, auth)
         return {"schema_version": 2, "result": checks.draft(store, auth, body)}
+
+    # Recognition layer (demo edition): the slower sentence step of the same draft check,
+    # served outside the frozen OpenAPI like the other recognition reads.
+    @app.post("/sessions/{session_id}/submission-rule-check/recognition", include_in_schema=False)
+    def submission_rule_check_recognition(
+        session_id: str, body: C.SubmissionRuleCheckRequest, credentials: Credentials
+    ):
+        auth = _context(store, session_id, credentials)
+        _human(auth)
+        checks = _rule_checks(gateway.registry, store, auth)
+        return {"schema_version": 2, "result": checks.draft_recognition(store, auth, body)}
 
     @app.get(
         "/sessions/{session_id}/submission-rule-check",

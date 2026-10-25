@@ -148,7 +148,7 @@
   z-index: 65;
   box-sizing: border-box;
   padding: 18px 0 10px;
-  border-radius: 22px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   box-shadow:
     var(--shadow-float),
@@ -230,7 +230,7 @@
   min-height: 248px;
   padding: 19px 18px 15px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-paper);
   background: var(--paper);
   color: var(--ink);
   box-shadow:
@@ -248,7 +248,7 @@
 .work-folder-card:focus-visible {
   outline: 2px solid var(--ink-3);
   outline-offset: -2px;
-  border-radius: 14px;
+  border-radius: var(--r-paper);
 }
 .work-folder-card-meta {
   display: flex;
@@ -335,7 +335,7 @@
 @media (max-width: 600px) {
   .work-folder-tray {
     padding-top: 16px;
-    border-radius: 18px;
+    border-radius: var(--r-panel);
   }
   .work-folder-tray-head {
     padding-inline: 16px;

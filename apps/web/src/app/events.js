@@ -3,6 +3,8 @@
 import { T, locale } from './i18n';
 import { serverText } from '../store';
 import { describeServerEvent } from './event-copy';
+import { personName } from './people.js';
+import { say } from './vocab.js';
 import { buildCatalog, catalogLookups } from '../reference-catalog';
 
 const WORLD = [
@@ -43,16 +45,21 @@ function lookups(a) {
   );
 }
 
-export function eventLine(a, e) {
+/** One line for a server event. `lang` is the practice's work language: a change in the world (a
+ * policy update, the manager's decision) is told in it, like the rest of the scenario, while your
+ * own actions are tool records in the interface language. Without it, everything follows the
+ * interface language. */
+export function eventLine(a, e, lang) {
   const d = e.detail || {};
   const w = a.world || {};
+  const W = say(lang);
   switch (e.type) {
     case 'policy_updated': {
       const v =
         ((d.material_versions || []).find((x) => x.material_id === 'policy') || {}).version ||
         w.policyVersion;
       return {
-        text: T(`差旅政策更新为 v${v}`, `Travel policy updated to v${v}`),
+        text: W(`差旅政策更新为 v${v}`, `Travel policy updated to v${v}`),
         icon: 'bolt',
         tone: 'warn',
         announce: 'policy',
@@ -62,9 +69,9 @@ export function eventLine(a, e) {
     case 'approve_request':
       return d.rule_id === 'capacity_approved'
         ? {
-            text: T(
-              `经理批准扩容：上限 ${w.capacity} 人`,
-              `The manager approved more seats: up to ${w.capacity}`,
+            text: W(
+              `${personName('manager')} 批准扩容：上限 ${w.capacity} 人`,
+              `${personName('manager')} approved more seats: up to ${w.capacity}`,
             ),
             icon: 'check',
             tone: 'good',
@@ -72,9 +79,9 @@ export function eventLine(a, e) {
             world: true,
           }
         : {
-            text: T(
-              `经理批准资源：${w.devDays} 人日，第 ${w.deadline} 天上线`,
-              `The manager approved resources: ${w.devDays} person-days, launch on day ${w.deadline}`,
+            text: W(
+              `${personName('manager')} 批准资源：${w.devDays} 人日，第 ${w.deadline} 天上线`,
+              `${personName('manager')} approved resources: ${w.devDays} person-days, launch on day ${w.deadline}`,
             ),
             icon: 'check',
             tone: 'good',
@@ -105,7 +112,13 @@ export function eventLine(a, e) {
     e.refs?.length || e.type !== 'test_assistant' || !d.object_id
       ? e.refs
       : [{ kind: 'test', object_id: d.object_id }];
-  const copy = describeServerEvent({ type: e.type, data: d, refs }, lookups(a), locale());
+  const event = { type: e.type, data: d, refs };
+  const names = lookups(a);
+  const tool = describeServerEvent(event, names, locale());
+  const copy =
+    tool.world && (lang === 'zh' || lang === 'en') && lang !== locale()
+      ? describeServerEvent(event, names, lang)
+      : tool;
   const subject = copy.subject;
   const test =
     subject?.kind === 'test' ? (a.tests || []).find((x) => x.id === subject.id) : undefined;

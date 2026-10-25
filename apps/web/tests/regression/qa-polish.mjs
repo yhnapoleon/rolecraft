@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { clickReady, waitFor, submitDelivery } from './browser-support.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -86,7 +86,7 @@ async function ensureWork(context) {
 /** Opens the delivery panel, selects the work written in these checks (or the first
  * version listed) and submits a decision; returns the selected version's label. */
 async function submitOnce(context, decision) {
-  const { browser, text } = context;
+  const { browser } = context;
   await closeOverlays(browser);
   await toBoard(context);
   await browser.click('.ws-toolbar [data-action="submit"]');
@@ -97,14 +97,18 @@ async function submitOnce(context, decision) {
   const chosen = await browser.ev(`(() => {
     const rows = [...document.querySelectorAll('#sheet .native-feedback label.field-row')]
       .filter((row) => row.querySelector('input[type="checkbox"]'));
+    // Each version reads as a paper slip: its title, with the version small.
+    const line = (r) => r.querySelector('.paper-slip__title')?.textContent ?? r.textContent;
     const row =
-      rows.find((r) => r.textContent.startsWith(${JSON.stringify(context.workTitle)})) ?? rows[0];
+      rows.find((r) => line(r).includes(${JSON.stringify(context.workTitle)})) ?? rows[0];
     const box = row.querySelector('input[type="checkbox"]');
     if (!box.checked) box.click();
-    return row.textContent;
+    return line(row);
   })()`);
-  await browser.select('#sheet .native-feedback select', decision);
-  await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  await browser.click(
+    `#sheet .native-feedback [data-decision-cards] .decision-card[data-decision="${decision}"] input`,
+  );
+  await submitDelivery(browser);
   await waitFor(browser, `${status} === 'submitted'`, 20000);
   return chosen;
 }
@@ -285,23 +289,36 @@ const importButton = `document.querySelector('#sheet [data-action="confirm-impor
 const productTask = (returnId) =>
   `window.PracticeLive.store.active().v2Workspace.products.find((p) => p.source_return_id === ${JSON.stringify(returnId)})?.task?.object_id`;
 
-/** F29: the two Agent buttons say what each does. */
+/** F29: the two Agent buttons say what each does. The raw package view lives in
+ * "⋯ → About this workspace" (190: internals leave the working view). */
 async function agentLabels(context) {
   const { browser, text, shot } = context;
   await openAgent(context, 0);
   const labels = await browser.ev(`[
-    document.querySelector('[data-action="package"]').textContent.trim(),
+    document.querySelector('[data-action="copy-package"]').textContent.trim(),
     document.querySelector('#import-form [type="submit"]').textContent.trim(),
   ]`);
-  assert.deepEqual(labels, text(['查看', '预览'], ['View package', 'Preview return']));
+  assert.deepEqual(labels, text(['复制任务包', '预览'], ['Copy package', 'Preview return']));
+  assert.equal(
+    await browser.ev(`!!document.querySelector('.agent-panel [data-action="package"]')`),
+    false,
+  );
   await shot('F29-agent');
+}
+
+/** Opens the raw task package from "⋯ → About this workspace". */
+async function openPackageFromAbout(browser) {
+  await browser.click('button[data-action="menu"][data-menu="more"]');
+  await browser.click('[data-action="about"]');
+  await waitFor(browser, `!!document.querySelector('#sheet [data-action="package"]')`);
+  await browser.click('#sheet [data-action="package"]');
 }
 
 /** F28: each document in the task package carries its text once (the brief always goes). */
 async function packageDocuments(context) {
   const { browser } = context;
   await openAgent(context, 0);
-  await browser.click('[data-action="package"]');
+  await openPackageFromAbout(browser);
   await waitFor(browser, `!!document.querySelector('#package-text')`);
   const pkg = JSON.parse(await browser.ev(`document.querySelector('#package-text').value`));
   assert.ok(pkg.materials.length >= 1);
@@ -436,25 +453,24 @@ async function snapshotNames(context) {
   const { browser, text, shot } = context;
   await ensureWork(context);
   const submitted = await submitOnce(context, 'defer_with_conditions');
-  const heading = text('已保存的提交快照', 'Saved submission snapshot');
+  // A confirmed delivery is stamped and handed over to the results page, whose cover is the
+  // saved snapshot: the delivery's name and the exact versions it attached.
   await waitFor(
     browser,
-    `[...document.querySelectorAll('#sheet h3')].some((h) => h.textContent.startsWith(${JSON.stringify(heading)}))`,
+    `location.hash === '#/review' && !!document.querySelector('[data-result-cover] .result-cover__slip')
+      && document.querySelector('[data-result-cover] .result-cover__title')?.textContent === ${JSON.stringify(text('第 1 次交付', 'Delivery 1'))}`,
+    20000,
   );
-  const receipt = await browser.ev(`(() => {
-    const h = [...document.querySelectorAll('#sheet h3')]
-      .find((node) => node.textContent.startsWith(${JSON.stringify(heading)}));
-    return h.parentElement.innerText;
-  })()`);
-  // The row read "<title> · <version>[ · made by an agent]"; the snapshot names that work and
-  // the delivery as every evidence button does.
-  const title = submitted.split(' · ')[0];
+  const receipt = await browser.ev(`document.querySelector('[data-result-cover]').innerText`);
+  // The slip names the work; the snapshot names that work and the delivery as every evidence
+  // button does.
+  const title = submitted;
   assert.ok(receipt.includes(title), JSON.stringify({ receipt, submitted }));
   assert.ok(receipt.includes(text('第 1 次交付', 'Delivery 1')), receipt);
   assert.doesNotMatch(receipt, RECORD_ID);
   await shot('F13-receipt');
   await openReview(context);
-  const history = text('查看评审与提交历史', 'Review and submission history');
+  const history = text('全部交付与评审记录', 'All deliveries and reviews');
   await browser.clickText(history, '.native-feedback summary');
   const rows = await browser.ev(`(() => {
     const summary = [...document.querySelectorAll('.native-feedback summary')]
@@ -516,8 +532,8 @@ async function supplementEcho(context) {
     'dialog[open]:not(#sheet) button',
   );
   const recorded = text(
-    '补证已记录 · 等待核验',
-    'Additional evidence recorded · Awaiting verification',
+    '已记下补充的依据，仍待核验；这份反馈保持原样。',
+    'Your evidence is saved. It still needs checking; this feedback stays as it is.',
   );
   await browser.ev(`${form}.querySelector('[data-response-action="supplement"]').click()`);
   // Read the form and the history in one frame: the echo must arrive with the reset.
@@ -552,7 +568,7 @@ async function supplementNeedsReference(context) {
   const sent = await browser.ev('window.qaWrites.length');
   await browser.ev(`${form}.querySelector('[data-response-action="supplement"]').click()`);
   const message = text(
-    '补证需要先选择至少一处原始引用。',
+    '补充依据需要先选择至少一处原始引用。',
     'Choose at least one original reference before submitting evidence.',
   );
   await waitFor(
@@ -584,7 +600,7 @@ async function deliveryRounds(context) {
     `[...document.querySelectorAll('.native-feedback ${sections} > article')].map((a) => a.querySelector('button').textContent)`,
   );
   assert.deepEqual(labels, text(['第 2 次交付', '第 1 次交付'], ['Delivery 2', 'Delivery 1']));
-  const history = text('查看评审与提交历史', 'Review and submission history');
+  const history = text('全部交付与评审记录', 'All deliveries and reviews');
   await browser.clickText(history, '.native-feedback summary');
   const rows = await browser.ev(`(() => {
     const summary = [...document.querySelectorAll('.native-feedback summary')]

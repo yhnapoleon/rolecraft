@@ -1,0 +1,327 @@
+import { describe, expect, it } from 'vitest';
+import overreachEn from '../../../public/engineer/sample-overreach.en.json';
+import rootCauseZh from '../../../public/engineer/sample-root-cause.zh.json';
+import { asFake, fakeDocument, type FakeElement } from '../results-native/fake-dom';
+// Earlier review outputs kept as UI-state fixtures; see view.test.ts.
+import fixedZh from './fixtures/earlier-target-fixed.zh.json';
+import notFixedEn from './fixtures/earlier-target-not-fixed.en.json';
+import { reviewViewOptions } from './page';
+import { renderEngineerReport } from './render';
+import type { EngineerPublicReport, EngineerReviewRecord } from './types';
+import { engineerReportView } from './view';
+
+const FIXED_ZH = fixedZh as unknown as EngineerPublicReport;
+const NOT_FIXED_EN = notFixedEn as unknown as EngineerPublicReport;
+const ROOT_ZH = rootCauseZh as unknown as EngineerReviewRecord;
+const OVER_EN = overreachEn as unknown as EngineerReviewRecord;
+const headings = (root: FakeElement) =>
+  ['h2', 'h3', 'h4', 'h5'].flatMap((tag) => root.byTag(tag).map((h) => `${tag} ${h.textContent}`));
+
+describe('engineer regression report · DOM', () => {
+  it('ER-20 one paper sheet: verdict first, then public, hidden, checks; basis closed', () => {
+    const doc = fakeDocument();
+    const view = engineerReportView(ROOT_ZH.report, {
+      ...reviewViewOptions(ROOT_ZH, 'zh'),
+      evaluation: null,
+      timeZone: 'UTC',
+    });
+    const root = asFake(renderEngineerReport(doc, view));
+    expect(root.tagName).toBe('article');
+    expect(root.dataset.engineerReport).toBe(ROOT_ZH.report.id);
+    expect(headings(root)).toEqual([
+      'h2 目标问题已修好',
+      'h3 公开探针 · 4 条',
+      'h3 隐藏探针 · 9 条',
+      'h3 规则核对',
+    ]);
+    expect(root.byClass('er-verdict')[0].dataset.tone).toBe('good');
+    expect(root.byClass('er-verdict__target')[0].textContent).toBe('住宿报销上限是多少？');
+    const rows = root.byClass('er-probe');
+    expect(rows.map((r) => r.dataset.result)).toEqual(['pass', 'pass', 'pass', 'pass']);
+    // The result is spoken before the case number; the mark itself is hidden from readers.
+    expect(rows[0].byClass('er-probe__id')[0].textContent).toBe('通过：F01');
+    expect(rows[0].byClass('er-probe__mark')[0].getAttribute('aria-hidden')).toBe('true');
+    expect(rows[0].dataset.target).toBe('');
+    expect(root.byClass('er-counts--comparison')).toHaveLength(1);
+    expect(root.byClass('er-advice')[0].textContent).toBe('模型建议：等待模型接入不计分');
+    expect(root.byClass('er-note--retrieval')[0].textContent).toBe('规则版检索');
+    const details = root.byTag('details');
+    expect(details).toHaveLength(1);
+    expect(details[0].open).toBe(false);
+    expect(details[0].byTag('summary')[0].textContent).toBe('查看依据');
+    expect(root.byTag('button')).toHaveLength(0);
+  });
+
+  it('ER-21 hidden comparison and assessment draw only when supplied', () => {
+    const doc = fakeDocument();
+    const report = {
+      ...NOT_FIXED_EN,
+      hidden_comparison: { new_failures: 2, fixed: 1, still_failing: 3, unverified: 0 },
+    };
+    const view = engineerReportView(report, {
+      language: 'en',
+      evaluation: {
+        rubric_revision: 'engineer-rubric-v1-final-20261009',
+        review_id: NOT_FIXED_EN.id,
+        submission_hash: NOT_FIXED_EN.submission.sha256,
+        affects_score: false,
+        criteria: [
+          {
+            criterion: 'E1.target_fixed',
+            status: 'concluded',
+            basis: 'rule',
+            label: 'NOT_MET',
+            reason_codes: [],
+            probe_ids: ['F01'],
+            hidden_probes: 0,
+          },
+          {
+            criterion: 'E5.remaining_explanation',
+            status: 'waiting_model',
+            basis: 'semantic_advice',
+            label: null,
+            reason_codes: [],
+            probe_ids: [],
+            hidden_probes: 0,
+          },
+        ],
+      },
+    });
+    const root = asFake(renderEngineerReport(doc, view, { headingLevel: 3 }));
+    expect(headings(root)).toEqual([
+      'h3 Target not fixed, and 4 new failures',
+      'h4 Public probes · 4',
+      'h4 Hidden probes · 9',
+      'h4 Rule checks',
+      'h4 Assessment',
+    ]);
+    const comparison = root.byClass('er-counts--comparison')[0];
+    expect(comparison.byClass('er-count').map((c) => [c.textContent, c.dataset.tone])).toEqual([
+      ['New failures2', 'warn'],
+      ['Fixed1', 'good'],
+      ['Still failing3', 'ink'],
+      ['Unverified0', 'ink'],
+    ]);
+    const evaluation = root.byClass('er-evaluation')[0].byClass('er-criterion');
+    expect(evaluation.map((r) => [r.textContent, r.dataset.mark])).toEqual([
+      ['Target failures repairedNot metF01', 'not_met'],
+      ['Unresolved items explainedAwaiting model verification', 'waiting'],
+    ]);
+    expect(root.byClass('er-tag').map((t) => t.textContent)).toEqual([
+      'Target',
+      'Also failed before',
+      'New failure',
+      'New failure',
+    ]);
+  });
+
+  it('ER-22 keeps a host-owned open basis and reports toggles', () => {
+    const toggled: boolean[] = [];
+    const root = asFake(
+      renderEngineerReport(fakeDocument(), engineerReportView(FIXED_ZH, { language: 'en' }), {
+        basisOpen: true,
+        onBasisToggle: (open) => toggled.push(open),
+      }),
+    );
+    const details = root.byTag('details')[0];
+    expect(details.open).toBe(true);
+    details.open = false;
+    details.dispatch('toggle');
+    expect(toggled).toEqual([false]);
+    expect(root.byClass('er-basis__value--code')[0].textContent).toBe('6b4cbd6a');
+  });
+
+  it('ER-23 markup-like text stays text', () => {
+    const report = {
+      ...FIXED_ZH,
+      public_results: FIXED_ZH.public_results.map((row, i) =>
+        i === 0 ? { ...row, query: '<img src=x onerror=alert(1)>' } : row,
+      ),
+    };
+    const root = asFake(
+      renderEngineerReport(fakeDocument(), engineerReportView(report, { language: 'zh' })),
+    );
+    const query = root.byClass('er-probe__query')[0];
+    expect(query.textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(query.children).toHaveLength(0);
+    expect(root.byTag('img')).toHaveLength(0);
+  });
+
+  it('ER-32 without a target line the sheet starts at the public probes and is named by its kind', () => {
+    const report = {
+      ...FIXED_ZH,
+      findings: FIXED_ZH.findings.filter((f) => f.kind !== 'target_fix'),
+    };
+    const root = asFake(
+      renderEngineerReport(fakeDocument(), engineerReportView(report, { language: 'zh' })),
+    );
+    expect(root.byClass('er-verdict')).toHaveLength(0);
+    expect(headings(root)[0]).toBe('h3 公开探针 · 4 条');
+    const kind = root.byClass('er-report__kind')[0];
+    expect(root.getAttribute('aria-labelledby')).toBe(kind.getAttribute('id'));
+  });
+
+  it('ER-33 E3 field checks sit behind their own disclosure inside the assessment row', () => {
+    const view = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: {
+        rubric_revision: 'engineer-rubric-v1-final-20261009',
+        review_id: FIXED_ZH.id,
+        submission_hash: FIXED_ZH.submission.sha256,
+        affects_score: false,
+        criteria: [
+          {
+            criterion: 'E3.change_consistency',
+            status: 'concluded',
+            basis: 'rule',
+            label: 'PARTIAL',
+            reason_codes: ['changes_omitted'],
+            probe_ids: [],
+            hidden_probes: 0,
+            field_checks: [
+              { field: 'domains', status: 'matched' },
+              { field: 'custom_knob', status: 'omitted' },
+            ],
+          },
+        ],
+      },
+    });
+    const root = asFake(renderEngineerReport(fakeDocument(), view));
+    const fields = root.byClass('er-criterion__fields')[0];
+    expect(fields.tagName).toBe('details');
+    expect(fields.open).toBe(false);
+    expect(fields.byTag('summary')[0].textContent).toBe('逐项核对 · 2 项');
+    expect(fields.byClass('er-field').map((f) => [f.textContent, f.dataset.tone])).toEqual([
+      ['✓开放的知识一致', 'good'],
+      ['◐custom_knob说明里没写', 'ink'],
+    ]);
+    expect(fields.byClass('er-field__name--code').map((f) => f.textContent)).toEqual([
+      'custom_knob',
+    ]);
+    expect(root.byTag('details')).toHaveLength(2);
+  });
+
+  it('ER-37 shapes carry meaning: open circle for not fixed, ink ✕ for not passed, amber chip for new', () => {
+    const root = asFake(
+      renderEngineerReport(fakeDocument(), engineerReportView(NOT_FIXED_EN, { language: 'en' })),
+    );
+    // New failures put an amber ↓ on the headline; the target still failing is a known result,
+    // so its line carries the ink ✕ of a failed probe (the open circle means not known yet).
+    const verdictMark = root.byClass('er-verdict__mark')[0];
+    expect([verdictMark.dataset.tone, verdictMark.textContent]).toEqual(['warn', '↓']);
+    const targetMark = root.byClass('er-verdict__line')[0].byClass('er-verdict__line-mark')[0];
+    expect([targetMark.dataset.tone, targetMark.dataset.shape, targetMark.textContent]).toEqual([
+      'ink',
+      undefined,
+      '✕',
+    ]);
+    const marks = root.byClass('er-probe__mark').map((m) => [m.textContent, m.dataset.tone]);
+    expect(marks).toEqual([
+      ['✕', 'ink'],
+      ['✕', 'ink'],
+      ['✕', 'ink'],
+      ['✓', 'good'],
+    ]);
+    expect(
+      root.byClass('er-tag').map((t) => [t.textContent, t.dataset.tone, t.dataset.quiet ?? null]),
+    ).toEqual([
+      ['Target', 'ink', null],
+      ['Also failed before', 'ink', ''],
+      ['New failure', 'warn', null],
+      ['New failure', 'warn', null],
+    ]);
+    const checks = root
+      .byClass('er-checks')[0]
+      .byClass('er-check__mark')
+      .map((m) => [m.textContent, m.dataset.tone]);
+    expect(checks).toEqual([
+      ['↓', 'warn'],
+      ['✕', 'bad'],
+    ]);
+  });
+
+  it('ER-46 fixed one, broke one: an amber ↓ circle, the turn in amber, two marked lines', () => {
+    const view = engineerReportView(OVER_EN.report, reviewViewOptions(OVER_EN, 'en'));
+    const root = asFake(renderEngineerReport(fakeDocument(), view));
+    const verdict = root.byClass('er-verdict')[0];
+    expect(verdict.dataset.tone).toBe('warn');
+    const mark = verdict.byClass('er-verdict__mark')[0];
+    expect([mark.dataset.tone, mark.textContent, mark.getAttribute('aria-hidden')]).toEqual([
+      'warn',
+      '↓',
+      'true',
+    ]);
+    const title = verdict.byClass('er-verdict__title')[0];
+    expect(title.textContent).toBe('Target fixed, but 1 new failure');
+    expect(title.byClass('er-verdict__turn').map((n) => [n.textContent, n.dataset.tone])).toEqual([
+      ['but 1 new failure', 'warn'],
+    ]);
+    const lines = verdict.byClass('er-verdict__line');
+    expect(
+      lines.map((line) => {
+        const m = line.byClass('er-verdict__line-mark')[0];
+        return [m.dataset.tone, m.textContent, line.textContent];
+      }),
+    ).toEqual([
+      ['good', '✓', '✓F01 now gives the expected answer recorded with the ticket.'],
+      ['warn', '↓', '↓1 hidden probe that passed before now fails.'],
+    ]);
+    expect(verdict.byClass('er-verdict__target')).toHaveLength(0);
+    expect(verdict.byClass('er-verdict__detail')).toHaveLength(0);
+  });
+
+  it('ER-47 not fixed and new failures: the target line carries the ink ✕, singular when one', () => {
+    const report = notFixedEn as unknown as EngineerPublicReport;
+    const lineMarks = (r: EngineerPublicReport) => {
+      const root = asFake(renderEngineerReport(fakeDocument(), engineerReportView(r, { language: 'en' })));
+      const verdict = root.byClass('er-verdict')[0];
+      return {
+        title: verdict.byClass('er-verdict__title')[0].textContent,
+        marks: verdict.byClass('er-verdict__line').map((line) => {
+          const m = line.byClass('er-verdict__line-mark')[0];
+          return [m.dataset.tone, m.textContent, m.dataset.shape ?? null];
+        }),
+      };
+    };
+    expect(lineMarks(report)).toEqual({
+      title: 'Target not fixed, and 2 new failures',
+      marks: [
+        ['ink', '✕', null],
+        ['warn', '↓', null],
+      ],
+    });
+    // Only one new failure left: the turn is singular.
+    let flipped = false;
+    const one = {
+      ...report,
+      findings: report.findings.map((f) => {
+        if (flipped || f.kind !== 'new_regression' || f.status !== 'fail') return f;
+        flipped = true;
+        return { ...f, status: 'pass' as const };
+      }),
+    };
+    expect(lineMarks(one).title).toBe('Target not fixed, and 1 new failure');
+  });
+
+  it('ER-42 overreach sample draws its one hidden new failure as an amber count', () => {
+    const view = engineerReportView(OVER_EN.report, reviewViewOptions(OVER_EN, 'en'));
+    const root = asFake(renderEngineerReport(fakeDocument(), view));
+    const counts = root.byClass('er-counts--comparison')[0].byClass('er-count');
+    expect(counts.map((c) => [c.dataset.key, c.textContent, c.dataset.tone])).toEqual([
+      ['new_failures', 'New failures1', 'warn'],
+      ['fixed', 'Fixed2', 'good'],
+      ['still_failing', 'Still failing0', 'ink'],
+      ['unverified', 'Unverified0', 'ink'],
+    ]);
+    const regression = root.byClass('er-checks')[0].byClass('er-check')[0];
+    expect([regression.dataset.tone, regression.byClass('er-check__mark')[0].textContent]).toEqual([
+      'warn',
+      '↓',
+    ]);
+    const e2 = root.byClass('er-evaluation')[0].byClass('er-criterion')[1];
+    expect([e2.dataset.tone, e2.byClass('er-criterion__hidden')[0].textContent]).toEqual([
+      'warn',
+      '1 hidden',
+    ]);
+  });
+});

@@ -2,6 +2,29 @@
 // replies, feedback reasons) is not translated here; it is shown as the backend sends it.
 import { T, locale } from './i18n';
 import { documentName } from '../reference-catalog';
+import { personName } from './people.js';
+
+// The words this product uses for the same thing everywhere; the table is in
+// docs/design/frontend-style.md, section 3.8 "统一词汇".
+export { PRODUCT_NAME } from './product.js';
+
+/** A work's version: "第 N 版" / "version N". Documents and settings keep "vN" (政策 v2, 配置 v3). */
+export const workVersion = (n) => T(`第 ${n} 版`, `version ${n}`);
+
+/** The four submission decisions, worded as the delivery panel words them. */
+export const DECISION = (k) =>
+  ({
+    launch: T('按方案推进', 'Proceed with the proposal'),
+    launch_narrow: T('缩小范围推进', 'Proceed with a limited scope'),
+    defer_with_conditions: T('满足条件后再推进', 'Defer until conditions are met'),
+    no_go: T('停止这项方案', 'Do not proceed with this proposal'),
+  })[k] || k;
+
+/** Situations this build offers to start. The IT service-desk domain stays hidden (user decision
+ * 2026-10-24): no card, list, suggestion or other entry starts or reopens it. */
+export const HIDDEN_CASES = new Set(['itticket']);
+export const HIDDEN_SCENARIOS = new Set(['it_ticket_pilot']);
+export const caseShown = (id) => !HIDDEN_CASES.has(id) && !HIDDEN_SCENARIOS.has(id);
 
 export const PRI = (p) =>
   ({ first: T('先做', 'Do first'), next: T('随后', 'Up next'), later: T('暂放', 'Later') })[p] || p;
@@ -30,21 +53,31 @@ export const KNOWS = (r) =>
 export const OPENER = (r) =>
   ({
     manager: T(
-      '目标、资源、先做什么，都可以找经理谈。',
-      'Talk to the manager about goals, resources and what comes first.',
+      `目标、资源、先做什么，都可以找 ${personName('manager')} 谈。`,
+      `Talk to ${personName('manager')} about goals, resources and what comes first.`,
     ),
     business: T(
-      '首批员工真正要问什么、政策怎么变，陈敏最清楚。',
-      'Chen Min knows what first users actually ask and how policy changes.',
+      `首批员工真正要问什么、政策怎么变，${personName('business')} 最清楚。`,
+      `${personName('business')} knows what first users actually ask and how policy changes.`,
     ),
     technical: T(
-      '系统能做什么、索引多久更新、测试说明了什么，问技术负责人。',
-      'Ask the technical lead what the system can do, how fresh the index is and what a test shows.',
+      `系统能做什么、索引多久更新、测试说明了什么，问 ${personName('technical')}。`,
+      `Ask ${personName('technical')} what the system can do, how fresh the index is and what a test shows.`,
     ),
   })[r];
 
-export const CASE = (id) =>
-  ({
+/** World text — the manager's words, what happened in the situation — is in the practice's work
+ * language, so switching the interface language never rewrites it (项目定义 2026-10-07: the work
+ * language decides the scenario's text; the interface language can change). `lang` is that work
+ * language; without one (no practice, or an old local one) the interface language is used. */
+export const say = (lang) => (zh, en) =>
+  lang === 'en' ? en : lang === 'zh' ? zh : T(zh, en);
+
+/** A situation's words. Inside a practice pass its work language; the home page and the
+ * situation lists leave it out and follow the interface language. */
+export const CASE = (id, lang) => {
+  const T = say(lang);
+  const cases = {
     pilot: {
       title: T('知识助手，准备好试点了吗？', 'Is the knowledge assistant ready for a pilot?'),
       quote: T(
@@ -81,7 +114,9 @@ export const CASE = (id) =>
       change: T('换一个领域：IT 服务台', 'Another domain: IT service desk'),
       minutes: T('20–30 分钟', '20–30 min'),
     },
-  })[id] || { title: id, quote: '', change: '', minutes: '' };
+  };
+  return cases[id] || { title: id, quote: '', change: '', minutes: '' };
+};
 
 export const SEEDS = {
   needs: {

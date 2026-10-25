@@ -890,4 +890,102 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "fingerprints: wording is not contract structure.",
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-c9c8c776596eb12e41a2c6094719bfc4457ae727b70156ff815e48b61969143b"
+        ),
+        "integration_changes": {
+            "engineer-session-operations": "Seven engineer operations join the public "
+            "operation slots in api/modules.py and are routed by api/v2_routes.py under "
+            "/sessions/{session_id}/engineer/: engineer.tickets.create (act, person only), "
+            "engineer.tickets.read (read), engineer.reproduce, engineer.trial and "
+            "engineer.submissions.draft (act), engineer.submissions.sign (submit, person only) "
+            "and engineer.reviews.read (read). They are served behind the ordinary session "
+            "authentication, capability and allowed_actions checks, and kept out of the frozen "
+            "OpenAPI like the recognition reads, so openapi.json, schemas, examples and "
+            "errors.json are unchanged. The five writing operations run in service mode: "
+            "authorized like any operation, then given the store instead of a locked business "
+            "view, because they write only the engineer directory and never PM business state. "
+            "api/vertical_runtime.py installs them for every running package and selects the "
+            "package by the session binding; the GET endpoints of the two reads also take "
+            "ticket_id or review_id query filters. Their request and response shapes live in "
+            "career_lab.engineer.session, outside this contract. These regenerated source "
+            "fingerprints also record the recognition-layer edits of commit bbe0d2d to "
+            "evaluation_runtime.py, modules.py, v2_routes.py, vertical_runtime.py, cli.py and "
+            "contracts/v2 evaluation.py, extensions.py, recognition.py and world.py, which were "
+            "not re-exported then; regenerating them alone changed only manifest.json and "
+            "revision.txt.",
+        },
+    },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-fa8eb9b341cf1cb6488a61e7cf8dffc5674a45796a8d746b15f50b8bcf7a4390"
+        ),
+        "integration_changes": {
+            "engineer-review-hidden-comparison-and-change-claims": "engineer-review-v1 gains two "
+            "optional fields and with them a new revision of its own manifest. "
+            "EngineerSubmissionRecord.changes lists EngineerChangeClaim statements, at most one "
+            "per field: field names one learner-editable AssistantConfig setting (never id, "
+            "session_id, version, config_version or min_score_calibration), before and after are "
+            "JSON values (equal when the setting is declared unchanged) and reason is optional "
+            "text of at most 500 characters. EngineerRegressionReport and EngineerPublicReport "
+            "gain hidden_comparison, an EngineerHiddenComparison of four non-negative counts over "
+            "the hidden probes between the original and candidate configurations: new_failures "
+            "(original passed, candidate failed), fixed (original failed, candidate passed), "
+            "still_failing (failed under both) and unverified (either side had an execution "
+            "error); probes passing under both are the remainder. The public projection copies "
+            "it, both reports reject counts that do not fit their hidden results, and no hidden "
+            "probe ID or question is added. Both fields are left out of serialization when "
+            "empty, so submissions, reports, review IDs and published examples written before "
+            "keep their bytes and digests; reviews written from now on carry hidden_comparison. "
+            "The expansion-v3 public models are unchanged.",
+            "engineer-rule-evaluation-model": "contracts/v2/engineer_evaluation.py holds the rule "
+            "conclusions for the final engineer rubric (EngineerRuleEvaluation: E1-E4 labels "
+            "with basis rule, reason codes, public probe IDs and hidden counts, field checks for "
+            "E3; E5 waiting_model with a rule precheck of still-failing probes that no "
+            "unresolved item names). It joins the source fingerprints with the other contract "
+            "modules but neither engineer-review-v1 nor expansion-v3 exports it; the engineer "
+            "session returns it as described under engineer-session-evaluation-and-agent-tools.",
+            "engineer-session-evaluation-and-agent-tools": "The engineer session operations use "
+            "these additions. A draft keeps its change statements as stated, at most one per "
+            "learner-editable setting, without requiring them to match the actual difference; "
+            "signing writes them into EngineerSubmissionRecord.changes, so E3 judges them, and "
+            "the sign-off identity includes them. The sign-off response and the "
+            "engineer.reviews.read detail carry evaluation, the EngineerRuleEvaluation of the "
+            "review computed from the private review store, beside report; reviews stored "
+            "without hidden_comparison still read and evaluate. The ticket detail lists the "
+            "latest 20 experiments and 10 drafts and adds draft_budget. Five operations become "
+            "delegated Agent tools through delegations/catalog.py: engineer.tickets.read and "
+            "engineer.reviews.read (ticket_id and review_id as query filters), "
+            "engineer.reproduce, engineer.trial and engineer.submissions.draft; "
+            "api/vertical_runtime.py adds the last three to the synchronous delegated "
+            "operations, as they run inline with the rule-based retrieval and queue no job. "
+            "engineer.tickets.create and engineer.submissions.sign stay with the person and are "
+            "never tools. These shapes live in career_lab.engineer.session, outside this "
+            "contract; openapi.json, schemas, examples and errors.json are unchanged.",
+        },
+    },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-1e0e9cc07fd0a051cf396667e782daa9e100ee6ddc906839f1fd65c3913e7491"
+        ),
+        "integration_changes": {
+            "agent-activity": "GET /sessions/{session_id}/agent-activity?after= "
+            "(AgentActivityResponse, the list-read envelope around AgentActivityResult: an "
+            "AgentActivityPage of AgentActivity rows with "
+            "AgentActivityObject and AgentClient, and an AgentConnection) lists, for the "
+            "practice's own person only, what their delegated Agent did over the MCP Streamable "
+            "HTTP endpoint: each connection (client name and version as the client reports them) "
+            "and each tools/call (tool, capability, objects touched as kind, id, version and an "
+            "optional short title, list row count, ok or error with its code), oldest first after "
+            "the seq cursor, at most 200 per page. connection.state is connected when a grant "
+            "still in force (not revoked, not expired) made an MCP request in the last ten "
+            "minutes, idle when the last request was earlier or its grant has ended, and none "
+            "when never. Rows live in separate append-only v4_agent_activity and "
+            "v4_agent_presence tables; frozen v2 tables are unchanged. No token, argument, header "
+            "or result body is stored, and an Agent credential is refused (human_required). "
+            "Delegation issuance accepts expiries up to 24 hours instead of one; the "
+            "DelegationInput model is unchanged.",
+        },
+    },
 )

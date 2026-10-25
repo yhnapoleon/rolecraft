@@ -1,6 +1,6 @@
 import { T, when, isChinese, locale } from './i18n';
 import { icon, assistantMark, agentMark } from './art.js';
-import { materialTitle } from './vocab.js';
+import { materialTitle, workVersion } from './vocab.js';
 import { answerModeLine } from './assistant-mode';
 
 const esc = (v) =>
@@ -97,7 +97,7 @@ export function investigationView({
     : work.source === 'user'
       ? T('你的调查记录', 'Your investigation')
       : T('外部 Agent 组合', 'Composed by your agent');
-  return `<div class="obj-pad investigation-work"><article class="paper investigation-paper">${strip}${controls}<header class="investigation-head"><div class="inv-kicker"><span class="inv-eyebrow">${icon('layers', 'i-sm')}${T('调查工作纸', 'Investigation workpaper')}</span><span class="inv-origin">${work.ruleOrigin || work.source === 'user' ? '' : agentMark('xs')}${origin}</span></div><label class="sr-only" for="editor-title">${T('标题', 'Title')}</label><input id="editor-title" class="editor-title" data-edit="title" value="${esc(work.title)}" maxlength="160" ${mutable ? '' : 'readonly'}><div class="editor-meta"><span data-revision-label>v${work.revision}</span><span>${T(`${work.blocks.length} 个模块`, `${work.blocks.length} modules`)}</span><span data-save></span></div><label class="inv-purpose">${T('要弄清什么', 'What are we trying to understand?')}<textarea id="investigation-question" data-investigation-question rows="1" maxlength="1000" ${mutable ? '' : 'readonly'}>${esc(work.question)}</textarea></label></header>
+  return `<div class="obj-pad investigation-work"><article class="paper investigation-paper">${strip}${controls}<header class="investigation-head"><div class="inv-kicker"><span class="inv-eyebrow">${icon('layers', 'i-sm')}${T('调查工作纸', 'Investigation workpaper')}</span><span class="inv-origin">${work.ruleOrigin || work.source === 'user' ? '' : agentMark('xs')}${origin}</span></div><label class="sr-only" for="editor-title">${T('标题', 'Title')}</label><input id="editor-title" class="editor-title" data-edit="title" value="${esc(work.title)}" maxlength="160" ${mutable ? '' : 'readonly'}><div class="editor-meta"><span data-revision-label>${workVersion(work.revision)}</span><span>${T(`${work.blocks.length} 个模块`, `${work.blocks.length} modules`)}</span><span data-save></span></div><label class="inv-purpose">${T('要弄清什么', 'What are we trying to understand?')}<textarea id="investigation-question" data-investigation-question rows="1" maxlength="1000" ${mutable ? '' : 'readonly'}>${esc(work.question)}</textarea></label></header>
     ${readOnly || !work.adopted ? `<p class="inv-adoption-note">${icon('eye', 'i-sm')}${readOnly ? T('当前练习只读，可查看已保存证据。', 'This practice is read-only. Saved evidence is available to review.') : T('先检查并采用；读取证据不会运行测试。', 'Review and adopt before running tests. Reading evidence does not run them.')}</p>` : ''}
     ${evidenceOverview(work, attempt, cache)}
     <div class="investigation-blocks">${work.blocks

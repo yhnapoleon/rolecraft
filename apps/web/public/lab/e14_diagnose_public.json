@@ -1,0 +1,625 @@
+{
+  "encoder_max_tokens": 160,
+  "alpha": 0.4,
+  "sources": {
+    "relation-v3": {
+      "claims": 1324,
+      "pairs": 5284,
+      "pair_c1_evidence": {
+        "table": [
+          [
+            366,
+            92,
+            160
+          ],
+          [
+            106,
+            267,
+            75
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.592,
+          "CONTRADICTS": 0.596,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_c1_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            48,
+            33,
+            4137
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.981
+        }
+      },
+      "pair_stack_evidence": {
+        "table": [
+          [
+            404,
+            53,
+            161
+          ],
+          [
+            108,
+            264,
+            76
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.654,
+          "CONTRADICTS": 0.589,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_stack_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            47,
+            19,
+            4152
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.984
+        }
+      },
+      "claim_errors": 444,
+      "claim_error_buckets": {
+        "SUPPORTED->INSUFFICIENT:missed_gold_pair": 162,
+        "CONTRADICTED->SUPPORTED:contradiction_read_as_support": 95,
+        "CONTRADICTED->INSUFFICIENT:missed_gold_pair": 81,
+        "SUPPORTED->CONTRADICTED:support_read_as_contradiction": 37,
+        "CONTRADICTED->SUPPORTED:rule_or_fusion": 28,
+        "INSUFFICIENT->SUPPORTED:spurious_support_non_evidence": 19,
+        "SUPPORTED->CONTRADICTED:rule_or_fusion": 11,
+        "INSUFFICIENT->CONTRADICTED:rule_or_fusion": 5,
+        "INSUFFICIENT->CONTRADICTED:spurious_contradiction_non_evidence": 3,
+        "CONTRADICTED->SUPPORTED:spurious_support_non_evidence": 2,
+        "INSUFFICIENT->SUPPORTED:rule_or_fusion": 1
+      },
+      "truncation": {
+        "pairs_over_limit": 0.0,
+        "gold_pairs_over_limit": 0.0,
+        "gold_evidence_cut_share_mean": 0.0
+      },
+      "contradiction_cues": {
+        "pairs": 448,
+        "number_cue": 0.10714285714285714,
+        "negation_cue": 0.5357142857142857,
+        "any_cue": 0.5915178571428571
+      }
+    },
+    "contractnli": {
+      "claims": 2091,
+      "pairs": 9430,
+      "pair_c1_evidence": {
+        "table": [
+          [
+            122,
+            160,
+            1591
+          ],
+          [
+            42,
+            3,
+            336
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.065,
+          "CONTRADICTS": 0.008,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_c1_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            593,
+            365,
+            6218
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.866
+        }
+      },
+      "pair_stack_evidence": {
+        "table": [
+          [
+            194,
+            179,
+            1500
+          ],
+          [
+            48,
+            21,
+            312
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.104,
+          "CONTRADICTS": 0.055,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_stack_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            710,
+            479,
+            5987
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.834
+        }
+      },
+      "claim_errors": 1128,
+      "claim_error_buckets": {
+        "SUPPORTED->INSUFFICIENT:missed_gold_pair": 482,
+        "INSUFFICIENT->SUPPORTED:spurious_support_non_evidence": 132,
+        "SUPPORTED->CONTRADICTED:support_read_as_contradiction": 123,
+        "INSUFFICIENT->CONTRADICTED:spurious_contradiction_non_evidence": 110,
+        "SUPPORTED->CONTRADICTED:spurious_contradiction_non_evidence": 110,
+        "CONTRADICTED->INSUFFICIENT:missed_gold_pair": 96,
+        "CONTRADICTED->SUPPORTED:spurious_support_non_evidence": 45,
+        "CONTRADICTED->SUPPORTED:contradiction_read_as_support": 30
+      },
+      "truncation": {
+        "pairs_over_limit": 0.03966065747613998,
+        "gold_pairs_over_limit": 0.0878438331854481,
+        "gold_evidence_cut_share_mean": 0.021206080551455824
+      },
+      "contradiction_cues": {
+        "pairs": 381,
+        "number_cue": 0.0,
+        "negation_cue": 0.5538057742782152,
+        "any_cue": 0.5538057742782152
+      }
+    },
+    "vitaminc": {
+      "claims": 4000,
+      "pairs": 4000,
+      "pair_c1_evidence": {
+        "table": [
+          [
+            1082,
+            134,
+            790
+          ],
+          [
+            469,
+            86,
+            574
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.539,
+          "CONTRADICTS": 0.076,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_c1_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            246,
+            17,
+            602
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.696
+        }
+      },
+      "pair_stack_evidence": {
+        "table": [
+          [
+            1378,
+            159,
+            469
+          ],
+          [
+            685,
+            86,
+            358
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.687,
+          "CONTRADICTS": 0.076,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_stack_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            380,
+            23,
+            462
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.534
+        }
+      },
+      "claim_errors": 2027,
+      "claim_error_buckets": {
+        "CONTRADICTED->SUPPORTED:contradiction_read_as_support": 659,
+        "SUPPORTED->INSUFFICIENT:missed_gold_pair": 466,
+        "CONTRADICTED->INSUFFICIENT:missed_gold_pair": 362,
+        "INSUFFICIENT->SUPPORTED:spurious_support_non_evidence": 356,
+        "SUPPORTED->CONTRADICTED:support_read_as_contradiction": 80,
+        "CONTRADICTED->SUPPORTED:rule_or_fusion": 49,
+        "INSUFFICIENT->SUPPORTED:rule_or_fusion": 34,
+        "INSUFFICIENT->CONTRADICTED:spurious_contradiction_non_evidence": 15,
+        "SUPPORTED->CONTRADICTED:rule_or_fusion": 4,
+        "INSUFFICIENT->CONTRADICTED:rule_or_fusion": 2
+      },
+      "truncation": {
+        "pairs_over_limit": 0.01225,
+        "gold_pairs_over_limit": 0.010845295055821371,
+        "gold_evidence_cut_share_mean": 0.0020650278940517732
+      },
+      "contradiction_cues": {
+        "pairs": 1129,
+        "number_cue": 0.10717449069973428,
+        "negation_cue": 0.16474756421612047,
+        "any_cue": 0.2612931798051373
+      }
+    },
+    "cfever": {
+      "claims": 2629,
+      "pairs": 10051,
+      "pair_c1_evidence": {
+        "table": [
+          [
+            765,
+            369,
+            536
+          ],
+          [
+            386,
+            277,
+            475
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.458,
+          "CONTRADICTS": 0.243,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_c1_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1438,
+            517,
+            5288
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.73
+        }
+      },
+      "pair_stack_evidence": {
+        "table": [
+          [
+            629,
+            141,
+            900
+          ],
+          [
+            325,
+            119,
+            694
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.377,
+          "CONTRADICTS": 0.105,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_stack_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            464,
+            150,
+            6629
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.915
+        }
+      },
+      "claim_errors": 1621,
+      "claim_error_buckets": {
+        "CONTRADICTED->INSUFFICIENT:missed_gold_pair": 674,
+        "SUPPORTED->INSUFFICIENT:missed_gold_pair": 525,
+        "CONTRADICTED->SUPPORTED:contradiction_read_as_support": 172,
+        "INSUFFICIENT->SUPPORTED:spurious_support_non_evidence": 65,
+        "CONTRADICTED->SUPPORTED:rule_or_fusion": 59,
+        "SUPPORTED->CONTRADICTED:support_read_as_contradiction": 51,
+        "CONTRADICTED->SUPPORTED:spurious_support_non_evidence": 30,
+        "INSUFFICIENT->SUPPORTED:rule_or_fusion": 29,
+        "INSUFFICIENT->CONTRADICTED:spurious_contradiction_non_evidence": 9,
+        "SUPPORTED->CONTRADICTED:spurious_contradiction_non_evidence": 7
+      },
+      "truncation": {
+        "pairs_over_limit": 0.01104367724604517,
+        "gold_pairs_over_limit": 0.014245014245014245,
+        "gold_evidence_cut_share_mean": 0.0023629121391485646
+      },
+      "contradiction_cues": {
+        "pairs": 1138,
+        "number_cue": 0.015817223198594025,
+        "negation_cue": 0.22231985940246046,
+        "any_cue": 0.23725834797891038
+      }
+    },
+    "public-synth": {
+      "claims": 806,
+      "pairs": 3064,
+      "pair_c1_evidence": {
+        "table": [
+          [
+            257,
+            60,
+            56
+          ],
+          [
+            93,
+            150,
+            35
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.689,
+          "CONTRADICTS": 0.54,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_c1_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            248,
+            80,
+            2085
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.864
+        }
+      },
+      "pair_stack_evidence": {
+        "table": [
+          [
+            315,
+            21,
+            37
+          ],
+          [
+            125,
+            131,
+            22
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.845,
+          "CONTRADICTS": 0.471,
+          "UNRELATED": 0.0
+        }
+      },
+      "pair_stack_other": {
+        "table": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            401,
+            91,
+            1921
+          ]
+        ],
+        "recall": {
+          "SUPPORTS": 0.0,
+          "CONTRADICTS": 0.0,
+          "UNRELATED": 0.796
+        }
+      },
+      "claim_errors": 241,
+      "claim_error_buckets": {
+        "CONTRADICTED->SUPPORTED:contradiction_read_as_support": 118,
+        "SUPPORTED->INSUFFICIENT:missed_gold_pair": 38,
+        "CONTRADICTED->INSUFFICIENT:missed_gold_pair": 30,
+        "INSUFFICIENT->SUPPORTED:spurious_support_non_evidence": 22,
+        "SUPPORTED->CONTRADICTED:support_read_as_contradiction": 19,
+        "CONTRADICTED->SUPPORTED:rule_or_fusion": 5,
+        "SUPPORTED->CONTRADICTED:spurious_contradiction_non_evidence": 3,
+        "CONTRADICTED->SUPPORTED:spurious_support_non_evidence": 3,
+        "INSUFFICIENT->SUPPORTED:rule_or_fusion": 2,
+        "INSUFFICIENT->CONTRADICTED:spurious_contradiction_non_evidence": 1
+      },
+      "truncation": {
+        "pairs_over_limit": 0.0016318537859007832,
+        "gold_pairs_over_limit": 0.007680491551459293,
+        "gold_evidence_cut_share_mean": 0.0004307008915303847
+      },
+      "contradiction_cues": {
+        "pairs": 278,
+        "number_cue": 0.02877697841726619,
+        "negation_cue": 0.5143884892086331,
+        "any_cue": 0.5359712230215827
+      }
+    }
+  }
+}

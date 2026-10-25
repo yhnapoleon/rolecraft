@@ -1,5 +1,6 @@
 """Trusted local review with isolated execution and immutable public projection."""
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,7 @@ from career_lab.storage.v2_store import V2Store
 
 from .execution import account_for_baseline_errors, execute_suite, interrupted_results
 from .files import encode, publish
-from .findings import claim_finding, compare_claim, regression_findings
+from .findings import claim_finding, compare_claim, hidden_comparison, regression_findings
 from .review_inputs import ReviewContext, prepare_review
 from .review_store import load_report, review_lock, save_report
 
@@ -59,6 +60,7 @@ def build_report(
             item.model_copy(update={"visibility": "hidden"}) for item in record.unresolved
         ),
         advice=EngineerAdvice(status="waiting_model", text=None, model=None, visibility="public"),
+        hidden_comparison=hidden_comparison(baseline, results),
     )
 
 
@@ -73,10 +75,13 @@ def execute_review(
     candidate = inputs.resolved_config.requested
     identity = "review-" + C.digest(inputs)
     if first_attempt:
+        operation = context.operation
         baseline_results = execute_suite(
-            module, snapshot, auth, baseline, probes, identity + "-base"
+            module, snapshot, auth, baseline, probes, identity + "-base", operation_name=operation
         )
-        results = execute_suite(module, snapshot, auth, candidate, probes, identity)
+        results = execute_suite(
+            module, snapshot, auth, candidate, probes, identity, operation_name=operation
+        )
     else:
         baseline_hash = C.digest(
             effective_config(module.package, baseline, snapshot.world.resources).effective
@@ -119,11 +124,16 @@ def review_configuration(
     submission_root: Path,
     output: Path,
     private_output: Path,
+    *,
+    seeded: Sequence[C.TestResultV2] = (),
+    operation: str | None = None,
 ) -> dict[str, Any]:
     public_path, private_path = output.resolve(), private_output.resolve()
     if public_path == private_path or private_path.is_relative_to(public_path):
         raise C.ProtocolError("engineer_private_output_required")
-    context = prepare_review(store, module, auth, pack_root, submission_root)
+    context = prepare_review(
+        store, module, auth, pack_root, submission_root, seeded=seeded, operation=operation
+    )
     identity = "review-" + C.digest(context.input)
     inputs_path, report_path = (
         private_output / "inputs" / identity,

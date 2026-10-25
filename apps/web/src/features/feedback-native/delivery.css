@@ -1,0 +1,276 @@
+/* Delivery panel (frontend-style 3.5 "交付时盖章", 3.6 decision cards and attachments).
+   The stamp is pressed once, on the results cover of a delivery just made (520 ms, spring). */
+.delivery-stamp {
+  display: inline-grid;
+  justify-items: center;
+  gap: 2px;
+  max-width: 260px;
+  padding: 9px 16px 10px;
+  border: 2px solid currentColor;
+  border-radius: var(--r-sm);
+  outline: 1px solid currentColor;
+  outline-offset: -6px;
+  color: color-mix(in oklab, var(--good), transparent 6%);
+  /* Pressed onto the paper itself, so text beneath never shows through the stamp's words. */
+  background: color-mix(in oklab, var(--paper), transparent 6%);
+  transform: rotate(-6deg);
+  line-height: 1.25;
+  text-align: center;
+}
+.delivery-stamp__kicker {
+  font-size: 11px;
+  font-weight: 700;
+}
+:lang(en) .delivery-stamp__kicker {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.delivery-stamp__decision {
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.delivery-stamp__when {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.delivery-stamp.is-fresh {
+  /* A beat after the panel scrolls the stamp into view. */
+  animation: delivery-stamp var(--slow) var(--spring) var(--fast) both;
+}
+@keyframes delivery-stamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-12deg) scale(1.55);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-6deg) scale(1);
+  }
+}
+
+/* Exact versions to submit (D spec `.check`): a quiet row; once chosen it lifts as paper and its
+   box is ink with a white tick. The native checkbox keeps its place for keyboard and readers. */
+.native-feedback .field-row.delivery-attachment {
+  align-items: flex-start;
+  gap: 10px;
+  margin: 2px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--fast) ease,
+    box-shadow var(--fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .native-feedback .field-row.delivery-attachment:not(:has(input:checked)):hover {
+    background: var(--fill);
+  }
+}
+.native-feedback .field-row.delivery-attachment:has(input:checked) {
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.native-feedback .field-row.delivery-attachment input {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--ink-4);
+  cursor: pointer;
+  transition:
+    background-color var(--fast) ease,
+    box-shadow var(--fast) ease;
+}
+.native-feedback .field-row.delivery-attachment input::before {
+  content: "";
+  width: 11px;
+  height: 11px;
+  background: var(--on-primary);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transform: scale(0.6);
+  opacity: 0;
+  transition:
+    opacity var(--fast) ease,
+    transform var(--fast) var(--ease-out);
+}
+.native-feedback .field-row.delivery-attachment input:checked {
+  background: var(--ink);
+  box-shadow: none;
+}
+.native-feedback .field-row.delivery-attachment input:checked::before {
+  opacity: 1;
+  transform: none;
+}
+.native-feedback .field-row.delivery-attachment input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.native-feedback .field-row.delivery-attachment:has(input:disabled) {
+  cursor: default;
+}
+.delivery-attachment__slip {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  min-width: 0;
+}
+.delivery-attachment__by {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+@media (max-width: 720px) {
+  .delivery-stamp {
+    max-width: 156px;
+    padding: 6px 11px 7px;
+  }
+  .delivery-stamp__decision {
+    font-size: 13.5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .delivery-stamp.is-fresh {
+    animation: none;
+  }
+}
+.native-feedback .delivery-attachment .delivery-attachment__view {
+  flex: none;
+  min-height: 28px;
+  margin: 0 0 0 auto;
+}
+
+/* The delivery's button in the panel's fixed footer: the panel's paper is not its containing
+   block (the sheet is), so it sits at the footer's right, after the preview card in reading
+   order and right below the scrolling content that ends with that card. */
+#sheet.deliver-sheet .deliver-doc {
+  position: static;
+}
+#sheet.deliver-sheet .sheet-foot {
+  justify-content: flex-start;
+  min-height: 66px;
+}
+#sheet.deliver-sheet .native-feedback .delivery-submit {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 2;
+  max-width: calc(100% - 220px);
+  min-height: 34px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* A work version as a paper slip: title (paper serif) with the version small; purpose outside. */
+.paper-slip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 10px 4px 9px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  font: 400 14px / 1.45 var(--serif);
+  white-space: nowrap;
+}
+.paper-slip__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.paper-slip__version {
+  flex: none;
+  color: var(--ink-3);
+  font: 500 11.5px / 1 var(--sans);
+}
+.paper-slip__purpose {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.native-feedback .delivery-attachment .paper-slip {
+  flex-wrap: wrap;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 15px;
+  white-space: normal;
+}
+.native-feedback .delivery-attachment .paper-slip__title {
+  overflow: visible;
+}
+@media (max-width: 720px) {
+  #sheet.deliver-sheet .native-feedback .delivery-submit {
+    right: 16px;
+    bottom: 16px;
+    max-width: calc(100% - 180px);
+  }
+}
+/* The scrolling content ends with the preview card, close above the footer and its button. */
+#sheet.deliver-sheet .sheet-body {
+  padding-bottom: 12px;
+}
+#sheet.deliver-sheet .deliver-doc {
+  padding-bottom: 14px;
+}
+#sheet.deliver-sheet .native-feedback > section.delivery-paper {
+  margin-bottom: 0;
+}
+
+/* One surface, not three nested ones: in the delivery dialog the panel is the dialog's own page
+   (no grey backdrop, no inner card). The pre-submission preview is mounted with frame 'flat'
+   (a section of the dialog, not a grey panel), so what it holds sits on it directly as paper;
+   here it only gives up its outer margin. */
+#sheet.deliver-sheet .sheet-body {
+  background: var(--surface);
+}
+#sheet.deliver-sheet .deliver-doc {
+  padding: 0 0 14px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+#sheet.deliver-sheet .native-feedback > section.delivery-paper {
+  margin-top: 0;
+}
+/* The page's first heading sits right under the dialog's own head (with or without the lens
+   switch on): no section gap above it. */
+#sheet.deliver-sheet .native-feedback > section.delivery-paper > .group-title:first-child {
+  margin-top: 0;
+}
+#sheet.deliver-sheet .native-feedback [data-presubmit] {
+  margin: 0;
+}
+/* The footer's text button never runs under the delivery button: it keeps to the space left of
+   it and wraps there if it must (phone width). */
+#sheet.deliver-sheet .sheet-foot > .btn {
+  max-width: calc(100% - 236px);
+  min-height: 34px;
+  height: auto;
+  padding-block: 6px;
+  text-align: left;
+  white-space: normal;
+}
+@media (max-width: 720px) {
+  /* The delivery button is narrower on a phone (right 16px, about 150px wide), so the text
+     button can take the rest and stay on two lines at most. */
+  #sheet.deliver-sheet .sheet-foot > .btn {
+    max-width: calc(100% - 190px);
+  }
+}

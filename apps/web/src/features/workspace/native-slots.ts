@@ -1,5 +1,6 @@
 /** Small bindings for the existing v4 DOM. Own no navigation or workbench root. */
 import { T, onLocaleChange } from '../../app/i18n';
+import { personLabel } from '../../app/people.js';
 import type { WorkspaceClient } from './client';
 
 export function purposeText(purpose: string) {
@@ -15,16 +16,9 @@ export function purposeText(purpose: string) {
   };
   return known[purpose] ?? purpose;
 }
+/** A share's recipient: the colleague's name with the role (app/people.js). */
 export function recipientText(role: string) {
-  return (
-    (
-      {
-        supervisor: T('经理', 'Manager'),
-        business_lead: T('业务负责人', 'Business lead'),
-        tech_lead: T('技术负责人', 'Technical lead'),
-      } as Record<string, string>
-    )[role] ?? T('指定同事', 'Selected colleague')
-  );
+  return T(personLabel(role, 'zh'), personLabel(role, 'en')) || T('指定同事', 'Selected colleague');
 }
 export function saveStatus(client: WorkspaceClient, productId: string) {
   const state = client.snapshot();

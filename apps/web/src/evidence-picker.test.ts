@@ -100,9 +100,9 @@ describe('pickerSections', () => {
     expect(sections.map((s) => s.title)).toEqual(['读过的资料段落', '测试运行', '作品版本']);
     const materials = sections[0].groups;
     expect(materials.map((g) => [g.title, g.note ?? ''])).toEqual([
-      ['《差旅政策》· 第 1 版', '有新版本'],
-      ['《差旅政策》· 第 2 版', ''],
-      ['《经理委托》· 第 1 版', ''],
+      ['《差旅政策》· v1', '有新版本'],
+      ['《差旅政策》· v2', ''],
+      ['《经理委托》· v1', ''],
     ]);
     expect(materials[0].rows.map((r) => r.label)).toEqual(['住宿上限 500 元。']);
     expect(rowsOf(sections, 'test').map((r) => [r.label, r.meta])).toEqual([
@@ -147,7 +147,7 @@ describe('pickerSections', () => {
       kinds: all,
       focus: { session_id: 's', kind: 'material', object_id: 'brief', version: 1 },
     });
-    expect(sections[0].groups[0].title).toBe('《经理委托》· 第 1 版');
+    expect(sections[0].groups[0].title).toBe('《经理委托》· v1');
   });
 
   it('preselects a focused test run', () => {
@@ -173,7 +173,7 @@ describe('pickerSections', () => {
     expect(sections[0].groups[0].title).toBe('“差旅政策” · v1');
     expect(sections[0].groups[0].note).toBe('Newer version');
     expect(rowsOf(sections, 'test')[0].meta).toBe('config v2 · answered · run 2');
-    expect(rowsOf(sections, 'product')[0].meta).toBe('v2 · Pilot decision');
+    expect(rowsOf(sections, 'product')[0].meta).toBe('version 2 · Pilot decision');
   });
 });
 
@@ -343,11 +343,11 @@ describe('evidenceSummary', () => {
   ];
   it('counts the chosen evidence by kind', () => {
     expect(evidenceSummary(refs)).toBe('已选依据：2 段资料 · 1 次测试 · 1 份作品');
-    expect(evidenceSummary([])).toBe('还没有选择依据');
+    expect(evidenceSummary([])).toBe('还没选依据');
     setPreference('en');
     expect(evidenceSummary(refs)).toBe(
       'Selected evidence: 2 passages · 1 test run · 1 work version',
     );
-    expect(evidenceSummary([])).toBe('No evidence selected');
+    expect(evidenceSummary([])).toBe('Nothing chosen yet');
   });
 });

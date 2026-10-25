@@ -59,12 +59,12 @@ describe('evidence chips', () => {
       names,
     );
     expect(chips.map((chip) => [chip.kind, chip.label, chip.version])).toEqual([
-      ['material', '差旅政策', '第 2 版'],
+      ['material', '差旅政策', 'v2'],
       ['test', '测试：住宿报销上限是多少？', '配置 v2'],
       ['product', '《试点决定草稿》', '第 3 版'],
       ['product', '作品', '第 1 版'],
     ]);
-    expect(chips[0].description).toBe('差旅政策 · 第 2 版：住宿上限 400 元。');
+    expect(chips[0].description).toBe('差旅政策 · v2：住宿上限 400 元。');
     setPreference('en');
     expect(evidenceChips([cited('test', 't1', 1)], names)[0]).toMatchObject({
       label: 'Test: 住宿报销上限是多少？',

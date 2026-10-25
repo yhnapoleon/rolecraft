@@ -65,9 +65,11 @@ export function evidenceKey(ref: EvidenceRefV2 | ObjectRef): string {
 /** The bound practice changed while the person was choosing or reading; nothing was added. */
 export const practiceChanged = () =>
   Error(T('练习已切换，请核对后继续。', 'The practice changed. Check it before continuing.'));
+// Documents and settings keep "vN"; a work's version is "第 N 版" / "version N".
 const documentTitle = (title: string, version: number) =>
-  T(`《${title}》· 第 ${version} 版`, `“${title}” · v${version}`);
-const versionText = (version: number) => T(`第 ${version} 版`, `v${version}`);
+  T(`《${title}》· v${version}`, `“${title}” · v${version}`);
+const versionText = (version: number) => T(`第 ${version} 版`, `version ${version}`);
+const documentVersion = (version: number) => `v${version}`;
 
 export function pickerSections(sources: PickerSources, pick: EvidencePick): PickerSection[] {
   const kinds = offered(pick);
@@ -171,7 +173,7 @@ export function pickerSections(sources: PickerSources, pick: EvidencePick): Pick
     if (!isKind(ref.kind) || !kinds.includes(ref.kind) || listed.has(evidenceKey(ref))) continue;
     if (ref.kind === 'material')
       documentGroup(ref.object_id, ref.version).rows.push(
-        row('material', ref, ref.quote || versionText(ref.version)),
+        row('material', ref, ref.quote || documentVersion(ref.version)),
       );
     else
       unlisted[ref.kind].push(
@@ -179,7 +181,7 @@ export function pickerSections(sources: PickerSources, pick: EvidencePick): Pick
           ref.kind,
           ref,
           ref.kind === 'test' ? T('测试运行', 'Test run') : T('作品', 'Work'),
-          versionText(ref.version),
+          ref.kind === 'test' ? documentVersion(ref.version) : versionText(ref.version),
         ),
       );
   }
@@ -315,7 +317,7 @@ export function evidenceSummary(refs: readonly (EvidenceRefV2 | ObjectRef)[]): s
   ].filter(Boolean);
   return parts.length
     ? T('已选依据：', 'Selected evidence: ') + parts.join(' · ')
-    : T('还没有选择依据', 'No evidence selected');
+    : T('还没选依据', 'Nothing chosen yet');
 }
 
 /** The picker dialog in the existing sheet style. */

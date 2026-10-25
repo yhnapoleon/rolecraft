@@ -1,15 +1,41 @@
 import {
   currentModeNotice,
   presentReply,
-  replyDisclosure,
   type GenerationMode,
   type RoleMode,
 } from './reply-presentation';
-import { renderShortResult } from '../results-native/short-result';
-import { hasMarkdownStructure, markdownNodes } from '../../app/markdown';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, locale, onLocaleChange } from '../../app/i18n';
-import { type RecognitionRecord, renderBadges } from '../recognition-native/badge';
+import { modelWaitNode } from '../../app/model-status';
+import { markdownNodes } from '../../app/markdown';
+import { PERSON_OF_ROLE } from '../../app/people.js';
+import { OPENER } from '../../app/vocab.js';
+import type { RecognitionRecord } from '../recognition-native/badge';
+import { lensOn, onLensChange } from '../recognition-native/lens';
+import { renderSignals } from '../recognition-native/signals';
+import {
+  dropEmphasis,
+  evidenceBySource,
+  isLocalReply,
+  localRoleLine,
+  localRows,
+  noticeKind,
+  replyParts,
+  splitCitations,
+  type Cite,
+} from './chat-model';
+import {
+  avatarNode,
+  deliveryLine,
+  glyph,
+  noticeRow,
+  noticeText,
+  paperTag,
+  peekNode,
+  replyBubble,
+  replyingRow,
+} from './chat-view';
+import { knownTurns, outgoing, outgoingListeners, threadKey } from './chat-memory';
 import './roles.css';
 
 export type RoleId = 'supervisor' | 'business_lead' | 'tech_lead';
@@ -52,6 +78,10 @@ export interface ConversationTurn {
   displayRecorded?: boolean; // Public server receipt, never inferred from a read.
   /** Intent and grounding-check signatures saved on the reply (recognition layer). */
   recognition?: RecognitionRecord[];
+  /** Source text the reply repeats word for word, as verified by the server (`spoken_evidence`). */
+  evidence?: readonly string[];
+  /** Why the job ended without a reply, when the server says (only shown as plain words). */
+  errorCode?: string;
 }
 /** Presentation data, not a new server schema. Never pass private audit objects. */
 export interface RolesView {
@@ -89,6 +119,8 @@ export interface RolesNativeHandle {
 export interface RolesMountOptions {
   surface?: 'standalone' | 'v4-history';
   roleId?: RoleId;
+  /** The practice the thread belongs to, when the host knows it before the first read. */
+  sessionId?: string;
 }
 
 const ROLES: readonly RoleId[] = ['supervisor', 'business_lead', 'tech_lead'];
@@ -98,20 +130,70 @@ const roleTitle = (id: RoleId) =>
     business_lead: T('业务负责人', 'Business lead'),
     tech_lead: T('技术负责人', 'Technical lead'),
   })[id];
-const statusText = (status: TurnStatus) =>
-  ({
-    queued: T('问题已收到，等待回复', 'Question received; waiting for a reply'),
-    running: T('正在处理', 'Processing'),
-    completed: T('已回复', 'Replied'),
-    failed: T('这次回复未完成', 'This reply was not completed'),
-    needs_context: T('材料已变化，需要确认后继续', 'Materials changed; confirm before continuing'),
-    paused: T('已暂停，问题仍保留', 'Paused; the question is retained'),
-    cancelled: T('本次处理已停止，问题仍保留', 'Stopped; the question is retained'),
-    unknown: T(
-      '处理状态尚待确认，问题仍保留',
-      'Processing status is unconfirmed; the question is retained',
-    ),
-  })[status];
+/* What this page remembers of each thread (per practice and colleague) while the shell redraws
+   the rail and the thread is mounted again: what was already shown (only later arrivals move),
+   the last view (no "loading" flash), which replies are open, the passage shown, and the scroll. */
+interface ThreadMemory {
+  questions: Set<string>;
+  replies: Set<string>;
+  waiting: Set<string>;
+  expanded: Set<string>;
+  peek?: { turnId: string; label: string };
+  view?: RolesView;
+  top: number;
+  atBottom: boolean;
+  /** When this thread was last on screen; a remount within moments continues the same look. */
+  aliveAt: number;
+}
+const threads = new Map<string, ThreadMemory>();
+const memoryOf = (key: string) => {
+  let memory = threads.get(key);
+  if (!memory) {
+    memory = {
+      questions: new Set(),
+      replies: new Set(),
+      waiting: new Set(),
+      expanded: new Set(),
+      top: 0,
+      atBottom: true,
+      aliveAt: 0,
+    };
+    threads.set(key, memory);
+  }
+  return memory;
+};
+/** A redraw of the rail remounts the thread; within this long it is the same look continuing. */
+const RESUME_MS = 4000;
+/** Space under the header when following lands on a long reply's question (or the reply). */
+const FOLLOW_GAP = 16;
+
+const reducedMotion = (doc: Document) =>
+  !!doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+/** A new message settles in: the colleague's from the thread, yours from the composer. */
+function enter(node: HTMLElement, side: 'them' | 'mine') {
+  if (typeof node.animate !== 'function') return;
+  const doc = node.ownerDocument;
+  if (reducedMotion(doc)) {
+    node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: 'ease' });
+    return;
+  }
+  const ease =
+    (doc.defaultView && getComputedStyle(node).getPropertyValue('--ease-out').trim()) ||
+    'cubic-bezier(0.23, 1, 0.32, 1)';
+  node.animate(
+    side === 'them'
+      ? [
+          { opacity: 0, transform: 'translateY(8px) scale(0.985)' },
+          { opacity: 1, transform: 'none' },
+        ]
+      : [
+          { opacity: 0, transform: 'translateY(10px) scale(0.97)' },
+          { opacity: 1, transform: 'none' },
+        ],
+    // The 280ms tier of frontend-style §3.5; both sides move the same length of time.
+    { duration: 280, easing: ease },
+  );
+}
 
 export function mount(
   container: HTMLElement,
@@ -153,7 +235,9 @@ export function mount(
   const main = el('div', 'rc-roles__main');
   const activeName = el('h3');
   const list = el('ol', 'rc-roles__conversation');
-  const empty = el('p', 'rc-roles__empty');
+  /** A message on its way, before the conversation has it. */
+  const pendingBox = el('div', 'rc-roles__outgoing');
+  const empty = el('div', 'rc-roles__empty');
   const form = el('form', 'rc-roles__composer');
   const label = el('label');
   const textarea = el('textarea');
@@ -172,11 +256,11 @@ export function mount(
   form.append(label, textarea, actions);
   if (historyOnly) {
     // v4 owns the colleague header, navigation, composer and scroll region.
-    main.append(list, empty);
+    main.append(list, pendingBox, empty);
     layout.append(main);
     root.append(mode, notice, recover, reload, layout);
   } else {
-    main.append(activeName, list, empty, form);
+    main.append(activeName, list, pendingBox, empty, form);
     layout.append(nav, main);
     root.append(header, mode, notice, recover, layout);
   }
@@ -194,11 +278,20 @@ export function mount(
   const drafts = new Map<RoleId, string>();
   const people = new Map<RoleId, HTMLButtonElement>();
   const displayAttempts = new Set<string>();
-  const expandedReplies = new Set<string>();
+  // Open replies belong to the thread, not to this mount (the rail redraw remounts it).
+  let expandedReplies = new Set<string>();
   const visibleReplies = new Map<HTMLElement, { turnId: string; visible: boolean }>();
+  /** This mount has read the conversation itself (a remembered view is only what was on screen). */
+  let readHere = false;
   const markDisplayed = (node: HTMLElement) => {
     const entry = visibleReplies.get(node);
-    if (!adapter.recordDisplay || !entry?.visible || destroyed || doc.visibilityState !== 'visible')
+    if (
+      !adapter.recordDisplay ||
+      !readHere ||
+      !entry?.visible ||
+      destroyed ||
+      doc.visibilityState !== 'visible'
+    )
       return;
     const key = sessionId + ':' + entry.turnId;
     if (displayAttempts.has(key)) return;
@@ -277,6 +370,11 @@ export function mount(
     item.addEventListener('click', () => {
       selected = id;
       textarea.value = draft(id);
+      // Another colleague is another thread with its own memory.
+      memory = undefined;
+      painted = false;
+      peek = undefined;
+      expandedReplies = new Set();
       render();
     });
     people.set(id, item);
@@ -296,21 +394,457 @@ export function mount(
       !!textarea.value.trim()
     );
   }
-  const appendAction = (
-    parent: HTMLElement,
+
+  /* ---------- the thread ---------- */
+  let peek: { turnId: string; label: string } | undefined;
+  let painted = false;
+  let resumed = false;
+  let lastCounts = '';
+  let memory: ThreadMemory | undefined;
+  /** Bind this mount to its thread's memory once the practice is known. */
+  const remember = () => {
+    if (!sessionId || memory) return memory;
+    memory = memoryOf(threadKey(sessionId, selected));
+    resumed = Date.now() - memory.aliveAt < RESUME_MS;
+    expandedReplies = memory.expanded;
+    if (resumed) peek = memory.peek;
+    return memory;
+  };
+  const built = new Map<
+    string,
+    { signature: string; node: HTMLLIElement; observe?: HTMLElement }
+  >();
+  const scroller = () => (historyOnly ? (root.parentElement ?? root) : (list as HTMLElement));
+  /** Where following the conversation lands: the end, or, when the latest reply is taller than
+   * the view, its question in full just under the header with the reply's start below it. A
+   * question taller than a third of the view gives way to the reply's start, scrolled fully out
+   * of sight rather than left as a sliver. */
+  const followTop = (box: HTMLElement) => {
+    const last = list.lastElementChild;
+    const reply = last?.querySelector<HTMLElement>('.rc-msg--them');
+    if (!reply || last?.querySelector('.rc-typing')) return box.scrollHeight;
+    if (reply.offsetHeight <= box.clientHeight - 2 * FOLLOW_GAP) return box.scrollHeight;
+    const boxTop = box.getBoundingClientRect().top;
+    const at = (node: HTMLElement) => box.scrollTop + node.getBoundingClientRect().top - boxTop;
+    const question = last?.querySelector<HTMLElement>('.rc-msg--mine');
+    if (question && question.offsetHeight <= box.clientHeight / 3)
+      return Math.max(0, at(question) - FOLLOW_GAP);
+    const questionEnd = question ? at(question) + question.offsetHeight : 0;
+    return Math.max(0, questionEnd, at(reply) - FOLLOW_GAP);
+  };
+  /** Scrolls made here, so the scroll listener does not mistake them for your own reading. */
+  let placingUntil = 0;
+  const actionButton = (
     title: string,
     name: string,
+    focus: string,
     invoke: () => Promise<void>,
   ) => {
-    const control = button('rc-roles__text-button');
+    const control = button('rc-roles__text-button rc-sys__action');
     control.textContent = title;
     control.dataset.action = name;
+    control.dataset.focus = focus;
     control.disabled = busy || !loaded || uncertain || !!view?.unconfirmed;
     control.addEventListener('click', () => {
       void perform(invoke);
     });
-    parent.append(control);
+    return control;
   };
+  const openSource = (ref: MaterialReference) => {
+    Promise.resolve()
+      .then(() => adapter.openMaterial!(ref))
+      .catch(() => {
+        if (!destroyed) {
+          feedback = 'action';
+          render();
+        }
+      });
+  };
+  const togglePeek = (turnId: string, label: string) => {
+    peek = peek?.turnId === turnId && peek.label === label ? undefined : { turnId, label };
+    render();
+  };
+  /** The toggle after a long reply's first paragraphs; the rest opens below them. */
+  const moreToggle = (turn: ConversationTurn, rest: HTMLElement, open: boolean, count: number) => {
+    const toggle = button('rc-roles__more');
+    toggle.dataset.focus = `more:${turn.id}`;
+    rest.id = `rc-rest-${crypto.randomUUID()}`;
+    toggle.setAttribute('aria-controls', rest.id);
+    toggle.setAttribute('aria-expanded', String(open));
+    const text = el('span');
+    text.textContent = open
+      ? T('收起', 'Show less')
+      : count > 0
+        ? T(`展开全文 · 还有 ${count} 段`, `Show the full reply · ${count} more`)
+        : T('展开全文', 'Show the full reply');
+    toggle.append(text, glyph(doc, 'chevron', 12));
+    toggle.addEventListener('click', () => {
+      if (expandedReplies.has(turn.id)) expandedReplies.delete(turn.id);
+      else expandedReplies.add(turn.id);
+      render();
+    });
+    return toggle;
+  };
+  const rowText = (text: string, cls: string) => {
+    const node = el('div', `${cls} rc-roles__md`);
+    node.append(...markdownNodes(doc, text));
+    return node;
+  };
+
+  /** One question and what came of it, as two message groups (yours, then the colleague's). */
+  function buildTurn(turn: ConversationTurn, last: boolean, name: string) {
+    const item = el('li', 'rc-roles__turn');
+    item.dataset.turnId = turn.id;
+    let observe: HTMLElement | undefined;
+    const mine = el('div', 'rc-msg rc-msg--mine');
+    const asked = el('div', 'rc-bubble rc-bubble--mine rc-roles__question');
+    const you = el('span', 'sr-only');
+    you.textContent = T('你：', 'You: ');
+    asked.append(you, turn.question);
+    mine.append(asked);
+    item.append(mine);
+    const kind =
+      turn.status === 'completed' && turn.reply !== undefined
+        ? 'reply'
+        : noticeKind(turn.status, turn.errorCode);
+    // On the server, so it was sent; nobody knows whether it was read.
+    if (last && kind !== 'reply' && kind !== 'failed' && kind !== 'held')
+      mine.append(deliveryLine(doc, 'sent'));
+    if (kind === 'typing') {
+      item.append(replyingRow(doc, selected));
+      return { item, kind };
+    }
+    if (kind !== 'reply') {
+      const action =
+        (kind === 'failed' || kind === 'held') && turn.canRetry && adapter.retry
+          ? actionButton(
+              kind === 'held' ? T('请对方重新回答', 'Ask again') : T('再试一次', 'Try again'),
+              'retry',
+              `retry:${turn.id}`,
+              () => adapter.retry?.(turn.id) ?? Promise.resolve(),
+            )
+          : kind === 'context' && turn.canRefresh && adapter.refreshContext
+            ? actionButton(
+                T('确认新材料并继续', 'Confirm updated materials'),
+                'refresh-context',
+                `refresh:${turn.id}`,
+                () => adapter.refreshContext?.(turn.id) ?? Promise.resolve(),
+              )
+            : undefined;
+      item.append(noticeRow(doc, kind, turn.explanation || noticeText(kind, selected), action));
+      return { item, kind };
+    }
+    const reply = turn.reply ?? '';
+    const presentation = presentReply(reply, {
+      generationMode: turn.generationMode,
+      receivedVersionsOnly: turn.receivedVersionsOnly,
+      omissionCount: turn.omissionCount,
+    });
+    const materials = turn.materials ?? [];
+    const materialOf = (cite: Cite) =>
+      materials.find((m) => m.title === cite.title && m.version === cite.version);
+    const open = expandedReplies.has(turn.id);
+    const them = el('div', 'rc-msg rc-msg--them');
+    const body = el('div', 'rc-roles__reply');
+    const said = el('span', 'sr-only');
+    said.textContent = name + T('：', ': ');
+    body.append(said);
+    const extra = el('div', 'rc-msg__extra');
+    const rest = el('div', 'rc-roles__rest');
+    rest.hidden = !open;
+    const local = turn.generationMode === 'local' || isLocalReply(reply);
+    if (local) {
+      // Excerpts quoted by rules: one dashed bubble, each passage under its own small tag.
+      const bubble = el('div', 'rc-bubble rc-bubble--them rc-bubble--local is-first');
+      const status = el('p', 'rc-local__status rc-roles__status');
+      status.append(presentation.status ?? T('规则核实', 'Rule-checked'));
+      status.append(modelWaitNode(doc, presentation.waitingNote ?? ''));
+      bubble.append(status);
+      const rows = localRows(reply);
+      const row = (r: (typeof rows)[number], first: boolean) => {
+        if (r.kind === 'excerpt') {
+          const line = el('div', 'rc-local__row');
+          const ref = materialOf(r.cite);
+          line.append(
+            paperTag(doc, r.cite, {
+              mini: true,
+              onPress: ref && adapter.openMaterial ? () => openSource(ref) : undefined,
+            }),
+            rowText(r.text, `rc-local__text${first ? ' rc-roles__preview' : ''}`),
+          );
+          return line;
+        }
+        if (r.kind === 'others') {
+          const line = el('div', 'rc-local__row rc-local__others');
+          const lead = el('span', 'rc-local__lead');
+          lead.textContent = T('其余可参考：', 'Also available:');
+          line.append(lead);
+          for (const cite of r.cites) {
+            const ref = materialOf(cite);
+            line.append(
+              paperTag(doc, cite, {
+                mini: true,
+                onPress: ref && adapter.openMaterial ? () => openSource(ref) : undefined,
+              }),
+            );
+          }
+          return line;
+        }
+        const line = el('p', `rc-local__none${first ? ' rc-roles__preview' : ''}`);
+        line.textContent = r.text;
+        return line;
+      };
+      const [lead, ...others] = rows;
+      if (lead) bubble.append(row(lead, true));
+      for (const r of others) rest.append(row(r, false));
+      const role = localRoleLine(reply);
+      if (role) {
+        const line = el('p', 'rc-local__role');
+        line.textContent = role;
+        rest.append(line);
+      }
+      if (rest.childElementCount) {
+        bubble.append(rest);
+        extra.append(moreToggle(turn, rest, open, others.length));
+      }
+      body.append(bubble);
+      observe = rest.childElementCount ? rest : bubble;
+    } else {
+      // The colleague's own words, a few messages long; source tags leave the sentences.
+      const { text, cites } = splitCitations(reply, view?.workLanguage ?? 'zh');
+      const parts = replyParts(dropEmphasis(text));
+      parts.shown.forEach((part, i) => {
+        body.append(replyBubble(doc, part, i === 0 ? 'is-first rc-roles__preview' : 'is-cont'));
+      });
+      for (const part of parts.folded) rest.append(replyBubble(doc, part, 'is-cont'));
+      if (parts.folded.length) {
+        body.append(rest);
+        extra.append(moreToggle(turn, rest, open, parts.folded.length));
+      }
+      observe = parts.folded.length ? rest : body;
+      // The source tags: each cited material once, at the end of the group.
+      const tags: { cite: Cite; ref: MaterialReference }[] = [];
+      for (const cite of cites) {
+        const ref = materialOf(cite);
+        if (ref && !tags.some((t) => t.ref === ref)) tags.push({ cite, ref });
+      }
+      for (const ref of materials)
+        if (!tags.some((t) => t.ref === ref))
+          tags.push({
+            cite: {
+              label: `${ref.title} · v${ref.version}`,
+              title: ref.title,
+              version: ref.version,
+            },
+            ref,
+          });
+      const quotes = evidenceBySource(reply, turn.evidence ?? []);
+      if (tags.length) {
+        const row = el('div', 'rc-tags');
+        row.setAttribute('aria-label', T('引用的资料', 'Cited materials'));
+        for (const { cite, ref } of tags) {
+          const quote = quotes.get(cite.label);
+          const expanded = peek?.turnId === turn.id && peek.label === cite.label;
+          const tag = paperTag(doc, cite, {
+            peek: !!quote,
+            expanded,
+            onPress: quote
+              ? () => togglePeek(turn.id, cite.label)
+              : adapter.openMaterial
+                ? () => openSource(ref)
+                : undefined,
+          });
+          tag.dataset.focus = `tag:${turn.id}:${cite.label}`;
+          row.append(tag);
+        }
+        extra.append(row);
+        const peeked = peek?.turnId === turn.id ? peek.label : undefined;
+        const shown = peeked ? tags.find((t) => t.cite.label === peeked) : undefined;
+        const quote = shown && quotes.get(shown.cite.label);
+        if (shown && quote) {
+          const id = `rc-peek-${crypto.randomUUID()}`;
+          row.querySelector<HTMLElement>(`[data-peek]`)?.setAttribute('aria-controls', id);
+          extra.append(
+            peekNode(doc, shown.cite, quote, {
+              id,
+              openFull: adapter.openMaterial ? () => openSource(shown.ref) : undefined,
+            }),
+          );
+        }
+      }
+    }
+    // Limits that change what the reply could say, in small type after it.
+    const notes = [
+      presentation.versionNote,
+      presentation.omissionNote,
+      turn.stale
+        ? T(
+            '引用包含旧版本；原回复按当时记录保留。',
+            'Citations include an older version; the original reply is retained.',
+          )
+        : undefined,
+    ].filter((note): note is string => !!note);
+    for (const note of notes) {
+      const line = el('p', 'rc-roles__limitation');
+      line.textContent = note;
+      extra.append(line);
+    }
+    const signals = renderSignals(doc, turn.recognition, locale(), {
+      context: 'reply',
+      lens: lensOn(),
+    });
+    if (signals) extra.append(signals);
+    them.append(avatarNode(doc, selected), body);
+    if (extra.childElementCount) them.append(extra);
+    item.append(them);
+    return { item, kind, observe };
+  }
+
+  /** Paint the turns, keeping unchanged ones in place so focus, scroll and motion hold still. */
+  function paintThread(turns: readonly ConversationTurn[]) {
+    const box = scroller();
+    const fromBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
+    const height = box.scrollHeight;
+    const active = doc.activeElement as HTMLElement | null;
+    const focusKey = active && root.contains(active) ? active.dataset.focus : undefined;
+    displayObserver?.disconnect();
+    visibleReplies.clear();
+    const name = view?.colleagues.find((c) => c.id === selected)?.name || roleTitle(selected);
+    const key = sessionId ? threadKey(sessionId, selected) : undefined;
+    if (key && loaded) knownTurns.set(key, turns);
+    const seen = loaded ? remember() : undefined;
+    // Opening a thread shows it as it is; only what arrives while you look moves in.
+    const baseline = !!seen && !painted && !resumed;
+    // The message on its way gives way to the real turn as soon as the conversation has it.
+    const sending = key ? outgoing.get(key) : undefined;
+    if (sending && key && loaded) {
+      const asking = turns.filter((t) => t.question === sending.text);
+      if (asking.length > sending.before) {
+        outgoing.delete(key);
+        const newest = asking.at(-1);
+        if (sending.shown && newest) seen?.questions.add(newest.id);
+      }
+    }
+    const animations: [HTMLElement, 'them' | 'mine'][] = [];
+    const lastId = turns.at(-1)?.id;
+    const nodes = turns.map((turn) => {
+      const last = turn.id === lastId;
+      const signature = JSON.stringify([
+        turn,
+        last,
+        expandedReplies.has(turn.id),
+        peek?.turnId === turn.id ? peek.label : '',
+        busy || !loaded || uncertain || !!view?.unconfirmed,
+        locale(),
+        lensOn(),
+        !!adapter.openMaterial,
+      ]);
+      const cached = built.get(turn.id);
+      if (cached?.signature === signature) {
+        if (cached.observe) track(cached.observe, turn);
+        return cached.node;
+      }
+      const made = buildTurn(turn, last, name);
+      built.set(turn.id, { signature, node: made.item, observe: made.observe });
+      if (made.observe) track(made.observe, turn);
+      if (seen && !baseline) {
+        if (!seen.questions.has(turn.id)) {
+          const group = made.item.querySelector<HTMLElement>('.rc-msg--mine');
+          if (group) animations.push([group, 'mine']);
+        }
+        if (made.kind === 'reply' && !seen.replies.has(turn.id)) {
+          const group = made.item.querySelector<HTMLElement>('.rc-msg--them');
+          if (group) animations.push([group, 'them']);
+        }
+        if (made.kind === 'typing' && !seen.waiting.has(turn.id)) {
+          const row = made.item.querySelector<HTMLElement>('.rc-typing');
+          if (row) animations.push([row, 'them']);
+        }
+      }
+      if (seen) {
+        seen.questions.add(turn.id);
+        if (made.kind === 'reply') seen.replies.add(turn.id);
+        if (made.kind === 'typing') seen.waiting.add(turn.id);
+      }
+      return made.item;
+    });
+    for (const id of [...built.keys()]) if (!turns.some((t) => t.id === id)) built.delete(id);
+    // Patch in place: an unchanged turn keeps its node and position.
+    nodes.forEach((node, i) => {
+      if (list.children[i] !== node) list.insertBefore(node, list.children[i] ?? null);
+    });
+    while (list.children.length > nodes.length) list.lastElementChild?.remove();
+    // The message on its way.
+    const pending = key ? outgoing.get(key) : undefined;
+    if (pending) {
+      const signature = `${pending.text}:${pending.state}`;
+      if (pendingBox.dataset.signature !== signature) {
+        pendingBox.dataset.signature = signature;
+        const group = el('div', 'rc-msg rc-msg--mine');
+        const bubble = el('div', 'rc-bubble rc-bubble--mine');
+        bubble.textContent = pending.text;
+        group.append(bubble, deliveryLine(doc, pending.state));
+        pendingBox.replaceChildren(group);
+        if (!pending.shown) {
+          pending.shown = true;
+          animations.push([group, 'mine']);
+        }
+      }
+    } else if (pendingBox.childElementCount) {
+      pendingBox.replaceChildren();
+      delete pendingBox.dataset.signature;
+    }
+    if (focusKey && !root.contains(doc.activeElement))
+      [...root.querySelectorAll<HTMLElement>('[data-focus]')]
+        .find((n) => n.dataset.focus === focusKey)
+        ?.focus({ preventScroll: true });
+    // Scroll and motion wait until the rest of the panel (notices, the empty state) is set.
+    return () => {
+      // Follow the conversation while you are at its end, when something new arrives; opening a
+      // long reply or a passage never moves you, and reading above is never pulled back down.
+      const counts = [
+        turns.length,
+        turns.filter((t) => t.reply !== undefined).length,
+        turns.filter((t) => t.status === 'queued' || t.status === 'running').length,
+        pending ? 1 : 0,
+      ].join(':');
+      const arrived = counts !== lastCounts && box.scrollHeight > height;
+      lastCounts = counts;
+      // "Following" is kept in memory: being placed at a long reply's start still follows.
+      const following = memory ? memory.atBottom : fromBottom < 48;
+      const follow = painted
+        ? (arrived && (fromBottom < 48 || following)) || !!(pending && animations.length)
+        : !resumed || !memory || memory.atBottom;
+      if (loaded && follow) {
+        const smooth = painted && !reducedMotion(doc);
+        const top = followTop(box);
+        placingUntil = Date.now() + (smooth ? 800 : 100);
+        if (box.scrollTo) box.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
+        else box.scrollTop = top;
+        if (memory) {
+          memory.top = top;
+          memory.atBottom = true;
+        }
+      } else if (loaded && !painted && memory) {
+        box.scrollTop = memory.top;
+      }
+      if (loaded) {
+        painted = true;
+        if (memory) {
+          memory.aliveAt = Date.now();
+          memory.peek = peek;
+          if (view) memory.view = view;
+        }
+      }
+      for (const [node, side] of animations) enter(node, side);
+    };
+  }
+  function track(node: HTMLElement, turn: ConversationTurn) {
+    if (!displayObserver || turn.canRecordDisplay === false || turn.displayRecorded) return;
+    // A reply counts as displayed only when its complete text is painted.
+    visibleReplies.set(node, { turnId: turn.id, visible: false });
+    displayObserver.observe(node);
+  }
   function render() {
     if (destroyed) return;
     root.setAttribute('aria-busy', String(busy));
@@ -321,7 +855,11 @@ export function mount(
       : '';
     reload.textContent = T('刷新对话', 'Refresh conversation');
     reload.disabled = busy;
-    mode.textContent = view ? currentModeNotice(view.mode) : '';
+    // In the thread, refreshing is only offered when a read failed; it updates by itself otherwise.
+    if (historyOnly) reload.hidden = feedback !== 'read';
+    // The toolbar's model status already says whether colleagues use a model.
+    mode.textContent =
+      view && !(historyOnly && view.mode === 'model') ? currentModeNotice(view.mode) : '';
     mode.hidden = !mode.textContent;
     for (const [id, item] of people) {
       const colleague = view?.colleagues.find((c) => c.id === id);
@@ -342,153 +880,25 @@ export function mount(
     activeName.textContent = colleague?.name || roleTitle(selected);
     list.setAttribute('aria-label', T('对话记录', 'Conversation history'));
     const turns = view?.turns.filter((t) => t.roleId === selected) ?? [];
-    displayObserver?.disconnect();
-    visibleReplies.clear();
-    const focusedTurnId =
-      doc.activeElement?.tagName === 'SUMMARY' && list.contains(doc.activeElement)
-        ? doc.activeElement.closest<HTMLElement>('[data-turn-id]')?.dataset.turnId
-        : undefined;
-    const fragments = turns.map((turn) => {
-      const item = el('li', 'rc-roles__turn');
-      item.dataset.turnId = turn.id;
-      const questionLabel = el('strong');
-      questionLabel.textContent = T('你', 'You');
-      const question = el('p', 'rc-roles__question');
-      question.textContent = turn.question;
-      item.append(questionLabel, question);
-      if (turn.status === 'completed' && turn.reply !== undefined) {
-        const replyLabel = el('strong');
-        replyLabel.textContent = colleague?.name || roleTitle(selected);
-        const presentation = presentReply(turn.reply, {
-          generationMode: turn.generationMode,
-          receivedVersionsOnly: turn.receivedVersionsOnly,
-          omissionCount: turn.omissionCount,
-        });
-        item.append(replyLabel);
-        // A shared work or a model reply may carry Markdown: show its headings and lists.
-        const reply = el('div', 'rc-roles__reply rc-roles__md');
-        reply.append(...markdownNodes(doc, turn.reply));
-        const leadBlocks = hasMarkdownStructure(presentation.summary)
-          ? el('div', 'rc-roles__md')
-          : undefined;
-        leadBlocks?.append(...markdownNodes(doc, presentation.summary));
-        const label = (ref: MaterialReference) =>
-          `${ref.title.trim() || T('材料', 'Material')} · v${ref.version}`;
-        const materials = turn.materials ?? [];
-        // The first screen names the source of its own excerpt; others stay in the details.
-        // A summary written by this view is not from any one source, so it shows none.
-        const lead = presentation.source
-          ? materials.find((ref) => `${ref.title} · v${ref.version}` === presentation.source)
-          : undefined;
-        const refs = el('div', 'rc-roles__materials');
-        refs.setAttribute('aria-label', T('引用材料', 'Referenced materials'));
-        const link = (ref: MaterialReference) => {
-          const node = adapter.openMaterial
-            ? button('rc-roles__material')
-            : el('span', 'rc-roles__material');
-          node.textContent = label(ref);
-          if (adapter.openMaterial)
-            node.addEventListener('click', () => {
-              Promise.resolve()
-                .then(() => adapter.openMaterial!(ref))
-                .catch(() => {
-                  if (!destroyed) {
-                    feedback = 'action';
-                    render();
-                  }
-                });
-            });
-          return node;
-        };
-        if (lead) refs.append(link(lead));
-        else if (presentation.source) {
-          const tag = el('span', 'rc-roles__material rc-roles__source');
-          tag.textContent = presentation.source;
-          refs.append(tag);
-        }
-        const notes = [
-          presentation.versionNote,
-          presentation.omissionNote,
-          turn.stale
-            ? T(
-                '引用包含旧版本；原回复按当时记录保留。',
-                'Citations include an older version; the original reply is retained.',
-              )
-            : undefined,
-        ].filter((note): note is string => !!note);
-        const short = renderShortResult(doc, {
-          kind: 'reply',
-          id: turn.id,
-          statuses: presentation.status
-            ? [
-                {
-                  text: presentation.status,
-                  tone: turn.generationMode === 'local' ? 'waiting' : undefined,
-                },
-              ]
-            : [],
-          lead: leadBlocks ?? presentation.summary,
-          derivedLead: presentation.derived,
-          notes,
-          actions: refs.childElementCount ? [refs] : [],
-          more: {
-            ...replyDisclosure(presentation),
-            body: [reply, ...materials.filter((ref) => ref !== lead).map(link)],
-            open: expandedReplies.has(turn.id),
-            onToggle: (open) => {
-              if (open) expandedReplies.add(turn.id);
-              else expandedReplies.delete(turn.id);
-            },
-          },
-          classes: {
-            status: 'rc-roles__reply-status',
-            lead: 'rc-roles__preview',
-            note: 'rc-roles__limitation',
-            more: 'rc-roles__details',
-          },
-        });
-        item.append(short.element);
-        if (turn.recognition?.length) {
-          item.append(renderBadges(doc, turn.recognition, locale()));
-        }
-        if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
-          // A reply counts as displayed only when its complete text is painted.
-          const visibleText = presentation.partial || !short.lead ? reply : short.lead;
-          visibleReplies.set(visibleText, { turnId: turn.id, visible: false });
-          displayObserver.observe(visibleText);
-        }
-      } else {
-        const status = el('p', 'rc-roles__turn-status');
-        status.textContent = turn.explanation || statusText(turn.status);
-        item.append(status);
-        if (turn.status === 'failed' && turn.canRetry && adapter.retry)
-          appendAction(item, T('重试这次回复', 'Retry this reply'), 'retry', () =>
-            adapter.retry!(turn.id),
-          );
-        if (turn.status === 'needs_context' && turn.canRefresh && adapter.refreshContext)
-          appendAction(
-            item,
-            T('确认新材料并继续', 'Confirm updated materials'),
-            'refresh-context',
-            () => adapter.refreshContext!(turn.id),
-          );
-      }
-      return item;
-    });
-    list.replaceChildren(...fragments);
-    if (focusedTurnId) {
-      fragments
-        .find((item) => item.dataset.turnId === focusedTurnId)
-        ?.querySelector('summary')
-        ?.focus({ preventScroll: true });
+    const settle = paintThread(turns);
+    empty.hidden = turns.length > 0 || (historyOnly && !!pendingBox.childElementCount);
+    const opening = el('p');
+    if (historyOnly && loaded) {
+      // An empty thread introduces the colleague the way the list does.
+      opening.textContent = OPENER(PERSON_OF_ROLE[selected] ?? selected);
+      const face = avatarNode(doc, selected);
+      face.classList.replace('av-sm', 'av-lg');
+      empty.replaceChildren(face, opening);
+    } else {
+      opening.textContent = loaded
+        ? T(
+            '从一个具体问题开始。只会使用这位同事已知且获准讨论的资料。',
+            'Start with a specific question. This colleague can use only information they know and may discuss.',
+          )
+        : T('正在读取对话…', 'Loading conversation…');
+      empty.replaceChildren(opening);
     }
-    empty.hidden = turns.length > 0;
-    empty.textContent = loaded
-      ? T(
-          '从一个具体问题开始。只会使用这位同事已知且获准讨论的资料。',
-          'Start with a specific question. This colleague can use only information they know and may discuss.',
-        )
-      : T('正在读取对话…', 'Loading conversation…');
+    empty.classList.toggle('rc-roles__empty--opening', historyOnly && loaded);
     label.textContent = T('想和这位同事讨论什么？', 'What would you like to discuss?');
     textarea.placeholder = T(
       '例如：35-45人的试点需要先确认哪些条件？',
@@ -524,6 +934,7 @@ export function mount(
               )
             : view?.restriction || '';
     notice.hidden = !notice.textContent;
+    settle();
   }
   async function refresh() {
     const ticket = ++loadTicket;
@@ -544,6 +955,7 @@ export function mount(
       sessionId = next.sessionId;
       view = next;
       loaded = true;
+      readHere = true;
       if (feedback === 'read') feedback = undefined;
     } catch {
       if (destroyed || ticket !== loadTicket) return;
@@ -601,6 +1013,27 @@ export function mount(
   reload.addEventListener('click', () => {
     void refresh();
   });
+  // Escape folds the passage back into its tag, before anything else on the page reacts.
+  root.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !peek) return;
+    const shown = peek;
+    peek = undefined;
+    event.stopPropagation();
+    render();
+    [...root.querySelectorAll<HTMLElement>('[data-focus]')]
+      .find((n) => n.dataset.focus === `tag:${shown.turnId}:${shown.label}`)
+      ?.focus({ preventScroll: true });
+  });
+  const onOutgoing = () => render();
+  outgoingListeners.add(onOutgoing);
+  // Where you were reading, kept for the next mount of this thread.
+  const scrollBox = scroller();
+  const onScroll = () => {
+    if (!memory || !painted || Date.now() < placingUntil) return;
+    memory.top = scrollBox.scrollTop;
+    memory.atBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 48;
+  };
+  scrollBox.addEventListener('scroll', onScroll, { passive: true });
   recover.addEventListener('click', () => {
     void perform(async () => {
       const result = await adapter.recover();
@@ -616,6 +1049,16 @@ export function mount(
     void refresh();
   });
   const unlocale = onLocaleChange(render);
+  const unlens = onLensChange(render);
+  // The rail redraw remounts this thread; start from what was just on screen, then read.
+  if (historyOnly && options.sessionId) {
+    const known = threads.get(threadKey(options.sessionId, selected))?.view;
+    if (known?.sessionId === options.sessionId) {
+      sessionId = known.sessionId;
+      view = known;
+      loaded = true;
+    }
+  }
   render();
   void refresh();
   return {
@@ -625,7 +1068,11 @@ export function mount(
       destroyed = true;
       ++loadTicket;
       unsubscribe?.();
+      outgoingListeners.delete(onOutgoing);
+      scrollBox.removeEventListener('scroll', onScroll);
+      if (memory && painted) memory.aliveAt = Date.now();
       unlocale();
+      unlens();
       displayObserver?.disconnect();
       visibleReplies.clear();
       doc.removeEventListener('visibilitychange', onVisibility);
@@ -641,6 +1088,7 @@ export function mountConversation(
   container: HTMLElement,
   adapter: RolesNativeAdapter,
   roleId: RoleId,
+  sessionId?: string,
 ): RolesNativeHandle {
-  return mount(container, adapter, { surface: 'v4-history', roleId });
+  return mount(container, adapter, { surface: 'v4-history', roleId, sessionId });
 }

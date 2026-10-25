@@ -1,10 +1,10 @@
-import { waitFor, clickReady } from './browser-support.mjs';
+import { waitFor, clickReady, submitDelivery } from './browser-support.mjs';
 import { askHowToPrioritise, openEvidence, readActivity } from './activity-evidence.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { connectAgentOverMcp } from './mcp-connection.mjs';
+import { connectAgentOverMcp, openMyAgent } from './mcp-connection.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -109,8 +109,10 @@ async function toolbarHoldsStill(context) {
     previous = current;
     await delay(1000);
   }
+  // Language lives in the toolbar's ⋯ since the second-round shell bar: hold ⋯, and the menu
+  // that opens carries the language row.
   const point = await browser.ev(`(() => {
-    const box = document.querySelector('#ws-toolbar [data-menu="lang"]').getBoundingClientRect();
+    const box = document.querySelector('#ws-toolbar [data-menu="more"]').getBoundingClientRect();
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   })()`);
   const press = { ...point, button: 'left', clickCount: 1 };
@@ -118,7 +120,7 @@ async function toolbarHoldsStill(context) {
   await browser.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...press });
   await delay(1800);
   await browser.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...press });
-  const open = `!!document.querySelector('#ws-toolbar .menu [data-action="set-lang"]')`;
+  const open = `!!document.querySelector('#ws-toolbar .menu [data-menu="lang"]')`;
   await waitFor(browser, open, 3000);
   await browser.ev(`window.regressionToolbar = document.getElementById('ws-toolbar')`);
   await delay(4500);
@@ -130,7 +132,7 @@ async function toolbarHoldsStill(context) {
   await delay(300);
   assert.equal(await browser.ev(kept), true, 'A notice that leaves the toolbar unchanged keeps it');
   await browser.ev(`window.PracticeLive.store.report({ notice: '' })`);
-  await browser.click('#ws-toolbar [data-menu="lang"]');
+  await browser.click('#ws-toolbar [data-menu="more"]');
   await waitFor(browser, `!document.querySelector('#ws-toolbar .menu')`);
 }
 
@@ -153,10 +155,40 @@ async function inspectResourceRegion(context) {
 }
 
 async function readAndTest(context) {
-  const { browser, question, shot } = context;
-  await browser.click('.doc-card[data-id="brief"]');
-  await waitFor(browser, `location.hash.startsWith('#/doc/')`);
-  await browser.click('[data-action="to-board"]');
+  const { browser, question, text, shot } = context;
+  const row = '[data-doc-row="brief"]';
+  const title = await browser.ev(`document.querySelector('${row} .doc-row-title').textContent`);
+  for (const close of ['escape', 'dim']) {
+    await browser.click(row);
+    await waitFor(browser, `!!document.querySelector('.mat-sheet[data-state="open"]')`);
+    assert.equal(await browser.ev('location.hash'), '#/work');
+    assert.equal(await browser.ev(`document.querySelector('.mat-title').textContent`), title);
+    await waitFor(browser, `document.querySelector('.mat-body')?.innerText.length > 40`);
+    // The reading sheet covers only the desk: the colleague rail remains usable.
+    await browser.click('.person[data-role="business"]');
+    const note = text('阅读时的问题草稿', 'Question drafted while reading');
+    await browser.type('#chat-input', note);
+    assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), note);
+    assert.equal(
+      await browser.ev(`!!document.querySelector('.mat-sheet[data-state="open"]')`),
+      true,
+    );
+    await shot(`material-${close}`);
+    if (close === 'escape') {
+      for (const type of ['keyDown', 'keyUp'])
+        await browser.send('Input.dispatchKeyEvent', {
+          type,
+          key: 'Escape',
+          code: 'Escape',
+          windowsVirtualKeyCode: 27,
+        });
+    } else await browser.click('.mat-dim');
+    await waitFor(browser, `!document.querySelector('.mat-sheet[data-state="open"]')`);
+    await waitFor(browser, `document.activeElement === document.querySelector('${row}')`);
+    assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), note);
+    await browser.type('#chat-input', '');
+    await browser.click('[data-action="rail"][data-rail="team"]');
+  }
   await browser.click('.product-bar [data-action="open-bench"]');
   await browser.type('#lab-q', question);
   await browser.submit('[data-form="run-test"]');
@@ -202,44 +234,38 @@ async function saveAndShare(context) {
 
 async function recoverAccess(context) {
   const { browser, text, shot } = context;
-  await browser.click('.rail-tabs [data-tab="agent"]');
-  await waitFor(browser, `!!document.querySelector('[name="agentName"]')`);
+  await openMyAgent(browser);
   assert.equal(
-    await browser.ev(`document.querySelectorAll('[data-v4-region="agent"]').length`),
+    await browser.ev(`document.querySelectorAll('[data-agent-page]').length`),
     1,
-    'One named region owns the Agent controls',
-  );
-  await browser.type('[name="agentName"]', 'Recovery check');
-  await browser.click(
-    `[aria-label="${text('授权整个工作区的可见内容', 'Allow visible content across the workspace')}"]`,
+    'One page owns the Agent controls',
   );
   await browser.ev('window.regressionDropNext = true');
-  await browser.submit('.agent-v4-grant');
+  await browser.click('.ag-cta button');
   await waitFor(browser, 'window.regressionResponseLost === true');
+  // The page says the answer never arrived and that pressing again checks the same request.
+  await waitFor(
+    browser,
+    `document.querySelector('.ag-cta-error')?.innerText.includes(${JSON.stringify(
+      text('不会多开一份', 'it will not open a second one'),
+    )})`,
+  );
   await browser.goto(base + context.taskRoute);
-  await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="agent"]')`);
-  await browser.click('.rail-tabs [data-tab="agent"]');
-  await clickReady(browser, text('核对原请求结果', 'Check original result'));
-  await waitFor(browser, `document.querySelectorAll('.agent-v4-access-row').length === 1`);
+  await openMyAgent(browser);
+  await browser.click('.ag-cta button');
+  await waitFor(browser, `document.querySelector('.ag-rig')?.dataset.phase === 'waiting'`);
   const count = await browser.ev(`(async () => {
       const live = window.PracticeLive;
       const host = live.v4Host(live.engine.getAttempt(live.state));
       return (await host.query('delegations.list')).items.length;
     })()`);
   assert.equal(count, 1);
-  await waitFor(
-    browser,
-    `(() => {
-    const input = document.querySelector('.agent-v4-grant [name="agentName"]');
-    return !!input && !input.disabled;
-  })()`,
-  );
   assert.equal(
     await browser.ev(
-      `document.querySelectorAll('[data-connection-action="download-config"]').length`,
+      `document.querySelectorAll('.ag-connect .ag-cmd:not(.is-ask) .ag-copy').length`,
     ),
     1,
-    'Recovered access shows the connection card through the host subscription',
+    'Recovered access shows the command through the host subscription',
   );
   await shot('recovered-access');
 }
@@ -249,9 +275,16 @@ async function submitDeferral(context) {
   await browser.click('[data-action="to-board"]');
   await browser.click('.ws-toolbar [data-action="submit"]');
   await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
-  await browser.click('.native-feedback input[type="checkbox"]');
-  await browser.select('.native-feedback select', 'defer_with_conditions');
-  await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  assert.equal(
+    await browser.ev(`document.querySelector('.native-feedback input[type="checkbox"]').checked`),
+    true,
+    'The latest saved work is selected by default',
+  );
+  // The decision is one of four paper options (a radio group named "本次决定").
+  await browser.click(
+    '.native-feedback [data-decision-cards] .decision-card[data-decision="defer_with_conditions"] input',
+  );
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(`${base}#/review`);
@@ -278,13 +311,9 @@ async function submitDeferral(context) {
   );
   await waitFor(
     browser,
-    `document.querySelector('.native-feedback [role="status"]')?.textContent === ${JSON.stringify(
-      text(
-        '本次提交已保存，可以看反馈、提出异议或开始修订。',
-        'Submission saved. Review feedback, raise a challenge or start revising.',
-      ),
-    )} && [...document.querySelectorAll(${reportHeadings})].map((node) => node.textContent)[0] === ${JSON.stringify(
-      text('最近提交的反馈', 'Latest submission feedback'),
+    // With its feedback in, the results cover says what was delivered: the status line is empty (195).
+    `document.querySelector('.native-feedback [role="status"]')?.textContent === '' && [...document.querySelectorAll(${reportHeadings})].map((node) => node.textContent)[0] === ${JSON.stringify(
+      text('逐项', 'Item by item'),
     )}`,
     30000,
   );
@@ -436,6 +465,108 @@ async function reloadWithDroppedReads(context) {
   );
 }
 
+/** The board does what its hint says: Option/Alt with the arrow keys changes a card's priority
+ * and its order, dragging a card moves it to another column, and after a reload every card is
+ * where it was put (the order is the server's, not the page's). */
+async function boardOrderPersists(context) {
+  const { browser, shot } = context;
+  const lanes = ['first', 'next', 'later'];
+  const board = `document.querySelectorAll('.kanban .card-open').length >= 3`;
+  const ids = (lane) =>
+    `[...document.querySelectorAll('.kanban .col-${lane} .card')].map((c) => c.dataset.taskId)`;
+  const stored = (id) =>
+    `window.PracticeLive.store.active().v2Workspace.tasks.find((t) => t.id === ${JSON.stringify(id)})`;
+  const where = async () =>
+    Object.fromEntries(await Promise.all(lanes.map(async (l) => [l, await browser.ev(ids(l))])));
+  const reload = async (total) => {
+    await browser.send('Page.reload', {});
+    await waitFor(
+      browser,
+      `location.hash === '#/work' && document.querySelectorAll('.kanban .card').length === ${total}`,
+      20000,
+    );
+    await delay(600);
+  };
+  const altKey = async (key, code, keyCode) => {
+    await browser.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown',
+      key,
+      code,
+      windowsVirtualKeyCode: keyCode,
+      modifiers: 1,
+    });
+    await browser.send('Input.dispatchKeyEvent', {
+      type: 'keyUp',
+      key,
+      code,
+      windowsVirtualKeyCode: keyCode,
+      modifiers: 1,
+    });
+  };
+  await browser.goto(`${base}#/work`);
+  await waitFor(browser, board, 20000);
+  await shot('board-order-before');
+  // 1. Option + Left: a card of "Up next" moves to "Do first"; the server records priority 0.
+  const start = await where();
+  const toFirst = start.next[0];
+  assert.ok(toFirst, JSON.stringify(start));
+  await browser.ev(
+    `document.querySelector('.kanban .card[data-task-id=${JSON.stringify(toFirst)}] .card-open').focus()`,
+  );
+  await altKey('ArrowLeft', 'ArrowLeft', 37);
+  await waitFor(
+    browser,
+    `${stored(toFirst)}?.priority === 0 && ${ids('first')}.includes(${JSON.stringify(toFirst)})`,
+  );
+  // 2. Option + Up: the last card of "Up next" moves to its top; the server keeps that order.
+  const next = await browser.ev(ids('next'));
+  assert.ok(next.length >= 2, JSON.stringify(next));
+  const toTop = next.at(-1);
+  await browser.ev(
+    `document.querySelector('.kanban .card[data-task-id=${JSON.stringify(toTop)}] .card-open').focus()`,
+  );
+  for (let i = 1; i < next.length; i++) {
+    await altKey('ArrowUp', 'ArrowUp', 38);
+    await waitFor(
+      browser,
+      `${ids('next')}.indexOf(${JSON.stringify(toTop)}) === ${next.length - 1 - i}`,
+    );
+  }
+  // 3. Drag: the last card of "Up next" is dropped on "Later"; the server records priority 2.
+  const dragged = await browser.ev(`${ids('next')}.at(-1)`);
+  assert.notEqual(dragged, toTop);
+  await browser.ev(`(() => {
+    const card = document.querySelector('.kanban .card[data-task-id=${JSON.stringify(dragged)}]');
+    const lane = document.querySelector('.kanban .col-later');
+    const data = new DataTransfer();
+    card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
+    lane.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: data }));
+    lane.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data }));
+    card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: data }));
+  })()`);
+  await waitFor(browser, `${stored(dragged)}?.priority === 2`);
+  // The board is drawn again from the server's records: read it once every card is back.
+  const total = Object.values(start).flat().length;
+  await waitFor(
+    browser,
+    `${ids('later')}.includes(${JSON.stringify(dragged)}) && document.querySelectorAll('.kanban .card').length === ${total}`,
+  );
+  await delay(400);
+  const placed = await where();
+  // After a reload every card is where it was put.
+  await reload(total);
+  assert.deepEqual(await where(), placed, 'the board keeps its new order after a reload');
+  assert.ok(
+    placed.first.includes(toFirst) && placed.later.includes(dragged),
+    JSON.stringify(placed),
+  );
+  assert.equal(placed.next[0], toTop, 'the card moved up stays first in its column');
+  await shot('board-order-after-reload');
+  console.log(
+    `board order ${context.language}: before ${JSON.stringify(start)} after reload ${JSON.stringify(placed)}`,
+  );
+}
+
 async function runLanguage(language) {
   const browser = await launch({ width: 1440, height: 1100, reduced: true });
   const en = language === 'en';
@@ -582,9 +713,12 @@ async function runLanguage(language) {
     await step('a page reload with dropped reads shows no error and loads on the next poll', () =>
       reloadWithDroppedReads(context),
     );
+    await step('board order: keys and dragging change it and a reload keeps it', () =>
+      boardOrderPersists(context),
+    );
     await step('connection card: agent returns work over MCP until revoked', async () => {
       await browser.goto(base + context.taskRoute);
-      await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="agent"]')`);
+      await waitFor(browser, `!!document.querySelector('#ws-stage')`);
       await connectAgentOverMcp(context);
     });
     assert.deepEqual(
@@ -600,6 +734,11 @@ async function runLanguage(language) {
       JSON.stringify(
         await browser.ev(
           `({
+            focus: {
+              tag: document.activeElement?.tagName,
+              id: document.activeElement?.id,
+              evidence: document.activeElement?.matches('[data-reference-kind]') ?? false,
+            },
             buttons: [...document.querySelectorAll('button')]
               .filter(button => button.offsetParent !== null)
               .map(button => ({text: button.textContent, disabled: button.disabled})),
@@ -621,4 +760,12 @@ async function runLanguage(language) {
   }
 }
 
-for (const language of ['zh', 'en']) await runLanguage(language);
+const failures = [];
+for (const language of ['zh', 'en']) {
+  try {
+    await runLanguage(language);
+  } catch (error) {
+    failures.push(error);
+  }
+}
+if (failures.length) throw new AggregateError(failures, 'Published flows failed');

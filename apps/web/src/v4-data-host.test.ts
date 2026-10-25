@@ -543,6 +543,30 @@ describe('v4 single host persistence and recovery', () => {
       expect(posts(fetcher)).toHaveLength(1);
       expect(map.size).toBe(0);
     });
+    it('asks for the sentence step of the same command on its own route', async () => {
+      const { host, fetcher, map } = setup();
+      const sentences = { session_id: 's', enabled: true, recognition: { units: [] } };
+      fetcher.mockImplementation(async (url, init) => {
+        if (!init?.body) return reply({ schema_version: 2, state });
+        expect(String(url)).toBe('/api/sessions/s/submission-rule-check/recognition');
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          operation: 'submissions.rule_check',
+          expected_version: point.business_seq,
+          payload: input,
+        });
+        return reply({ schema_version: 2, result: sentences });
+      });
+      expect(await host.query('submissions.rule_check.recognition', input)).toEqual(sentences);
+      expect(map.size).toBe(0);
+      fetcher.mockImplementation(async (_url, init) =>
+        init?.body
+          ? reply({ schema_version: 2, result: { ...sentences, session_id: 'other' } })
+          : reply({ schema_version: 2, state }),
+      );
+      await expect(host.query('submissions.rule_check.recognition', input)).rejects.toMatchObject({
+        code: 'response_unconfirmed',
+      });
+    });
     it('reads a saved submission again by GET', async () => {
       const { host, fetcher } = setup();
       fetcher.mockImplementation(async () =>

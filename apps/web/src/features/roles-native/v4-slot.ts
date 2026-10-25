@@ -2,6 +2,7 @@
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
 import type { ObjectRef } from '../../contracts-v2';
 import { T } from '../../app/i18n';
+import { personName } from '../../app/people.js';
 import {
   mountConversation,
   type RoleId,
@@ -9,6 +10,7 @@ import {
   type RolesView,
   type TurnStatus,
 } from './index';
+import { noteOutgoing } from './chat-memory';
 import {
   object,
   body,
@@ -247,8 +249,18 @@ export function mount(context: V4SlotContext): V4SlotHandle {
             split > 0 &&
             Number.isInteger(version) &&
             version > 0 &&
-            reply?.content.text.includes('[' + title + ' · v' + version + ']')
+            (reply?.content.text.includes(`[${title} · v${version}]`) ||
+              reply?.content.text.includes(`《${title} · v${version}》`))
             ? [{ id, title, version }]
+            : [];
+        });
+        // Exact source text the reply repeats word for word, checked by the server.
+        const evidence = (
+          Array.isArray(reply?.content.spoken_evidence) ? reply.content.spoken_evidence : []
+        ).flatMap((item: unknown) => {
+          const e = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+          return e.verification === 'verified' && typeof e.quote === 'string' && e.quote
+            ? [e.quote]
             : [];
         });
         return {
@@ -258,6 +270,9 @@ export function mount(context: V4SlotContext): V4SlotHandle {
           status,
           reply: reply?.content.text,
           materials,
+          evidence,
+          errorCode:
+            !reply && typeof job?.error_code === 'string' ? (job.error_code as string) : undefined,
           receivedVersionsOnly: reply?.content.received_versions_only === true,
           recognition: Array.isArray(reply?.content.recognition) ? reply.content.recognition : [],
           generationMode:
@@ -292,8 +307,8 @@ export function mount(context: V4SlotContext): V4SlotHandle {
           explanation:
             status === 'unknown'
               ? T(
-                  '处理状态尚待确认，原问题已保留。',
-                  'Processing status is not yet confirmed; the original question is retained.',
+                  '还没确认这条有没有处理，你的问题还在。',
+                  'Not yet confirmed whether this was handled. Your question is kept.',
                 )
               : undefined,
         };
@@ -313,12 +328,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       mode: ['local_reference', 'model', 'unavailable'].includes(mode) ? mode : 'unavailable',
       colleagues: roles.map((id) => ({
         id,
-        name:
-          id === 'supervisor'
-            ? T('经理', 'Manager')
-            : id === 'business_lead'
-              ? T('陈敏', 'Chen Min')
-              : T('技术负责人', 'Technical lead'),
+        name: personName(id),
         available: mode !== 'unavailable',
       })),
       turns,
@@ -425,7 +435,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     },
   };
   thread.replaceChildren(); // The assigned history surface is owned by this v2 slot.
-  const view = mountConversation(thread, adapter, selected);
+  const view = mountConversation(thread, adapter, selected, sid);
   const onSubmit = (event: Event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -445,8 +455,10 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       );
       return;
     }
-    void adapter
-      .send({ roleId: selected, text })
+    const sending = adapter.send({ roleId: selected, text });
+    // The thread shows it at once, marked sending until the client confirms it.
+    noteOutgoing(sid, selected, text, sending);
+    void sending
       .then(() => {
         if (quote && !destroyed)
           form.dispatchEvent(

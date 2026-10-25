@@ -1,0 +1,53 @@
+{
+ "id": "trial-746b167375e7faf015158abb478804742890cd32fc4825a24ae569a113c6d01c",
+ "kind": "reproduce",
+ "ticket_id": "ticket-e33e76121d13fe9aeaa3e7e8f5d435f814bd003746248533f86409ca0568b183",
+ "executor": {
+  "id": "human:cbb29b71a5d9479ba58134169ac9338b",
+  "kind": "human"
+ },
+ "role": "engineer",
+ "created_at": "2026-10-24T09:22:15.027063+00:00",
+ "config_hash": null,
+ "changes": {},
+ "status": "reproduced",
+ "counts": {
+  "matched": 1,
+  "changed": 0,
+  "total": 1
+ },
+ "mode": "isolated_reexecution_without_model_calls",
+ "rows": [
+  {
+   "test_id": "4bbcb1473d8f7a566c654e9e9aef0215ee1661547d56aa5e6851c244750a3f2d",
+   "query": "住宿报销上限是多少？",
+   "matches_record": true,
+   "recorded": {
+    "status": "answered",
+    "error_code": null,
+    "answer_summary": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+    "citations": [
+     {
+      "object_id": "policy",
+      "version": 1,
+      "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。"
+     }
+    ],
+    "citation_count": 1
+   },
+   "reproduced": {
+    "status": "answered",
+    "error_code": null,
+    "answer_summary": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+    "citations": [
+     {
+      "object_id": "policy",
+      "version": 1,
+      "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。"
+     }
+    ],
+    "citation_count": 1
+   }
+  }
+ ]
+}

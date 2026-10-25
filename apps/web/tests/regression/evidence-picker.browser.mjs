@@ -1,4 +1,4 @@
-import { clickReady, waitFor } from './browser-support.mjs';
+import { clickReady, waitFor, submitDelivery } from './browser-support.mjs';
 /** Cite read passages, test runs and work versions in the normal v4 entry, then read the
  * shortened feedback. Real HTTP API and worker; BASE is the web entry, OUT a new directory. */
 import assert from 'node:assert/strict';
@@ -195,7 +195,7 @@ async function run(language, reduced, width, flow) {
       await waitFor(
         browser,
         `document.querySelector('.w03-outcome-meta')?.textContent.includes(${JSON.stringify(
-          text('按第 3 版计算', 'Computed for v3'),
+          text('按第 3 版计算', 'Computed for version 3'),
         )}) && !(${mainQuestion})`,
         20000,
       );
@@ -256,11 +256,7 @@ async function run(language, reduced, width, flow) {
       await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
       await browser.click('.native-feedback input[type="checkbox"]');
       await browser.select('.native-feedback select', 'launch_narrow');
-      await clickReady(
-        browser,
-        text('提交选中的版本', 'Submit selected versions'),
-        '#sheet button',
-      );
+      await submitDelivery(browser);
       await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
       await browser.ev(`document.querySelector('#sheet')?.close()`);
       await browser.goto(`${base}#/review`);
@@ -280,7 +276,8 @@ async function run(language, reduced, width, flow) {
         '本项仅核对明确承诺的受限范围及固定配置。',
         'This criterion checks only the committed limited scope and fixed configuration.',
       );
-      const first = await browser.ev(`document.querySelector('[data-rule-lines]').innerText`);
+      // Item by item (195): the premise is stated once, in the scope line's basis.
+      const first = await browser.ev(`document.querySelector('[data-rule-lines]').textContent`);
       assert.equal(first.split(premise).length - 1, 1, 'the shared premise is stated once');
       assert.ok(
         !(await browser.ev(
@@ -313,9 +310,9 @@ async function run(language, reduced, width, flow) {
       await shot('feedback');
       // The expanded items keep their findings without repeating the shared premise.
       await browser.ev(`(() => {
-        const more = document.querySelector('.native-feedback details[data-short-result-more]');
-        more.open = true;
-        more.scrollIntoView({ block: 'start' });
+        const row = document.querySelector('.native-feedback [data-feedback-item] .fb-item__head');
+        row.click();
+        row.scrollIntoView({ block: 'start' });
       })()`);
       const details = await browser.ev(
         `[...document.querySelectorAll('.native-feedback .rule-detail')].map((n) => n.textContent)`,

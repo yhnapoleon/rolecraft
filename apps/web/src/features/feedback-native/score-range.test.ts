@@ -90,12 +90,12 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
     [
       'zh',
       '规则已定标部分：20–65 分（适用项共 75 分，满分 100）',
-      '模型建议不计分；待核验项使区间变宽。',
+      '模型建议不计分。还没核验的项会让区间变宽，核验后收窄。',
     ],
     [
       'en',
-      'Rule-anchored part: 20–65 of 75 (applicable items; full rubric 100)',
-      'Model advice is not scored; pending items widen the range.',
+      'Rule-checked range: 20–65 of 75 applicable points (full rubric 100)',
+      'Model advice isn’t scored. Each item not checked yet widens the range until it is.',
     ],
   ] as const)('shows the recorded range and its caveat (%s)', (language, range, note) => {
     const { root, notes } = firstScreen(report({ score_range: MIXED }), language);
@@ -111,7 +111,7 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
 
   it.each([
     ['zh', '规则已定标部分：100–100 分（满分 100）'],
-    ['en', 'Rule-anchored part: 100–100 of 100'],
+    ['en', 'Rule-checked range: 100–100 of 100'],
   ] as const)('all met gives a narrow range, never one number (%s)', (language, text) => {
     const narrow: _RuleScoreRange = {
       ...MIXED,
@@ -130,7 +130,7 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
 
   it.each([
     ['zh', '规则已定标部分：0–100 分（满分 100）'],
-    ['en', 'Rule-anchored part: 0–100 of 100'],
+    ['en', 'Rule-checked range: 0–100 of 100'],
   ] as const)('all pending spans the full width (%s)', (language, text) => {
     const pending: _RuleScoreRange = {
       ...MIXED,
@@ -152,7 +152,7 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
     ['zh', '规则已定标部分：21.6–65 分（适用项共 75 分，其中 3.3 分适用性待确认，满分 100）'],
     [
       'en',
-      'Rule-anchored part: 21.6–65 of 75 (applicable items, including 3.3 points whose applicability is undetermined; full rubric 100)',
+      'Rule-checked range: 21.6–65 of 75 applicable points (3.3 may not apply; full rubric 100)',
     ],
   ] as const)('names the undetermined share of the denominator (%s)', (language, text) => {
     expect(scoreRangeLine(report({ score_range: VARIED }), language)?.text).toBe(text);
@@ -162,7 +162,7 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
     ['zh', '规则已定标部分：0–100 分（适用项共 100 分，其中 5 分适用性待确认，满分 100）'],
     [
       'en',
-      'Rule-anchored part: 0–100 of 100 (applicable items, including 5 points whose applicability is undetermined; full rubric 100)',
+      'Rule-checked range: 0–100 of 100 applicable points (5 may not apply; full rubric 100)',
     ],
   ] as const)('names it even when every criterion applies (%s)', (language, text) => {
     const whole: _RuleScoreRange = {
@@ -194,7 +194,7 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
 
   it.each([
     ['zh', '规则已定标部分：尚无适用项，不形成区间。'],
-    ['en', 'Rule-anchored part: nothing applies yet, so there is no range.'],
+    ['en', 'Rule-checked range: nothing applies yet, so there is no range.'],
   ] as const)('nothing applicable has no range (%s)', (language, text) => {
     const empty = { ...MIXED, denominator: 0, lower: null, upper: null };
     expect(scoreRangeLine(report({ score_range: empty }), language)).toEqual({
@@ -264,7 +264,7 @@ const TWELFTHS = Array.from({ length: 1201 }, (_, k) => k / 12);
 describe('decision 5: shown bounds stay within the shown denominator and weight', () => {
   it.each([
     ['zh', '规则已定标部分：0–33.3 分（适用项共 33.3 分，满分 100）'],
-    ['en', 'Rule-anchored part: 0–33.3 of 33.3 (applicable items; full rubric 100)'],
+    ['en', 'Rule-checked range: 0–33.3 of 33.3 applicable points (full rubric 100)'],
   ] as const)('an exploration-note review shows 0–33.3 of 33.3 (%s)', (language, text) => {
     const review = report({ subject: ref('review', 'r1'), score_range: EXPLORATION });
     expect(firstScreen(review, language).notes[0]).toBe(text);
@@ -298,7 +298,7 @@ describe('decision 5: shown bounds stay within the shown denominator and weight'
       );
       const partial = { ...MIXED, criteria: [row('R2.support', 25 / 3, 'bounded', 0, 25 / 6)] };
       expect(criterionWeightText({ score_range: partial }, 'R2.support', 'en')).toContain(
-        'Rule-bounded: 0–4.2 points',
+        'rules bound it to 0–4.2',
       );
     },
   );
@@ -330,24 +330,25 @@ describe('decision 5: per-criterion weight and anchoring', () => {
     [
       'zh',
       {
-        'R3.capacity': '权重 10 分（满分 100）· 规则已定标：计 10 分',
-        'R4.functional_tests': '权重 10 分（满分 100）· 规则已定标：计 0 分',
-        'R6.consistency': '权重 3.3 分（满分 100）· 规则限定 1.6–3.3 分，其余待核验',
-        'R2.support': '权重 8.3 分（满分 100）· 待核验：不计分，区间因此加宽 8.3 分',
-        'R6.operations': '权重 3.3 分（满分 100）· 适用性待确认：不计分，区间因此加宽 3.3 分',
-        'R5.impact': '权重 7.5 分（满分 100）· 本次不适用：不计入分母',
+        'R3.capacity': '占 10 分（满分 100）· 规则计入 10 分',
+        'R4.functional_tests': '占 10 分（满分 100）· 规则计入 0 分',
+        'R6.consistency': '占 3.3 分（满分 100）· 规则限定 1.6–3.3 分，其余核验前不计分',
+        'R2.support': '占 8.3 分（满分 100）· 核验前不计分',
+        'R6.operations': '占 3.3 分（满分 100）· 还不确定是否适用，核验前不计分',
+        'R5.impact': '占 7.5 分（满分 100）· 这次不适用，不计入',
       },
     ],
     [
       'en',
       {
-        'R3.capacity': 'Weight 10 of 100 · Rule-anchored: 10 points',
-        'R4.functional_tests': 'Weight 10 of 100 · Rule-anchored: 0 points',
-        'R6.consistency': 'Weight 3.3 of 100 · Rule-bounded: 1.6–3.3 points; the rest is pending',
-        'R2.support': 'Weight 8.3 of 100 · Pending: not scored; widens the range by 8.3',
+        'R3.capacity': 'Worth 10 of 100 · 10 counted by rules',
+        'R4.functional_tests': 'Worth 10 of 100 · 0 counted by rules',
+        'R6.consistency':
+          'Worth 3.3 of 100 · rules bound it to 1.6–3.3; the rest isn’t scored until checked',
+        'R2.support': 'Worth 8.3 of 100 · not scored until checked',
         'R6.operations':
-          'Weight 3.3 of 100 · Applicability undetermined: not scored; widens the range by 3.3',
-        'R5.impact': 'Weight 7.5 of 100 · Not applicable: left out of the denominator',
+          'Worth 3.3 of 100 · may not apply; not scored until checked',
+        'R5.impact': 'Worth 7.5 of 100 · doesn’t apply this time, left out',
       },
     ],
   ] as const)(

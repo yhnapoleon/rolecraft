@@ -2,7 +2,8 @@
 // Covers are drawn from the case's own constraints (launch day, seats), so the
 // picture carries information instead of decorating the page.
 
-import { T } from './i18n';
+import { locale } from './i18n';
+import { personLabel, personName, personTitle } from './people.js';
 
 const P = {
   edit: '<path d="m15.5 4.5 4 4M4.5 19.5l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L5 14.5z"/>',
@@ -81,29 +82,37 @@ export const priMark = (p) => {
 export const statusMark = (s) =>
   `<svg class="status-mark ${s}" viewBox="0 0 24 24" aria-hidden="true">${s === 'done' ? P.done : s === 'working' ? P.half : P.circle}</svg>`;
 
-/** People and marks. Names follow the confirmed scenario materials: only the business lead is
- * named there (陈敏 / Chen Min); the manager and technical lead are known by their titles.
+/** People and marks. One name per colleague, the same in both languages, from people.js:
+ * Grace the manager, Chen the business lead, Daniel the technical lead (user 2026-10-24).
  * Each hue names who: manager violet, business lead magenta, technical lead teal, the assistant
- * blue; your agent is ink like you. `ref` is the in-sentence form, `subject` starts a sentence. */
-const person = (zh, en, enRef, initialEn, titled) => ({
+ * blue; your agent is ink like you. `ref` is the in-sentence form, `subject` starts a sentence,
+ * `title` is the role and `label` the name with the role. */
+const person = (key) => ({
   get name() {
-    return T(zh, en);
+    return personName(key);
   },
   get ref() {
-    return T(zh, enRef);
+    return personName(key);
   },
   get subject() {
-    return T(zh, enRef.charAt(0).toUpperCase() + enRef.slice(1));
+    return personName(key);
   },
   get initial() {
-    return T(zh.charAt(0), initialEn);
+    return personName(key).charAt(0);
   },
-  titled,
+  get title() {
+    return personTitle(key, locale());
+  },
+  get label() {
+    return personLabel(key, locale());
+  },
+  // Named people: a heading shows the role beside the name.
+  titled: false,
 });
 export const PEOPLE = {
-  manager: person('经理', 'Manager', 'the manager', 'M', true),
-  business: person('陈敏', 'Chen Min', 'Chen Min', 'C', false),
-  technical: person('技术负责人', 'Technical lead', 'the technical lead', 'T', true),
+  manager: person('manager'),
+  business: person('business'),
+  technical: person('technical'),
 };
 export const ROLES = ['manager', 'business', 'technical'];
 

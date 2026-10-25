@@ -131,20 +131,46 @@ def test_review_detects_regression(session: Session) -> None:
     rows = {r.probe_id: r for r in report.results}
     assert rows["F01"].result == "pass"
     assert rows["F01"].actual.status == "answered_with_warning"
-    assert rows["F09"].result == "fail"
     assert any(
         f.kind == "target_fix" and f.status == "pass" and "F01" in f.probe_ids
         for f in report.findings
     )
+    # The root-cause fix breaks nothing; the target's two hidden kin are fixed with it.
+    assert not any(f.kind == "new_regression" and f.status == "fail" for f in report.findings)
+    assert report.hidden_comparison is not None
+    assert (report.hidden_comparison.new_failures, report.hidden_comparison.fixed) == (0, 2)
+    baseline = json.loads(
+        (root / "private-reviews" / "reports" / identity / "baseline-results.json").read_bytes()
+    )
+    assert next(r for r in baseline if r["probe_id"] == "F01")["result"] == "fail"
+    # The over-broad change (the warning plus a lower threshold) passes every public probe,
+    # but a hidden out-of-scope question now gets an answer: a real regression.
+    from career_lab.engineer.files import encode
+
+    pack, source = prepare(target, {"freshness_guard": "warn", "min_score": 0.2})
+    record = json.loads(source.read_bytes())
+    record["id"] = "overreach-1"
+    source.write_bytes(encode(record))
+    submitted = submit(target, pack, source)
+    assert submitted.returncode == 0, submitted.stdout + submitted.stderr
+    folder = root / "submissions" / json.loads(submitted.stdout)["directory"]
+    result = review(target, pack, folder)
+    assert result.returncode == 0, result.stdout
+    identity = json.loads(result.stdout)["review_id"]
+    report = EngineerRegressionReport.model_validate_json(
+        (root / "private-reviews" / "reports" / identity / "report.json").read_bytes()
+    )
+    rows = {r.probe_id: r for r in report.results}
+    assert all(r.result == "pass" for r in report.results if r.visibility == "public")
+    assert rows["F16"].visibility == "hidden" and rows["F16"].result == "fail"
     assert any(
-        f.kind == "new_regression" and f.status == "fail" and "F09" in f.probe_ids
+        f.kind == "new_regression" and f.status == "fail" and "F16" in f.probe_ids
         for f in report.findings
     )
     baseline = json.loads(
         (root / "private-reviews" / "reports" / identity / "baseline-results.json").read_bytes()
     )
-    assert next(r for r in baseline if r["probe_id"] == "F01")["result"] == "fail"
-    assert next(r for r in baseline if r["probe_id"] == "F09")["result"] == "pass"
+    assert next(r for r in baseline if r["probe_id"] == "F16")["result"] == "pass"
 
 
 def test_review_immutable(session: Session) -> None:

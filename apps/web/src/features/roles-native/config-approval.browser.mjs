@@ -10,7 +10,7 @@
  */
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { clickReady, waitFor } from '../../../tests/regression/browser-support.mjs';
+import { clickReady, waitFor, submitDelivery } from '../../../tests/regression/browser-support.mjs';
 import { delay, launch } from '../../../tests/walkthrough/cdp.mjs';
 
 const [base, out, language = 'zh', motion = 'reduced'] = process.argv.slice(2);
@@ -138,7 +138,7 @@ async function deliver() {
   );
   await browser.click('#sheet .native-feedback input[type="checkbox"]');
   await browser.select('#sheet .native-feedback select', 'launch_narrow');
-  await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(new URL('#/review', base).href);
@@ -183,7 +183,7 @@ try {
     assert.ok((await savedPilot()).work_items.includes('realtime_sync'));
     assert.equal(await innerText('.product-bar [data-config-use]'), gapLine);
     assert.ok(
-      (await innerText('.product-bar .pb-state')).startsWith(text('已保存 v1', 'Saved v1')),
+      (await innerText('.product-bar .pb-state')).replace(/\s+/g, ' ').startsWith(text('已保存 v1', 'Saved v1')),
     );
     await shot('bar-gap');
     await viewport(390, 844, true);
@@ -424,7 +424,7 @@ try {
       async () => {
         await waitFor(browser, `!document.querySelector('.product-bar [data-config-use]')`);
         assert.ok(
-          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v4', 'Config v4')),
+          (await innerText('.product-bar .pb-state')).replace(/\s+/g, ' ').startsWith(text('配置 v4', 'Config v4')),
         );
         await shot('bar-funded');
         const answer = await runTest();

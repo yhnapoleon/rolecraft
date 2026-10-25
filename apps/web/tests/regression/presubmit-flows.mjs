@@ -1,7 +1,8 @@
 /** Pre-submission preview in the normal v4 entry, zh and en, reduced motion: a round of the
  * browser gate, after published-flows on the same services. A new practice submitted straight
  * away gets an "at submission" line on the feedback page only under the item the rules found
- * unmet. On a second practice the card sits right above "Submit selected versions", counts
+ * unmet. On a second practice the card sits right above the submit button (which names the
+ * version already ticked, 199 decision 20), counts
  * rule-met items without any percentage, phrases one fact per item, follows the decision, opens
  * the tool that fixes an unmet item, names configuration versions after a retest on an earlier
  * one (164 F17), remembers the choice when the panel is reopened, and agrees with the formal
@@ -11,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { waitFor, submitDelivery } from './browser-support.mjs';
 
 const base = process.env.BASE;
 assert.ok(base && process.env.OUT, 'BASE and OUT are required');
@@ -51,6 +52,14 @@ async function settled(browser, predicate) {
     30000,
   );
   return read(browser);
+}
+
+/** The panel opens with the latest version of the work ticked (199 decision 20); tick it only
+ * when it is not, so the click never unticks it. */
+async function tickVersion(browser) {
+  const box = `document.querySelector('#sheet .native-feedback input[type="checkbox"]')`;
+  if (!(await browser.ev(`${box}.checked`)))
+    await browser.click('#sheet .native-feedback input[type="checkbox"]');
 }
 
 async function openDelivery(browser) {
@@ -139,8 +148,8 @@ async function startPractice(browser, language, t) {
 
 /** Submit the versions and decision shown in the panel; then wait for the formal feedback and
  * return its rule items as [criterion, label, source, applicability]. */
-async function submitShown(browser, t) {
-  await clickReady(browser, t('提交选中的版本', 'Submit selected versions'), '#sheet button');
+async function submitShown(browser) {
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
   const formal = await browser.ev(`(async () => {
     const s = window.PracticeLive.store.active();
@@ -171,10 +180,8 @@ const decidedBy = (formal) =>
 async function submissionFacts(browser, count) {
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(`${base}#/review`);
-  await waitFor(browser, `!!document.querySelector('[data-short-result="feedback"]')`, 60000);
-  await browser.ev(
-    `document.querySelector('[data-short-result="feedback"] > details').open = true`,
-  );
+  // Item by item (195): each unmet row carries its "at submission" line in its basis.
+  await waitFor(browser, `!!document.querySelector('[data-feedback-items]')`, 60000);
   await waitFor(browser, `document.querySelectorAll('[data-rule-fact]').length >= ${count}`, 30000);
   return browser.ev(
     `[...document.querySelectorAll('[data-rule-fact]')].map((n) => [n.dataset.ruleFact, n.textContent])`,
@@ -191,10 +198,10 @@ async function runLanguage(language) {
     // line; the change rules that do not apply and the items awaiting a model get none.
     await startPractice(browser, language, t);
     await openDelivery(browser);
-    await browser.click('#sheet .native-feedback input[type="checkbox"]');
+    await tickVersion(browser);
     await browser.select('#sheet .native-feedback select', 'launch');
     await settled(browser, `!!c.querySelector('.presubmit__count')`);
-    const direct = decidedBy(await submitShown(browser, t));
+    const direct = decidedBy(await submitShown(browser));
     assert.deepEqual(
       direct.filter(([, label]) => label !== 'MET').map(([criterion]) => criterion),
       ['R4.functional_tests'],
@@ -207,7 +214,7 @@ async function runLanguage(language) {
       ],
     ]);
     await browser.ev(
-      `document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('section').scrollIntoView({block: 'start'})`,
+      `(() => { const row = document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('[data-feedback-item]'); const head = row.querySelector('.fb-item__head'); if (head.getAttribute('aria-expanded') !== 'true') head.click(); row.scrollIntoView({block: 'start'}); })()`,
     );
     await shot('feedback-direct');
 
@@ -217,14 +224,15 @@ async function runLanguage(language) {
     // 2. Placement and the empty state.
     await openDelivery(browser);
     let seen = await read(browser);
-    assert.equal(seen.aboveSubmit, t('提交选中的版本', 'Submit selected versions'));
+    // The latest version is already ticked, so the button names it.
+    assert.match(seen.aboveSubmit, t(/^提交第 \d+ 版$/, /^Submit version \d+$/));
     assert.ok(
       seen.text.includes(t('选好作品版本和决定后', 'Choose versions and a decision')),
       'the card asks for a choice before computing',
     );
 
     // 3. A fresh launch: two limits met, configuration v0 untested, everything else waits.
-    await browser.click('#sheet .native-feedback input[type="checkbox"]');
+    await tickVersion(browser);
     await browser.select('#sheet .native-feedback select', 'launch');
     seen = await settled(browser, `!!c.querySelector('.presubmit__count')`);
     assert.equal(seen.count, t('2/3 项已满足', '2/3 met'));
@@ -340,7 +348,7 @@ async function runLanguage(language) {
     await viewport(browser, 1440, 1000, false);
 
     // 8. Submit the same choice: the formal feedback decides each item as the preview did.
-    const decided = decidedBy(await submitShown(browser, t));
+    const decided = decidedBy(await submitShown(browser));
     assert.deepEqual(
       decided.map(([criterion, label]) => [criterion, label === 'MET']),
       lastPreview.lines.map((line) => [line.criterion, line.met]),
@@ -371,7 +379,7 @@ async function runLanguage(language) {
       ],
     ]);
     await browser.ev(
-      `document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('section').scrollIntoView({block: 'start'})`,
+      `(() => { const row = document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('[data-feedback-item]'); const head = row.querySelector('.fb-item__head'); if (head.getAttribute('aria-expanded') !== 'true') head.click(); row.scrollIntoView({block: 'start'}); })()`,
     );
     await shot('feedback-fact');
     results.push({

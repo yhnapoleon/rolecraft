@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { launch, delay } from '../../../tests/walkthrough/cdp.mjs';
-import { waitFor, clickReady } from '../../../tests/regression/browser-support.mjs';
+import { waitFor, clickReady, submitDelivery } from '../../../tests/regression/browser-support.mjs';
 
 const base = process.env.BASE;
 const out = process.env.OUT;
@@ -138,7 +138,7 @@ for (const language of ['zh', 'en']) {
     assert.ok(fact.lead && !OLD_META.includes(fact.lead), 'first screen shows the reply itself');
     assert.equal(fact.derived, false, 'first screen quotes the reply, not a tool sentence');
     assert.ok(fact.source, 'the quoted fact names its source on the first screen');
-    assert.ok(fact.status.includes(t('等待模型接入', 'waiting for model connection')));
+    assert.ok(fact.status.includes(t('等待模型接入', 'Awaiting model connection')));
     assert.equal(fact.open, false);
     assert.ok(fact.summary.startsWith(t('展开原文', 'Show full reply')));
     assert.deepEqual(
@@ -488,7 +488,7 @@ for (const language of ['zh', 'en']) {
     );
     await browser.click('#sheet .native-feedback input[type="checkbox"]');
     await browser.select('#sheet .native-feedback select', 'defer_with_conditions');
-    await clickReady(browser, t('提交选中的版本', 'Submit selected versions'), '#sheet button');
+    await submitDelivery(browser);
     await waitFor(
       browser,
       `window.PracticeLive.store.active().world.status === 'submitted'`,
@@ -516,7 +516,7 @@ for (const language of ['zh', 'en']) {
         await browser.clickText(again, 'button');
       } else
         await browser
-          .clickText(t('查看最新反馈', 'Refresh feedback'), 'button')
+          .clickText(t('刷新', 'Refresh'), 'button')
           .catch(() => undefined);
     }
     results.push({ language, check: 'submission feedback retries used', retried });

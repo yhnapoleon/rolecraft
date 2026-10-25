@@ -3,6 +3,7 @@ import { WorkspaceClient, draftOf } from './client';
 import type { ImportResult, WorkspaceImport } from './contract-types';
 import { buildBrowserImport } from './import-browser';
 import './workspace.css';
+import { personLabel } from '../../app/people.js';
 
 type Locale = 'zh' | 'en';
 const words = (locale: Locale) => (zh: string, en: string) => (locale === 'zh' ? zh : en);
@@ -179,8 +180,8 @@ export function WorkspacePanel({
                   )
                 }
               >
-                <option value={0}>{t('先做', 'First')}</option>
-                <option value={1}>{t('随后', 'Next')}</option>
+                <option value={0}>{t('先做', 'Do first')}</option>
+                <option value={1}>{t('随后', 'Up next')}</option>
                 <option value={2}>{t('暂放', 'Later')}</option>
               </select>
             </label>
@@ -201,7 +202,7 @@ export function WorkspacePanel({
               >
                 <option value="open">{t('待处理', 'Open')}</option>
                 <option value="active">{t('正在做', 'Working')}</option>
-                <option value="paused">{t('暂放', 'Paused')}</option>
+                <option value="paused">{t('已暂停', 'Paused')}</option>
                 <option value="blocked">{t('受阻', 'Blocked')}</option>
                 <option value="done">{t('已处理', 'Done')}</option>
                 <option value="removed">{t('已移除', 'Removed')}</option>
@@ -421,9 +422,11 @@ export function WorkspacePanel({
               <label>
                 {t('同事', 'Colleague')}
                 <select value={recipient} onChange={(e) => setRecipient(e.target.value)}>
-                  <option value="tech_lead">{t('技术负责人', 'Technical lead')}</option>
-                  <option value="business_lead">{t('业务负责人', 'Business lead')}</option>
-                  <option value="supervisor">{t('经理', 'Manager')}</option>
+                  {['tech_lead', 'business_lead', 'supervisor'].map((id) => (
+                    <option key={id} value={id}>
+                      {t(personLabel(id, 'zh'), personLabel(id, 'en'))}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>

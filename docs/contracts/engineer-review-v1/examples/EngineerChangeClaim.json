@@ -1,0 +1,7 @@
+{
+  "after": "warn",
+  "before": "none",
+  "field": "freshness_guard",
+  "reason": "Synthetic change statement",
+  "schema_version": 2
+}

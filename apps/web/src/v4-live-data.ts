@@ -21,6 +21,7 @@ export class V4LiveData {
       sync: (s) => this.sync(s),
       write: (s, kind, body, origin) => this.write(s, kind, body, origin),
       poll: (s) => this.poll(s),
+      awaiting: (s) => this.outstanding(s).size > 0,
     });
   }
   hasUnpersistedDrafts() {
@@ -139,10 +140,9 @@ export class V4LiveData {
             trace_id: r.ref.object_id,
             role_id: r.content.input.role_id,
             question: r.content.input.text,
-            text:
-              (context.semantic.roles === 'waiting_model'
-                ? T('等待模型接入\n', 'Waiting for model connection\n')
-                : '') + reply.content.text,
+            // The reply as saved. Whether colleagues wait for a model is shown once, by the
+            // toolbar's model status and a grey mark beside the reply, never inside the text.
+            text: reply.content.text,
             status: reply.content.status,
             model_revision: reply.content.model_revision ?? '',
             as_of_seq: r.content.as_of.business_seq,
@@ -380,15 +380,20 @@ export class V4LiveData {
       );
     }
   }
+  /** Requests still owed a terminal answer: the turns and runs a poll reads until they settle. */
+  private outstanding(session: LocalSession) {
+    return new Set([
+      ...this.host(session)
+        .pendingRequests({ readOnly: true })
+        .map((pending) => pending.requestId),
+      ...Object.keys(this.current(session.id).queuedTestRuns ?? {}),
+    ]);
+  }
   private async recoverPending(session: LocalSession) {
     const host = this.host(session);
     // Recovery remains GET-only; a failed model job is never restarted here.
     const queued = Object.keys(this.current(session.id).queuedTestRuns ?? {});
-    const ids = new Set([
-      ...host.pendingRequests({ readOnly: true }).map((pending) => pending.requestId),
-      ...queued,
-    ]);
-    for (const requestId of ids)
+    for (const requestId of this.outstanding(session))
       await host
         .recover(requestId)
         .then((recovered) => this.settleQueued(session.id, requestId, recovered))

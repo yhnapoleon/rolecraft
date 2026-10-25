@@ -1,0 +1,557 @@
+/* The practice topbar (decision 1): one 56px instrument row.
+ * [paper wordmark] case title │ [Product manager|Engineer] │ scale │ ●Agent ⏱ ⋯ [primary]
+ * At phone width: back, short title, "2/3", the agent dot, the primary key. */
+
+.shell-bar {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--toolbar-h);
+  padding: 0 12px 0 10px;
+  background: var(--surface);
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+html.scrolled body:not([data-view="work"]) .shell-bar {
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.shell-bar .sep {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 8px;
+  background: var(--line-2);
+}
+.shell-bar .crumbbar {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.shell-bar .ws-title {
+  max-width: 34ch;
+}
+/* The same title on every practice screen, so the bar never shifts when the hat changes. */
+.shell-bar .ws-title .title-btn {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+/* The title changes with the hat; a fixed width keeps the hat switch and the scale in place. */
+@media (min-width: 1280px) {
+  /* A set width, so the hat switch does not move when the title changes with the hat; it still
+   * gives way (ellipsis) when a deeper page adds a back key and a crumb. */
+  .shell-bar .crumbbar {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .shell-bar .crumbbar > .title-wrap,
+  .shell-bar .crumbbar > p.ws-title {
+    flex: 0 1 300px;
+    width: 300px;
+    min-width: 140px;
+    max-width: none;
+  }
+  .shell-bar .crumbbar .title-btn {
+    max-width: 100%;
+  }
+}
+@media (min-width: 1440px) {
+  .shell-bar .crumbbar > .title-wrap,
+  .shell-bar .crumbbar > p.ws-title {
+    flex-basis: 360px;
+    width: 360px;
+  }
+}
+.shell-bar .crumbbar {
+  display: flex;
+  align-items: center;
+}
+.shell-bar .crumb-now {
+  min-width: 7ch;
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shell-bar .ws-title,
+.shell-bar .ws-title .title-btn {
+  min-width: 0;
+}
+.shell-bar .wordmark .wordmark-text {
+  display: none;
+}
+@media (min-width: 1440px) {
+  .shell-bar .wordmark .wordmark-text {
+    display: inline;
+  }
+  .shell-bar .ws-title {
+    max-width: 40ch;
+  }
+}
+
+/* ---------- hat switch + scale (island) ---------- */
+.rc-hatscale {
+  /* Never squeezed: if the row is too narrow the title gives way, then fitShellBar() folds. */
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.rc-hatscale .rc-hat {
+  flex: none;
+}
+.rc-hat-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+/* Sits in the gap after the switch, so nothing beside it moves while a hat is being prepared. */
+.rc-hat-spin {
+  position: absolute;
+  right: -17px;
+  top: calc(50% - 6px);
+  width: 12px;
+  height: 12px;
+  color: var(--ink-3);
+}
+/* The scale is a track, not a control: no plates. Where you are is ink text over a solid ink
+ * stretch of track; steps walked are ticked; steps ahead are quiet. */
+.rc-scale {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.rc-scale__wide {
+  position: relative;
+}
+.rc-scale__steps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.rc-scale__step {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  font: 500 12.5px / 1 var(--sans);
+  white-space: nowrap;
+  transition: transform var(--fast) var(--ease-out);
+}
+.rc-scale__step[data-state="done"] {
+  color: var(--ink-2);
+}
+.rc-scale__step[aria-current="step"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.rc-scale[data-delivered="true"] .rc-scale__step[data-last] {
+  color: var(--good);
+}
+.rc-scale__step:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rc-scale__step:not([aria-current="step"]):hover {
+    color: var(--ink);
+  }
+}
+.rc-scale__tick {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rc-scale[data-delivered="true"] .rc-scale__tick {
+  color: var(--good);
+}
+/* The hairline track under all steps, and the solid stretch under the current one. */
+.rc-scale__track {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -5px;
+  height: 1px;
+  background: var(--line-2);
+}
+.rc-scale__track-good {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--good);
+}
+.rc-scale__mark {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+.rc-scale__mark-good {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--good);
+}
+.rc-scale__compact {
+  position: relative;
+  display: none;
+  padding: 6px 8px 7px;
+  font: 600 12.5px / 1 var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+/* Its own short track, like the wide one. */
+.rc-scale__compact::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+.rc-scale__compact[data-delivered="true"] {
+  border-radius: 6px;
+  background: var(--good-tint);
+  color: var(--good);
+}
+.rc-scale__compact[data-delivered="true"]::after {
+  background: var(--good);
+}
+
+/* ---------- agent lamp, record, more ---------- */
+.agent-lamp {
+  position: relative;
+  flex: none;
+  margin-left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: transform var(--fast) var(--ease-out);
+}
+.agent-lamp:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .agent-lamp:hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
+}
+.lamp {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: inset 0 0 0 1.5px var(--ink-4);
+}
+.agent-lamp[data-state="waiting"] .lamp {
+  box-shadow: none;
+  border: 1.5px dashed var(--ink-3);
+}
+.agent-lamp[data-state="connected"] .lamp {
+  background: var(--ink);
+  box-shadow: none;
+}
+.agent-lamp[data-state="idle"] .lamp {
+  background: var(--ink-4);
+  box-shadow: none;
+}
+/* One pulse per real call: a ring grows to 2.2x while fading, 520ms. Never loops. */
+.lamp-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--ink);
+  opacity: 0;
+  pointer-events: none;
+}
+.shell-bar .record-btn {
+  color: var(--ink-2);
+}
+.shell-bar .icon-key {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+/* ---------- primary key (island) ---------- */
+.rc-primary {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 6px;
+}
+.rc-primary__reason {
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.rc-primary__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font: 600 13.5px / 1 var(--sans);
+  white-space: nowrap;
+  overflow: hidden;
+  transition:
+    transform var(--fast) var(--ease-out),
+    opacity var(--fast) var(--ease-out);
+}
+.rc-primary__key:active:not([aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+.rc-primary__key[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rc-primary__key:not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--primary), var(--canvas) 14%);
+  }
+}
+.rc-primary__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.rc-primary__icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- narrower widths ---------- */
+@media (max-width: 1279px) {
+  /* No room beside the key: the reason stays for screen readers and comes up as a toast on press. */
+  .rc-primary__reason {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .agent-lamp .lamp-label {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .shell-bar .sep.before-scale,
+  .rc-scale__wide {
+    display: none;
+  }
+  .rc-scale__compact {
+    display: inline-block;
+  }
+}
+@media (max-width: 860px) {
+  .rc-hatscale .rc-hat,
+  .shell-bar .sep.before-hat {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .shell-bar {
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .shell-bar .wordmark,
+  .shell-bar .sep,
+  .shell-bar .record-btn,
+  .shell-bar .team-btn,
+  .shell-bar .crumb-sep,
+  .shell-bar .crumb-now {
+    display: none;
+  }
+  .shell-bar .ws-title {
+    max-width: 16ch;
+    font-size: 14px;
+  }
+  .agent-lamp {
+    width: 32px;
+    margin-left: 4px;
+    padding: 0;
+    justify-content: center;
+  }
+  .rc-primary {
+    margin-left: 2px;
+  }
+  .rc-primary__key {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .rc-primary__icon {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-scale__step,
+  .agent-lamp,
+  .rc-primary__key {
+    transition: opacity 160ms linear;
+  }
+  .rc-scale__step:active,
+  .agent-lamp:active,
+  .rc-primary__key:active:not([aria-disabled="true"]) {
+    transform: none;
+  }
+}
+
+/* ---------- ⋯ menu rows that only exist where the bar has no room ---------- */
+.narrow-only,
+.narrow-item,
+.phone-item {
+  display: none;
+}
+.menu .narrow-item,
+.menu .phone-item {
+  display: none;
+}
+@media (max-width: 1279px) {
+  .menu .narrow-item {
+    display: contents;
+  }
+}
+@media (max-width: 860px) {
+  .menu .phone-item {
+    display: contents;
+  }
+}
+@media (max-width: 720px) {
+  .shell-bar .narrow-only {
+    display: inline-flex;
+  }
+}
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+.menu .menu-value {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+/* Only the title column gives way; everything else keeps its size (see fitShellBar). */
+.shell-bar > :not(.crumbbar):not(.spacer) {
+  flex-shrink: 0;
+}
+/* The title column shrinks at every width, its words clipped with an ellipsis; below its
+ * minimum the row folds instead. The brief popover is a sibling of the heading, so clipping
+ * the heading never clips the popover. */
+.shell-bar .crumbbar > .title-wrap,
+.shell-bar .crumbbar > p.ws-title {
+  flex-shrink: 1;
+  min-width: 120px;
+}
+.shell-bar .crumbbar > .title-wrap {
+  display: flex;
+}
+.shell-bar .ws-title {
+  overflow: hidden;
+}
+.shell-bar .ws-title .title-btn {
+  max-width: 100%;
+}
+.shell-bar .crumb-sep {
+  flex: none;
+}
+@media (max-width: 720px) {
+  .shell-bar .crumbbar > .title-wrap,
+  .shell-bar .crumbbar > p.ws-title {
+    min-width: 0;
+  }
+}
+@media (max-width: 720px) {
+  .shell-bar .crumb-now {
+    min-width: 0;
+  }
+}
+/* The title column never shrinks below its own minimum (title 120px, plus the crumb's 7ch on a
+ * deeper page): past that the row overflows, which is what tells fitShellBar() to fold. An
+ * explicit number, because the automatic one would count the whole unbroken title. */
+.shell-bar .crumbbar {
+  min-width: 120px;
+}
+.shell-bar .crumbbar:has(.crumb-now) {
+  min-width: 220px;
+}
+@media (max-width: 720px) {
+  .shell-bar .crumbbar {
+    min-width: 0;
+  }
+}
+/* After the base rules they override (lint: no descending specificity); a static title
+ * is plain text. */
+.shell-bar p.ws-title .title-btn {
+  cursor: default;
+}
+.shell-bar p.ws-title .title-btn:hover {
+  background: none;
+}
+/* Folds, set by fitShellBar() only when the row would otherwise overflow. */
+.shell-bar.fold-words .lamp-label,
+.shell-bar.fold-words .rc-primary__reason {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.shell-bar.fold-scale .rc-scale__wide,
+.shell-bar.fold-scale .sep.before-scale {
+  display: none;
+}
+.shell-bar.fold-scale .rc-scale__compact {
+  display: inline-block;
+}
+.shell-bar.fold-hat .rc-hatscale .rc-hat-wrap,
+.shell-bar.fold-hat .sep.before-hat {
+  display: none;
+}
+.shell-bar.fold-hat ~ * .menu .phone-item,
+.shell-bar.fold-hat .menu .phone-item {
+  display: contents;
+}

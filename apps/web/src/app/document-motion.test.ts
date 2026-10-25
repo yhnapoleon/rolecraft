@@ -5,6 +5,10 @@ import { cleanClone, DOCUMENT_DURATION, documentEase, mixBox } from './document-
 class Surface {
   readonly style: Record<string, string> = {};
   inert = false;
+  tagName = 'DIV';
+  selectedIndex = 0;
+  value = '';
+  checked = false;
   private readonly attributes: Map<string, string>;
   constructor(
     attributes: Record<string, string>,
@@ -28,11 +32,14 @@ class Surface {
     if (selector !== '*') throw new Error(`Unsupported selector: ${selector}`);
     return this.children.flatMap((child) => [child, ...child.querySelectorAll('*')]);
   }
+  // Like the DOM: attributes copy, the live state of a control does not.
   cloneNode(): Surface {
-    return new Surface(
+    const copy = new Surface(
       Object.fromEntries(this.attributes),
       this.children.map((child) => child.cloneNode()),
     );
+    copy.tagName = this.tagName;
+    return copy;
   }
 }
 
@@ -49,6 +56,22 @@ describe('document flight copies', () => {
     );
     expect(markers).toEqual([]);
     expect(stage.getAttribute('data-v4-region')).toBe('workspace');
+  });
+});
+
+describe('document flight copies keep what controls show (164 N4)', () => {
+  it('copies the chosen option, typed text and ticks into the flight copy', () => {
+    const control = (tagName: string, state: Partial<Surface>) =>
+      Object.assign(new Surface({}), { tagName, ...state });
+    const priority = control('SELECT', { selectedIndex: 2 });
+    const note = control('TEXTAREA', { value: 'typed' });
+    const tick = control('INPUT', { value: 'on', checked: true });
+    const board = new Surface({ id: 'main' }, [new Surface({}, [priority, note]), tick]);
+    const copy = cleanClone(board as unknown as HTMLElement) as unknown as Surface;
+    const [, , copiedPriority, copiedNote, copiedTick] = [copy, ...copy.querySelectorAll('*')];
+    expect(copiedPriority.selectedIndex).toBe(2);
+    expect(copiedNote.value).toBe('typed');
+    expect(copiedTick.checked).toBe(true);
   });
 });
 

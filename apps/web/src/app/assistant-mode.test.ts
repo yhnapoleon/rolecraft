@@ -25,20 +25,18 @@ describe('assistant answer modes', () => {
   });
 
   it.each([
-    ['zh', '等待模型接入（当前为原文检索结果）', '原文抽取', '模型生成 · 回答待核验'],
-    [
-      'en',
-      'Awaiting model connection (showing extractive result)',
-      'Extractive',
-      'Model-generated · Answer awaiting verification',
-    ],
+    ['zh', '原文抽取', '原文抽取', '模型生成 · 回答待核验'],
+    ['en', 'Extractive', 'Extractive', 'Model-generated · Answer awaiting verification'],
   ] as const)(
     'labels each saved mode in %s from the record',
     (language, waiting, extractive, llm) => {
       setPreference(language);
-      expect(answerModeLabel({ mode: 'extractive', assistant: 'waiting_model' }).text).toBe(
-        waiting,
-      );
+      // Waiting for a model keeps the saved mode's words; the grey mark says the rest.
+      expect(answerModeLabel({ mode: 'extractive', assistant: 'waiting_model' })).toMatchObject({
+        text: waiting,
+        waiting: true,
+      });
+      expect(answerModeLabel({ mode: 'extractive', assistant: 'model' }).waiting).toBe(false);
       expect(answerModeLabel({ mode: 'extractive', assistant: 'model' }).text).toBe(extractive);
       // A generated answer stays generated even after the deployment loses its model.
       expect(answerModeLabel({ mode: 'llm', assistant: 'waiting_model' }).text).toBe(llm);
@@ -57,6 +55,7 @@ describe('assistant answer modes', () => {
       const html = answerModeLine({ mode: 'extractive', assistant: 'waiting_model' });
       expect(count(html, 'class="answer-mode"')).toBe(1);
       expect(count(html, ASSISTANT_COPY[language].assistant_mode_waiting)).toBe(1);
+      expect(count(html, 'data-model-wait')).toBe(1);
       expect(html).toContain('data-answer-mode="extractive"');
       expect(answerModeLine({ mode: 'local' })).toBe('');
     }

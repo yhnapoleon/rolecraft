@@ -1,67 +1,83 @@
 /* RoleCraft workbench
    A workplace, not a quiz: your work on the left, the desk in the middle, your team
-   on the right. Colour carries meaning — the case has its own light, each colleague
-   has a colour that follows their words, documents are paper, the product under test
-   looks like a product. Everything else stays quiet. */
+   on the right. Colour carries meaning — each colleague has a colour that follows their
+   words, documents are paper, the product under test looks like a product, and the desk
+   is lit only when the world changes. Everything else stays quiet.
+   Materials: the desk is a calibrated instrument and whatever arrives from the world is
+   paper. Depth comes from lightness steps (recess < desk < instrument < paper), not from
+   cards; the shapes, surfaces and the light that apply them live in material.css. */
 
 :root {
   color-scheme: light;
-  --canvas: #eceef2;
-  --surface: #ffffff;
-  --surface-2: #f6f7f9;
-  --surface-3: #eef0f4;
+  --canvas: #e6eae7;
+  --surface: #f1f3f1;
+  --surface-2: #e8ebe9;
+  --surface-3: #dce1dd;
   --paper: #ffffff;
-  --glass: rgba(248, 249, 251, 0.74);
-  --glass-strong: rgba(250, 251, 252, 0.96);
-  --ink: #15171c;
-  --ink-2: #4b505b;
-  --ink-3: #7b818d;
-  --ink-4: #a9aeb7;
-  --line: rgba(20, 24, 32, 0.08);
-  --line-2: rgba(20, 24, 32, 0.14);
-  --fill: rgba(20, 24, 32, 0.05);
-  --fill-2: rgba(20, 24, 32, 0.08);
-  --primary: #15171c;
-  --on-primary: #ffffff;
+  --glass: rgba(241, 243, 241, 0.8);
+  --glass-strong: rgba(243, 245, 243, 0.97);
+  --ink: #111715;
+  --ink-2: #434c49;
+  --ink-3: #5a6461;
+  --ink-4: #8a938f;
+  --line: rgba(17, 23, 21, 0.09);
+  --line-2: rgba(17, 23, 21, 0.15);
+  --fill: rgba(17, 23, 21, 0.05);
+  --fill-2: rgba(17, 23, 21, 0.08);
+  --primary: #111715;
+  --on-primary: #f6f7f6;
   /* Colour has one meaning each. Ink: you and what you can do. Amber: the world changed or is out of date.
      Green: holds / done. Red: over a limit. Grey: not known yet. Hues name people (see --p-*). */
-  --accent: #15171c;
-  --accent-ink: #15171c;
-  --accent-tint: rgba(20, 24, 32, 0.07);
-  --warn: #b5530b;
-  --warn-tint: #fff2e5;
-  --good: #16794a;
-  --good-tint: #e8f6ee;
-  --bad: #c0392b;
-  --bad-tint: #fdeceb;
-  --p-manager: #7457e8;
-  --p-business: #c2449f;
-  --p-technical: #0d9484;
-  --p-neutral: #8b93a2;
-  --p-assistant: #3d63f5;
-  --p-agent: #3a3f4b;
-  --amb-a: rgba(120, 130, 160, 0.1);
-  --amb-b: rgba(120, 130, 160, 0.07);
-  --amb-c: rgba(120, 130, 160, 0.05);
+  --accent: #111715;
+  --accent-ink: #111715;
+  --accent-tint: rgba(17, 23, 21, 0.07);
+  --warn: #96500a;
+  --warn-tint: #f4e5d0;
+  --good: #1b7149;
+  --good-tint: #dcede2;
+  --bad: #b3372a;
+  --bad-tint: #f6e1dc;
+  --p-manager: #6550d0;
+  --p-business: #ad3f88;
+  --p-technical: #0e7e70;
+  --p-neutral: #8a938f;
+  --p-assistant: #3557d2;
+  --p-agent: #343b39;
+  /* The desk has no light of its own; it is lit only while the world has changed
+     (amber) or the work has just been handed in (green). */
+  --amb-a: transparent;
+  --amb-b: transparent;
+  --amb-c: transparent;
+  --light-warn: rgba(222, 146, 58, 0.22);
+  --light-good: rgba(52, 160, 104, 0.24);
   --shadow-paper:
-    0 1px 1px rgba(16, 18, 24, 0.04), 0 4px 14px -4px rgba(16, 18, 24, 0.08),
-    0 22px 44px -26px rgba(16, 18, 24, 0.18);
-  --shadow-card: 0 1px 1px rgba(16, 18, 24, 0.04), 0 10px 30px -18px rgba(16, 18, 24, 0.22);
-  --shadow-float: 0 2px 6px rgba(16, 18, 24, 0.06), 0 26px 70px -18px rgba(16, 18, 24, 0.32);
+    0 0 0 0.5px rgba(17, 23, 21, 0.11), 0 1px 0 rgba(17, 23, 21, 0.035),
+    0 14px 30px -20px rgba(17, 23, 21, 0.42);
+  --shadow-card: 0 0 0 0.5px rgba(17, 23, 21, 0.11), 0 1px 1px rgba(17, 23, 21, 0.05);
+  --shadow-float:
+    0 0 0 0.5px rgba(17, 23, 21, 0.14), 0 2px 4px rgba(17, 23, 21, 0.04),
+    0 24px 48px -20px rgba(17, 23, 21, 0.38);
   --r-xs: 6px;
   --r-sm: 9px;
   --r-md: 12px;
   --r-lg: 16px;
   --r-xl: 22px;
+  /* Paper sheets are near-square, instrument keys are 8px, pills are kept for status. */
+  --r-paper: 3px;
+  --r-key: 8px;
+  --r-panel: 12px;
+  --r-dialog: 16px;
+  /* Scrim behind a sheet that covers the main screen. */
+  --dim: rgba(17, 23, 21, 0.16);
   --sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", system-ui, sans-serif;
+    "Instrument Sans Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --display:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", system-ui, sans-serif;
+    "Instrument Sans Variable", -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --serif:
-    "Newsreader", "Iowan Old Style", "Charter", "Songti SC", "Noto Serif SC", "Source Han Serif SC",
-    "PingFang SC", system-ui, sans-serif;
+    "Newsreader Variable", "Newsreader", "Iowan Old Style", "Charter", "Songti SC", "Noto Serif SC",
+    "Source Han Serif SC", "PingFang SC", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --toolbar-h: 56px;
   /* Springs sampled from WWDC23 duration/bounce into CSS linear(). */
@@ -108,6 +124,7 @@
     1
   );
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --fast: 160ms;
   --mid: 280ms;
   --slow: 520ms;
@@ -115,43 +132,48 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --canvas: #0e0f12;
-    --surface: #17191e;
-    --surface-2: #1d2026;
-    --surface-3: #23272e;
-    --paper: #1b1e23;
-    --glass: rgba(22, 24, 29, 0.72);
-    --glass-strong: rgba(24, 26, 31, 0.96);
-    --ink: #f2f3f5;
-    --ink-2: #b4b9c2;
-    --ink-3: #868c97;
-    --ink-4: #5d636e;
-    --line: rgba(255, 255, 255, 0.08);
-    --line-2: rgba(255, 255, 255, 0.14);
+    --canvas: #0e1211;
+    --surface: #151a18;
+    --surface-2: #1c2220;
+    --surface-3: #090c0b;
+    --paper: #1c2220;
+    --glass: rgba(21, 26, 24, 0.8);
+    --glass-strong: rgba(22, 27, 25, 0.97);
+    --ink: #e8edea;
+    --ink-2: #b1bab6;
+    --ink-3: #8d9692;
+    --ink-4: #5c6561;
+    --line: rgba(255, 255, 255, 0.075);
+    --line-2: rgba(255, 255, 255, 0.13);
     --fill: rgba(255, 255, 255, 0.06);
     --fill-2: rgba(255, 255, 255, 0.1);
-    --primary: #f2f3f5;
-    --on-primary: #121317;
-    --accent: #f2f3f5;
-    --accent-ink: #f2f3f5;
+    --primary: #e8edea;
+    --on-primary: #0e1211;
+    --accent: #e8edea;
+    --accent-ink: #e8edea;
     --accent-tint: rgba(255, 255, 255, 0.1);
-    --warn: #f0a35b;
-    --warn-tint: rgba(240, 163, 91, 0.13);
-    --good: #57c98c;
-    --good-tint: rgba(87, 201, 140, 0.13);
-    --bad: #f07a6e;
-    --bad-tint: rgba(240, 122, 110, 0.13);
-    --p-manager: #9b86ff;
-    --p-business: #ec7ccb;
-    --p-technical: #2fc2ad;
-    --p-assistant: #7d95ff;
-    --p-agent: #c9ced8;
-    --amb-a: rgba(140, 150, 180, 0.08);
-    --amb-b: rgba(140, 150, 180, 0.05);
-    --amb-c: rgba(140, 150, 180, 0.04);
-    --shadow-paper: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 18px 40px -24px rgba(0, 0, 0, 0.7);
-    --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 16px 34px -22px rgba(0, 0, 0, 0.7);
-    --shadow-float: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 30px 70px -20px rgba(0, 0, 0, 0.8);
+    --warn: #e7a15a;
+    --warn-tint: rgba(231, 161, 90, 0.12);
+    --good: #5bc28e;
+    --good-tint: rgba(91, 194, 142, 0.13);
+    --bad: #ee7a6a;
+    --bad-tint: rgba(238, 122, 106, 0.14);
+    --p-manager: #a08fff;
+    --p-business: #ea7fc6;
+    --p-technical: #3cc2ae;
+    --p-assistant: #7f97ff;
+    --p-agent: #c9d0cd;
+    --amb-a: transparent;
+    --amb-b: transparent;
+    --amb-c: transparent;
+    --light-warn: rgba(231, 150, 70, 0.16);
+    --light-good: rgba(70, 190, 128, 0.16);
+    --shadow-paper:
+      0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 18px 36px -22px rgba(0, 0, 0, 0.85);
+    --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    --shadow-float: 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 28px 60px -20px rgba(0, 0, 0, 0.85);
+    --dim: rgba(0, 0, 0, 0.42);
   }
 }
 
@@ -219,9 +241,13 @@ a {
   text-underline-offset: 3px;
 }
 :focus-visible {
-  outline: 2px solid var(--focus, var(--accent));
+  outline: 2px solid var(--focus, var(--ink));
   outline-offset: 2px;
-  border-radius: 6px;
+}
+/* Headings and regions focused by code (a reader opening, a page arriving) show no ring unless
+ * the person is moving by keyboard. */
+html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
+  outline: none;
 }
 ::selection {
   background: var(--accent-tint);
@@ -290,6 +316,11 @@ a {
 }
 
 /* ---------- controls ---------- */
+/* Keys in four levels (decision 3): .btn is the secondary key (instrument, hairline edge),
+ * .btn.primary the one ink key per screen, .btn.quiet the ghost, .btn.icon the 32px icon key.
+ * Seven states: hover only where a fine pointer can hover; pressed scale(.97) 160ms; keyboard
+ * focus ring (global :focus-visible); disabled at 40% with a reason line beside it; loading and
+ * done through setKeyState (shell/keys.ts). */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -298,19 +329,17 @@ a {
   height: 34px;
   padding: 0 14px;
   border: 0;
-  border-radius: 999px;
-  background: var(--fill);
+  border-radius: var(--r-key);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
   color: var(--ink);
   font-size: 13.5px;
   font-weight: 500;
   white-space: nowrap;
   transition:
-    background var(--fast) ease,
-    transform var(--fast) var(--ease),
-    opacity var(--fast) ease;
-}
-.btn:hover {
-  background: var(--fill-2);
+    background-color var(--fast) var(--ease-out),
+    transform var(--fast) var(--ease-out),
+    opacity var(--fast) var(--ease-out);
 }
 .btn:active {
   transform: scale(0.97);
@@ -318,17 +347,25 @@ a {
 .btn.primary {
   background: var(--primary);
   color: var(--on-primary);
-}
-.btn.primary:hover {
-  background: color-mix(in oklab, var(--primary), var(--canvas) 14%);
+  box-shadow: none;
+  font-weight: 600;
 }
 .btn.quiet {
   background: transparent;
+  box-shadow: none;
   color: var(--ink-2);
 }
-.btn.quiet:hover {
-  background: var(--fill);
-  color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    background: color-mix(in oklab, var(--surface-2) 82%, var(--ink) 6%);
+  }
+  .btn.primary:hover {
+    background: color-mix(in oklab, var(--primary), var(--canvas) 14%);
+  }
+  .btn.quiet:hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
 }
 .btn.small {
   height: 30px;
@@ -341,16 +378,56 @@ a {
   font-size: 15px;
 }
 .btn.icon {
-  width: 34px;
+  width: 32px;
+  height: 32px;
   padding: 0;
 }
 .btn.icon.small {
-  width: 30px;
+  width: 28px;
+  height: 28px;
 }
 .btn[disabled] {
-  opacity: 0.38;
+  opacity: 0.4;
   cursor: default;
   transform: none;
+}
+.btn[aria-busy="true"] {
+  cursor: progress;
+}
+/* Why a key cannot be pressed (decision 4), on the line under it or beside it. */
+.key-reason {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+.key-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+.key-glyph > * {
+  grid-area: 1 / 1;
+}
+.key-spin {
+  width: 14px;
+  height: 14px;
+  animation: key-spin 700ms linear infinite;
+}
+@keyframes key-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn:active {
+    transform: none;
+  }
+  .key-spin {
+    animation-duration: 1.6s;
+  }
 }
 .btn.back {
   padding-left: 8px;
@@ -491,17 +568,13 @@ a {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  color: #fff;
+  /* A monogram on paper, ringed in the person's hue: the hue lives only here. */
+  color: var(--c);
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 0;
-  background: radial-gradient(
-    120% 120% at 28% 18%,
-    color-mix(in oklab, var(--c), white 30%),
-    var(--c) 55%,
-    color-mix(in oklab, var(--c), black 18%)
-  );
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.25);
+  background: color-mix(in oklab, var(--c) 9%, var(--paper));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 34%, transparent);
 }
 .av.who-manager {
   --c: var(--p-manager);
@@ -585,21 +658,15 @@ a {
   stroke-linejoin: round;
 }
 .mark-assistant {
-  background: linear-gradient(145deg, #4c6bff, #2bb7d1);
-  box-shadow:
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.3),
-    0 1px 2px rgba(43, 80, 210, 0.25);
+  color: var(--p-assistant);
+  background: color-mix(in oklab, var(--p-assistant) 9%, var(--paper));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--p-assistant) 34%, transparent);
 }
+/* Your own agent is ink, the same as you. */
 .mark-agent {
-  background: linear-gradient(145deg, #545a67, #15171c);
-  box-shadow:
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.22),
-    0 1px 2px rgba(16, 18, 24, 0.3);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .mark-agent {
-    background: linear-gradient(145deg, #767d8b, #3a3f4b);
-  }
+  border-radius: 50%;
+  color: var(--on-primary);
+  background: var(--primary);
 }
 .mark-xs {
   width: 18px;
@@ -694,27 +761,33 @@ html.scrolled body:not([data-view="work"]) .topbar {
 .wordmark {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   height: 34px;
-  padding: 0 10px 0 6px;
+  padding: 0 10px 0 8px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-key);
   background: none;
   font-weight: 600;
-  font-size: 15px;
-  letter-spacing: -0.01em;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  font-stretch: 92%;
 }
 .wordmark:hover {
   background: var(--fill);
 }
 .wordmark-glyph {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
+  /* A slip of paper, slightly askew, with three lines of ink. */
+  flex: none;
+  width: 17px;
+  height: 21px;
+  border-radius: 2px;
   background:
-    radial-gradient(120% 120% at 25% 15%, #8b5cf6, transparent 60%),
-    linear-gradient(140deg, #16206b, #3d63f5 60%, #22b8cf);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.3);
+    linear-gradient(var(--ink), var(--ink)) 4px 6px / 9px 1.5px no-repeat,
+    linear-gradient(var(--ink-3), var(--ink-3)) 4px 10px / 9px 1.5px no-repeat,
+    linear-gradient(var(--ink-4), var(--ink-4)) 4px 14px / 5px 1.5px no-repeat,
+    var(--paper);
+  box-shadow: var(--shadow-card);
+  transform: rotate(-5deg);
 }
 .lang-btn {
   gap: 6px;
@@ -734,7 +807,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   z-index: 50;
   min-width: 200px;
   padding: 6px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   backdrop-filter: blur(24px) saturate(1.6);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
@@ -840,7 +913,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   max-width: 760px;
   margin-bottom: 28px;
   padding: 14px 16px 14px 18px;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -860,7 +933,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--r-xl);
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
   transition:
@@ -947,7 +1020,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   display: grid;
   grid-template-columns: minmax(260px, 0.82fr) 1.5fr;
   overflow: hidden;
-  border-radius: var(--r-xl);
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -1079,7 +1152,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   display: grid;
   grid-template-columns: 136px 1fr;
   overflow: hidden;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -1117,7 +1190,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   padding-top: 6px;
 }
 .intake {
-  border-radius: var(--r-lg);
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -1186,7 +1259,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
 }
 .list {
   display: grid;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
   overflow: hidden;
@@ -1337,7 +1410,7 @@ body[data-view="work"] {
   gap: 14px;
   width: min(440px, 92vw);
   padding: 18px;
-  border-radius: 18px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   backdrop-filter: blur(26px) saturate(1.6);
   -webkit-backdrop-filter: blur(26px) saturate(1.6);
@@ -1774,7 +1847,7 @@ button.crumb:hover {
 }
 .paper {
   position: relative;
-  border-radius: 14px;
+  border-radius: var(--r-paper);
   background: var(--paper);
   box-shadow: var(--shadow-paper);
 }
@@ -1796,7 +1869,7 @@ button.crumb:hover {
   min-height: 64px;
   padding: 14px 16px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   box-shadow: var(--shadow-card);
   text-align: left;
@@ -1989,6 +2062,28 @@ button.crumb:hover {
   box-shadow: inset 0 1px 0 var(--line);
   padding-top: 14px;
   margin-top: 6px;
+}
+/* Cited passages under the evidence chips: the world's words in serif, the source beneath. */
+.evidence-quotes {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.evidence-quote {
+  margin: 0;
+  padding-left: 12px;
+  box-shadow: inset 2px 0 0 var(--line-2);
+  color: var(--ink-2);
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 72ch;
+}
+.evidence-quote-src {
+  margin-left: 12px;
+  font-size: 12px;
 }
 .agent-strip {
   display: flex;
@@ -2197,7 +2292,7 @@ button.crumb:hover {
 
 /* the product under test */
 .console {
-  border-radius: 18px;
+  border-radius: var(--r-panel);
   background: var(--paper);
   box-shadow: var(--shadow-paper);
   overflow: hidden;
@@ -2208,7 +2303,11 @@ button.crumb:hover {
   align-items: flex-start;
   gap: 12px 14px;
   padding: 20px 22px 18px;
-  background: linear-gradient(180deg, color-mix(in oklab, #3d63f5, transparent 94%), transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--p-assistant), transparent 94%),
+    transparent
+  );
 }
 .console.is-stale .console-head {
   background: linear-gradient(
@@ -2316,7 +2415,7 @@ button.crumb:hover {
 }
 .run {
   padding: 18px 20px 14px;
-  border-radius: 16px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   box-shadow: var(--shadow-card);
   scroll-margin: 24px;
@@ -2460,7 +2559,7 @@ button.crumb:hover {
   min-height: 62px;
   padding: 10px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: none;
   text-align: left;
   transition: background var(--fast) ease;
@@ -2492,6 +2591,10 @@ button.crumb:hover {
 }
 .person.unread .person-line {
   color: var(--ink);
+  font-weight: 600;
+}
+.person-replying {
+  color: var(--ink-2);
 }
 .count-badge {
   display: inline-grid;
@@ -2614,17 +2717,26 @@ button.crumb:hover {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  font-size: 15px;
   font-weight: 600;
+  line-height: 1.25;
 }
 .chat-name small {
   color: var(--ink-3);
   font-weight: 400;
   font-size: 12px;
 }
+/* Role · what they know, under the name. */
 .chat-knows {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 1px;
   color: var(--ink-3);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-wrap: pretty;
 }
 .thread {
   flex: 1;
@@ -2634,6 +2746,11 @@ button.crumb:hover {
   flex-direction: column;
   gap: 10px;
   padding: 16px 14px;
+}
+/* A native thread follows new messages itself; opening a long reply grows it in place, so the
+   browser must not shift the view to keep something else still. */
+.chat[data-v4-region="roles"] .thread {
+  overflow-anchor: none;
 }
 .chat-empty {
   display: grid;
@@ -2828,56 +2945,108 @@ button.crumb:hover {
 .agent-config .btn {
   justify-self: start;
 }
+/* What travels with the next message: a card on the composer, taken off with its cross. */
 .chat-quote {
-  position: relative;
-  margin: 0 12px 8px;
-  padding: 8px 34px 8px 10px;
-  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 28px;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 4px 8px 10px;
+  border-radius: 9px;
   background: var(--fill);
-  color: var(--ink-2);
   font-size: 12.5px;
-  line-height: 1.5;
+  line-height: 1.45;
+}
+.chat-quote-i {
+  margin-top: 2px;
+  color: var(--ink-2);
+}
+.chat-quote-body {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
 }
 .chat-quote-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
   color: var(--ink-3);
   font-size: 11.5px;
 }
 .chat-quote-text {
-  margin: 3px 0 0;
-  max-height: 7.5em;
-  overflow: auto;
-  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 .chat-quote .btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+  width: 28px;
+  height: 28px;
 }
+/* The composer is paper: attachments on top, the two attach keys, the words, the ink send key. */
 .composer {
+  display: grid;
+  gap: 5px;
+  margin: 2px 12px 0;
+  padding: 5px;
+  border-radius: var(--r-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--fast) ease;
+}
+.composer:focus-within {
+  box-shadow:
+    var(--shadow-card),
+    0 0 0 1.5px color-mix(in oklab, var(--ink) 22%, transparent);
+}
+.composer-line {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  margin: 0 12px 12px;
-  padding: 8px 8px 8px 12px;
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
+  gap: 4px;
+}
+.composer-tools {
+  display: flex;
+  flex: none;
+}
+.composer-tool {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--r-key, 8px);
+  background: none;
+  color: var(--ink-2);
+  transition:
+    background-color var(--fast) ease,
+    transform var(--fast) var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+.composer-tool:active {
+  transform: scale(0.95);
+}
+.composer-tool.on {
+  background: var(--fill);
+  color: var(--ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .composer-tool:hover {
+    background: var(--fill);
+  }
 }
 .composer textarea {
   flex: 1;
-  min-height: 40px;
-  max-height: 180px;
+  min-width: 0;
+  min-height: 34px;
+  max-height: 132px;
   resize: none;
   border: 0;
   background: none;
-  padding: 6px 0;
-  font-size: 13.5px;
-  line-height: 1.5;
+  padding: 7px 4px;
+  font-size: 14px;
+  line-height: 1.45;
   outline: none;
+}
+.composer textarea::placeholder {
+  color: var(--ink-3);
 }
 @supports (field-sizing: content) {
   .composer textarea {
@@ -2885,8 +3054,52 @@ button.crumb:hover {
   }
 }
 .composer .send {
-  width: 32px;
-  height: 32px;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-key, 9px);
+}
+.composer .send:disabled {
+  opacity: 0.25;
+}
+.composer:has(textarea:placeholder-shown) .send:not(:disabled) {
+  opacity: 0.35;
+}
+.composer-hint {
+  margin: 0;
+  padding: 5px 17px 10px;
+  color: var(--ink-3);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity var(--fast) ease;
+}
+.chat:focus-within .composer-hint {
+  opacity: 1;
+}
+/* Touch keyboards have their own send key; the hint is for keyboards only. */
+@media (hover: none), (pointer: coarse) {
+  .composer-hint {
+    display: none;
+  }
+  .composer {
+    margin-bottom: 12px;
+  }
+  .composer-tool,
+  .composer .send {
+    width: 40px;
+    height: 40px;
+  }
+}
+/* The breathing ring is on the avatar; the avatar keeps its own letter and layout (the
+   generic .typing dots rule would grey the letter out). */
+.av.typing {
+  display: inline-grid;
+  color: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .av.typing::after {
+    animation: none;
+  }
 }
 .agent-panel {
   display: grid;
@@ -2909,7 +3122,7 @@ button.crumb:hover {
   display: grid;
   gap: 10px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -3015,7 +3228,7 @@ button.crumb:hover {
 .review-art {
   height: 150px;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: var(--r-paper);
   box-shadow: var(--shadow-card);
 }
 .review-title {
@@ -3089,7 +3302,7 @@ button.crumb:hover {
   align-items: center;
   gap: 12px;
   padding: 18px 20px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
   margin-bottom: 20px;
@@ -3144,7 +3357,7 @@ button.crumb:hover {
   display: flex;
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -3223,6 +3436,8 @@ button.crumb:hover {
 .review-side {
   display: grid;
   gap: 20px;
+  /* A grid item may shrink below its content: nothing inside widens the side column. */
+  min-width: 0;
   position: sticky;
   top: calc(var(--toolbar-h) + 12px);
   /* Never taller than the window: the column scrolls on its own, so practice choices and
@@ -3244,7 +3459,7 @@ button.crumb:hover {
   max-height: 40vh;
   overflow: auto;
   padding: 16px 18px;
-  border-radius: 14px;
+  border-radius: var(--r-paper);
   background: var(--paper);
   box-shadow: var(--shadow-paper);
   scroll-margin-top: calc(var(--toolbar-h) + 12px);
@@ -3433,7 +3648,7 @@ button.crumb:hover {
   max-height: min(88dvh, 860px);
   padding: 0;
   border: 0;
-  border-radius: 22px;
+  border-radius: var(--r-dialog);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-float);
@@ -3459,6 +3674,13 @@ button.crumb:hover {
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   animation: fade 200ms ease;
+}
+/* On a dark desk the light scrim hardly dims anything; darken toward the desk itself so the
+   page behind a dialog or bottom sheet clearly steps back. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sheet::backdrop {
+    background: color-mix(in srgb, var(--canvas) 62%, transparent);
+  }
 }
 @keyframes sheet-in {
   from {
@@ -3737,7 +3959,7 @@ textarea.doc-input[name="rationale"] {
   max-width: min(560px, calc(100vw - 32px));
   margin-inline: auto;
   padding: 10px 12px 10px 16px;
-  border-radius: 16px;
+  border-radius: var(--r-panel);
   background: var(--primary);
   color: var(--on-primary);
   font-size: 13.5px;
@@ -3840,7 +4062,7 @@ textarea.doc-input[name="rationale"] {
 }
 ::view-transition-image-pair(case-surface) {
   overflow: clip;
-  border-radius: 18px;
+  border-radius: var(--r-paper);
 }
 @keyframes vt-out {
   to {
@@ -4100,9 +4322,11 @@ textarea.doc-input[name="rationale"] {
   }
   .sheet {
     width: 100vw;
+    /* A bottom sheet that fills the width: the UA keeps modal dialogs 2em + 6px narrower. */
+    max-width: 100vw;
     max-height: 92dvh;
     margin: auto 0 0;
-    border-radius: 22px 22px 0 0;
+    border-radius: var(--r-dialog) var(--r-dialog) 0 0;
   }
   .sheet[open] {
     animation: sheet-up var(--slow) var(--spring);
@@ -4229,7 +4453,7 @@ textarea.doc-input[name="rationale"] {
   gap: 28px;
   align-items: center;
   padding: 24px 28px;
-  border-radius: 20px;
+  border-radius: var(--r-paper);
   background: var(--paper);
   box-shadow: var(--shadow-paper);
 }
@@ -4256,7 +4480,7 @@ textarea.doc-input[name="rationale"] {
   display: grid;
   gap: 2px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--surface-2);
 }
 .conds.compact .cond {
@@ -4304,7 +4528,7 @@ textarea.doc-input[name="rationale"] {
   align-items: center;
   gap: 12px 16px;
   padding: 18px 20px;
-  border-radius: 18px;
+  border-radius: var(--r-panel);
   background: var(--warn-tint);
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warn), transparent 80%);
   animation: arrive var(--slow) var(--spring);
@@ -4347,7 +4571,7 @@ textarea.doc-input[name="rationale"] {
   align-items: center;
   gap: 10px 14px;
   padding: 14px 16px 14px 18px;
-  border-radius: 16px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   box-shadow: var(--shadow-card);
 }
@@ -4440,7 +4664,7 @@ textarea.doc-input[name="rationale"] {
   align-content: start;
   min-height: 120px;
   padding: 10px;
-  border-radius: 16px;
+  border-radius: var(--r-panel);
   background: var(--fill);
   transition:
     background var(--fast) ease,
@@ -4482,16 +4706,18 @@ textarea.doc-input[name="rationale"] {
 }
 .card {
   position: relative;
-  border-radius: 14px;
+  border-radius: var(--r-paper);
   background: var(--paper);
   box-shadow: var(--shadow-card);
   transition:
     transform var(--mid) var(--spring),
     box-shadow var(--mid) ease;
 }
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-float);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-float);
+  }
 }
 .card.dragging {
   opacity: 0.45;
@@ -4507,7 +4733,7 @@ textarea.doc-input[name="rationale"] {
   width: 100%;
   padding: 14px 40px 14px 14px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-paper);
   background: none;
   text-align: left;
 }
@@ -4594,6 +4820,7 @@ textarea.doc-input[name="rationale"] {
   top: 10px;
   right: 8px;
   opacity: 0;
+  transition: opacity var(--fast) ease;
 }
 .card:hover .card-more,
 .card:focus-within .card-more {
@@ -4622,7 +4849,7 @@ textarea.doc-input[name="rationale"] {
   min-height: 112px;
   padding: 14px 14px 12px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-paper);
   background: var(--paper);
   box-shadow: var(--shadow-card);
   text-align: left;
@@ -4686,7 +4913,7 @@ textarea.doc-input[name="rationale"] {
 }
 .task-head {
   padding: 16px 20px;
-  border-radius: 18px;
+  border-radius: var(--r-paper);
   background: var(--paper);
   box-shadow: var(--shadow-card);
 }
@@ -4722,7 +4949,7 @@ textarea.doc-input[name="rationale"] {
   display: grid;
   gap: 14px;
   padding: 12px 10px;
-  border-radius: 16px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   box-shadow: var(--shadow-card);
 }
@@ -4818,7 +5045,7 @@ textarea.doc-input[name="rationale"] {
   display: grid;
   gap: 4px;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--glass-strong);
   box-shadow: var(--shadow-card);
 }
@@ -4856,7 +5083,7 @@ textarea.doc-input[name="rationale"] {
   display: grid;
   gap: 6px;
   padding: 12px 12px 10px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--paper);
   box-shadow: var(--shadow-card);
   animation: arrive var(--mid) var(--spring);
@@ -5032,7 +5259,7 @@ textarea.doc-input[name="rationale"] {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 12px 10px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -5133,7 +5360,7 @@ textarea.doc-input[name="rationale"] {
   display: grid;
   gap: 10px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -5363,6 +5590,14 @@ button.act-open:hover {
   list-style: disc;
   padding-left: 1.2em;
 }
+/* The engineer job's three steps read in order: quiet numbers, not bullets. */
+ol.later-list {
+  list-style: decimal;
+}
+ol.later-list li::marker {
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
 .career.later .career-art {
   opacity: 1;
   filter: none;
@@ -5586,6 +5821,41 @@ button.act-open:hover {
 .sw-shape {
   gap: 5px;
 }
+/* About this workspace: three quiet sections, then the records kept out of the working view. */
+.about-sec {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+.about-sec .mini-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.about .legend,
+.about .model-pop__parts {
+  padding-left: 0;
+  list-style: none;
+}
+.about-sec .legend {
+  margin: 0;
+}
+.about-sec .model-pop__parts {
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.legend .sw-shape .model-wait {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
 .answer-tag {
   margin-top: 8px;
 }
@@ -5775,4 +6045,108 @@ button.act-open:hover {
     transform: none;
     transition: opacity 80ms;
   }
+}
+
+/* The manager's second line in the brief: what to hand back, by when, and where. Same voice
+   and serif as the brief, a breath below it. */
+.brief-letter .brief-direction {
+  margin-top: 10px;
+}
+
+/* "Start a revision" lands here: the manager's note on where to pick the work up. */
+.revise-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.revise-note .letter {
+  flex: 1;
+  min-width: 0;
+}
+.revise-note > button.btn {
+  flex: none;
+}
+@media (max-width: 720px) {
+  .revise-note {
+    flex-direction: column;
+  }
+}
+.revise-note .letter-body {
+  max-width: 72ch;
+}
+
+/* Phone-width sheets fill the width as bottom sheets (every width variant) and keep 16px
+   gutters on both sides. */
+@media (max-width: 720px) {
+  .sheet,
+  .sheet.wide,
+  .sheet.narrow {
+    width: 100vw;
+    max-width: 100vw;
+  }
+  .sheet-head {
+    padding: 16px 12px 10px 16px;
+  }
+  .sheet-body {
+    padding: 4px 16px 18px;
+  }
+  .sheet-foot {
+    padding: 12px 16px 16px;
+  }
+}
+/* The sheet's title takes the first focus so nothing looks chosen; it is not a control. */
+#sheet-title:focus {
+  outline: none;
+}
+
+/* An empty column shows only its slot; the drop hint appears while a card is being dragged.
+   (A grey dashed line means "not known yet", so it is not used here.) */
+.kanban .col-empty {
+  min-height: 48px;
+  border: 0;
+  color: transparent;
+  background: transparent;
+  transition:
+    background var(--fast) ease,
+    color var(--fast) ease;
+}
+.kanban.is-dragging .col-empty {
+  background: var(--fill-2);
+  color: var(--ink-3);
+}
+
+/* The board hint names only what works where it shows: the keys need a keyboard, dragging a
+   pointer; a touch screen shows neither (the card's "⋯" does both). */
+@media (max-width: 720px) {
+  .sec-hint .hint-keys {
+    display: none;
+  }
+}
+/* A text button with a shorter label for phone widths (the delivery sheet's "View feedback"):
+   only the shown label exists for a screen reader, since the other is display: none. */
+.when-narrow {
+  display: none;
+}
+@media (max-width: 720px) {
+  .when-wide {
+    display: none;
+  }
+  .when-narrow {
+    display: inline;
+  }
+}
+@media (hover: none) {
+  .sec-hint {
+    display: none;
+  }
+}
+
+/* The behaviour card waits for its reading; an empty one leaves no blank strip. */
+.review-side .rc-behavior:empty {
+  display: none;
 }

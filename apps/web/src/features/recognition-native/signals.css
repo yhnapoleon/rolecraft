@@ -1,0 +1,147 @@
+/* Recognition lens. Quiet by default: nothing, or one grey line. With the lens open: capsule
+ * chips (plain words, a short bar, the course category) and the work sentence by sentence.
+ * Colours keep their one meaning: green holds up, red contradicts, grey dashed not known yet;
+ * bars are neutral ink so a long bar never reads as good or bad. */
+.rc-quiet {
+  margin: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.rc-cat {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+:lang(en) .rc-cat {
+  letter-spacing: 0.01em;
+}
+.rc-sigs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 8px 0 0;
+}
+.rc-sig {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  min-height: 22px;
+  max-width: 100%;
+  padding: 2px 9px;
+  /* A capsule on one line; a soft rectangle when a long finding wraps. */
+  border-radius: var(--r-md);
+  background: var(--accent-tint);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+.rc-sig[data-tone='good'] {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.rc-sig[data-tone='bad'] {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.rc-sig[data-tone='unknown'],
+.rc-sig[data-fallback] {
+  background: transparent;
+  outline: 1px dashed var(--ink-4);
+  outline-offset: -1px;
+  color: var(--ink-3);
+}
+.rc-sig__text {
+  min-width: 0;
+}
+.rc-sig .rc-cat {
+  padding-inline-start: 7px;
+  border-inline-start: 1px solid var(--line-2);
+}
+.rc-meter {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  inline-size: 34px;
+  block-size: 4px;
+  border-radius: var(--r-xs);
+  background: var(--line-2);
+  vertical-align: middle;
+}
+.rc-meter i {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  border-radius: inherit;
+  background: var(--ink-3);
+}
+.rc-meter b {
+  position: absolute;
+  inset-block: -2px;
+  inline-size: 1.5px;
+  margin-inline-start: -0.75px;
+  background: var(--ink);
+}
+
+/* Reviewer explanation tag (lens only) */
+.rc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 1px 8px;
+  border-radius: var(--r-md);
+  background: var(--accent-tint);
+  color: var(--ink-2);
+  font-size: 11px;
+}
+.rc-tag[data-tag='agree'] {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.rc-tag[data-tag='missing'] {
+  background: transparent;
+  outline: 1px dashed var(--ink-4);
+  outline-offset: -1px;
+  color: var(--ink-3);
+}
+details.rc-tag-box {
+  margin: 0 0 4px;
+}
+details.rc-tag-box > summary {
+  display: inline-flex;
+  list-style: none;
+  cursor: pointer;
+}
+details.rc-tag-box > summary::-webkit-details-marker {
+  display: none;
+}
+details.rc-tag-box > p {
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.rc-tag-line {
+  margin: 0;
+}
+details.rc-tag-box[open] > summary .rc-tag {
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+details.rc-tag-box > summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: var(--r-md);
+}
+/* Test runs: line up with the run's version stamps. */
+.run-col [data-rc-run]:empty {
+  display: none;
+}
+.run-col [data-rc-run] {
+  margin-inline-start: 34px;
+}
+.run-col [data-rc-run] .rc-sigs {
+  margin-top: 8px;
+}

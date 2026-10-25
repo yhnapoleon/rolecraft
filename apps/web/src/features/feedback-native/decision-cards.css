@@ -1,0 +1,100 @@
+/* Four decisions as one list (D spec, the submission dialog's `.dec`): quiet rows on the
+   instrument; the chosen one lifts as paper with an ink-filled mark. No borders, no ink frame; a
+   focus ring only from the keyboard. Its note shows on the chosen row only. */
+.decision-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin: 0 0 20px;
+}
+.decision-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background-color var(--fast) ease,
+    box-shadow var(--fast) ease,
+    transform var(--fast) var(--ease-out);
+}
+.decision-card:active {
+  transform: scale(0.98);
+}
+@media (hover: hover) and (pointer: fine) {
+  .decision-card:not(.is-chosen):hover {
+    background: var(--fill);
+  }
+}
+.decision-card.is-chosen {
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+}
+/* The radio stays in place for keyboard and screen readers; the row draws its state. */
+.decision-card__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.decision-card:has(.decision-card__input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.decision-card__mark {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--ink-4);
+  transition: box-shadow var(--fast) var(--ease-out);
+}
+.decision-card.is-chosen .decision-card__mark {
+  box-shadow: inset 0 0 0 4.5px var(--ink);
+}
+.decision-card__words {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.decision-card__name {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.decision-card__note {
+  display: none;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+.decision-card.is-chosen .decision-card__note {
+  display: block;
+}
+.decision-cards.is-disabled .decision-card {
+  cursor: default;
+  transform: none;
+}
+.decision-cards.is-disabled .decision-card:not(.is-chosen) {
+  opacity: 0.4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .decision-card,
+  .decision-card__mark {
+    transition: none;
+  }
+  .decision-card:active {
+    transform: none;
+  }
+}

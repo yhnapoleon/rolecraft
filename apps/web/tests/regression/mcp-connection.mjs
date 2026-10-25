@@ -1,8 +1,9 @@
-// Agent connection card on the normal entry: create access with returned work, read the endpoint
-// and token from the card's own copy action, return work with a scripted Streamable HTTP client,
-// then see it waiting for review in the Agent panel. No real agent or model is involved.
+// My agent page on the normal entry: one press issues access, the page's own copy action gives the
+// command (and the config for other clients), a scripted Streamable HTTP client connects and
+// returns work, and the page shows the call stream, the returned paper and the connection state
+// until the grant is revoked. No real agent or model is involved.
 import assert from 'node:assert/strict';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { waitFor } from './browser-support.mjs';
 
 const MODERN = '2026-07-28';
 const LEGACY = '2025-11-25';
@@ -79,8 +80,8 @@ class McpHttpClient {
   }
 }
 
-/** The card's own copy action, captured instead of the system clipboard. */
-async function copied(browser, action) {
+/** The page's own copy action, captured instead of the system clipboard. */
+async function copied(browser, selector) {
   await browser.ev(`(() => {
     window.regressionCopied = null;
     Object.defineProperty(navigator.clipboard, 'writeText', {
@@ -89,55 +90,20 @@ async function copied(browser, action) {
     });
     return true;
   })()`);
-  await browser.click(`[data-connection-action="${action}"]`);
+  await browser.click(selector);
   await waitFor(browser, 'typeof window.regressionCopied === "string"');
   return browser.ev('window.regressionCopied');
 }
 
-async function ensureChecked(browser, label) {
-  const selector = `[aria-label="${label}"]`;
-  if (!(await browser.ev(`document.querySelector(${JSON.stringify(selector)}).checked`)))
-    await browser.click(selector);
-}
-
-async function openAgentPanel(browser) {
-  await browser.click('.rail-tabs [data-tab="agent"]');
-  await waitFor(
-    browser,
-    `(() => {
-      const input = document.querySelector('.agent-v4-grant [name="agentName"]');
-      return !!input && !input.disabled;
-    })()`,
-  );
-}
-
-/** Creates access with returned work across the workspace; resolves when its card is shown. */
-async function createAccess(browser, text, agentName) {
-  await browser.type('[name="agentName"]', agentName);
-  await ensureChecked(browser, text('允许操作与回传作品', 'Allow actions and returned work'));
-  await ensureChecked(
-    browser,
-    text('授权整个工作区的可见内容', 'Allow visible content across the workspace'),
-  );
-  await browser.submit('.agent-v4-grant');
-  await waitFor(
-    browser,
-    `document.querySelector('[data-connection-card]')?.innerText.includes(${JSON.stringify(agentName)})`,
-  );
-  return browser.ev(`(() => {
-    const live = window.PracticeLive;
-    return live.v4Host(live.engine.getAttempt(live.state)).issuedDelegation().delegationId;
-  })()`);
-}
-
+const host = `(() => {
+  const live = window.PracticeLive;
+  return live.v4Host(live.engine.getAttempt(live.state));
+})()`;
 /** What the page would still hand out for copying. */
-const offeredSecret = (browser) =>
-  browser.ev(`(() => {
-    const live = window.PracticeLive;
-    return live.v4Host(live.engine.getAttempt(live.state)).connectionSecret();
-  })()`);
+const offeredSecret = (browser) => browser.ev(`${host}.connectionSecret()`);
+const issuedId = (browser) => browser.ev(`${host}.issuedDelegation()?.delegationId ?? null`);
 
-/** Another tab revoking the grant: the same API, not this page's host. */
+/** Another tab revoking a grant: the same API, not this page's host. */
 const revokeOutsideThisPage = (browser, delegationId) =>
   browser.ev(`(async () => {
     const session = window.PracticeLive.store.active();
@@ -158,41 +124,57 @@ const revokeOutsideThisPage = (browser, delegationId) =>
     return response.status;
   })()`);
 
+/** The My agent page of the practice on screen, ready to connect or already connected. */
+export async function openMyAgent(browser) {
+  await browser.ev(`location.hash = '#/agent'`);
+  await waitFor(
+    browser,
+    `!!document.querySelector('.ag-rig') && (
+      !!document.querySelector('.ag-cta button:not([disabled])') ||
+      ['waiting', 'connected', 'idle'].includes(document.querySelector('.ag-rig').dataset.phase))`,
+  );
+}
+
+const phase = (browser, name, milliseconds) =>
+  waitFor(
+    browser,
+    `document.querySelector('.ag-rig')?.dataset.phase === ${JSON.stringify(name)}`,
+    milliseconds,
+  );
+
 export async function connectAgentOverMcp(context) {
   const { browser, text, shot } = context;
-  const agentName = text('MCP 连接卡', 'MCP connection card');
   const title = text('MCP 回传：试点检查清单', 'MCP return: pilot checklist');
-  await openAgentPanel(browser);
-  // The scope chooser names what it lists.
+  await openMyAgent(browser);
+  // Decision R3: no name, duration or scope to choose; one press issues access.
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('.ag-root input, .ag-root select').length`),
+    0,
+  );
+  // Access may already be waiting from earlier in the practice; otherwise one press issues it.
+  if (await browser.ev(`!!document.querySelector('.ag-cta button')`))
+    await browser.click('.ag-cta button');
+  await phase(browser, 'waiting');
+  await waitFor(browser, `!!document.querySelector('.ag-connect .ag-cmd .ag-copy')`);
   assert.ok(
-    (await browser.text('.agent-v4-grant button')).includes(
-      text('选择资料范围', 'Choose documents'),
+    (await browser.ev(`document.querySelector('.ag-connect').innerText`)).includes(
+      text('到明天这个时候都有效', 'works until this time tomorrow'),
     ),
   );
-  await createAccess(browser, text, agentName);
-  const region = await browser.ev(`document.querySelector('[data-v4-region="agent"]').innerText`);
-  assert.ok(
-    region.includes(
-      text(
-        '授权已创建，按下方连接卡接入你的 Agent。',
-        'Access created. Connect your agent with the card below.',
-      ),
-    ),
-  );
-  assert.ok(
-    region.includes(
-      text(
-        '令牌会写进你的 Agent 配置和命令历史，最长 60 分钟失效，可随时撤销；点“完成”或离开练习后，这里不再提供。',
-        'The token goes into your agent’s config and command history, expires within 60 minutes and can be revoked any time; after Done or leaving the practice, it is no longer offered here.',
-      ),
-    ),
-  );
-  const command = await copied(browser, 'copy-claude');
+  const firstGrant = await issuedId(browser);
+  const command = await copied(browser, '.ag-connect .ag-cmd .ag-copy');
   const endpoint = command.match(/rolecraft '([^']+\/mcp)'/)?.[1];
   const token = command.match(/Bearer ([^']+)'/)?.[1];
   assert.ok(endpoint?.startsWith(`${new URL(await browser.ev('location.href')).origin}/api/`));
   assert.ok(token && token.length >= 32);
-  assert.equal(await copied(browser, 'copy-endpoint'), endpoint);
+  // The command starts Claude Code with its first request.
+  assert.ok(command.includes(text('读 RoleCraft 里的委托', 'Read the brief in RoleCraft')));
+  // Other clients get the same endpoint and header as a config.
+  await browser.click('.ag-connect .ag-seg button', 2);
+  const config = JSON.parse(await copied(browser, '.ag-connect .ag-cmd .ag-copy'));
+  assert.equal(config.mcpServers.rolecraft.url, endpoint);
+  assert.equal(config.mcpServers.rolecraft.headers.Authorization, `Bearer ${token}`);
+  await browser.click('.ag-connect .ag-seg button', 0);
   // Copying fetched the token; it is still nowhere in the page or its storage.
   assert.equal(
     await browser.ev(`document.documentElement.outerHTML.includes(${JSON.stringify(token)})`),
@@ -206,7 +188,30 @@ export async function connectAgentOverMcp(context) {
   const agent = new McpHttpClient(endpoint, token);
   const discovered = await agent.modern('server/discover');
   assert.ok(discovered.body.result.supportedVersions.includes(MODERN));
-  const seen = (await agent.call('observation', {})).result.as_of;
+  const sessionId = await browser.ev('window.PracticeLive.store.active().id');
+  let seen = (await agent.call('observation', {})).result.as_of;
+  // M3: the agent cites a passage it read; the returned work shows that passage.
+  const read = await agent.call('read_material', {
+    command: {
+      schema_version: 2,
+      request_id: crypto.randomUUID(),
+      operation: 'read_material',
+      payload: {
+        tool: 'read_material',
+        material: {
+          schema_version: 2,
+          session_id: sessionId,
+          kind: 'material',
+          object_id: 'brief',
+          version: 1,
+        },
+      },
+      expected_version: seen.business_seq,
+      expected_workspace_revision: seen.workspace_revision,
+    },
+  });
+  const cited = (read.result?.fragments ?? read.fragments).find((part) => part.ref?.quote).ref;
+  seen = (await agent.call('observation', {})).result.as_of;
   await agent.call('work_products.create', {
     command: {
       schema_version: 2,
@@ -217,55 +222,74 @@ export async function connectAgentOverMcp(context) {
         purpose: 'exploration',
         title,
         content: text('先核对容量和索引更新。', 'Check capacity and index updates first.'),
+        evidence_refs: [cited],
       },
       expected_version: seen.business_seq,
       expected_workspace_revision: seen.workspace_revision,
     },
   });
   assert.equal(await agent.legacyHandshake(), LEGACY);
-  await clickReady(browser, text('刷新授权与记录', 'Refresh access and records'));
-  const awaiting = text('此版本待你检查', 'This version awaits your review');
+  // The page saw it connect, read and hand back: the stream lists the calls by their real
+  // tool names and the returned work arrives as a paper waiting for review.
+  await phase(browser, 'connected');
+  await waitFor(browser, `!!document.querySelector('.ag-line[data-tool="read_material"]')`);
+  const awaiting = text('等你检查', 'Waiting for your check');
   await waitFor(
     browser,
-    `[...document.querySelectorAll('.agent-v4-work-row')].some((row) =>
-      row.innerText.includes(${JSON.stringify(title)}) && row.innerText.includes(${JSON.stringify(awaiting)}))`,
+    `[...document.querySelectorAll('.ag-paper')].some((paper) =>
+      paper.innerText.includes(${JSON.stringify(title)}) && paper.innerText.includes(${JSON.stringify(awaiting)}))`,
   );
   await shot('mcp-returned');
-  await browser.click('[data-connection-action="done"]');
-  await waitFor(browser, `!document.querySelector('[data-connection-card]')`);
-  // Leaving the practice withdraws a card that was still open: back again, nothing to copy.
-  await createAccess(browser, text, text('MCP 离开检查', 'MCP leave check'));
+  // Opening the returned work shows the cited passage in its own words.
+  await browser.ev(`(() => {
+    const paper = [...document.querySelectorAll('.ag-paper')]
+      .find((sheet) => sheet.innerText.includes(${JSON.stringify(title)}));
+    [...paper.querySelectorAll('button')]
+      .find((button) => button.textContent === ${JSON.stringify(text('打开', 'Open'))})
+      .click();
+    return true;
+  })()`);
+  await waitFor(browser, `!!document.querySelector('#sheet[open] .evidence-quotes blockquote')`);
+  assert.equal(
+    await browser.ev(`document.querySelector('#sheet .evidence-quotes blockquote').textContent`),
+    cited.quote,
+  );
+  await shot('mcp-returned-passage');
+  await browser.ev(`document.querySelector('#sheet [data-action="close"]').click()`);
+  await waitFor(browser, `!document.querySelector('#sheet').open`);
+  // Leaving the practice withdraws the token from the page; the agent itself stays connected.
   await browser.click('button[data-action="menu"][data-menu="more"]');
   await browser.click('[data-action="to-entry"]');
   await waitFor(browser, `!!document.querySelector('.case-hero [data-action="resume-attempt"]')`);
   await browser.click('.case-hero [data-action="resume-attempt"]');
-  await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="agent"]')`);
-  await openAgentPanel(browser);
-  assert.equal(await browser.ev(`!!document.querySelector('[data-connection-card]')`), false);
+  await waitFor(browser, `location.hash === '#/work'`);
+  await openMyAgent(browser);
   assert.equal(await offeredSecret(browser), null);
-  // Revoked in another tab: refreshing the records withdraws the card and its token.
-  const elsewhere = await createAccess(
-    browser,
-    text,
-    text('MCP 他处撤销', 'MCP revoked elsewhere'),
-  );
+  await phase(browser, 'connected');
+  // Copying again issues a fresh grant. Revoked in another tab, that grant is never handed out
+  // again: the next copy reads the grant list first and issues another.
+  await browser.clickText(text('再看一次连接命令', 'Show the command again'));
+  await waitFor(browser, `!!document.querySelector('.ag-connect .ag-cmd .ag-copy')`);
+  const second = (await copied(browser, '.ag-connect .ag-cmd .ag-copy')).match(
+    /Bearer ([^']+)'/,
+  )?.[1];
+  const elsewhere = await issuedId(browser);
+  assert.ok(second && elsewhere && elsewhere !== firstGrant);
   assert.equal(await revokeOutsideThisPage(browser, elsewhere), 200);
-  await clickReady(browser, text('刷新授权与记录', 'Refresh access and records'));
-  await waitFor(browser, `!document.querySelector('[data-connection-card]')`);
-  assert.equal(await offeredSecret(browser), null);
-  await browser.ev(`(() => {
-    const row = [...document.querySelectorAll('.agent-v4-access-row')]
-      .find((line) => line.innerText.includes(${JSON.stringify(agentName)}));
-    row.querySelector('button[data-agent-write="delegations.revoke"]').click();
-    return true;
-  })()`);
-  const revoked = text('已撤销', 'Revoked');
-  await waitFor(
-    browser,
-    `[...document.querySelectorAll('.agent-v4-access-row')].some((line) =>
-      line.innerText.includes(${JSON.stringify(agentName)}) && line.innerText.includes(${JSON.stringify(revoked)}))`,
-  );
+  const third = (await copied(browser, '.ag-connect .ag-cmd .ag-copy')).match(
+    /Bearer ([^']+)'/,
+  )?.[1];
+  assert.ok(third && third !== second);
+  assert.notEqual(await issuedId(browser), elsewhere);
+  // Revoking the connected agent's grant: its token stops working and the page shows it gone.
+  assert.equal(await revokeOutsideThisPage(browser, firstGrant), 200);
   const denied = await agent.modern('tools/list');
   assert.equal(denied.status, 401);
   assert.equal(denied.body.error.data.code, 'credential_revoked_or_invalid');
+  await phase(browser, 'idle', 20000);
+  assert.ok(
+    (await browser.ev(`document.querySelector('.ag-rig').innerText`)).includes(
+      text('最近一次', 'Last seen'),
+    ),
+  );
 }

@@ -15,7 +15,7 @@ import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { waitFor, submitDelivery } from './browser-support.mjs';
 
 const WEB = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ROOT = resolve(WEB, '../..');
@@ -32,7 +32,8 @@ const results = [];
 
 const COPY = {
   zh: {
-    waiting: '等待模型接入（当前为原文检索结果）',
+    // The saved mode's words, then the grey mark's readable name.
+    waiting: '原文抽取等待模型接入',
     extractive: '原文抽取',
     llm: '模型生成 · 回答待核验',
     unavailable: '模型生成：当前部署未接入模型，暂不能选择。',
@@ -48,7 +49,7 @@ const COPY = {
     quoteMarker: '（模型生成 · 待核验）',
   },
   en: {
-    waiting: 'Awaiting model connection (showing extractive result)',
+    waiting: 'ExtractiveAwaiting model connection',
     extractive: 'Extractive',
     llm: 'Model-generated · Answer awaiting verification',
     unavailable:
@@ -392,7 +393,7 @@ async function submitAfterGeneratedRetest(browser, language, calls, before) {
   await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
   await browser.click('.native-feedback input[type="checkbox"]');
   await browser.select('.native-feedback select', 'launch');
-  await clickReady(browser, text.submit, '#sheet button');
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(`${BASE}#/review`);

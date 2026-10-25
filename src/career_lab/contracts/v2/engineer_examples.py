@@ -94,12 +94,22 @@ def engineer_examples() -> dict[str, V2]:
             for child in value:
                 visit(child)
 
+    # Additive fields have their own examples so the published examples above keep their bytes.
+    change = E.EngineerChangeClaim(
+        field="freshness_guard",
+        before="none",
+        after="warn",
+        reason="Synthetic change statement",
+    )
+    comparison = E.EngineerHiddenComparison(new_failures=1, fixed=2, still_failing=1, unverified=0)
     for value in (
         submission,
         report,
         claimed,
         E.public_engineer_report(report),
         E.EngineerPublicAdvice(status="waiting_model", model=None),
+        change,
+        comparison,
     ):
         visit(value)
     return examples

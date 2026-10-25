@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
+import { PRODUCT_NAME } from './src/app/product.js';
 
 // Development/preview forwarding only. Existing backend routes stay unchanged.
 const proxy = {
@@ -10,8 +12,14 @@ const proxy = {
     rewrite: (path: string) => path.replace(/^\/api(?=\/)/, ''),
   },
 };
+// index.html names the product through %PRODUCT_NAME%, from the same constant the workbench uses.
+const productName = {
+  name: 'rolecraft-product-name',
+  transformIndexHtml: (html: string) => html.replaceAll('%PRODUCT_NAME%', PRODUCT_NAME),
+};
 export default defineConfig({
-  plugins: [react()],
+  // Tailwind only reaches src/islands/tw.css (prefixed tw:, no preflight); see that file.
+  plugins: [react(), tailwindcss(), productName],
   build: {
     rolldownOptions: {
       input: {

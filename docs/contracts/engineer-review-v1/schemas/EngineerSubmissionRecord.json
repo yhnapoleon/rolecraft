@@ -1,5 +1,63 @@
 {
   "$defs": {
+    "EngineerChangeClaim": {
+      "additionalProperties": false,
+      "description": "One structured statement about a setting; before == after declares it unchanged.",
+      "properties": {
+        "after": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "before": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "field": {
+          "enum": [
+            "domains",
+            "scope_filter",
+            "update_strategy",
+            "fallback",
+            "chunk_size",
+            "retrieval_limit",
+            "min_score",
+            "freshness_guard",
+            "manual_domains",
+            "prohibited_topics",
+            "work_items",
+            "participants",
+            "launch_day",
+            "generator"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "field",
+        "before",
+        "after"
+      ],
+      "title": "EngineerChangeClaim",
+      "type": "object"
+    },
     "EngineerUnresolvedItem": {
       "additionalProperties": false,
       "properties": {
@@ -120,7 +178,8 @@
       ],
       "title": "FileRef",
       "type": "object"
-    }
+    },
+    "JsonValue": {}
   },
   "additionalProperties": false,
   "properties": {
@@ -128,6 +187,14 @@
       "pattern": "^[0-9a-f]{64}$",
       "title": "Base Config Hash",
       "type": "string"
+    },
+    "changes": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/EngineerChangeClaim"
+      },
+      "title": "Changes",
+      "type": "array"
     },
     "config": {
       "$ref": "#/$defs/FileRef"

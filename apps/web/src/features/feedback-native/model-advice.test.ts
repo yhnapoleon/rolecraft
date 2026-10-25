@@ -73,15 +73,15 @@ describe('149 sentence counts and states', () => {
     const [advice] = read(mixed());
     expect(advice.status).toBe('synthetic_mechanism_only');
     expect(adviceCountsText(advice, 'zh')).toBe(
-      '逐句：支持 1 · 矛盾 1 · 超长未核 2 · 模型弃权 1 · 失败 1 · 过短未核 2 · 超出句数上限 5',
+      '1 句与材料一致 · 1 句与材料矛盾 · 2 句太长，模型没有核查 · 1 句模型放弃判断 · 1 句没能判断 · 2 句太短，没有送模型 · 5 句超出句数上限，没有送模型',
     );
     expect(adviceCountsText(advice, 'en')).toBe(
-      'By sentence: supported 1 · contradicted 1 · too long to check 2 · model abstained 1 · failed 1 · too short to check 2 · over the sentence limit 5',
+      '1 matches the materials · 1 contradicts the materials · 2 were too long for the model to check · 1 the model declined to judge · 1 could not be judged · 2 were too short to send to the model · 5 were over the sentence limit',
     );
   });
   it('UI-01: the example short result reads as in the task', () => {
     const [advice] = read(recordedZh());
-    expect(adviceCountsText(advice, 'zh')).toBe('逐句：支持 1 · 矛盾 1 · 证据不足 4');
+    expect(adviceCountsText(advice, 'zh')).toBe('1 句与材料一致 · 1 句与材料矛盾 · 4 句证据不足');
   });
   it('UI-07: states are named distinctly and the first match decides', () => {
     const [synthetic] = read(recorded.advice.zh);
@@ -99,7 +99,7 @@ describe('149 sentence counts and states', () => {
     const title = (advice: Parameters<typeof registeredAdviceSummary>[0]) =>
       registeredAdviceSummary(advice, 'zh', 'pending');
     expect(title([synthetic])).toBe('合成机制演示');
-    expect(title([abstained, synthetic])).toBe('模型未判断任何句子');
+    expect(title([abstained, synthetic])).toBe('模型这次一句也没能判断');
     expect(title([failed('model_timeout'), abstained])).toBe('模型调用超时');
     expect(title([failed('model_timeout'), failed('model_load_failed')])).toBe('模型建议失败');
     expect(registeredAdviceSummary([failed('model_timeout')], 'en', 'pending')).toBe(

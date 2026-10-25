@@ -309,3 +309,9 @@ timeline与workbench.read的workspace新增effective_config：已保存配置按
 独立新增 `v4_continue_codes`（会话、HMAC 校验值、密钥 ID、代数、生成该码的凭据、时间）与 `v4_continue_code_attempts`（来源地址的 HMAC、窗口起点、次数），不改旧表。校验值用部署凭据密钥计算，库内与日志不出现明文；更换密钥后旧码全部失效，缺密钥时生成与交换都返回 503 `credential_derivation_unavailable`。
 
 交换不带 Bearer，每个来源 15 分钟内最多 10 次（成功也计），超出返回 429 `continue_code_rate_limited` 与 `details.retry_after_seconds`。输入先规范化（全角、大小写、空格与各类连字符不计；O 读作 0，I、L 读作 1），不成码返回 422 `continue_code_malformed`；查不到或已被替换统一返回 404 `continue_code_invalid`。会话情境先按运行中的注册识别，再按本部署归档的场景包识别；识别不出返回 409 `continue_code_scenario_unavailable`，此前不签发凭据。成功时以派生用途 `continue-code`（`signed_credential`，所有者为生成该码的凭据，请求含代数与 `request_id`）签发新的 `session_owner` 凭据，同码同 `request_id` 重试返回同一令牌；响应 `ContinueCodeExchangeResponse` 含 `PracticeSession` 与注册名，带 `Cache-Control: no-store`。已有令牌、在途任务与 Agent 授权不受交换或换码影响；补练会话被继续码打开后，重放原补练选择按派生用途识别原始本人凭据。SQLite 有集成回归；PostgreSQL 并发未验证。
+
+### 学员自己的 Agent 活动记录
+
+公开导出新增 `GET /sessions/{session_id}/agent-activity?after=<seq>`，由正常运行入口随 v4 扩展挂载，不是 Gateway 动作，外部 Agent 与 MCP 工具够不到。使用会话 Bearer 身份，只允许本会话 human learner；外部 Agent 授权返回 403 `human_required`。响应 `AgentActivityResponse` 与授权列表同一外壳，内层 `AgentActivityResult` 的 `AgentActivityPage` 按 `seq` 升序列出 `after` 之后的记录（每页至多 200 条，`complete` 为假时以 `next_cursor` 续读），并给出 `connection`：最近 10 分钟内有仍然有效（未撤销、未到期）的授权发过 MCP 请求为 `connected`；最近一次请求更早，或发请求的授权已撤销、到期，为 `idle`；从未连接为 `none`，附客户端名与 `last_seen`。
+
+记录由 MCP Streamable HTTP 端点只追加写入独立表 `v4_agent_activity` 与 `v4_agent_presence`，冻结的 v2 表不变。`kind=connected` 在该授权首次请求、客户端名或版本变化、或间隔 10 分钟以上再来时记一条，带客户端自报的 `clientInfo`；`kind=tool_call` 每次 `tools/call` 记一条（`read_material` 读的资料也记为对象）：工具名、按目录得到的 capability、涉及对象（kind、id、version，以及调用本身带出的短标题；缺标题时读取时按本会话作品、测试、事项补齐）、列表读取的行数、结果 ok 或 error 与错误码。不存令牌、参数、请求头或结果正文。记录失败只写日志，不影响 Agent 的调用。stdio 本机客户端不经此端点，不记录。

@@ -2,6 +2,7 @@
 import { draftOf, type WorkspaceClient, type Draft } from '../client';
 import type { WorkspaceProductRead, ProductShare } from '../contract-types';
 import { saveStatus, recipientText } from '../native-slots';
+import { personLabel } from '../../../app/people.js';
 import { T, onLocaleChange } from '../../../app/i18n';
 import './workspace.css';
 
@@ -86,14 +87,10 @@ export function mountNativeWorkspace(
   const shares = node('div'),
     recipient = node('select', '', 'select');
   label(recipient, '分享给同事', 'Share with colleague', 'aria-label');
-  for (const [value, zh, en] of [
-    ['supervisor', '经理', 'Manager'],
-    ['business_lead', '业务负责人', 'Business lead'],
-    ['tech_lead', '技术负责人', 'Technical lead'],
-  ]) {
+  for (const value of ['supervisor', 'business_lead', 'tech_lead']) {
     const option = node('option');
     option.value = value;
-    label(option, zh, en);
+    label(option, personLabel(value, 'zh'), personLabel(value, 'en'));
     recipient.append(option);
   }
   const question = node('textarea', '', 'textarea');
@@ -344,7 +341,7 @@ export function mountNativeWorkspace(
         const row = node('details'),
           heading = node(
             'summary',
-            T('第 ' + p.version + ' 版 · ', 'v' + p.version + ' · ') + p.title,
+            `${T(`第 ${p.version} 版`, `version ${p.version}`)} · ${p.title}`,
           );
         const content = node('pre', p.content, 'native-version-content');
         row.append(heading, content);
@@ -419,10 +416,7 @@ export function mountNativeWorkspace(
           }
         : undefined;
     serverText.textContent = product
-      ? T('第 ' + product.version + ' 版 · ', 'v' + product.version + ' · ') +
-        product.title +
-        '\n' +
-        product.content
+      ? `${T(`第 ${product.version} 版`, `version ${product.version}`)} · ${product.title}\n${product.content}`
       : '';
     merge.disabled = readonly || pending || !reviewed;
     recover.hidden = !state.journal.pending;
@@ -463,8 +457,8 @@ export function mountNativeWorkspace(
       ? ''
       : product.visibility === 'shared'
         ? T(
-            '当前第 ' + product.version + ' 版已有同事可见。',
-            'Current v' + product.version + ' is shared with colleagues.',
+            `当前第 ${product.version} 版已有同事可见。`,
+            `Current version ${product.version} is shared with colleagues.`,
           )
         : product.visibility === 'private'
           ? T(
@@ -472,9 +466,7 @@ export function mountNativeWorkspace(
                 product.version +
                 ' 版仅自己可见。' +
                 (earlier ? '此前分享仍有效，见下方具体版本。' : ''),
-              'Current v' +
-                product.version +
-                ' is private.' +
+              `Current version ${product.version} is private.` +
                 (earlier ? ' Earlier shares are still active; see the versions below.' : ''),
             )
           : T(

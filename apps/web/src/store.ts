@@ -1,5 +1,6 @@
 import { ApiError, request, sessionPath, type Transport } from './api';
 import { T } from './app/i18n';
+import { personName } from './app/people.js';
 import type { PracticeSession } from './contracts-v2';
 import type {
   Artifact,
@@ -21,6 +22,9 @@ import type {
   Workspace,
   World,
 } from './types';
+
+/** The manager decides resource requests; named as everywhere else (app/people.js). */
+const MANAGER = personName('manager');
 
 export const STORAGE_KEY = 'rolecraft.live.workspace.v1';
 export const emptyDraft = (): Deliverable => ({
@@ -62,6 +66,7 @@ export class WorkspaceStore {
       localRun?: LocalTestRun,
     ): Promise<{ queued: string } | undefined>;
     poll(session: LocalSession): Promise<void>;
+    awaiting(session: LocalSession): boolean;
   };
   installV2(bridge: NonNullable<WorkspaceStore['v2']>) {
     this.v2 = bridge;
@@ -614,6 +619,12 @@ export class WorkspaceStore {
       this.emit({ busy: false });
     }
   }
+  /** Whether the session still waits on a server job, so polling continues while the page is hidden. */
+  awaiting(id = this.state.workspace.active) {
+    const s = this.state.workspace.sessions.find((s) => s.id === id);
+    if (s?.protocol === 2) return !!this.v2?.awaiting(s);
+    return !!s?.pending?.jobId;
+  }
   async poll(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find((s) => s.id === id);
     if (s?.protocol === 2) {
@@ -795,20 +806,20 @@ export function serverText(detail: string, code?: string, details?: Record<strin
       'There is no pending request of this kind.',
     ),
     approval_needs_config: T(
-      '先保存要申请的试点设置，再请经理处理。',
-      'Save the requested pilot settings before asking the manager to decide.',
+      `先保存要申请的试点设置，再请 ${MANAGER} 处理。`,
+      `Save the requested pilot settings before asking ${MANAGER} to decide.`,
     ),
     approval_plan_incomplete: T(
-      '经理没有批准：方案缺少必要工作或人工兜底。',
-      'The manager did not approve: required work or a human fallback is missing.',
+      `${MANAGER} 没有批准：方案缺少必要工作或人工兜底。`,
+      `${MANAGER} did not approve: required work or a human fallback is missing.`,
     ),
     approval_unsupported_rule: T(
-      '经理暂不能处理这类申请。',
-      'The manager cannot handle this type of request.',
+      `${MANAGER} 暂不能处理这类申请。`,
+      `${MANAGER} cannot handle this type of request.`,
     ),
     approval_not_needed_or_over_limit: T(
-      '经理没有批准：当前设置不需要这项申请，或超出了可批范围。',
-      'The manager did not approve: the current settings do not need it, or it exceeds what she can approve.',
+      `${MANAGER} 没有批准：当前设置不需要这项申请，或超出了可批范围。`,
+      `${MANAGER} did not approve: the current settings do not need it, or it exceeds what she can approve.`,
     ),
   };
   if (code === 'approval_plan_incomplete' && details?.missing) {
@@ -831,7 +842,7 @@ export function serverText(detail: string, code?: string, details?: Record<strin
       );
     if (reasons.length)
       return (
-        T('经理没有批准：', 'The manager did not approve: ') +
+        T(`${MANAGER} 没有批准：`, `${MANAGER} did not approve: `) +
         reasons.join(T('；', '; ')) +
         T('。', '.')
       );
@@ -877,8 +888,8 @@ export function serverText(detail: string, code?: string, details?: Record<strin
     );
   if (/request is unnecessary or exceeds/.test(d))
     return T(
-      '经理没有批准：当前设置不需要这项申请，或超出了可批范围。',
-      'The manager did not approve: the current settings do not need it, or it exceeds what she can approve.',
+      `${MANAGER} 没有批准：当前设置不需要这项申请，或超出了可批范围。`,
+      `${MANAGER} did not approve: the current settings do not need it, or it exceeds what she can approve.`,
     );
   if (/material unavailable/.test(d))
     return T('这份资料现在不可读。', 'This document is not available now.');
