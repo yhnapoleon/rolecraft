@@ -36,7 +36,6 @@ import { installCardToggles } from '../features/recognition-native/profile-card'
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
 import './practice-language.css';
-import './polish';
 import { behaviorHtml } from '../features/behavior-native/view';
 import {
   PRI,
@@ -131,7 +130,6 @@ import { provideTaskCardFacts, testFacts } from '../features/workspace/native-v4
 import {
   ENGINEER_CASES,
   ENGINEER_ROUTES,
-  engineerCareerCardHtml,
   engineerEntryId,
   installEngineer,
   navigateStage,
@@ -1102,7 +1100,7 @@ function priPick(id, p, title, change = 'priority') {
 }
 
 /* ---------- 1. jobs ---------- */
-// Home: the manager's first sentence, the desk, two rows of jobs (screens/home). A practice
+// Home: two role scenes and their entry actions (screens/home). A practice
 // under way shows first, as a continue slip with the hat on and its stage.
 function renderCareers() {
   // A practice in a hidden situation (reopened with a continue code) is not offered here.
@@ -1111,9 +1109,7 @@ function renderCareers() {
     topbar: topbar(wordmark()),
     quote: CASE('pilot').quote,
     capacity: worldOf('pilot').capacity,
-    seeds: SEED_KEYS.map(seedText),
     resume: a ? continueInfo(a) : null,
-    engineerRow: engineerCareerCard(),
     continueCode: recovery.homeLink(),
   });
 }
@@ -1142,21 +1138,6 @@ function continueInfo(a) {
     engineer: everEngineer(a.id) ? { stage: stepWords('engineer', a) } : null,
     lang: workLang(a),
   };
-}
-
-/* The engineer job, open: start a new practice with the engineer's hat on, or take the ticket in
- * the practice already under way (the same practice, two hats). */
-function engineerCareerCard() {
-  const a = current();
-  const practice = !!(
-    a &&
-    caseShown(a.scenarioId) &&
-    L.nativeWorkspace(a) &&
-    ENGINEER_CASES.includes(a.scenarioId) &&
-    // Taking the ticket inside a practice is the old two-hat way: only for one without a role.
-    !roleOf(a.id)
-  );
-  return engineerCareerCardHtml({ practice });
 }
 
 /* ---------- 2. PM entry ---------- */

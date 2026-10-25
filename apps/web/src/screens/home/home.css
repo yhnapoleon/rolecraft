@@ -1,19 +1,4 @@
-/* The way in: home and the job page. D「仪器与纸」: the page is the desk, things from the world
-   are paper (3px corners, paper shadow), the brief speaks in the serif. One orchestrated moment
-   on home (the desk settles once per load) and one on the way in (the brief's slips fly to the
-   board, view transitions below). Durations 160 / 280 / 520 only; transform and opacity only. */
-
-/* ---------- home ---------- */
-.hm {
-  max-width: 1312px;
-  margin: 0 auto;
-  padding: 56px 64px 72px;
-  display: grid;
-  gap: 56px;
-}
-
-/* The continue slip: a narrow paper tucked at the top of the desk. One line of what and where,
-   one quiet line on the two hats. */
+/* Resume strip, product-manager brief, and entry motion. Role selection lives in careers.css. */
 .hm-cont {
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr) auto;
@@ -104,14 +89,12 @@
   background: currentColor;
   opacity: 0.6;
 }
-/* The hat this practice has on reads in ink; the other one stays grey. */
 .hm-cont[data-hat="pm"] .hm-cont__hat:not(.hm-cont__hat--eng),
 .hm-cont[data-hat="pm"] .hm-cont__stage:not(.hm-cont__stage--eng),
 .hm-cont[data-hat="engineer"] .hm-cont__hat--eng,
 .hm-cont[data-hat="engineer"] .hm-cont__stage--eng {
   color: var(--ink);
 }
-/* The practice speaks another language than home: say so before Continue switches to it. */
 .hm-cont__lang {
   margin-left: 4px;
   padding: 2px 8px;
@@ -136,303 +119,6 @@
   font-size: 12.5px;
   line-height: 1.45;
 }
-
-/* The hero: the manager's first sentence on the left, the desk on the right. */
-.hm-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 56px;
-  align-items: center;
-}
-.hm-hero__pre {
-  margin-bottom: 18px;
-  color: var(--ink-3);
-  font-size: 14px;
-}
-.hm-hero__quote {
-  font: 400 56px / 1.08 var(--serif);
-  font-variation-settings: "opsz" 72;
-  letter-spacing: -0.018em;
-  color: var(--ink);
-  text-wrap: balance;
-}
-/* Hanging punctuation: the opening quote sits in the margin so the words align with the line. */
-.hm-q {
-  margin-left: -0.42em;
-}
-:lang(zh-CN) .hm-hero__quote {
-  font-size: 46px;
-  line-height: 1.3;
-  letter-spacing: 0.01em;
-  /* Ten characters to the line, so the break falls after 下周 rather than inside it. */
-  max-width: 10.4em;
-  text-wrap: wrap;
-}
-:lang(zh-CN) .hm-q {
-  margin-left: -0.5em;
-}
-.hm-hero__by {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 22px;
-  color: var(--ink-2);
-  font-size: 14px;
-}
-.hm-hero__lede {
-  margin-top: 24px;
-  max-width: 46ch;
-  color: var(--ink-2);
-  font-size: 18px;
-  line-height: 1.5;
-  text-wrap: pretty;
-}
-
-/* The desk as a still life. Every piece is a real object of the job; rotations are what a hand
-   leaves on a desk, never more than a degree and a half. */
-.hm-desk {
-  position: relative;
-  height: 380px;
-}
-.hm-desk > * {
-  position: absolute;
-  rotate: var(--r, 0deg);
-}
-.hm-desk__memo {
-  --r: -1.2deg;
-  left: 2%;
-  top: 8%;
-  width: 300px;
-  display: grid;
-  gap: 12px;
-  padding: 22px 24px 18px;
-  transition:
-    translate var(--mid) var(--ease-out),
-    box-shadow var(--mid) var(--ease-out);
-}
-/* The brief has more than one page: a second sheet shows under the first. */
-.hm-desk__memo::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: var(--r-paper);
-  background: var(--paper);
-  box-shadow: var(--shadow-card);
-  rotate: 2.6deg;
-  translate: 6px 4px;
-}
-.hm-desk__memo p {
-  font: 400 15.5px / 1.5 var(--serif);
-  font-variation-settings: "opsz" 16;
-  color: var(--ink);
-  text-wrap: pretty;
-}
-.hm-desk__memo small {
-  color: var(--ink-3);
-  font-size: 11.5px;
-}
-.hm-desk__read {
-  right: 0;
-  top: 2%;
-  width: 128px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: baseline;
-  column-gap: 6px;
-  padding-top: 9px;
-  box-shadow: inset 0 1px 0 var(--line-2);
-}
-.hm-desk__read small {
-  grid-column: 1 / -1;
-  margin-bottom: 4px;
-  color: var(--ink-3);
-  font-size: 11.5px;
-}
-.hm-desk__read b {
-  font: 500 40px / 1 var(--sans);
-  font-stretch: 78%;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums lining-nums;
-}
-.hm-desk__read span {
-  color: var(--ink-2);
-  font-size: 12.5px;
-}
-.hm-desk__slip {
-  width: 244px;
-  display: grid;
-  grid-template-columns: 14px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  padding: 11px 13px;
-  font: 600 12.5px / 1.4 var(--sans);
-  color: var(--ink);
-}
-.hm-desk__slip .i-sm {
-  width: 14px;
-  height: 14px;
-  margin-top: 1px;
-}
-.hm-desk__slip--0 {
-  --r: 0.8deg;
-  left: 24%;
-  top: 47%;
-}
-.hm-desk__slip--1 {
-  --r: -0.6deg;
-  left: 34%;
-  top: 66%;
-}
-:lang(zh-CN) .hm-desk__slip--0 {
-  top: 53%;
-}
-:lang(zh-CN) .hm-desk__slip--1 {
-  top: 71%;
-}
-.hm-desk__team {
-  right: 6%;
-  bottom: 8%;
-  display: flex;
-  gap: 6px;
-  padding: 8px;
-  border-radius: var(--r-panel);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-}
-
-@keyframes hm-settle {
-  from {
-    opacity: 0;
-    translate: 0 14px;
-    scale: 0.985;
-  }
-}
-@keyframes hm-rise {
-  from {
-    opacity: 0;
-    translate: 0 6px;
-  }
-}
-
-/* Two rows of jobs, a hairline between them, one key at the end of each row. */
-.hm-jobs {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.6fr) minmax(0, 1fr) auto;
-  column-gap: 32px;
-  box-shadow: inset 0 -1px 0 var(--line);
-}
-.hm-job,
-.hm-job--eng > .career {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: subgrid;
-  align-items: center;
-  padding: 24px 0;
-  box-shadow: inset 0 1px 0 var(--line);
-}
-.hm-job--eng {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: subgrid;
-  padding: 0;
-  box-shadow: none;
-}
-/* The engineer's row: content from the engineer line (201), drawn as a row of this list. */
-.hm .hm-job--eng > .career {
-  overflow: visible;
-  border-radius: 0;
-  background: none;
-  transition: none;
-}
-.hm .hm-job--eng > .career:hover {
-  transform: none;
-  box-shadow: inset 0 1px 0 var(--line);
-}
-.hm .hm-job--eng .career-art {
-  display: none;
-}
-.hm .hm-job--eng .career-body {
-  display: contents;
-}
-.hm-job__name,
-.hm .hm-job--eng .career-name {
-  font: 600 22px / 1.25 var(--sans);
-  letter-spacing: -0.015em;
-}
-.hm-job__what,
-.hm .hm-job--eng .career-body > p:not(.meta) {
-  color: var(--ink-2);
-  font-size: 15px;
-  line-height: 1.5;
-  text-wrap: pretty;
-}
-.hm-job__meta,
-.hm .hm-job--eng .career-body > .meta {
-  color: var(--ink-3);
-  font-size: 13px;
-  line-height: 1.45;
-  text-wrap: pretty;
-}
-.hm-job__go,
-.hm .hm-job--eng .career-cta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-  margin: 0;
-}
-/* Two keys in one row: the key sits on the row's centre line like the one above it; the second,
-   a quiet text key, hangs under it. */
-.hm .hm-job--eng .career-cta {
-  position: relative;
-}
-.hm .hm-job--eng > .career:has(.career-cta .btn.quiet) {
-  padding-bottom: 40px;
-}
-.hm .hm-job--eng .career-cta .btn.quiet {
-  position: absolute;
-  top: calc(100% + 2px);
-  right: 0;
-  height: 28px;
-  padding: 0 4px;
-  background: none;
-  box-shadow: none;
-  color: var(--ink-2);
-  font-size: 12.5px;
-  text-decoration: underline;
-  text-decoration-color: var(--line-2);
-  text-underline-offset: 3px;
-}
-.hm-job .btn,
-.hm .hm-job--eng .career-cta .btn:not(.quiet) {
-  height: 38px;
-  padding: 0 18px;
-}
-/* Pointing at the product manager's row lifts the brief on the desk: that paper is the job. */
-@media (hover: hover) and (pointer: fine) {
-  .hm:has(.hm-job--pm:hover) .hm-desk__memo {
-    translate: 0 -3px;
-    box-shadow: var(--shadow-float);
-  }
-}
-.hm-foot {
-  margin-top: -32px;
-  display: grid;
-  gap: 10px;
-}
-.hm-hats {
-  color: var(--ink-3);
-  font-size: 13px;
-  line-height: 1.5;
-}
-/* With a practice under way the slip takes the top: the hero gives back some air. */
-.hm:has(.hm-cont) {
-  padding-top: 32px;
-  gap: 40px;
-}
-
-/* ---------- the job page: one brief on paper ---------- */
 .hm-entry {
   max-width: 944px;
   margin: 0 auto;
@@ -453,8 +139,6 @@
   font-size: 15px;
   line-height: 1.5;
 }
-/* Also carries .case-hero, the hook the browser tests click through; its old panel look must not
-   reach this paper, so the rules below are scoped one step deeper. */
 .hm-entry .hm-brief {
   grid-template-columns: minmax(0, 1fr);
   overflow: visible;
@@ -573,7 +257,6 @@
   background: var(--paper);
   box-shadow: var(--shadow-paper);
 }
-/* The task's priority, in words, as a small instrument control over a native select. */
 .hm-pri {
   position: relative;
   display: inline-flex;
@@ -582,7 +265,7 @@
   height: 24px;
   padding: 0 6px 0 8px;
   border-radius: 6px;
-  /* --fill-2 and a hairline: --surface-2 equals --paper in dark mode and would vanish. */
+
   background: var(--fill-2);
   box-shadow: inset 0 0 0 0.5px var(--line-2);
   color: var(--ink-2);
@@ -636,8 +319,6 @@
   height: 40px;
   padding: 0 20px;
 }
-
-/* The variants: one line under the brief; the number that changed is amber. */
 .hm-vars {
   display: flex;
   flex-wrap: wrap;
@@ -690,8 +371,6 @@
   color: var(--ink-3);
   font-size: 12px;
 }
-/* Below the brief, quieter: your own business, a continue code, past practice. Rows on the
-   desk, not more panels. */
 .hm-entry__after {
   margin-top: 40px;
   display: grid;
@@ -721,9 +400,6 @@
 .hm-entry__after .intake > summary .section-title {
   font-size: 15px;
 }
-
-/* "Take this on": a brief glyph (not a check: that mark means "done") whose slot becomes a spinner while the practice opens; the
-   words and the width stay. */
 .hm-take .hm-take__glyph {
   display: inline-grid;
   place-items: center;
@@ -751,16 +427,12 @@
     transform: rotate(360deg);
   }
 }
-
 @keyframes hm-rise-in {
   from {
     opacity: 0;
     translate: 0 12px;
   }
 }
-
-/* ---------- the way in: the brief's slips fly to their cards on the board (walk-in.ts) ---------- */
-/* A still copy of the brief that covers the board while it loads underneath. */
 .hm-cover {
   position: fixed;
   inset: 0;
@@ -773,7 +445,6 @@
   left: 0;
   width: 100%;
 }
-/* From home: the brief rises 12px into place (the old page faded out first, 160ms). */
 .hm-entry[data-enter] > * {
   animation: hm-rise-in var(--mid) var(--ease-out) both;
 }
@@ -782,21 +453,6 @@
 }
 .hm-entry[data-enter] > :nth-child(n + 3) {
   animation-delay: 80ms;
-}
-/* Settle: the one moment on home, once per load. Each piece lands where a hand put it.
-   (Exception noted: a page-load sequence; it never repeats on the same load.) */
-.hm[data-settle] .hm-desk > * {
-  animation: hm-settle var(--slow) var(--spring) both;
-  animation-delay: calc(var(--i, 0) * 60ms + 120ms);
-}
-.hm[data-settle] .hm-hero__words > * {
-  animation: hm-rise var(--slow) var(--ease-out) both;
-}
-.hm[data-settle] .hm-hero__by {
-  animation-delay: 60ms;
-}
-.hm[data-settle] .hm-hero__lede {
-  animation-delay: 100ms;
 }
 .hm-flight {
   position: fixed;
@@ -816,13 +472,7 @@
 .hm-lifting .hm-entry.is-holding .hm-seed {
   visibility: hidden;
 }
-
-/* ---------- phone width ---------- */
 @media (max-width: 720px) {
-  .hm {
-    padding: 20px 16px 40px;
-    gap: 36px;
-  }
   .hm-cont {
     grid-template-columns: minmax(0, 1fr);
     padding: 14px 16px 0;
@@ -847,79 +497,6 @@
   }
   .hm-cont__sep {
     display: none;
-  }
-  .hm-hero {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 28px;
-  }
-  .hm-hero__quote {
-    font-size: 36px;
-    line-height: 1.12;
-  }
-  :lang(zh-CN) .hm-hero__quote {
-    font-size: 30px;
-    line-height: 1.32;
-  }
-  .hm-hero__lede {
-    font-size: 16px;
-  }
-  .hm-desk {
-    height: 264px;
-  }
-  .hm-q {
-    margin-left: 0;
-  }
-  .hm-desk__memo {
-    left: 0;
-    width: 214px;
-    padding: 16px 18px 14px;
-  }
-  .hm-desk__memo p {
-    font-size: 13px;
-  }
-  .hm-desk__read {
-    width: 92px;
-  }
-  .hm-desk__read b {
-    font-size: 30px;
-  }
-  .hm-desk__slip {
-    width: 196px;
-  }
-  .hm-desk__slip--0 {
-    left: 16%;
-    top: 56%;
-  }
-  .hm-desk__slip--1 {
-    left: 28%;
-    top: 75%;
-  }
-  .hm-desk__team {
-    bottom: auto;
-    top: 36%;
-    right: 0;
-  }
-  .hm-jobs,
-  .hm-job,
-  .hm-job--eng,
-  .hm-job--eng > .career {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .hm-job,
-  .hm-job--eng > .career {
-    gap: 8px;
-    padding: 20px 0;
-  }
-  .hm .hm-job--eng .career-cta {
-    align-items: flex-start;
-  }
-  .hm-job__go,
-  .hm .hm-job--eng .career-cta {
-    justify-content: flex-start;
-    margin-top: 6px;
-  }
-  .hm-foot {
-    margin-top: -16px;
   }
   .hm-entry {
     padding: 20px 16px 40px;
@@ -956,17 +533,10 @@
     padding: 14px 20px 16px;
   }
 }
-
-/* Reduced motion: no travel. The desk, the words and the brief fade in, 160ms. */
 @media (prefers-reduced-motion: reduce) {
-  .hm-entry[data-enter] > *,
-  .hm[data-settle] .hm-desk > *,
-  .hm[data-settle] .hm-hero__words > * {
+  .hm-entry[data-enter] > * {
     animation: hm-fade var(--fast) ease both;
     animation-delay: 0ms;
-  }
-  .hm-desk__memo {
-    transition: none;
   }
 }
 @keyframes hm-fade {

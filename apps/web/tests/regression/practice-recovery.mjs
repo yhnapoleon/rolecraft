@@ -56,7 +56,7 @@ async function opened(language, reduced) {
   await browser.goto(base);
   await browser.ev(`localStorage.setItem('rolecraft.locale', '${language}')`);
   await browser.goto(base);
-  await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
+  await waitFor(browser, `!!document.querySelector('.home-roles [data-role="pm"] [data-action="open-career"]')`);
   await listen(browser);
   return browser;
 }
@@ -103,7 +103,7 @@ async function round(language, reduced) {
   try {
     const a = await opened(language, reduced);
     browsers.push(a);
-    await a.click('[data-action="open-career"]');
+    await a.click('.home-roles [data-role="pm"] [data-action="open-career"]');
     await a.click('.case-hero [data-action="take-case"]');
     await acceptEntryStory(a);
     await waitFor(a, `location.hash === '#/work' && !!document.querySelector('.card-open')`);

@@ -19,8 +19,8 @@ for (const language of ['zh', 'en']) {
       localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)});`,
     );
     await browser.goto(base);
-    await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-    await browser.click('[data-action="open-career"]');
+    await waitFor(browser, `!!document.querySelector('.home-roles [data-role="pm"] [data-action="open-career"]')`);
+    await browser.click('.home-roles [data-role="pm"] [data-action="open-career"]');
     await browser.click('.case-hero [data-action="take-case"]');
     await waitFor(browser, `!!document.querySelector('.product-bar')`);
     await browser.click('.product-bar [data-action="config"]');

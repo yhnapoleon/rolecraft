@@ -29,8 +29,8 @@ async function openEntry(context) {
     `localStorage.clear(); localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)});`,
   );
   await browser.goto(base);
-  await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-  await browser.click('[data-action="open-career"]');
+  await waitFor(browser, `!!document.querySelector('.home-roles [data-role="pm"] [data-action="open-career"]')`);
+  await browser.click('.home-roles [data-role="pm"] [data-action="open-career"]');
   await waitFor(browser, `!!document.querySelector('.case-hero select[data-change="triage"]')`);
 }
 

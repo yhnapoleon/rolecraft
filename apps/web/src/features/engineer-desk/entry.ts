@@ -25,7 +25,7 @@ import { practiceFacts } from './need';
 import type { ScreenContext, ScreenKey } from './screens';
 import { setEngineerNavigator, setEngineerPorts } from './wire';
 
-export { engineerCareerCardHtml, ENGINEER_CASES } from './career-card';
+export { ENGINEER_CASES } from './career-card';
 
 type Screens = typeof import('./screens');
 let loaded: Screens | null = null;

@@ -12,8 +12,8 @@ const results = [];
 
 async function enterWorkspace(context) {
   const { browser, language, shot } = context;
-  await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-  await browser.click('[data-action="open-career"]');
+  await waitFor(browser, `!!document.querySelector('.home-roles [data-role="pm"] [data-action="open-career"]')`);
+  await browser.click('.home-roles [data-role="pm"] [data-action="open-career"]');
   await browser.click('.case-hero [data-action="take-case"]');
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
   assert.equal(

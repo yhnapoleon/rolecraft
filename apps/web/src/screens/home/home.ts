@@ -1,9 +1,8 @@
-/** The way in: the home page (the manager's first sentence, the desk you will work on, two rows
- * of jobs) and the job page (one brief on paper). Pure HTML builders; ui.js supplies the data and
- * keeps the actions. Shapes follow D「仪器与纸」(197-visual-d.md); decisions 5–7 of 199. */
+/** Home role selection, the resume strip, and the product-manager brief.
+ * Pure HTML builders; ui.js supplies data and owns the actions. */
 import './home.css';
-import { exploreHome, homeDirection } from './explore';
-import { agentMark, avatar, icon, PEOPLE } from '../../app/art.js';
+import { careersHtml } from './careers';
+import { avatar, icon, PEOPLE } from '../../app/art.js';
 import { locale, T } from '../../app/i18n';
 import { PRI } from '../../app/vocab.js';
 
@@ -16,10 +15,7 @@ const esc = (v: unknown) =>
   );
 const key = (label: string, action: string, cls = '', attrs = '') =>
   `<button type="button" class="btn ${cls}" data-action="${action}" ${attrs}>${label}</button>`;
-/** A key's spoken name with the job it belongs to: two "Start" keys on one page are not the same. */
-const named = (label: string, job: string) => `aria-label="${esc(`${label}: ${job}`)}"`;
 const JOB_PM = () => T('AI 产品经理', 'AI Product Manager');
-const JOB_ENG = () => T('AI 应用工程师', 'AI Application Engineer');
 const TWO_HATS = () =>
   T(
     '一局只演一个岗位。另一边的工作由 AI 同事承担：你做产品经理，工程修复由 Daniel 负责；你做工程师，产品侧由 Grace 接收。',
@@ -27,12 +23,6 @@ const TWO_HATS = () =>
   );
 const reduced = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-/** The first sentence of a brief: what the home page sets in large type. */
-export function firstSentence(text: string): string {
-  const m = String(text || '').match(/^.+?[.。!?！？](?=\s|$|[^.。])/u);
-  return (m ? m[0] : String(text || '')).trim();
-}
 
 /* ---------- home ---------- */
 
@@ -81,85 +71,14 @@ function continueSlip(c: ContinueInfo): string {
   </section>`;
 }
 
-/** The desk, as a still life: the brief on paper, one readout, two task slips, the team. */
-function tableau(o: { memo: string; capacity: number; seeds: string[] }): string {
-  return `<div class="hm-desk" aria-hidden="true">
-    <div class="hm-desk__memo paper" style="--i:0"><p>${esc(o.memo)}</p><small>${T('经理的委托 · 第 1 版', 'Manager brief, v1')}</small></div>
-    <div class="hm-desk__read" style="--i:1"><small>${T('试点容量', 'Capacity')}</small><b class="num">${o.capacity}</b><span>${T('人', 'seats')}</span></div>
-    ${o.seeds
-      .slice(0, 2)
-      .map(
-        (s, i) =>
-          `<div class="hm-desk__slip paper hm-desk__slip--${i}" style="--i:${i + 2}">${icon(i ? 'circle' : 'half', 'i-sm')}<span>${esc(s)}</span></div>`,
-      )
-      .join('')}
-    <div class="hm-desk__team" style="--i:4">${['manager', 'business', 'technical'].map((r) => avatar(r, 'sm')).join('')}${agentMark('sm')}</div>
-  </div>`;
-}
-
-/** The engineer row's keys are 201's markup; give each a spoken name with its job here. */
-function nameEngineerKeys(html: string): string {
-  return html.replace(
-    /<button([^>]*?)data-action="(engineer-start|engineer-take)"([^>]*)>([^<]*)<\/button>/g,
-    (all, a, action, b, label) =>
-      /aria-label=/.test(a + b)
-        ? all
-        : `<button${a}data-action="${action}"${b} ${named(label.trim(), JOB_ENG())}>${label}</button>`,
-  );
-}
-
-let settled = false;
-/** The desk settles once per page load; later visits to home draw it at rest. */
-function settleOnce(): boolean {
-  if (settled) return false;
-  settled = true;
-  return true;
-}
-
 export function homeHtml(o: {
   topbar: string;
   quote: string;
   capacity: number;
-  seeds: string[];
   resume: ContinueInfo | null;
-  /** The engineer's row: its content belongs to the engineer line (201). */
-  engineerRow: string;
   continueCode: string;
 }): string {
-  const direction = homeDirection();
-  if (direction)
-    return exploreHome({ ...o, resumeHtml: o.resume ? continueSlip(o.resume) : '' }, direction);
-  // In Chinese the closing quote follows the sentence directly; a full stop before it leaves a gap.
-  const first = firstSentence(o.quote).replace(/。$/u, '');
-  const rest = o.quote.slice(firstSentence(o.quote).length).trim();
-  const memo = firstSentence(rest) || rest;
-  const g = PEOPLE.manager;
-  return `${o.topbar}
-    <main id="main" class="page hm" tabindex="-1"${settleOnce() ? ' data-settle' : ''}>
-      ${o.resume ? continueSlip(o.resume) : ''}
-      <div class="hm-hero">
-        <div class="hm-hero__words">
-          <p class="hm-hero__pre">${T('练一份真实的工作', 'Practise real work')}</p>
-          <h1 class="hm-hero__quote"><span class="hm-q" aria-hidden="true">“</span>${esc(first)}<span aria-hidden="true">”</span></h1>
-          <p class="hm-hero__by">${avatar('manager', 'sm')}<span>${esc(T(`${g.name}，你的经理，第 1 天`, `${g.name}, your manager, on day 1`))}</span></p>
-          <p class="hm-hero__lede">${T('接手一件真实的工作。可以犯错，可以求助，也可以重来。', 'Take on a real piece of work. Get it wrong, ask for help, try again.')}</p>
-        </div>
-        ${tableau({ memo, capacity: o.capacity, seeds: o.seeds })}
-      </div>
-      <section class="hm-jobs" aria-label="${esc(T('岗位', 'Jobs'))}">
-        <article class="hm-job hm-job--pm">
-          <h2 class="hm-job__name">${JOB_PM()}</h2>
-          <p class="hm-job__what">${T('判断一个 AI 功能该不该上线、先给谁用、怎样保障，并为这个决定负责。', 'Decide whether an AI feature should launch, who gets it first and how it stays safe, then own the call.')}</p>
-          <p class="hm-job__meta">${T('3 个情境，每次 20–30 分钟。没有倒计时，随时可停。工程修复交给 Daniel（AI 同事），用不用由你决定。', '3 situations, 20–30 min each. No countdown, pause any time. Engineering fixes go to Daniel (AI colleague); you decide whether to use them.')}</p>
-          <div class="hm-job__go">${(() => {
-            const label = o.resume ? T('看看所有情境', 'See all situations') : T('开始', 'Start');
-            return key(label, 'open-career', o.resume ? '' : 'primary', named(label, JOB_PM()));
-          })()}</div>
-        </article>
-        <div class="hm-job hm-job--eng" data-job-slot="engineer">${nameEngineerKeys(o.engineerRow)}</div>
-      </section>
-      <div class="hm-foot">${o.resume ? '' : `<p class="hm-hats">${TWO_HATS()}</p>`}${o.continueCode}</div>
-    </main>`;
+  return careersHtml({ ...o, resumeHtml: o.resume ? continueSlip(o.resume) : '' });
 }
 
 /* ---------- the job page: one brief on paper ---------- */

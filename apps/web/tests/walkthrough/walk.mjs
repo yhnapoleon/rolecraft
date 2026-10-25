@@ -60,7 +60,7 @@ try {
   await b.goto(BASE + '#/');
   await delay(900);
   await shot('01-jobs', true);
-  await step('open career', () => b.click('[data-action="open-career"]'));
+  await step('open career', () => b.click('.home-roles [data-role="pm"] [data-action="open-career"]'));
   await delay(500);
   await shot('02-entry', true);
   await step('triage needs first', () => b.select('select[data-change="triage"]', 'first', 0));

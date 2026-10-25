@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setPreference } from '../../app/i18n';
-import { engineerCareerCardHtml } from './career-card';
+import { homeHtml } from '../../screens/home/home';
 import { ENGINEER_ERROR_CODES, engineerErrorText, valueText } from './copy';
 
 afterEach(() => setPreference('zh'));
@@ -71,12 +71,29 @@ describe('engineer desk · setting values in words', () => {
 describe('engineer desk · the home row', () => {
   // Phase 2: one role per practice; the card says who takes the product side (Grace).
   it('ED-44 names the product manager, not the internal "AIPM", and says Grace takes the product side', () => {
-    const zh = engineerCareerCardHtml({ practice: false });
+    const input = { topbar: '', quote: '委托。', capacity: 30, continueCode: '', resume: null };
+    const zh = homeHtml(input);
     expect(zh).toContain('修好产品经理测出的问题');
     expect(zh).toContain('Grace（AI 同事，产品侧）');
     expect(zh).not.toContain('engineer-take');
+    expect(zh).toContain('aria-label="选择这个岗位：AI 产品经理"');
+    expect(zh).toContain('aria-label="选择这个岗位：AI 应用工程师"');
+    expect(zh).toContain('data-action="open-career"');
+    expect(zh).toContain('data-action="engineer-start"');
     setPreference('en');
-    const en = engineerCareerCardHtml({ practice: true });
+    const en = homeHtml({
+      ...input,
+      quote: 'A brief.',
+      resume: {
+        id: 'legacy-practice',
+        title: 'Pilot',
+        hat: 'engineer',
+        stage: 'Investigating',
+        submitted: false,
+        engineer: { stage: 'Reproduce' },
+        lang: 'en',
+      },
+    });
     expect(en).toContain('Fix what the product manager found');
     expect(en).toContain('Grace (AI colleague, product side)');
     expect(en).toContain('data-action="engineer-take"');
