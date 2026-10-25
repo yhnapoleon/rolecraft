@@ -66,6 +66,7 @@ export class WorkspaceStore {
       localRun?: LocalTestRun,
     ): Promise<{ queued: string } | undefined>;
     poll(session: LocalSession): Promise<void>;
+    awaiting(session: LocalSession): boolean;
   };
   installV2(bridge: NonNullable<WorkspaceStore['v2']>) {
     this.v2 = bridge;
@@ -617,6 +618,12 @@ export class WorkspaceStore {
     } finally {
       this.emit({ busy: false });
     }
+  }
+  /** Whether the session still waits on a server job, so polling continues while the page is hidden. */
+  awaiting(id = this.state.workspace.active) {
+    const s = this.state.workspace.sessions.find((s) => s.id === id);
+    if (s?.protocol === 2) return !!this.v2?.awaiting(s);
+    return !!s?.pending?.jobId;
   }
   async poll(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find((s) => s.id === id);

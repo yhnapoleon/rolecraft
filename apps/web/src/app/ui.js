@@ -7158,8 +7158,10 @@ L.attach(state, onLive);
 L.load(current()).then((loaded) => {
   if (loaded) ui.synced = true;
 });
+// A hidden page skips the idle refresh but keeps reading a pending reply or run until it settles,
+// so a reply that finishes in the background is shown, not held until the page is looked at.
 setInterval(async () => {
-  if (document.hidden) return;
+  if (document.hidden && !L.store.awaiting()) return;
   await L.store.poll();
   const a = current();
   // Feedback completion and a new submission change the host point. Refresh the optional
