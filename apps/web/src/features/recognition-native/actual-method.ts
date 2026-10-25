@@ -74,8 +74,14 @@ export function actualMethod(record: RecognitionRecord, language: Language) {
               ? w.m_relation_stack
               : w.m_relation;
       if (out.mode === 'support_check') {
-        category = rule;
-        mode = 'rule';
+        category = t('引用核验', 'Citation verification');
+        method = fallback
+          ? t('引文定位规则', 'Citation-location rules')
+          : t('引文定位；关系模型参与情况未单列', 'Citation lookup; relation-model participation not recorded separately');
+        if (out.delegated_to_llm)
+          method += t('；已交评审模型复核', '; delegated to the reviewer');
+        // fallback records the availability of C1, not whether every optional model branch ran.
+        mode = fallback ? 'fallback' : 'unknown';
       }
       break;
     case 'decision':

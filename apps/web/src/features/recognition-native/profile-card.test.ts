@@ -122,3 +122,14 @@ it('puts delivery-record provenance on the closed summary and keeps current reco
  expect(cardsHtml([scope],'en',{context:'feedback',lens:true,cards:{}}).split('rc-card-slot')[0]).toContain('Record at delivery');
  expect(cardHtml(scope,'en',{source:'current'})).toContain('Recomputed locally now');
 });
+
+it('does not mistake a saved support-check record for proof that a relation model ran', () => {
+ const record={...scope,task:'relation',outputs:{mode:'support_check',quotes:2,quotes_grounded:1,delegated_to_llm:true},label:'unverified'};
+ const html=cardHtml(record,'en');
+ expect(html).toContain('1 / 2 located');expect(html).toContain('Support remains unverified');expect(html).toContain('Delegated to the reviewer this time');expect(html).not.toContain('Real inference');
+ expect(lensSignal({...record,fallback:true},'en').method).toContain('Citation-location rules');
+});
+it('counts per-sentence retrieval groups as sentences rather than passages', () => {
+ const html=cardHtml({...dense,outputs:{per_sentence_top:[{index:0,top:[]},{index:1,top:[]}],k:5}},'en');
+ expect(html).toContain('candidates saved for 2 sentences');expect(html).not.toContain('Top 2 passages');expect(html).toContain('Actual method not recorded');
+});

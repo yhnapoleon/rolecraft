@@ -248,8 +248,10 @@ function thisTime(record: RecognitionRecord, language: Language, o: CardOptions)
     case 'retrieval': {
       const top = Array.isArray(out.top) ? (out.top as Record<string, unknown>[]).slice(0, 3) : [];
       const methodName = actualMethod(record, language).method;
-      if (!top.length && Array.isArray(out.per_sentence_top))
-        return `<p>${esc(fill(w.retrievalLine, { method: methodName, n: (out.per_sentence_top as unknown[]).length }))}</p>`;
+      if (!top.length && Array.isArray(out.per_sentence_top)) {
+        const count = out.per_sentence_top.length;
+        return `<p>${esc(language === 'zh' ? `实际用的检索：${methodName}。已保存 ${count} 句的检索候选。` : `Retrieval actually used: ${methodName}. Retrieval candidates saved for ${count} sentences.`)}</p>`;
+      }
       return `<p>${esc(fill(w.retrievalLine, { method: methodName, n: top.length }))}</p><ol class="rc-hits">${top
         .map(
           (h) =>
@@ -276,6 +278,19 @@ function thisTime(record: RecognitionRecord, language: Language, o: CardOptions)
         .join('')}</ol>`;
     }
     case 'relation': {
+      if (out.mode === 'support_check') {
+        const count = isNum(out.quotes) ? out.quotes : null;
+        const found = isNum(out.quotes_grounded) ? out.quotes_grounded : null;
+        const text = language === 'zh'
+          ? `评审说明中的引文：已定位 ${found ?? '—'} / ${count ?? '—'} 处。`
+          : `Quotes in the review explanation: ${found ?? '—'} / ${count ?? '—'} located.`;
+        const verdict = record.label === 'supported'
+          ? (language === 'zh' ? '引用支持结论' : 'Citations support the conclusion')
+          : record.label === 'unsupported'
+            ? (language === 'zh' ? '引用不支持结论' : 'Citations do not support the conclusion')
+            : (language === 'zh' ? '支持关系仍待核验' : 'Support remains unverified');
+        return `<p>${esc(text)}</p><p>${esc(verdict)}</p>${out.delegated_to_llm ? `<p>${language === 'zh' ? '这次已交评审模型复核。' : 'Delegated to the reviewer this time.'}</p>` : ''}`;
+      }
       const counts = (out.counts ?? {}) as Record<string, number>;
       const units = (Array.isArray(out.units) ? out.units : []) as Record<string, unknown>[];
       const list = units.length
@@ -334,7 +349,7 @@ export function cardHtml(record: RecognitionRecord, language: Language, given: C
   const row = REGISTER.find((r) => r.id === rowId);
   const mode = runMode(record);
   const actual = actualMethod(record, language);
-  const modeText = mode === 'fallback' ? w.fallback : mode === 'rule' ? (language === 'zh' ? '规则计算' : 'Rule calculation') : mode === 'unknown' ? (language === 'zh' ? '实际方法未记录' : 'Actual method not recorded') : w.real;
+  const modeText = mode === 'fallback' ? w.fallback : mode === 'rule' ? (language === 'zh' ? '规则计算' : 'Rule calculation') : mode === 'unknown' ? (language === 'zh' ? '执行细节未完整记录' : 'Execution details not fully recorded') : w.real;
   const cats = row
     ? [...row.cats, ...(row.extraCat ? [row.extraCat] : [])].map((c) => `<span class="rc-family">${esc(lab(language, c))}</span>`).join('')
     : '';
