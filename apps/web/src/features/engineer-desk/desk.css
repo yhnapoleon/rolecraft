@@ -762,7 +762,13 @@
 .ed-seg-host.is-stacked {
   display: block;
 }
-.ed-seg-track.is-stacked > button {
+/* The thumb's copy of the labels stands up with the items, so the chosen label shows on it. */
+.ed-seg-track.is-stacked .rc-ink-layer {
+  flex-direction: column;
+  align-items: stretch;
+}
+.ed-seg-track.is-stacked > button,
+.ed-seg-track.is-stacked .rc-ink-layer > span {
   justify-content: flex-start;
   height: auto;
   min-height: 30px;
