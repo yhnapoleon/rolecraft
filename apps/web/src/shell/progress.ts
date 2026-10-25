@@ -114,6 +114,20 @@ const ROLE: Record<string, Text> = {
   technical: ['Daniel', 'Daniel'],
 };
 
+/** An exact excerpt, retaining a monetary value when a long lead-in would clip it. */
+function answerExcerpt(answer: string) {
+  const text = answer.replace(/^#+\s*/, '').replace(/\*\*|__/g, '').trim().split(/[。；;\n]|(?<=[.!?])\s/)[0];
+  if (text.length <= 110) return text;
+  const money = /(?:CNY|RMB|USD|SGD|\$)\s*\d[\d,.]*|\d[\d,.]*\s*元/i.exec(text);
+  let start = money ? Math.max(0, money.index - 36) : 0;
+  if (start) {
+    const space = text.indexOf(' ', start);
+    if (space >= start && space < (money?.index ?? 0)) start = space + 1;
+  }
+  const end = Math.min(text.length, start + 110);
+  return `${start ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`;
+}
+
 export function progressOf(f: ProgressFacts): Progress {
   const cited = f.works.filter((w) => w.hasBody && w.evidence.length > 0);
   const noted = f.tests.filter((t) => t.noted);
@@ -151,7 +165,7 @@ export function progressOf(f: ProgressFacts): Progress {
         const before = last.previousTestId ? f.tests.find(t => t.id === last.previousTestId) : undefined;
         return [before, last].flatMap(t => {
           if (!t?.answer) return [];
-          const quote = t.answer.replace(/^#+\s*/, '').replace(/\*\*|__/g, '').trim().split(/[。；;\n]/)[0].slice(0, 90);
+          const quote = answerExcerpt(t.answer);
           return [T(`索引 v${t.indexVersion ?? '—'} 回答「${quote}」`, `Index v${t.indexVersion ?? '—'} answered “${quote}”`)];
         });
       })(),

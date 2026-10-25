@@ -140,3 +140,10 @@ it('distills actual indexed answers without treating inherited expectations as i
  const facts=progressOf(base({tests})).layers.find(l=>l.id==='understand')?.confirmed.map(t=>t[1]).join(' ');
  expect(facts).toContain('Index v1 answered “cap 500”');expect(facts).toContain('Index v2 answered “cap 400”');expect(facts).not.toContain('Your judgement on 3');
 });
+
+it('retains the actual amount in a long English answer instead of clipping it after the lead-in', () => {
+ const answer='Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap require approval.';
+ const p=progressOf(base({tests:[test('now',{answer,indexVersion:2,noted:true})]}));
+ const summary=p.layers.find(l=>l.id==='understand')?.confirmed.map(t=>t[1]).join(' ');
+ expect(summary).toContain('CNY 400');expect(summary).toContain('per person per night');expect(summary).not.toContain('CNY 500');
+});
