@@ -1,3 +1,4 @@
+import { singleAnswerAmount } from '../features/recognition-native/test-comparison';
 // The six layers of the problem a practice works through (场景与训练闭环 §4.2): take the brief on,
 // understand the problem and who it hits, form a candidate decision, verify and coordinate,
 // deliver, then look back and carry on. Read from the person's own records only: a test, a
@@ -61,6 +62,8 @@ export type Layer = {
   state: LayerState;
   /** What the records already show for this layer. */
   confirmed: Text[];
+  compactConfirmed?: Text[];
+  compactMissing?: Text[];
   /** What is still missing for it. */
   missing: Text[];
   /** Why a done layer needs another look. */
@@ -289,6 +292,28 @@ export function progressOf(f: ProgressFacts): Progress {
   };
 
 
+  const lastTest = f.tests.at(-1);
+  const previousTest = lastTest?.previousTestId ? f.tests.find(t => t.id === lastTest.previousTestId) : undefined;
+  const amount = lastTest?.answer ? singleAnswerAmount(lastTest.answer) : null;
+  const beforeAmount = previousTest?.answer ? singleAnswerAmount(previousTest.answer) : null;
+  const briefTest = lastTest
+    ? amount && beforeAmount && amount.currency === beforeAmount.currency
+      ? T(`回答金额 ${beforeAmount.value}→${amount.value}；索引 v${previousTest?.indexVersion ?? '—'}→v${lastTest.indexVersion ?? '—'}`, `Answer amounts ${beforeAmount.value}→${amount.value}; index v${previousTest?.indexVersion ?? '—'}→v${lastTest.indexVersion ?? '—'}`)
+      : T('已保存测试与来源版本，完整结论见地图', 'Tests and source versions saved; full findings in the map')
+    : null;
+  const compactMissing: Partial<Record<LayerId, Text[]>> = {
+    understand: [
+      ...(f.tests.length ? [] : [T('还没有测试', 'No test yet')]),
+      ...(noted.length || cited.length ? [] : [T('判断还未关联依据', 'Judgement not linked to evidence')]),
+    ],
+    decide: decide.done ? [] : [T('决定还需要正文和引用依据', 'The decision needs text and evidence')],
+    verify: [
+      ...(applied ? [] : [T('尚未应用设置', 'Settings not applied')]),
+      ...(applied && !retested ? [T('当前配置还未复测', 'Current settings not retested')] : []),
+      ...waiting,
+    ],
+  };
+
   const parts: Record<
     LayerId,
     { done: boolean; confirmed: Text[]; missing: Text[]; reopened?: Text }
@@ -325,6 +350,8 @@ export function progressOf(f: ProgressFacts): Progress {
       goal: GOAL[id],
       state,
       confirmed: p.confirmed,
+      compactConfirmed: id === 'understand' && briefTest ? [briefTest] : p.confirmed.slice(0, 1),
+      compactMissing: p.done ? [] : compactMissing[id] ?? p.missing,
       missing: p.done ? [] : p.missing,
       ...(p.done && p.reopened ? { reopened: p.reopened } : {}),
     };

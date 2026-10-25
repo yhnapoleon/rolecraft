@@ -584,11 +584,9 @@
   box-shadow: var(--shadow-float);
   font-size: 13.5px;
   opacity: 0;
-  transform: translateY(-4px);
+  transform: none;
   pointer-events: none;
-  transition:
-    opacity var(--fast) var(--ease-out),
-    transform var(--fast) var(--ease-out);
+  transition: none;
 }
 .rc-prog-dock[data-on] .rc-prog-dock__bar {
   opacity: 1;
@@ -714,4 +712,13 @@
 @media (max-width: 720px) {
   .rc-prog-dock__bar .rc-prog__viewing { grid-column: 1; }
   .rc-prog-dock__bar .rc-prog__summary-link { grid-column: 1; grid-row: auto; }
+}
+
+/* Mobile keeps the task/action summary; the map owns the complete findings. */
+@media (max-width: 720px) {
+  .rc-prog__summary { gap: 6px; }
+  .rc-prog__summary .rc-prog__eyebrow { margin-bottom: 2px; }
+  .rc-prog__facts > div + div { margin-top: 5px; }
+  .rc-prog__viewing .btn { padding-block: 2px; }
+  .rc-prog__tools { margin-top: 5px; }
 }

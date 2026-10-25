@@ -1647,6 +1647,8 @@ function mountProgress(a) {
         goal: tx(l.goal),
         state: l.state,
         confirmed: l.confirmed.map(tx),
+        compactConfirmed: l.compactConfirmed?.map(tx),
+        compactMissing: l.compactMissing?.map(tx),
         missing: l.missing.map(tx),
         ...(l.reopened ? { reopened: tx(l.reopened) } : {}),
         ...(d ? { distilled: { confirmed: d.confirmed.map(tx), kept: d.kept.map(tx) } } : {}),

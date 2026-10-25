@@ -18,6 +18,8 @@ export type BandLayer = {
   goal: string;
   state: 'done' | 'current' | 'reopened' | 'todo' | 'uncovered';
   confirmed: string[];
+  compactConfirmed?: string[];
+  compactMissing?: string[];
   missing: string[];
   reopened?: string;
   /** The distillation left when the layer was passed. */
@@ -99,33 +101,20 @@ export function ProgressBand(props: ProgressBandProps) {
   const [viewing, setViewing] = useState<string | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const gid = useId();
-  // Once the full band scrolls out of #main, a slim copy docks at the top of it, so where you are
-  // stays on screen while the board or a document is read further down. It docks only once the
-  // whole band has left, so the two never overlap.
+  // Dock as soon as the CURRENT summary approaches the viewport edge. The map,
+  // viewed layer and distillation below it must not affect this handoff.
   const self = useRef<HTMLElement>(null);
   const [docked, setDocked] = useState(false);
-  // Measured on scroll rather than observed: ui.js replaces #main on a full redraw, which would
-  // leave an IntersectionObserver watching a detached root.
-  useEffect(() => {
-    let raf = 0;
+  useLayoutEffect(() => {
     const measure = () => {
-      raf = 0;
-      const el = self.current;
-      const root = el?.closest('#main');
-      if (!el || !root) return;
-      setDocked(el.getBoundingClientRect().bottom < root.getBoundingClientRect().top + 40);
-    };
-    const soon = () => {
-      if (!raf) raf = requestAnimationFrame(measure);
+      const summary = self.current?.querySelector('.rc-prog__summary');
+      const root = self.current?.closest('#main');
+      if (summary && root) setDocked(summary.getBoundingClientRect().top <= root.getBoundingClientRect().top + 16);
     };
     measure();
-    document.addEventListener('scroll', soon, { capture: true, passive: true });
-    addEventListener('resize', soon);
-    return () => {
-      cancelAnimationFrame(raf);
-      document.removeEventListener('scroll', soon, { capture: true });
-      removeEventListener('resize', soon);
-    };
+    document.addEventListener('scroll', measure, {capture:true,passive:true});
+    addEventListener('resize', measure);
+    return () => { document.removeEventListener('scroll', measure, {capture:true}); removeEventListener('resize', measure); };
   }, []);
   // Scroll targets account for the actual dock height, including narrow/translated layouts.
   useLayoutEffect(() => {
@@ -138,12 +127,11 @@ export function ProgressBand(props: ProgressBandProps) {
     observer.observe(bar);
     return () => { observer.disconnect(); root.style.removeProperty('--progress-dock-height'); };
   }, [docked]);
-  // A redraw can move the band (another page under it) without a scroll.
-  useEffect(() => {
-    const el = self.current;
-    const root = el?.closest('#main');
-    if (el && root)
-      setDocked(el.getBoundingClientRect().bottom < root.getBoundingClientRect().top + 40);
+  // Re-check restored scroll positions before paint, not one frame after render.
+  useLayoutEffect(() => {
+    const summary = self.current?.querySelector('.rc-prog__summary');
+    const root = self.current?.closest('#main');
+    if (summary && root) setDocked(summary.getBoundingClientRect().top <= root.getBoundingClientRect().top + 16);
   });
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new frontier ends a look elsewhere
   useEffect(() => setViewing(null), [p.current]);
@@ -158,12 +146,12 @@ export function ProgressBand(props: ProgressBandProps) {
   const isNow = shown.id === current.id;
   const after = p.layers.slice(at + 1, at + 3);
   const arrived = p.arrived ? p.layers.find((l) => l.id === p.arrived) : undefined;
-  const missing = [...new Set([...current.missing, ...p.carried])];
+  const missing = [...new Set([...(narrow ? current.compactMissing ?? current.missing : current.missing), ...p.carried])];
   const confirmed = current.confirmed.length
-    ? current.confirmed
+    ? narrow ? current.compactConfirmed ?? current.confirmed.slice(0, 1) : current.confirmed
     : p.layers
         .slice(0, at)
-        .flatMap((l) => l.confirmed)
+        .flatMap((l) => narrow ? l.compactConfirmed ?? l.confirmed.slice(0, 1) : l.confirmed)
         .slice(-1);
   const summary = (dock = false) => (
     <div className="rc-prog__summary" data-progress-current={current.id}>
@@ -316,7 +304,7 @@ export function ProgressBand(props: ProgressBandProps) {
           </div>
         )}
         <AnimatePresence>
-          {arrived?.distilled && (
+          {!narrow && arrived?.distilled && (
             <motion.div
               className="rc-prog__distil"
               role="status"

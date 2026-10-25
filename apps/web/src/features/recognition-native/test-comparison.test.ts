@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { comparisonFor, type TestRecord } from './test-comparison';
+import { comparisonFor, singleAnswerAmount, type TestRecord } from './test-comparison';
 const old: TestRecord = {
   id: 'old',
   question: 'cap?',
@@ -24,4 +24,11 @@ it('leaves unavailable baselines unknown instead of substituting the previous ru
     referenced: true,
     previous: undefined,
   });
+});
+
+it('extracts a real monetary value only when the saved answer is unambiguous', () => {
+ expect(singleAnswerAmount('cap CNY 400 per night')).toEqual({value:'400',currency:'CNY'});
+ expect(singleAnswerAmount('每晚500元，超出需批准')).toEqual({value:'500',currency:'CNY'});
+ expect(singleAnswerAmount('cap 500; revised 400')).toBeNull();
+ expect(singleAnswerAmount('hotel CNY 400 and taxi CNY 200')).toBeNull();
 });
