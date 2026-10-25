@@ -1,4 +1,4 @@
-import { waitFor, clickReady, submitDelivery } from './browser-support.mjs';
+import { acceptEntryStory, waitFor, clickReady, submitDelivery } from './browser-support.mjs';
 import { askHowToPrioritise, openEvidence, readActivity } from './activity-evidence.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
@@ -17,6 +17,7 @@ async function enterWorkspace(context) {
   await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
   await browser.click('[data-action="open-career"]');
   await browser.click('.case-hero [data-action="take-case"]');
+  await acceptEntryStory(browser);
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
   assert.equal(
     await browser.ev(`document.querySelectorAll('[data-v4-region="workspace"]').length`),
