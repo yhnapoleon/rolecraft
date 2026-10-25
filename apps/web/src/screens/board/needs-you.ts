@@ -31,7 +31,7 @@ function note(s: Signal, people: SignalPeople) {
   const who = s.person && people[s.person];
   return `<article class="needs-note who-${esc(s.person || '')}" data-signal-id="${esc(s.id)}">
     <p class="needs-who">${s.person ? avatar(s.person, 'xs') : ''}<b>${esc(who?.name || '')}</b><span>${esc(who?.title || '')}</span></p>
-    <p class="needs-text">${esc(s.text)}</p>
+    <p class="needs-text"${s.id.startsWith('note:') ? ` data-note-message-id="${esc(s.id)}"` : ''}>${esc(s.text)}</p>
     ${s.action || s.dismissible ? `<div class="needs-keys">${key(s, '')}${aside(s)}</div>` : ''}
   </article>`;
 }

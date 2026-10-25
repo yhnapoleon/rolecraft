@@ -1,3 +1,16 @@
+type Message = { role: string; traceId?: string | null };
+/** The fallback ordinal counts colleague messages, never interleaved learner questions. */
+export const messageKey = (message: Message, colleagueIndex: number) =>
+  message.traceId || `legacy-${colleagueIndex}`;
+export function messageRows<M extends Message>(messages: readonly M[]) {
+  let colleagueIndex = 0;
+  return messages.map((message) => ({
+    message,
+    key: message.role === 'user' ? '' : messageKey(message, colleagueIndex++),
+  }));
+}
+export const noteKey = (key: string) => `note:${key}`;
+
 /** Browser-local reading receipts; never sent to the conversation/model. */
 export function unreadStore(storage?: Pick<Storage, 'getItem' | 'setItem'>) {
   const key = 'rolecraft.colleague-read.v1';
@@ -51,6 +64,7 @@ export function watchMessages(
   root: HTMLElement,
   read: (id: string) => void,
   visible: () => boolean,
+  selector = '[data-message-id], .rc-msg--them:not(.rc-typing)',
 ) {
   if (typeof IntersectionObserver === 'undefined') return () => {};
   const seen = new Map<Element, boolean>();
@@ -60,7 +74,10 @@ export function watchMessages(
       if (!inView || !node.isConnected) continue;
       const el = node as HTMLElement;
       if (el.closest('[inert], [hidden]')) continue;
-      const id = el.dataset.messageId || el.closest<HTMLElement>('[data-turn-id]')?.dataset.turnId;
+      const id =
+        el.dataset.noteMessageId ||
+        el.dataset.messageId ||
+        el.closest<HTMLElement>('[data-turn-id]')?.dataset.turnId;
       if (id) read(id);
     }
   };
@@ -79,7 +96,7 @@ export function watchMessages(
         observer.unobserve(node);
         seen.delete(node);
       }
-    for (const node of root.querySelectorAll('[data-message-id], .rc-msg--them:not(.rc-typing)')) {
+    for (const node of root.querySelectorAll(selector)) {
       if (!seen.has(node)) {
         seen.set(node, false);
         observer.observe(node);

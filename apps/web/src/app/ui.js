@@ -172,6 +172,7 @@ import '../shell/bar.css';
 import { carried, distillation, progressOf } from '../shell/progress';
 import { comparisonFor } from '../features/recognition-native/test-comparison';
 import * as Greetings from '../features/colleague-greetings';
+import { messageRows, noteKey } from '../features/colleague-greetings/unread';
 import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
 import '../shell/progress.css';
@@ -370,13 +371,11 @@ const readSet = (a) =>
       .filter((e) => e.server && e.type === 'material_read')
       .map((e) => e.detail && e.detail.materialId),
   );
-const replyIds = (a, role) =>
-  (a.conversations[role] || [])
-    .filter((m) => m.role !== 'user')
-    .map((m, i) => m.traceId || `legacy-${i}`);
+const replyIds = (a, role) => messageRows(a.conversations[role] || []).filter(row => row.key).map(row => row.key);
 const unread = (a, role) =>
   Greetings.receipts.count(a.id, role, [
     ...replyIds(a, role),
+    ...(ui.notesCache || []).filter(note => note.role === role).map(note => noteKey(note.key)),
     ...(Greetings.hasArrived(a.id, role) ? [Greetings.greetingId] : []),
   ]);
 const unreadLabel = (n) => T(`${n} 条未读消息`, `${n} unread message${n === 1 ? '' : 's'}`);
@@ -932,6 +931,7 @@ function afterRender() {
   updateSave();
   syncPanels();
   markRead();
+  markNotesRead();
   refreshGreeting();
   const a = current();
   const activeWork = a && ui.obj?.type === 'work' ? artifact() : null;
@@ -3215,7 +3215,7 @@ const KIND = (k) =>
 function marginNote(n) {
   return `<div class="note ${n.kind} who-${n.role}" data-note="${esc(n.key)}">
     <p class="note-head">${avatar(n.role, 'xs')}<b>${PEOPLE[n.role].name}</b><span class="note-kind">${KIND(n.kind)}</span><span class="rule-tag" title="${esc(T('按场景规则生成，不是同事实时回复', 'Generated from scenario rules, not a live reply'))}">${T('规则', 'Rule')}</span></p>
-    <p class="note-text">${esc(n.text)}</p>
+    <p class="note-text" data-note-message-id="${esc(noteKey(n.key))}">${esc(n.text)}</p>
     <div class="note-actions"><button type="button" class="link" data-action="reply-note" data-key="${esc(n.key)}">${T('回应', 'Reply')}</button><button type="button" class="link quiet" data-action="ack" data-key="note:${esc(n.key)}">${T('先放下', 'Set aside')}</button></div>
   </div>`;
 }
@@ -3458,7 +3458,7 @@ function railChat(a, role) {
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
     <div data-chat-greeting>${Greetings.hasArrived(a.id, role) ? Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a)) : ''}</div>
-    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
+    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? messageRows(msgs).map(({ message, key }) => msgHtml(a, message, key)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
     ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
     <form class="composer" data-form="chat">${attached}<div class="composer-line">${tools ? `<span class="composer-tools">${tools}</span>` : ''}<label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="1" maxlength="4000" required enterkeyhint="send" aria-describedby="chat-hint" placeholder="${esc(quote ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></div></form>
     <p class="composer-hint" id="chat-hint">${T('回车发送 · Shift+回车换行', 'Enter to send · Shift+Enter for a new line')}</p>
@@ -3466,7 +3466,7 @@ function railChat(a, role) {
 }
 // The server's local provider answers with a fact list, not a reply. Label it so nobody mistakes it for the colleague.
 const LOCAL_REPLY = /^本地事实模式[:：]\s*/;
-function msgHtml(a, role, m) {
+function msgHtml(a, m, messageId) {
   const mine = m.role === 'user';
   const local = !mine && LOCAL_REPLY.test(m.text);
   const text = local
@@ -3486,7 +3486,7 @@ function msgHtml(a, role, m) {
     (local
       ? `<span class="msg-local" title="${esc(T('后端以本地模式运行，没有接模型：这里列出的是这位同事掌握的事实，并没有读你的问题。', 'The server runs in local mode with no model: this lists facts the colleague holds and does not read your question.'))}">${T('本地模式', 'Local mode')}</span>`
       : '');
-  return `<div ${mine ? '' : `data-message-id="${esc(m.traceId || '')}"`} class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
+  return `<div ${mine ? '' : `data-message-id="${esc(messageId)}"`} class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
 // The rail no longer carries the result (it lives on the result page, the main screen). Until
 // the board line drops this tab, it holds one line and the way there.
@@ -4837,6 +4837,20 @@ function markRead() {
       !sheet.open &&
       !document.querySelector('.rc-tour'),
   );
+}
+
+let notesReadRoot = null;
+let stopReadingNotes = () => {};
+function markNotesRead() {
+  const a = current(), root = document.querySelector('.ws');
+  if (root === notesReadRoot) return;
+  stopReadingNotes();
+  notesReadRoot = root;
+  if (!a || !root) return;
+  stopReadingNotes = Greetings.watchMessages(root, id => {
+    const note = (ui.notesCache || []).find(n => noteKey(n.key) === id);
+    if (note && Greetings.receipts.read(a.id, note.role, id)) paintUnread();
+  }, () => current()?.id === a.id && !sheet.open && !document.querySelector('.rc-tour'), '[data-note-message-id]');
 }
 
 /* ---------- workspace refresh ---------- */
