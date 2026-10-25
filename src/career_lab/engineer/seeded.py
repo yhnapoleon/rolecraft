@@ -82,6 +82,7 @@ def seed_record(
         operation_name=operation,
         # Rule-based like reproduction, trials and reviews, so it can be re-run exactly.
         recognize=False,
+        rule_replay=True,
     ).result
     for ref in record.citations:
         module.check_evidence(view, auth, ref)
