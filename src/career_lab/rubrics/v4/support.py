@@ -5,14 +5,15 @@ Missing/invalid/unavailable verification stays unverified. No network calls occu
 unless a caller explicitly supplies a configured model adapter.
 """
 
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 
-from career_lab.evidence.v2.localization import message, validate_language
 from career_lab.contracts.v2.core import canonical, digest
+from career_lab.evidence.v2.localization import message, validate_language
 
 # Moved to the shared model-input projection; kept importable for existing callers.
 from career_lab.models.v3.projection import relation_input as registered_relation_input
+from career_lab.runtime.model_audit import audited, complete
 
 __all__ = ["EvidenceSupportVerifier", "SupportResult", "registered_relation_input"]
 
@@ -43,6 +44,7 @@ class EvidenceSupportVerifier:
     def __call__(self, package, advice):
         return self.verify(package, advice).verdict
 
+    @audited("SUPPORT")
     def verify(self, package, advice, *, work_language="zh"):
         validate_language(work_language)
 
@@ -110,7 +112,7 @@ class EvidenceSupportVerifier:
         if len(encoded) > self.input_bytes:
             return result("unverified", "input_overflow", input_hash=input_hash)
         try:
-            reply = self.model.complete(messages, [])
+            reply = complete(self.model, messages, [])
             if reply.tool_calls or len(reply.text.encode()) > self.output_bytes:
                 return result("unverified", "invalid_response", input_hash=input_hash)
             output_hash = digest(reply.text)

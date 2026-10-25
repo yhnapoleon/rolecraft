@@ -175,6 +175,7 @@ class OncePerInputModel:
 
     def __init__(self, model):
         self.model, self.revision, self.seen = model, model.revision, set()
+        self.provider = getattr(model, "provider", None)
 
     def complete(self, messages, tools):
         key = C.digest(messages[:2])
@@ -349,7 +350,13 @@ def create_feedback_handler(
         )
         return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader, engine)
 
-    return run
+    def audited_run(store, view, envelope, auth):
+        from career_lab.runtime.model_audit import audit_scope
+
+        with audit_scope(session_id=auth.session_id, request_id=envelope.command.request_id):
+            return run(store, view, envelope, auth)
+
+    return audited_run
 
 
 def installed_evaluation(module):
