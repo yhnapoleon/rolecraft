@@ -1,0 +1,41 @@
+/* Normal working moments: quiet, readable signatures; the lens keeps its existing details. */
+.rc-signature-wrap { min-width: 0; }
+.rc-signature {
+  display: inline-flex; gap: 5px; align-items: baseline; text-align: start;
+  background: none; border: 0; padding: 5px 0; max-width: 100%;
+  font: inherit; font-size: 12px; line-height: 1.5; color: var(--ink-3);
+  cursor: pointer; overflow-wrap: anywhere;
+}
+.rc-signature:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: var(--r-xs); }
+@media (hover: hover) and (pointer: fine) { .rc-signature:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; } }
+.rc-test-moment { margin: 16px 0 4px; padding-block-start: 12px; border-block-start: 1px solid var(--line); min-width: 0; }
+.rc-moment-hit { margin-block-end: 8px; padding: 12px 16px; border-inline-start: 2px solid var(--line-2); background: var(--paper); border-radius: var(--r-paper); }
+.rc-moment-hit-title, .rc-moment-note { margin: 0 0 7px; font-size: 12px; line-height: 1.55; color: var(--ink-3); overflow-wrap: anywhere; }
+.rc-moment-hit blockquote { margin: 6px 0 10px; color: var(--ink-2); font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+.rc-moment-change { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin: 0 0 8px; }
+.rc-moment-change strong { color: var(--warn); font-size: 23px; font-weight: 600; }
+.rc-test-age { color: var(--warn); font-size: 12px; line-height: 1.5; margin: 10px 0; }
+.rc-moment-hit mark { background: var(--warn-tint); color: var(--ink); }
+@media (max-width: 720px) { .rc-moment-hit { padding: 10px 12px; } .rc-signature { min-height: 32px; } }
+
+.rc-business-reading { color: var(--ink); padding-block: 12px; min-width: 0; }
+.rc-business-reading h3 { font-size: 16px; margin: 0 0 6px; }
+.rc-business-reading ol { list-style: none; padding: 0; margin: 10px 0 0; }
+.rc-business-reading li { padding: 14px 0; border-block-start: 1px solid var(--line); }
+.rc-business-quote { font-size: 16px; line-height: 1.65; margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rc-business-label { font-size: 12px; color: var(--ink-3); }
+[data-sentence-state="supported"] .rc-business-label { color: var(--good); }
+[data-sentence-state="contradicted"] .rc-business-label { color: var(--bad); }
+.rc-business-reading details { margin-block-start: 8px; font-size: 13px; color: var(--ink-2); }
+.rc-business-reading summary { cursor: pointer; line-height: 1.6; overflow-wrap: anywhere; }
+.rc-business-reading summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.rc-business-reading blockquote { margin: 10px 0; padding-inline-start: 12px; border-inline-start: 2px solid var(--line-2); line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rc-work-check { margin: 14px 0; padding: 14px; border-block-start: 1px solid var(--line-2); }
+.rc-work-check-note { color: var(--ink-3); font-size: 13px; line-height: 1.6; }
+.rc-work-check-note.warn { color: var(--warn); }
+.rc-work-check-choice { display: grid; gap: 10px; margin-block: 12px; }
+.rc-work-check-choice select { max-width: 100%; width: 100%; }
+.rc-work-check-choice button { justify-self: start; }
+
+.rc-work-check-actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-block: 10px; }
+.rc-work-check:empty { display: none; }

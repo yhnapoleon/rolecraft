@@ -13,7 +13,9 @@ import { type Counted, feedbackClass, feedbackCounts } from './short-summary';
 import type { PreviewRecognition } from '../recognition-native/chain';
 import { LENS_COPY } from '../recognition-native/lens-copy';
 import { lensOn, onLensChange } from '../recognition-native/lens';
-import { previewQuiet, renderSentenceLens } from '../recognition-native/sentences';
+import { renderSentenceLens } from '../recognition-native/sentences';
+
+import { renderBusinessSentences } from '../recognition-native/business-sentences';
 
 type Facts = _RuleCheckFacts;
 type Tone = 'good' | 'bad' | 'warn' | 'ink';
@@ -41,7 +43,9 @@ export type SentencePass =
   | { kind: 'idle' }
   | { kind: 'running'; startedAt: number }
   | { kind: 'ready'; preview: PreviewRecognition }
-  | { kind: 'failed' };
+  | { kind: 'failed' }
+  | { kind: 'disabled' }
+  | { kind: 'empty' };
 
 export type PresubmitView = {
   title: string;
@@ -396,8 +400,9 @@ export function createSentencePass(options: {
     start(check: SubmissionRuleCheck | null, choice: SubmitChoice | null) {
       current = check;
       const body = check ? carried(check) : null;
-      if (!check || !body) return options.show({ kind: 'idle' });
-      if (Array.isArray(body.units) && body.units.length) return options.show({ kind: 'ready', preview: body });
+      if (!check) return options.show({ kind: 'idle' });
+      if (!body) return options.show({ kind: 'disabled' });
+      if (Array.isArray(body.units)) return options.show(body.units.length ? { kind: 'ready', preview: body } : { kind: 'empty' });
       if (body.status !== 'pending' || !options.recognize || !choice) return options.show({ kind: 'idle' });
       const known = results.get(check);
       if (known) return options.show(known);
@@ -410,7 +415,7 @@ export function createSentencePass(options: {
             check,
             found.enabled && found.recognition?.units?.length
               ? { kind: 'ready', preview: found.recognition }
-              : { kind: 'idle' },
+              : { kind: found.enabled ? 'empty' : 'disabled' },
           ),
         () => {
           results.delete(check);
@@ -440,7 +445,7 @@ export function mountPresubmitCard(
      * three-column submission dialog, 206). */
     split?: boolean;
     /** Told the sentence step's state each time it is drawn. */
-    onReading?: (kind: 'idle' | 'running' | 'ready' | 'failed') => void;
+    onReading?: (kind: SentencePass['kind']) => void;
   } = {},
 ) {
   const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
@@ -553,7 +558,6 @@ export function mountPresubmitCard(
       stage.append(done, el('span', '→', 'presubmit__muted'), el('span', `${lens('stage_sentences')}…`), elapsed);
       rec.replaceChildren(stage, el('p', lens('stage_keepWriting'), 'presubmit__muted'));
     } else if (pass.kind === 'ready') {
-      const quiet = previewQuiet(pass.preview, language);
       rec.replaceChildren(
         lensOn()
           ? renderSentenceLens(doc, {
@@ -564,10 +568,11 @@ export function mountPresubmitCard(
               // The submission dialog shows Replay in its header, beside the lens switch.
               replay: false,
             })
-          : el('p', quiet ?? '', 'presubmit__muted'),
+          : renderBusinessSentences(doc, pass.preview, language),
       );
       playNext = false;
     } else if (pass.kind === 'failed') rec.replaceChildren(el('p', lens('stage_failed'), 'presubmit__muted'));
+    else if (pass.kind === 'disabled' || pass.kind === 'empty') rec.replaceChildren(el('p', language === 'zh' ? (pass.kind === 'disabled' ? '未启用识别，未生成逐句结论。' : '本次没有返回逐句结论，不能视为通过。') : (pass.kind === 'disabled' ? 'Recognition is not enabled; no sentence judgements were generated.' : 'No sentence judgements were returned; this is not a pass.'), 'presubmit__muted'));
     else rec.replaceChildren();
     options.onReading?.(pass.kind);
   }
@@ -601,7 +606,7 @@ export function mountPresubmitCard(
   );
   function show(state: PresubmitState) {
     root.setAttribute('aria-busy', String(state.kind === 'loading'));
-    if (state.kind === 'loading' && state.check) return;
+    if (state.kind === 'loading' && state.check) { pass.start(null, null); return; }
     const view = state.kind === 'ready' ? presubmitView(state.check, language) : null;
     const note = t(
       state.kind === 'idle' ? 'choose' : state.kind === 'loading' ? 'loading' : 'failed',

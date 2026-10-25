@@ -32,7 +32,7 @@ import { openLensForDelivery } from '../screens/result/deliver-lens';
 import { registerResultScreen } from '../screens/result';
 import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
-import { installCardToggles } from '../features/recognition-native/profile-card';
+import { installCardToggles, fillCardMetrics } from '../features/recognition-native/profile-card';
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
 import './practice-language.css';
@@ -169,6 +169,9 @@ import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
 import { carried, distillation, progressOf } from '../shell/progress';
 import { comparisonFor } from '../features/recognition-native/test-comparison';
+import { createWorkChecks, workCheckHtml } from '../features/recognition-native/work-check';
+import { createV4FeedbackAdapter } from '../features/feedback-native/v4-slot';
+import { testMomentHtml, testAgeText, retrievalHit } from '../features/recognition-native/test-moment';
 import * as Greetings from '../features/colleague-greetings';
 import { messageRows, noteKey } from '../features/colleague-greetings/unread';
 import { engineerApi } from '../features/engineer-desk/api';
@@ -1999,7 +2002,7 @@ const materialNameOf = (a) => (id) => {
 };
 /** A test run's recognition signals: quiet facts by default, chips in the lens. */
 function runSignals(a, x) {
-  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a), cards: { comparison: { current: x, tests: a.tests || [] } } })}</div>`;
+  return `<div data-rc-run="${esc(x.id)}">${lensOn() ? signalsHtml(x.recognition, locale(), { context: 'test', lens: true, materialName: materialNameOf(a), cards: { comparison: { current: x, tests: a.tests || [] } } }) : ''}</div>`;
 }
 /** Redraw only the recognition parts of the current page when the lens opens or closes. */
 onLensChange((on) => {
@@ -2010,7 +2013,7 @@ onLensChange((on) => {
   if (!a) return;
   document.querySelectorAll('[data-rc-run]').forEach((node) => {
     const run = (a.tests || []).find((t) => t.id === node.dataset.rcRun);
-    node.innerHTML = run
+    node.innerHTML = run && on
       ? signalsHtml(run.recognition, locale(), {
           context: 'test',
           lens: lensOn(),
@@ -2811,6 +2814,74 @@ async function restoreWorkFromControl(a, id, trigger) {
     if (trigger.isConnected) trigger.disabled = false;
   }
 }
+const workChecks = createWorkChecks();
+const workCheckKey = (a, x) => `${a.id}:${x.id}`;
+function savedWorkBasis(a, x) {
+  const products = sessionOf(a)?.v2Workspace?.products || [];
+  const saved = products.find((p) => p.product_id === x.id && !p.removed_at);
+  const value = L.nativeProductValue(a, x.id);
+  if (!saved || !value) return null;
+  const fields = (p) => [p.title || '', p.content || '', p.purpose || '', p.evidence_refs || []];
+  const isDirty = JSON.stringify(fields(value)) !== JSON.stringify(fields(saved));
+  const at = L.v4Host(a)?.snapshot().asOf;
+  return { saved, isDirty, key: JSON.stringify([a.id, x.id, saved.version, fields(saved), at?.business_seq, at?.workspace_revision]) };
+}
+function workCheckSummary(a, x) {
+  const basis = savedWorkBasis(a, x);
+  return workCheckHtml(workChecks.get(workCheckKey(a, x)), locale(), basis?.key || '', !basis || basis.isDirty);
+}
+function showWorkCheck(a, x) {
+  const basis = savedWorkBasis(a, x);
+  if (!basis || basis.isDirty) { notify(T('请先保存作品，再核对本版。', 'Save your work before checking this version.')); return; }
+  const host = L.v4Host(a);
+  if (!host || statusOf(a) !== 'active') return;
+  const key = workCheckKey(a, x);
+  openSheet(T('核对本版', 'Check this version'),
+    `<p>${esc(basis.saved.title)} · ${workVersion(basis.saved.version)}</p><p class="rc-moment-note">${T('只核对这份已保存版本，不提交决定，也不改作品。', 'Checks only this saved version. It does not submit a decision or change your work.')}</p><div class="rc-work-check-choice"><label for="work-check-decision">${T('你拟作出的交付决定', 'Your intended delivery decision')}</label><select class="select" id="work-check-decision"><option value="">${T('由你选择…', 'Choose a decision…')}</option>${['launch', 'launch_narrow', 'defer_with_conditions', 'no_go'].map((d) => `<option value="${d}">${esc(DECISION(d))}</option>`).join('')}</select><button type="button" class="btn primary" data-work-check-start disabled>${T('核对本版', 'Check this version')}</button></div><div data-work-check-result>${workCheckSummary(a, x)}</div>`,
+    btn(T('回到作品', 'Back to the work'), 'close', 'quiet'), 'wide');
+  const output = sheet.querySelector('[data-work-check-result]');
+  const select = sheet.querySelector('#work-check-decision');
+  const button = sheet.querySelector('[data-work-check-start]');
+  let controller;
+  let running = false;
+  let closed = false;
+  const currentBasis = () => savedWorkBasis(a, x);
+  const stillCurrent = () => !closed && current()?.id === a.id && !currentBasis()?.isDirty && currentBasis()?.key === basis.key;
+  const draw = () => { if (output.isConnected) output.innerHTML = workCheckHtml(workChecks.get(key), locale(), currentBasis()?.key || '', !!currentBasis()?.isDirty); };
+  const stop = host.subscribe(() => { if (!stillCurrent()) { workChecks.invalidate(key); draw(); } });
+  select.addEventListener('change', () => { workChecks.invalidate(key); draw(); button.disabled = running || !select.value || !stillCurrent(); });
+  button.addEventListener('click', async () => {
+    if (running || !select.value || !stillCurrent()) return;
+    const decision = select.value;
+    running = true; button.disabled = true; select.disabled = true;
+    const result = workChecks.run(key, basis.key, async () => {
+      controller = createV4FeedbackAdapter(host);
+      await controller.refresh();
+      if (!stillCurrent()) throw Error('stale');
+      return controller.adapter.previewRecognition({ decision, products: [{ session_id: a.id, kind: 'product', object_id: x.id, version: basis.saved.version }] });
+    }, stillCurrent, DECISION(decision));
+    draw();
+    await result;
+    controller?.destroy(); controller = null;
+    running = false;
+    if (!closed) { select.disabled = false; button.disabled = !select.value || !stillCurrent(); draw(); }
+  });
+  sheet.addEventListener('close', () => {
+    closed = true; stop(); controller?.destroy();
+    if (running) workChecks.invalidate(key);
+    const summary = document.querySelector('[data-work-check-summary]');
+    if (summary && artifact()?.id === x.id) summary.innerHTML = workCheckSummary(a, x);
+  }, { once: true });
+}
+// Native editors stop bubble events; mark old checks stale on the input's capture phase.
+document.addEventListener('input', (event) => {
+  if (!event.target.matches?.('[data-edit]')) return;
+  const a = current(), x = artifact();
+  if (!a || !x) return;
+  workChecks.invalidate(workCheckKey(a, x));
+  const summary = document.querySelector('[data-work-check-summary]');
+  if (summary) summary.innerHTML = workCheckSummary(a, x);
+}, true);
 function workView(a, t, x) {
   if (x.kind === 'test_set') return structuredWorkView(a, t, x);
   if (x.kind === 'investigation') return structuredInvestigationView(a, t, x);
@@ -2837,7 +2908,9 @@ function workView(a, t, x) {
           <span>${x.source === 'user' ? T('你写的', 'By you') : x.requestId ? T('来自你的 Agent', 'From your agent') : T('导入的作品', 'Imported work')}</span>
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>
+        ${L.nativeWorkspace(a) ? `<div class="rc-work-check-actions">${btn(T('核对本版', 'Check this version'), 'check-work', 'small', `data-id="${esc(x.id)}" ${canEditWork(a, x) ? '' : 'disabled'}`)}<span class="rc-moment-note">${T('先保存，再选择拟交付决定', 'Save first, then choose your intended decision')}</span></div>` : ''}
         ${showEditor ? `<label class="sr-only" for="editor-body">${T('正文', 'Body')}</label><textarea id="editor-body" class="editor-body" data-edit="body" ${editable ? '' : 'readonly'} maxlength="50000" spellcheck="false" placeholder="${esc(T('写判断、问题，或直接起草方案。## 写小标题，- 写列表。', 'Write a judgement, questions or a draft plan. ## for headings, - for lists.'))}">${esc(view.body)}</textarea>` : `<div class="prose">${md(view.body)}</div>`}
+        ${L.nativeWorkspace(a) ? `<section class="rc-work-check" data-work-check-summary>${workCheckSummary(a, x)}</section>` : ''}
         ${L.nativeWorkspace(a) ? nativeEvidenceRow(a, x, T('依据', 'Evidence')) : x.evidence.length ? `<div class="evidence-row"><span class="meta">${T('依据', 'Evidence')}</span>${x.evidence.map((ev) => `<button type="button" class="chip" data-action="view-evidence" data-id="${esc(ev.id)}" data-version="${esc(ev.version ?? '')}">${icon(ev.type === 'test' ? 'flask' : 'doc', 'i-xs')}<span>${esc(evTitle(ev))}</span>${ev.version ? `<span class="ver">v${ev.version}</span>` : ''}</button>`).join('')}</div>` : ''}
       </article>
       ${notes.length ? `<aside class="margin" aria-label="${esc(T('同事的提醒', 'Reminders from colleagues'))}">${notes.map(marginNote).join('')}</aside>` : ''}
@@ -3312,6 +3385,7 @@ function runGroup(a, runs) {
   return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}" id="run-${esc(r.id)}">
     <header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(r.question)}>${esc(r.question)}</h3>${runs.length > 1 ? `<span class="meta">${T(runs.length + ' 次', runs.length + ' runs')}</span>` : ''}${tk && ui.route !== 'task' ? `<button type="button" class="run-task" data-action="open-task" data-id="${tk.id}">${icon('note', 'i-xs')}${esc(taskTitle(tk))}</button>` : ''}</header>
     ${r.expectation ? `<p class="run-expect">${icon('eye', 'i-xs')}<span${zhAttr(r.expectation)}>${esc(r.expectation)}</span></p>` : ''}
+    ${testAgeText(r, a.world.policyVersion, locale()) ? `<p class="rc-test-age">${esc(testAgeText(r, a.world.policyVersion, locale()))}</p>` : ''}
     <div class="run-cols ${paired.length > 1 ? 'two' : ''}">${paired
       .map(
         (
@@ -3322,6 +3396,7 @@ function runGroup(a, runs) {
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
+    ${testMomentHtml(r, a.tests, locale(), materialNameOf(a))}
     <div class="run-lens">${runSignals(a, r)}${paired[1] ? `<details class="run-baseline-signals"><summary>${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, paired[1])}</details>` : ''}</div>
     ${comparison.referenced && !comparison.previous ? `<p class="meta">${T('识别记录指定的比较对象未载入；没有用上一次测试代替。', 'The recorded comparison baseline is not loaded; the previous run has not been substituted.')}</p>` : ''}
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
@@ -4849,6 +4924,7 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   }
   const stage = document.getElementById('main');
   const y = stage ? stage.scrollTop : 0;
+  const openMomentCards = [...(stage?.querySelectorAll('.rc-test-moment [data-rc-card][aria-expanded="true"]') || [])].map((key) => key.dataset.rcCard);
   if (parts.includes('toolbar')) {
     const tb = document.getElementById('ws-toolbar');
     const html = wsToolbar(a);
@@ -4874,6 +4950,11 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
       );
     }
     if (stage) stage.scrollTop = y;
+    for (const id of openMomentCards) {
+      const card = document.getElementById(id);
+      const key = next?.querySelector(`[data-rc-card="${CSS.escape(id)}"]`);
+      if (card && key) { card.hidden = false; key.setAttribute('aria-expanded', 'true'); void fillCardMetrics(card, locale()); }
+    }
     ui.stageStale = false;
   }
   if (parts.includes('rail')) {
@@ -5517,6 +5598,11 @@ async function act(el, ev = new Event('rc-action')) {
       refreshWS(['stage']);
       if (ui.kbd) document.querySelector('[data-work-mode]')?.focus({ preventScroll: true });
       break;
+    case 'check-work': {
+      const x = a.artifacts.find((w) => w.id === id);
+      if (x) showWorkCheck(a, x);
+      break;
+    }
     case 'save-work': {
       const x = artifact();
       requireWorkMutation(a, x);
@@ -5962,6 +6048,24 @@ async function act(el, ev = new Event('rc-action')) {
         btn(T('好', 'OK'), 'close', 'primary'),
         'wide',
       );
+      break;
+    }
+    case 'run-hit': {
+      const r = a.tests.find((x) => x.id === id);
+      const hit = r && retrievalHit(r);
+      if (!hit?.citation) break;
+      const c = hit.citation;
+      const result = await L.citationSource(a, r.id, c.id);
+      const m = result?.material;
+      const text = String(m?.content || '');
+      const at = text.indexOf(hit.quote);
+      const passage = at >= 0
+        ? `${md(text.slice(0, at), { dropTitle: true })}<mark data-hit-target>${esc(hit.quote)}</mark>${md(text.slice(at + hit.quote.length), { dropTitle: true })}`
+        : `${m ? md(text, { dropTitle: true }) : `<p>${T('这个引用版本的正文暂未取得。', 'The exact cited version is unavailable.')}</p>`}`;
+      openSheet(T('本次检索原文', 'Retrieved passage'),
+        `<div class="rc-moment-hit"><p class="rc-moment-hit-title">${esc(c.title || materialNameOf(a)(c.id))} · v${c.version}</p><blockquote>${esc(hit.quote)}</blockquote></div><div class="prose serif">${passage}</div>`,
+        btn(T('返回测试', 'Back to the test'), 'close', 'primary'), 'wide');
+      sheet.querySelector('[data-hit-target]')?.scrollIntoView({ block: 'center' });
       break;
     }
     case 'rerun': {
@@ -6617,6 +6721,21 @@ async function act(el, ev = new Event('rc-action')) {
     case 'cite-material': {
       const m = E.getMaterials(a).find((x) => x.id === id);
       if (m) cite({ id: m.id, title: m.title, version: m.version, body: m.body, type: 'material' });
+      refreshWS(['stage']);
+      break;
+    }
+    case 'cite-hit': {
+      const r = a.tests.find((x) => x.id === id);
+      const hit = r && retrievalHit(r);
+      if (hit?.citation && L.nativeWorkspace(a)) {
+        const work = nativeCiteHost.open() || nativeCiteHost.newest(a);
+        if (!work) { notify(T('先在这件事里写一份作品，再引用依据。', 'Write a piece of work for this task first, then cite evidence.')); break; }
+        const c = hit.citation;
+        const accepted = await nativeCiteHost.cite(a, work, { session_id: a.id, kind: 'material', object_id: c.id, version: c.version });
+        if (accepted) { nativeCiteHost.show(work); notify(T('依据已加入草稿，保存这版后生效。', 'Evidence added to your draft. Save this version to keep it.')); }
+        break;
+      }
+      if (hit?.citation) cite({ id: hit.citation.id, title: hit.citation.title, version: hit.citation.version, body: hit.quote, type: 'material' });
       refreshWS(['stage']);
       break;
     }

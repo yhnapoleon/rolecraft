@@ -110,15 +110,6 @@
   margin: 0 4px;
   background: var(--line-2);
 }
-.hm-cont__note {
-  grid-column: 2 / -1;
-  margin-top: 12px;
-  padding: 9px 0 11px;
-  box-shadow: inset 0 1px 0 var(--line);
-  color: var(--ink-3);
-  font-size: 12.5px;
-  line-height: 1.45;
-}
 .hm-entry {
   max-width: 944px;
   margin: 0 auto;
@@ -486,9 +477,6 @@
   }
   .hm-cont__title {
     white-space: normal;
-  }
-  .hm-cont__note {
-    grid-column: 1 / -1;
   }
   .hm-cont__row {
     flex-direction: column;
