@@ -87,3 +87,25 @@ def test_transport_error_never_writes_exception_or_unknown_usage_as_zero(env, le
     usage = next(r["usage"] for r in records if r["event"] == "model_call_finished")
     assert usage["status"] == "timeout" and usage["usage_known"] is False
     assert usage["input_tokens"] is None
+
+
+def test_evaluation_slot_defaults_fit_structured_evidence_and_keep_explicit_budgets():
+    from career_lab.runtime.model_slots import slot_config
+
+    configured = {"CAREER_LAB_JUDGE_PROVIDER": "deepseek"}
+    judge = slot_config("JUDGE", "local", configured)
+    support = slot_config("SUPPORT", "local", configured, judge)
+    assert judge.max_tokens == support.max_tokens == 2048
+    assert slot_config("ROLES", "local", {}).max_tokens == 512
+    assert slot_config("JUDGE", "local", {}).max_tokens == 512
+    small = slot_config("JUDGE", "local", configured | {"CAREER_LAB_JUDGE_MAX_TOKENS": "300"})
+    assert small.max_tokens == 300
+    assert slot_config("SUPPORT", "local", configured, small).max_tokens == 300
+
+
+def test_support_exposes_truncation_without_accepting_partial_json(env, ledger):
+    p = package(env, criterion="R6.comparison", purpose="option")
+    model = ScriptedModel([ModelReply(text='{"relation":"SUPPORTED"', finish_reason="length")])
+    result = EvidenceSupportVerifier(model).verify(p, proposal(p))
+    assert result.verdict == "unverified" and result.code == "output_truncated"
+    assert rows(ledger)[-1]["code"] == "output_truncated"
