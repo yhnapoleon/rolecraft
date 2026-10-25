@@ -480,7 +480,11 @@ def generated_history(request, tmp_path, monkeypatch):
 
     def provider(url, **kwargs):
         candidates = json.loads(kwargs["json"]["messages"][1]["content"])["candidates"]
-        content = {"answer": GENERATED[request.param], "citation_ids": [candidates[0]["id"]]}
+        content = {
+            "answerable": True,
+            "answer": GENERATED[request.param],
+            "citation_ids": [candidates[0]["id"]],
+        }
         return httpx.Response(
             200, json={"choices": [{"message": {"content": json.dumps(content)}}]}
         )

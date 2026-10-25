@@ -36,7 +36,21 @@ class FakeProvider:
         if self.behavior == "error":
             return httpx.Response(500, json={"error": "controlled failure"})
         candidates = loads(json["messages"][1]["content"])["candidates"]
-        content = {"answer": GENERATED[self.language], "citation_ids": [candidates[0]["id"]]}
+        content = {
+            "answerable": True,
+            "answer": GENERATED[self.language],
+            "citation_ids": [candidates[0]["id"]],
+        }
+        if self.behavior == "insufficient":
+            content["answerable"] = False
+            content["citation_ids"] = []
+            content["answer"] = (
+                "资料没有提供办公室停车位的预订信息。"
+                if self.language == "zh"
+                else (
+                    "They do not provide information about reserving a parking space at the office."
+                )
+            )
         return httpx.Response(
             200,
             json={
@@ -368,3 +382,40 @@ def test_feedback_keeps_a_generated_retest_pending(environment, language):
     assert GENERATED[language] not in json.dumps(generated["citations"], ensure_ascii=False)
     assert (extractive["label"], extractive["source"]) == ("MET", "verified_rule")
     assert len(fake.calls) == 1
+
+
+@pytest.mark.parametrize("fallback", ["human", "none"])
+def test_generated_missing_information_is_not_answered(environment, language, fallback):
+    database, fake = environment
+    fake.behavior = "insufficient"
+    with deployment(database, "openai") as (app, client):
+        session = start(client, language)
+        assert (
+            session.configure("llm", {"generator": "llm", "fallback": fallback}).status_code == 200
+        )
+        # Hold retrieval fixed; a valid retrieved passage alone cannot establish answerability.
+        assert session.ask("missing-info", QUESTION[language])["status"] == "queued"
+        run_worker(app)
+        row = latest(session)
+        assert row["content"]["status"] == ("fallback" if fallback == "human" else "failed")
+        assert row["content"]["error_code"] == "assistant_insufficient_sources"
+        assert row["assistant"]["mode"] == "llm"
+        assert row["content"]["citations"] == []
+        assert len(fake.calls) == 1
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"answer": "No information", "citation_ids": []},
+        {"answerable": "false", "answer": "No information", "citation_ids": []},
+        {"answerable": True, "answer": "A claim", "citation_ids": []},
+        {"answerable": False, "answer": "No information", "citation_ids": ["unknown"]},
+        {"answerable": False, "answer": "", "citation_ids": []},
+    ],
+)
+def test_answerability_requires_explicit_valid_output(payload):
+    from career_lab.assistant.v2.generation import parse_answer
+
+    with pytest.raises(ValueError):
+        parse_answer(dumps(payload), ())
