@@ -222,9 +222,9 @@
     max-width: calc(100% - 180px);
   }
 }
-/* The scrolling content ends with the preview card, close above the footer and its button. */
+/* Leave room to scroll the last preview above the overlaid material footer. */
 #sheet.deliver-sheet .sheet-body {
-  padding-bottom: 12px;
+  padding-bottom: 110px;
 }
 #sheet.deliver-sheet .deliver-doc {
   padding-bottom: 14px;

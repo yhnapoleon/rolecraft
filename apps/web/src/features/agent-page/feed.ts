@@ -35,6 +35,32 @@ const LIST_KINDS: Record<string, NonNullable<AgentEvent['object']>['kind']> = {
   'work_products.list': 'work_product',
 };
 
+/** An engineer's experiment or draft is named by its ticket (as read earlier), a review plainly. */
+function engineerTitle(kind: string, objects: readonly { kind: string; title?: string | null }[]) {
+  const en = locale() === 'en';
+  if (kind === 'experiment' || kind === 'draft' || kind === 'ticket')
+    return (
+      objects.find((o) => o.kind === 'ticket' && o.title)?.title ?? (en ? 'the ticket' : '工单')
+    );
+  if (kind === 'review') return en ? 'the review' : '复核';
+  return undefined;
+}
+
+/** Recorded calls can predate short names. Render known tickets in the practice language;
+ * unknown tickets and reviews keep a plain noun instead of exposing a backend title. */
+function ticketName(kind: string, title: string | undefined) {
+  const en = locale() === 'en';
+  if (kind === 'review') return en ? 'the review' : '复核';
+  if (!['ticket', 'experiment', 'draft'].includes(kind)) return title;
+  const hotel = [
+    '委托：住宿报销上限的回答需要排查',
+    'Ticket: the hotel reimbursement limit answer needs investigation',
+    '住宿上限委托',
+    'the hotel-limit ticket',
+  ].includes(title ?? '');
+  return hotel ? (en ? 'the hotel-limit ticket' : '住宿上限委托') : en ? 'the ticket' : '工单';
+}
+
 export function toEvent(row: AgentActivity): AgentEvent {
   if (row.kind === 'connected') {
     return {
@@ -59,8 +85,12 @@ export function toEvent(row: AgentActivity): AgentEvent {
       kind: KINDS[first.kind] ?? 'other',
       id: first.id,
       version: first.version ?? undefined,
-      title: first.title ?? undefined,
+      title: ticketName(first.kind, first.title ?? engineerTitle(first.kind, row.objects ?? [])),
     };
+  if (!object && tool.startsWith('engineer.')) {
+    const kind = tool === 'engineer.reviews.read' ? 'review' : 'ticket';
+    object = { kind, title: ticketName(kind, undefined) };
+  }
   return {
     id: String(row.seq),
     at: row.at,

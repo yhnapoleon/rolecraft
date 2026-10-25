@@ -195,14 +195,14 @@ def test_configured_deployment_projects_each_saved_mode(environment, language):
     modes = sorted(
         (row["content"]["as_of"]["business_seq"], row["assistant"]["mode"]) for row in rows.values()
     )
-    assert [mode for _, mode in modes] == ["extractive", "llm", "failed", "extractive"]
+    assert [mode for _, mode in modes] == ["extractive", "llm", "failed", "gate"]
     assert rows[extractive["ref"]["object_id"]]["assistant"]["provider"] is None
     generated = next(row for row in rows.values() if row["assistant"]["mode"] == "llm")
     assert generated["assistant"]["provider"] == "openai"
     assert generated["assistant"]["model_revision"] == "controlled-mode-model"
     assert generated["assistant"]["config_version"] == 1
     assert generated["content"]["answer"] == GENERATED[language]
-    # The rule guard kept the extractive path's own answer and never called the provider.
+    # The rule guard returned a gate notice, not a source extract, with no provider call.
     assert len(fake.calls) == 2
 
 

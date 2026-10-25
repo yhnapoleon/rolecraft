@@ -131,6 +131,7 @@ class Assistant:
         now=None,
         operation_name="test_assistant",
         generation_permitted: bool = False,
+        rule_replay: bool = False,
         recognize: bool = False,
     ):
         engine = ScenarioEngine(self.package)
@@ -369,8 +370,11 @@ class Assistant:
             version=snapshot.config.version,
             config_version=snapshot.config.config_version,
         )
+        # Engineering executes the frozen configuration with a declared rule executor.
+        # Preserve requested/effective config identity; never authorize a provider call here.
+        generator = "extractive" if rule_replay else cfg.generator
         generated = generation.answer_for_config(
-            cfg.generator,
+            generator,
             self.model,
             request.query,
             execution.chunks,
@@ -410,7 +414,7 @@ class Assistant:
         return TestExecution(
             result,
             {
-                **generation.execution_mode(cfg.generator, generated),
+                **generation.execution_mode(generator, generated),
                 "scenario_hash": self.package.content_hash,
                 "created_at": executed_at.isoformat(),
                 "source_versions": {

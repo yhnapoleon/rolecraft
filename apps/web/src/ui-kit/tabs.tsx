@@ -1,5 +1,5 @@
 // Tabs on Radix (shadcn tabs, MIT), drawn as the same segmented control as the hat switch:
-// real tab semantics (Radix triggers), the same sliding ink plate.
+// real tab semantics (Radix triggers), the same sliding light thumb.
 import { Tabs as Radix } from 'radix-ui';
 import type * as React from 'react';
 import { cn } from './cn';
@@ -34,7 +34,7 @@ export function Tabs<V extends string>({
             {it.label}
           </Radix.Trigger>
         ))}
-        <InkLayer layer={layer} items={items} size="sm" />
+        <InkLayer layer={layer} items={items} size="sm" value={value} />
       </Radix.List>
       {children}
     </Radix.Root>

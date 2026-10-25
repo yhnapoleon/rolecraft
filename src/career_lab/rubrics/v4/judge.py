@@ -1,12 +1,14 @@
 """Bounded, read-only advisory model adapter with grounded-reference checks."""
 
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 
 from career_lab.contracts.v2.core import canonical, digest
 from career_lab.contracts.v2.evaluation import FeedbackItem
 from career_lab.evidence.v2.assembler import model_input
 from career_lab.evidence.v2.localization import message, validate_language
+from career_lab.runtime.model_audit import audited, complete
+
 from .rules import pending
 from .support import EvidenceSupportVerifier
 
@@ -33,6 +35,7 @@ class AdvisoryJudge:
     def revision(self):
         return self.model.revision if self.model is not None else "unavailable"
 
+    @audited("JUDGE")
     def evaluate(self, package, expected_revision=None, *, work_language="zh"):
         validate_language(work_language)
         if package.applicability != "applicable":
@@ -98,7 +101,7 @@ class AdvisoryJudge:
                     ),
                     tuple(attempts),
                 )
-            reply = self.model.complete(messages, [])
+            reply = complete(self.model, messages, [])
             if reply.tool_calls:
                 raise ValueError("tools_not_allowed")
             if len(reply.text) > 24000:

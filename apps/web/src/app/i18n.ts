@@ -8,6 +8,11 @@ const KEY = 'rolecraft.locale';
 let current: Locale = 'zh';
 let preference: Preference = 'auto';
 const listeners = new Set<(l: Locale) => void>();
+/** Inside a practice the interface speaks the practice's own language (one practice, one
+ * language: never half one and half the other). Outside a practice the preference decides. */
+let practice: Locale | null = null;
+const preferred = (): Locale => (preference === 'auto' ? detect() : preference);
+const effective = (): Locale => practice ?? preferred();
 
 export function detect(
   languages: readonly string[] = typeof navigator === 'undefined'
@@ -26,6 +31,9 @@ export function detect(
 function apply() {
   if (typeof document === 'undefined') return;
   document.documentElement.lang = current === 'zh' ? 'zh-CN' : 'en';
+  // The skip link lives in index.html, outside every screen; it speaks the interface language.
+  const skip = document.querySelector('.skip-link');
+  if (skip) skip.textContent = current === 'en' ? 'Skip to content' : '跳到主要内容';
 }
 
 export function initLocale(storage?: Pick<Storage, 'getItem'>) {
@@ -35,11 +43,11 @@ export function initLocale(storage?: Pick<Storage, 'getItem'>) {
   } catch {
     /* storage blocked: follow the system */
   }
-  current = preference === 'auto' ? detect() : preference;
+  current = effective();
   apply();
   if (typeof window !== 'undefined') {
     window.addEventListener('languagechange', () => {
-      if (preference === 'auto') setLocale(detect());
+      if (preference === 'auto') setLocale(effective());
     });
   }
   return current;
@@ -49,7 +57,7 @@ function setLocale(next: Locale) {
   if (next === current) return;
   current = next;
   apply();
-  listeners.forEach((l) => l(current));
+  for (const l of listeners) l(current);
 }
 
 export function setPreference(next: Preference, storage?: Pick<Storage, 'setItem'>) {
@@ -59,8 +67,20 @@ export function setPreference(next: Preference, storage?: Pick<Storage, 'setItem
   } catch {
     /* keep the choice for this page only */
   }
-  setLocale(next === 'auto' ? detect() : next);
+  setLocale(effective());
 }
+
+/** Enter (with its language) or leave (null) a practice. Returns true when the interface
+ * language changed, so the caller knows a redraw is on its way through onLocaleChange. */
+export function setPracticeLocale(next: Locale | null): boolean {
+  practice = next;
+  const before = current;
+  setLocale(effective());
+  return current !== before;
+}
+/** The language the home page and new practices use (the preference, not the practice's). */
+export const preferredLocale = () => preferred();
+export const practiceLocale = () => practice;
 
 export const locale = () => current;
 export const getPreference = () => preference;

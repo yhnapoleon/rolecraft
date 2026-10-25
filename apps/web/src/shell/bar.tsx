@@ -3,8 +3,9 @@
 // across ui.js redraws. Clicks go through runAction, the same path as a native button.
 // Ink plates are only for the hat switch (a switch) and the primary key (what to press); the
 // scale is a track (where you are), so the three never read as three things to press.
+import { Eye } from 'lucide-react';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Segmented } from '../ui-kit/toggle-group';
 import type { Hat } from './hat';
 import { runAction } from './registry';
@@ -22,8 +23,11 @@ export type HatScaleProps = {
   hat: Hat;
   /** Labels already in the interface language. */
   hats: { pm: string; engineer: string; label: string; busy: string };
-  /** False where only one hat can be worn (no practice, an old local one). */
+  /** False where only one hat can be worn (no practice, an old local one, a fixed role). */
   canSwitch: boolean;
+  /** The practice's one role, already in the interface language ("Product manager · you"):
+   * drawn as a plate in the switch's place, never as something to press (phase 2). */
+  fixed?: string;
   steps: { id: string; label: string; state: Stage['steps'][number]['state'] }[];
   scaleLabel: string;
   /** "Step 1 of 3: Investigate", for the compact scale's screen-reader name. */
@@ -31,16 +35,29 @@ export type HatScaleProps = {
   delivered: boolean;
   /** The interface language, so a language switch redraws the labels. */
   lang?: string;
+  /**
+   * Optional: the step whose screen is shown when it is not the current step's own (looking
+   * back at Investigate while deciding). The scale outlines it and writes `viewingWord`; the
+   * current step keeps its ink stretch. Added by the stage-view fix (204).
+   */
+  viewing?: string;
+  viewingWord?: string;
+  /** Optional: the way back to the current step's screen, a ghost key right after the scale. */
+  back?: { label: string; action: string };
 };
 
 export function HatScale({
   hat,
   hats,
   canSwitch,
+  fixed,
   steps,
   scaleLabel,
   stepName,
   delivered,
+  viewing,
+  viewingWord,
+  back,
 }: HatScaleProps) {
   // The thumb moves at the click; the screen follows when the other hat's screen is ready.
   // While it is being prepared the switch shows a spinning dot; a failure sends the thumb back
@@ -75,6 +92,11 @@ export function HatScale({
   };
   return (
     <div className="rc-hatscale">
+      {!canSwitch && fixed && (
+        <span className="rc-role" data-role={hat}>
+          {fixed}
+        </span>
+      )}
       {canSwitch && (
         <span className="rc-hat-wrap" aria-busy={busy || undefined}>
           <Segmented<Hat>
@@ -121,7 +143,25 @@ export function HatScale({
           label={scaleLabel}
           stepName={stepName}
           delivered={delivered}
+          viewing={viewing}
+          viewingWord={viewingWord}
         />
+      )}
+      {back && (
+        <button
+          type="button"
+          className="btn quiet small rc-scale__back"
+          onClick={() => {
+            runAction(back.action).catch((e: unknown) =>
+              showToast(e instanceof Error ? e.message : String(e)),
+            );
+          }}
+        >
+          <svg viewBox="0 0 16 16" className="rc-scale__back-i" aria-hidden="true">
+            <path d="M6.5 4 2.5 8l4 4M3 8h7.5a3 3 0 0 1 3 3v1" />
+          </svg>
+          <span className="rc-scale__back-label">{back.label}</span>
+        </button>
       )}
     </div>
   );
@@ -141,15 +181,45 @@ function Scale({
   label,
   stepName,
   delivered,
+  viewing,
+  viewingWord,
 }: {
   hat: Hat;
   steps: HatScaleProps['steps'];
   label: string;
   stepName: string;
   delivered: boolean;
+  viewing?: string;
+  viewingWord?: string;
 }) {
   const reduce = useReducedMotion();
   const id = useId();
+  // The narrow scale's list of steps: closes on a pick, Esc, or a press anywhere else.
+  const [listOpen, setListOpen] = useState(false);
+  const opener = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLOListElement>(null);
+  const byKeys = useRef(false);
+  // Opened from the keyboard, focus goes to the first step; Esc gives it back to "2/3".
+  useEffect(() => {
+    if (listOpen && byKeys.current)
+      list.current?.querySelector<HTMLButtonElement>('button')?.focus();
+  }, [listOpen]);
+  useEffect(() => {
+    if (!listOpen) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
+      if (e instanceof PointerEvent && (e.target as Element)?.closest?.('.rc-scale__compact-wrap'))
+        return;
+      setListOpen(false);
+      if (e instanceof KeyboardEvent) opener.current?.focus();
+    };
+    document.addEventListener('pointerdown', close, true);
+    document.addEventListener('keydown', close, true);
+    return () => {
+      document.removeEventListener('pointerdown', close, true);
+      document.removeEventListener('keydown', close, true);
+    };
+  }, [listOpen]);
   const at = Math.max(
     0,
     steps.findIndex((s) => s.state === 'current'),
@@ -180,15 +250,22 @@ function Scale({
                       className="rc-scale__step"
                       data-state={delivered ? 'done' : s.state}
                       data-last={i === steps.length - 1 || undefined}
+                      data-viewing={s.id === viewing || undefined}
                       aria-current={i === mark ? 'step' : undefined}
                       onClick={() => {
                         void runAction(`stage-${hat}`, undefined, { step: s.id }).catch(() => {});
                       }}
                     >
-                      {walked && (
+                      {walked && s.id !== viewing && (
                         <svg viewBox="0 0 16 16" className="rc-scale__tick" aria-hidden="true">
                           <path d="m3.5 8.5 3 3 6-7" />
                         </svg>
+                      )}
+                      {s.id === viewing && viewingWord && (
+                        <span className="rc-scale__viewing">
+                          <Eye size={14} strokeWidth={1.75} aria-hidden="true" />
+                          {viewingWord}
+                        </span>
                       )}
                       {s.label}
                       {i === mark && (
@@ -217,12 +294,73 @@ function Scale({
           </span>
         </motion.div>
       </AnimatePresence>
-      {/* Narrow widths: "1/3" on its own short track; read out in full. */}
-      <span className="rc-scale__compact" data-delivered={delivered}>
-        <span aria-hidden="true">
-          {delivered ? steps.length : at + 1}/{steps.length}
-        </span>
-        <span className="sr-only">{stepName}</span>
+      {/* Narrow widths: "1/3" on its own short track, read out in full. It opens the steps as a
+          short list, so every step can be reached at phone width too (204). */}
+      <span className="rc-scale__compact-wrap">
+        <button
+          type="button"
+          className="rc-scale__compact"
+          data-delivered={delivered}
+          data-viewing={viewing ? true : undefined}
+          ref={opener}
+          aria-expanded={listOpen}
+          aria-controls={`${id}-steps`}
+          onClick={(e) => {
+            byKeys.current = e.detail === 0;
+            setListOpen((v) => !v);
+          }}
+        >
+          {/* Short at phone width ("Viewing 1/3"); the full name is read out. */}
+          <span aria-hidden="true">
+            {viewing && viewingWord
+              ? `${viewingWord} ${steps.findIndex((s) => s.id === viewing) + 1}/${steps.length}`
+              : `${delivered ? steps.length : at + 1}/${steps.length}`}
+          </span>
+          <span className="sr-only">
+            {viewing && viewingWord
+              ? `${viewingWord} ${steps.find((s) => s.id === viewing)?.label ?? ''}. ${stepName}`
+              : stepName}
+          </span>
+        </button>
+        {listOpen && (
+          <ol className="rc-scale__list" id={`${id}-steps`} ref={list} aria-label={label}>
+            {steps.map((s, i) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className="rc-scale__list-step"
+                  data-state={delivered ? 'done' : s.state}
+                  data-last={i === steps.length - 1 || undefined}
+                  data-delivered={delivered || undefined}
+                  data-viewing={s.id === viewing || undefined}
+                  aria-current={i === mark ? 'step' : undefined}
+                  onClick={() => {
+                    setListOpen(false);
+                    void runAction(`stage-${hat}`, undefined, { step: s.id }).catch(() => {});
+                  }}
+                >
+                  {/* The wide scale's marks: walked steps ticked, the current one in ink. */}
+                  <span className="rc-scale__list-n" aria-hidden="true">
+                    {delivered || s.state === 'done' ? (
+                      <svg viewBox="0 0 16 16" className="rc-scale__tick" aria-hidden="true">
+                        <path d="m3.5 8.5 3 3 6-7" />
+                      </svg>
+                    ) : (
+                      i + 1
+                    )}
+                  </span>
+                  {s.label}
+                  {s.id === viewing && viewingWord && (
+                    <span className="rc-scale__viewing">
+                      <Eye size={14} strokeWidth={1.75} aria-hidden="true" />
+                      {viewingWord}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
       </span>
     </nav>
   );

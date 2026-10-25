@@ -1,0 +1,216 @@
+/* The walk-through: one card on paper beside the thing it points at, and a soft ring around that
+   thing. The card is the manager's (her avatar on the count line); the ring is ink, not colour. */
+.rc-tour {
+  position: fixed;
+  z-index: 70;
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px 12px;
+  border-radius: var(--r-panel);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-float);
+}
+.rc-tour::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--arrow, 50%) - 7px);
+  width: 14px;
+  height: 14px;
+  background: var(--paper);
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+.rc-tour[data-side="below"]::before {
+  top: -6px;
+  box-shadow: -1px -1px 0 0 var(--line);
+}
+.rc-tour[data-side="above"]::before {
+  bottom: -6px;
+  box-shadow: 1px 1px 0 0 var(--line);
+}
+.rc-tour[data-side="none"]::before {
+  display: none;
+}
+.rc-tour__count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.rc-tour__title {
+  margin: 0 0 4px;
+  font: 600 16px / 1.3 var(--display);
+  letter-spacing: -0.01em;
+}
+.rc-tour__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.rc-tour__keys {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+.rc-tour__keys .spacer {
+  flex: 1;
+}
+.rc-tour-ring {
+  position: fixed;
+  z-index: 69;
+  border-radius: var(--r-md);
+  box-shadow:
+    0 0 0 2px var(--ink),
+    0 0 0 6px var(--accent-tint);
+  pointer-events: none;
+  transition:
+    left var(--mid) var(--ease-out),
+    top var(--mid) var(--ease-out),
+    width var(--mid) var(--ease-out),
+    height var(--mid) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-tour-ring {
+    transition: none;
+  }
+}
+
+/* The item's brief under its title (ui.js itemBrief): up to four short cells on one line. */
+.th-brief {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.th-brief__cell {
+  min-width: 0;
+  max-width: 34ch;
+  padding: 0 16px;
+  border-left: 1px solid var(--line);
+}
+.th-brief__cell:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.th-brief dt {
+  margin: 0 0 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.th-brief dd {
+  margin: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink);
+}
+.th-brief__cell.is-warn dd {
+  color: var(--warn);
+}
+@media (max-width: 720px) {
+  .th-brief__cell {
+    padding: 0;
+    border-left: 0;
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+/* Grace’s commission is the single first-screen action. */
+.rc-entry-story {
+  max-width: 660px;
+  margin: clamp(24px, 7vh, 76px) auto;
+  padding: 32px;
+  background: var(--paper);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow-paper);
+}
+.rc-entry-from {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+  font-size: 13px;
+  margin: 0 0 32px;
+}
+.rc-entry-role {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.rc-entry-story h1 {
+  font: 500 clamp(26px, 3vw, 36px) / 1.25 var(--serif);
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+.rc-entry-body {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ink-2);
+  margin: 0 0 24px;
+}
+.rc-entry-brief {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+.rc-entry-brief summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.ws:has(.rc-entry-story) .rc-primary {
+  display: none;
+}
+.rc-entry-next {
+  display: flex;
+  gap: 10px;
+  margin: 0 40px 16px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.rc-entry-next b {
+  flex: none;
+  color: var(--ink);
+}
+.rc-tour__title:lang(zh) {
+  letter-spacing: normal;
+}
+@media (max-width: 720px) {
+  .rc-entry-story {
+    margin: 20px 14px;
+    padding: 24px 20px;
+  }
+  .rc-entry-from {
+    margin-bottom: 24px;
+  }
+  .rc-entry-next {
+    margin: 0 14px 14px;
+  }
+}
+
+.rc-prog__suggestion {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.rc-prog__suggestion b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.view-engineer .rc-entry-next {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 12px 0;
+  background: var(--surface);
+}

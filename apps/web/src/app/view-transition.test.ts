@@ -199,3 +199,27 @@ it('cleans up a failed delivery transition without focusing an unsuccessfully up
     vi.unstubAllGlobals();
   }
 });
+
+it('resolves once the new page is drawn, with or without an animation, and never rejects', async () => {
+  const { run, reduced } = harness();
+  const drawn: string[] = [];
+  await run(() => drawn.push('animated'));
+  expect(drawn).toEqual(['animated']);
+  reduced.matches = true;
+  await run(() => drawn.push('instant'));
+  expect(drawn).toEqual(['animated', 'instant']);
+  reduced.matches = false;
+  const report = vi.fn();
+  vi.stubGlobal('reportError', report);
+  try {
+    const error = new Error('render failed');
+    const failing = run(() => {
+      throw error;
+    });
+    await expect(failing).resolves.toBeUndefined();
+    await turn();
+    expect(report).toHaveBeenCalledExactlyOnceWith(error);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

@@ -102,7 +102,7 @@ describe('engineer regression report · real samples', () => {
     expect(view.verdict).toMatchObject({
       state: 'fixed',
       tone: 'good',
-      title: '目标问题已修好',
+      title: '目标修好了，没有新增失败',
       detail: '现在给出了委托记录的预期答案。',
       targets: ['账号密码忘了怎么重置？'],
     });
@@ -177,7 +177,7 @@ describe('engineer regression report · real samples', () => {
       timeZone: SG,
     });
     expect(root.verdict).toMatchObject({
-      title: 'Target fixed',
+      title: 'Target fixed, nothing new fails',
       detail: 'Now gives the expected answer recorded with the ticket.',
       targets: ['What is the hotel reimbursement limit per night?'],
     });
@@ -559,14 +559,14 @@ describe('engineer regression report · target line and rubric conclusions', () 
     expect(view.verdict).toMatchObject({
       source: 'public',
       state: 'fixed',
-      title: '目标问题已修好',
+      title: '目标修好了，没有新增失败',
       detail: '现在给出了委托记录的预期答案。',
       targets: ['账号密码忘了怎么重置？'],
     });
   });
 
   it.each([
-    ['MET', 'fixed', 'good', '目标问题已修好'],
+    ['MET', 'fixed', 'good', '目标修好了，没有新增失败'],
     ['NOT_MET', 'not_fixed', 'ink', '目标问题没修好'],
     ['PARTIAL', 'partial', 'ink', '目标问题部分修好'],
     ['INSUFFICIENT', 'unknown', 'unknown', '还不知道目标是否修好'],
@@ -896,7 +896,7 @@ describe('engineer regression report · signed review samples', () => {
       source: 'public',
       state: 'fixed',
       tone: 'good',
-      title: '目标问题已修好',
+      title: '目标修好了，没有新增失败',
       detail: '现在给出了委托记录的预期答案。',
       targets: ['住宿报销上限是多少？'],
     });
@@ -1014,7 +1014,10 @@ describe('engineer regression report · signed review samples', () => {
       ],
     });
     const both = engineerReportView(
-      { ...NOT_FIXED_ZH, hidden_comparison: { new_failures: 1, fixed: 0, still_failing: 0, unverified: 0 } },
+      {
+        ...NOT_FIXED_ZH,
+        hidden_comparison: { new_failures: 1, fixed: 0, still_failing: 0, unverified: 0 },
+      },
       { language: 'zh' },
     );
     expect(both.verdict?.lines?.[1].text).toBe('3 个原来通过的探针现在失败（公开 2 · 隐藏 1）');

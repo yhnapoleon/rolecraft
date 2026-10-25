@@ -197,6 +197,29 @@ def test_a_broad_grant_still_has_no_person_only_tool(eng: tuple[Eng, TestClient]
     assert [row["id"] for row in detail["drafts"]] == [made["id"]]
 
 
+def test_engineer_tools_explain_changes_fields_and_signing(eng: tuple[Eng, TestClient]) -> None:
+    """Each engineer tool's input schema tells the Agent how to fill it and who signs."""
+    person, loopback = eng
+    token = person.grant(
+        "mcp-engineer", ["read", "act"], [*ENGINEER_AGENT_ACTIONS, "observation", "tools"]
+    )
+    listed = Agent(person, loopback, token).rpc("tools/list")["result"]["tools"]
+    notes = {
+        tool["name"]: tool["inputSchema"]["description"]
+        for tool in listed
+        if tool["name"].startswith("engineer.")
+    }
+    assert set(notes) == set(ENGINEER_AGENT_ACTIONS)
+    assert "editable_fields" in notes["engineer.tickets.read"]
+    for name in ("engineer.trial", "engineer.submissions.draft"):
+        assert "{field: new value}" in notes[name], name
+        assert "editable_fields" in notes[name], name
+    for name in ("engineer.submissions.draft", "engineer.reviews.read"):
+        assert "only the person" in notes[name] and "web page" in notes[name], name
+    assert "baseline" in notes["engineer.reproduce"]
+    assert all(len(note) <= 300 for note in notes.values()), notes
+
+
 def test_a_busy_ticket_detail_stays_within_the_result_limit(eng: tuple[Eng, TestClient]) -> None:
     """The detail lists the latest experiments and drafts; budgets count all of them."""
     person, loopback = eng

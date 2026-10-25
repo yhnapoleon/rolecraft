@@ -71,6 +71,7 @@ def run_query(
             # rule-based retrieval, whether or not CAREER_LAB_RECOGNIZERS is configured, so a
             # verdict never depends on which recognizers a deployment happens to have.
             recognize=False,
+            rule_replay=True,
         ).result
     except Exception:
         # Execution faults do not become a business fail or leak private text.

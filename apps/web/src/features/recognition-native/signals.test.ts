@@ -65,10 +65,10 @@ describe('recognition signals', () => {
   it('stays quiet on test records unless the answer’s numbers changed', () => {
     expect(signalsHtml([scopeOut, retrieval], 'zh', { context: 'test', lens: false })).toBe('');
     const html = signalsHtml([scopeOut, retrieval, drift], 'zh', { context: 'test', lens: false });
-    expect(html).toContain('和上一次相比，回答里的数字从 500 变成 400');
+    expect(html).toContain('和记录指定的基准相比，回答里的数字从 500 变成 400');
     expect(html).not.toMatch(INTERNAL);
     expect(signalsHtml([drift], 'en', { context: 'test', lens: false })).toContain(
-      'Compared with last time, the numbers in the answer changed from 500 to 400',
+      'Compared with the recorded baseline, the numbers in the answer changed from 500 to 400',
     );
   });
 
@@ -109,12 +109,13 @@ describe('recognition signals', () => {
   });
 
   it('labels every recognizer with its course category', () => {
+    expect(categoryOf({ ...intent, task: 'retrieval', outputs: { method: 'rrf' } }, 'zh')).toBe('混合');
     expect(categoryOf(intent, 'zh')).toBe('监督 · 经典机器学习');
     expect(categoryOf({ ...intent, task: 'behavior' }, 'zh')).toBe('机器学习 · 无监督 · 智能感知');
     expect(categoryOf({ ...intent, task: 'arbiter' }, 'en')).toBe('Statistical decision · Hybrid');
     expect(categoryOf({ ...intent, task: 'relation', recognizer_id: 'xlm-r-pair-v1' }, 'zh')).toBe('监督 · 深度学习');
     expect(categoryOf({ ...intent, task: 'relation', recognizer_id: 'relation-stack-v1' }, 'zh')).toBe('集成 · 混合');
-    expect(categoryOf({ ...intent, task: 'retrieval' }, 'zh')).toBe('混合');
+    expect(categoryOf({ ...intent, task: 'retrieval' }, 'zh')).toBe('检索');
   });
 
   it('words the arbiter by outcome in the lens', () => {

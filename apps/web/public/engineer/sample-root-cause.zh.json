@@ -7,6 +7,10 @@
     "kind": "human"
   },
   "draft_id": "draft-c5cdc5c2afee6270e977f4f627c3381798350f7dd5940c7aa1203dbcee8a7be6",
+  "draft_executor": {
+    "id": "human:f6d613290a2548ee93edb5beb00ea840",
+    "kind": "human"
+  },
   "ticket_id": "ticket-ede51eda8c833ac06bb4f2c11a0473018af259f9b5924aa531b60255fdfe3472",
   "impact_note": "其他引用旧版资料的回答也可能带上提醒；门槛变化可能让更多问题得到回答。",
   "retrieval": {

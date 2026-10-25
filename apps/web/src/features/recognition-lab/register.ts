@@ -221,6 +221,21 @@ export const REGISTER: Row[] = [
   }),
 ];
 
+/** A row's published figures as list items, read from the result files (none typed in). A figure
+ * whose file is missing is left out. Shared with the profile cards on learner pages. */
+export function rowMetricsHtml(r: Row, results: Results, language: Language) {
+  return r.metrics
+    .map((m) => {
+      const values = fill(results, m.figures);
+      const setValues = fill(results, m.setFigures ?? {}) ?? {};
+      if (!values) return '';
+      const [label, figures] = COPY[language][m.text].split('|');
+      return `<li><span class="rc-metric-label">${rich(label, values)}</span><span class="rc-metric-text">${rich(figures ?? '', values)}</span><span class="rc-metric-set">${esc(COPY[language][m.set].replace(/\{(\w+)\}/g, (_, n: string) => setValues[n] ?? ''))}</span></li>`;
+    })
+    .filter(Boolean)
+    .join('');
+}
+
 export function registerHtml(results: Results, language: Language) {
   const t = (k: Key) => esc(COPY[language][k]);
   const families = (
@@ -238,16 +253,7 @@ export function registerHtml(results: Results, language: Language) {
       ...r.cats.map((c) => `<span class="rc-family">${t(c)}</span>`),
       r.extraCat ? `<span class="rc-family" data-extra>${t(r.extraCat)}</span>` : '',
     ].join('');
-    const metrics = r.metrics
-      .map((m) => {
-        const values = fill(results, m.figures);
-        const setValues = fill(results, m.setFigures ?? {}) ?? {};
-        if (!values) return '';
-        const [label, figures] = COPY[language][m.text].split('|');
-        return `<li><span class="rc-metric-label">${rich(label, values)}</span><span class="rc-metric-text">${rich(figures ?? '', values)}</span><span class="rc-metric-set">${esc(COPY[language][m.set].replace(/\{(\w+)\}/g, (_, n: string) => setValues[n] ?? ''))}</span></li>`;
-      })
-      .filter(Boolean)
-      .join('');
+    const metrics = rowMetricsHtml(r, results, language);
     const steps = r.steps
       ? `<ol class="rc-chainsteps" aria-label="${t('c1_chain')}">${r.steps
           .map((s, i) => {

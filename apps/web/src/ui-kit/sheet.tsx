@@ -1,6 +1,6 @@
 // Sheet on Radix Dialog (shadcn sheet, MIT). `container` puts the portal inside an element, so
 // a reading sheet can cover only the main screen while the right rail stays usable (decision 14).
-// Paper or instrument surface; 280ms in/out on the drawer curve; the scrim uses --dim.
+// Paper or instrument surface; 280ms in/out on the drawer curve; the scrim uses --scrim-b.
 import { Dialog } from 'radix-ui';
 import type * as React from 'react';
 import { cn } from './cn';
@@ -33,7 +33,7 @@ export function SheetContent({
     <Dialog.Portal container={container ?? undefined}>
       <Dialog.Overlay
         className={cn(
-          'rc-portal rc-sheet-scrim tw:inset-0 tw:z-[80] tw:bg-[var(--dim)]',
+          'rc-portal rc-sheet-scrim tw:inset-0 tw:z-[80] tw:bg-[var(--scrim-b)]',
           contained ? 'tw:absolute' : 'tw:fixed',
         )}
       />
@@ -41,14 +41,15 @@ export function SheetContent({
         data-side={side}
         data-modal={modal}
         className={cn(
-          'rc-portal rc-sheet tw:z-[81] tw:flex tw:flex-col tw:outline-none',
+          'rc-portal rc-sheet tw:z-[81] tw:flex tw:flex-col tw:outline-none tw:rounded-dialog tw:overflow-hidden',
           contained ? 'tw:absolute' : 'tw:fixed',
-          side === 'right' && 'tw:inset-y-0 tw:right-0 tw:w-[min(720px,100%)]',
-          side === 'left' && 'tw:inset-y-0 tw:left-0 tw:w-[min(720px,100%)]',
-          side === 'bottom' && 'tw:inset-x-0 tw:bottom-0 tw:max-h-[85%]',
-          surface === 'paper'
-            ? 'tw:bg-paper tw:rounded-paper tw:shadow-float'
-            : 'tw:bg-inst tw:shadow-float',
+          side === 'right' &&
+            'tw:inset-y-[var(--sheet-inset)] tw:right-[var(--sheet-inset)] tw:w-[min(720px,calc(100%_-_2_*_var(--sheet-inset)))]',
+          side === 'left' &&
+            'tw:inset-y-[var(--sheet-inset)] tw:left-[var(--sheet-inset)] tw:w-[min(720px,calc(100%_-_2_*_var(--sheet-inset)))]',
+          side === 'bottom' &&
+            'tw:inset-x-[var(--sheet-inset)] tw:bottom-[var(--sheet-inset)] tw:max-h-[85%]',
+          surface === 'paper' ? 'tw:bg-paper tw:shadow-float' : 'tw:bg-inst tw:shadow-float',
           className,
         )}
         {...props}

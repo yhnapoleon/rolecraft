@@ -790,30 +790,39 @@
 .rc-switch__track {
   position: relative;
   flex: none;
-  inline-size: 30px;
-  block-size: 18px;
-  border-radius: 9px;
-  background: var(--line-2);
-  transition: background-color var(--fast) var(--rc-ease, ease);
+  width: var(--switch-width);
+  height: var(--switch-height);
+  border-radius: 999px;
+  background: var(--fill-2);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  transition: background-color var(--fast) ease;
 }
 .rc-switch__track::after {
-  content: '';
+  content: "";
   position: absolute;
-  inset-block-start: 2px;
-  inset-inline-start: 2px;
-  inline-size: 14px;
-  block-size: 14px;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  transition: transform var(--mid) var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+  top: 2px;
+  left: 2px;
+  width: var(--switch-knob);
+  height: var(--switch-knob);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--switch-shadow);
+  transition:
+    transform 320ms var(--spring),
+    width 200ms var(--ease-out);
 }
-.rc-switch[aria-checked='true'] .rc-switch__track {
-  background: var(--primary, var(--ink));
+.rc-switch[aria-checked="true"] .rc-switch__track {
+  background: var(--switch-on);
+  box-shadow: none;
 }
-.rc-switch[aria-checked='true'] .rc-switch__track::after {
-  background: var(--on-primary, var(--surface));
-  transform: translateX(12px);
+.rc-switch[aria-checked="true"] .rc-switch__track::after {
+  transform: translateX(var(--switch-travel));
+}
+.rc-switch:active .rc-switch__track::after {
+  width: var(--switch-pressed);
+}
+.rc-switch[aria-checked="true"]:active .rc-switch__track::after {
+  transform: translateX(var(--switch-pressed-travel));
 }
 .rc-switch__short {
   display: none;

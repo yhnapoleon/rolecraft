@@ -12,7 +12,9 @@ vi.mock('./index', () => ({
 }));
 import { mount } from './v4-slot';
 import { regionHost } from '../../v4-region-test-support';
-class Form {
+class Form extends EventTarget {
+  dataset: Record<string, string> = {};
+  closest() { return null; }
   input = Object.assign(new EventTarget(), { value: '', defaultValue: '' });
   querySelector() {
     return this.input;
@@ -20,8 +22,6 @@ class Form {
   querySelectorAll() {
     return [];
   }
-  addEventListener() {}
-  removeEventListener() {}
 }
 beforeEach(() => {
   vi.unstubAllGlobals();
@@ -373,4 +373,34 @@ for (const language of ['zh', 'en'] as const) {
       }
     });
   }
+}
+
+for (const accepted of [true, false]) {
+  it(`acknowledges a greeting suggestion through the native send path (accepted=${accepted})`, async () => {
+    const host = regionHost();
+    const snapshot = {...host.snapshot(), available: {'turns.create': true, timeline: true, 'work_products.list': true}};
+    host.snapshot = () => snapshot;
+    host.query = vi.fn(async () => ({objects: [], events: [], role_mode: 'local_reference',items:[],shares:[],sharing_complete:true,as_of:{business_seq:0,workspace_revision:1,storage_revision:1},next_cursor:null})) as unknown as V4HostAdapter['query'];
+    host.command = vi.fn(async () => {
+      if (!accepted) throw Error('offline');
+      return {requestId:'greet-request',status:'confirmed' as const,result:{turn:{session_id:'s',kind:'role_turn',object_id:'turn',version:1},question:'Suggested question',role_id:'supervisor'}};
+    }) as unknown as V4HostAdapter['command'];
+    const form = new Form();
+    const result: unknown[] = [];
+    form.addEventListener('rolecraft:greeting-result', event => result.push((event as CustomEvent).detail));
+    const handle = mount({host,nodes:{thread:{dataset:{roleId:'supervisor'},replaceChildren(){}} as unknown as HTMLElement,composer:form as unknown as HTMLElement}});
+    try {
+      await capture.adapter?.read();
+      expect(form.dataset.rolesBound).toBe('supervisor');
+      form.input.value='Suggested question';
+      form.input.dispatchEvent(new Event('input'));
+      form.dataset.greetingRequest='opening-token';
+      form.dispatchEvent(new Event('submit',{cancelable:true}));
+      await vi.waitFor(() => expect(result).toEqual([{token:'opening-token',accepted}]));
+      expect(host.command).toHaveBeenCalledWith('turns.create',{role_id:'supervisor',text:'Suggested question',shares:[]});
+      expect(form.dataset.greetingRequest).toBeUndefined();
+      if (!accepted) expect(form.input.value).toBe('Suggested question');
+    } finally {handle.destroy();}
+    expect(form.dataset.rolesBound).toBeUndefined();
+  });
 }

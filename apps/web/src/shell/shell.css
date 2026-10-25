@@ -37,3 +37,12 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+/* Sonner owns the lifecycle and movement; this class only supplies the material. */
+.rc-toast {
+  background: var(--pop-bg);
+  color: var(--ink);
+  -webkit-backdrop-filter: var(--pop-filter);
+  backdrop-filter: var(--pop-filter);
+  box-shadow: var(--pop-hi), var(--shadow-float);
+}

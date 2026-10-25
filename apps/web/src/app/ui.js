@@ -12,6 +12,8 @@ import {
   detect,
   when,
   isChinese,
+  practiceLocale,
+  setPracticeLocale,
 } from './i18n';
 import {
   icon,
@@ -30,8 +32,10 @@ import { openLensForDelivery } from '../screens/result/deliver-lens';
 import { registerResultScreen } from '../screens/result';
 import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
+import { installCardToggles } from '../features/recognition-native/profile-card';
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
+import './practice-language.css';
 import { behaviorHtml } from '../features/behavior-native/view';
 import {
   PRI,
@@ -105,7 +109,7 @@ import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-r
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { createConnectionKeeper, renderAgentConnection } from './agent-connection';
-import { provideAgentPage, syncAgentFeed } from '../features/agent-page';
+import { feedStore, provideAgentPage, syncAgentFeed } from '../features/agent-page';
 import './agent-connection.css';
 import { installV4References } from '../v4-references';
 import {
@@ -126,11 +130,16 @@ import { provideTaskCardFacts, testFacts } from '../features/workspace/native-v4
 import {
   ENGINEER_CASES,
   ENGINEER_ROUTES,
-  engineerBackHref,
   engineerCareerCardHtml,
-  mountEngineerRoute,
+  engineerEntryId,
+  installEngineer,
+  navigateStage,
   openEngineerHandover,
   openEngineerTicket,
+  colleagueReported,
+  readLearnerRole,
+  takeInPractice,
+  writeLearnerRole,
 } from '../features/engineer-desk/entry';
 import {
   afterShellRender,
@@ -139,6 +148,8 @@ import {
   hasStage,
   everEngineer,
   hatOf,
+  rememberRole,
+  roleOf,
   installShell,
   lastTicket,
   onAgentConnection,
@@ -158,7 +169,16 @@ import {
 } from '../shell';
 import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
+import { carried, distillation, progressOf } from '../shell/progress';
+import { comparisonFor } from '../features/recognition-native/test-comparison';
+import * as Greetings from '../features/colleague-greetings';
+import { messageRows, noteKey } from '../features/colleague-greetings/unread';
+import { engineerApi } from '../features/engineer-desk/api';
+import { ProgressBand } from '../shell/progress-band';
+import '../shell/progress.css';
+import { agentLine } from '../screens/board/agent-line';
 import * as Board from '../screens/board';
+import { dossierHtml, installDossier } from '../screens/investigate';
 import { islandSlot, keepIsland } from '../islands/mount';
 import {
   entryHtml,
@@ -167,7 +187,6 @@ import {
   leaveForBrief,
   resetSeedOrder,
   seedOrder,
-  walkIn,
 } from '../screens/home/home';
 
 const L = window.PracticeLive;
@@ -352,10 +371,55 @@ const readSet = (a) =>
       .filter((e) => e.server && e.type === 'material_read')
       .map((e) => e.detail && e.detail.materialId),
   );
-const unread = (a, role) => {
-  const n = (a.conversations[role] || []).filter((m) => m.role !== 'user').length;
-  return Math.max(0, n - ((a.readTurns || {})[role] ?? n));
-};
+const replyIds = (a, role) => messageRows(a.conversations[role] || []).filter(row => row.key).map(row => row.key);
+const unread = (a, role) =>
+  Greetings.receipts.count(a.id, role, [
+    ...replyIds(a, role),
+    ...(ui.notesCache || []).filter(note => note.role === role).map(note => noteKey(note.key)),
+    ...(Greetings.hasArrived(a.id, role) ? [Greetings.greetingId] : []),
+  ]);
+const unreadLabel = (n) => T(`${n} 条未读消息`, `${n} unread message${n === 1 ? '' : 's'}`);
+const unreadBadge = (n) =>
+  `<span class="unread-mark" ${n ? '' : 'hidden'}><span class="sr-only">${esc(unreadLabel(n))}</span></span>`;
+function paintUnread() {
+  const a = current();
+  if (!a) return;
+  for (const role of ROLES) {
+    const n = unread(a, role);
+    const person = document.querySelector(`[data-action="chat"][data-role="${role}"]`);
+    person?.classList.toggle('unread', n > 0);
+    const badge = person?.querySelector('.unread-mark');
+    if (badge) {
+      badge.hidden = !n;
+      badge.firstElementChild.textContent = unreadLabel(n);
+    }
+    const dot = document.querySelector(`.team-btn .who-${role} .av-dot`);
+    if (dot) dot.hidden = !n;
+  }
+  const total = ROLES.reduce((n, r) => n + unread(a, r), 0);
+  const summary = document.querySelector('.team-compact .unread-mark');
+  if (summary) { summary.hidden = !total; summary.firstElementChild.textContent = unreadLabel(total); }
+  document
+    .querySelector('.team-btn')
+    ?.setAttribute('aria-label', T('团队', 'Team') + (total ? ` · ${unreadLabel(total)}` : ''));
+}
+function refreshGreeting() {
+  const a = current(),
+    slot = document.querySelector('[data-chat-greeting]');
+  if (a && slot && !slot.firstElementChild && Greetings.hasArrived(a.id, ui.chatRole))
+    slot.innerHTML = Greetings.introductionHtml(
+      a.id,
+      hatHere(a) === 'engineer' ? 'engineer' : 'pm',
+      ui.chatRole,
+      locale(),
+      true,
+      canWrite(a),
+    );
+  const next = document.querySelector('[data-entry-next]');
+  if (a && next && hatHere(a) === 'engineer') next.outerHTML = nextStep(a);
+  paintUnread();
+}
+document.addEventListener('rolecraft:greetings', refreshGreeting);
 const btn = (label, action, cls = '', attrs = '') =>
   `<button type="button" class="btn ${cls}" data-action="${action}" ${attrs}>${label}</button>`;
 // Continue codes: the ⋯ dialog of a practice and the entry on the job page. Codes are never stored.
@@ -622,8 +686,9 @@ WS.push(...registeredRouteNames());
 onRouteRegistered((name) => WS.push(name));
 function parseRoute() {
   const [r, id] = location.hash.replace(/^#\/?/, '').split('/');
-  if (['pm', 'work', 'bench', 'review', 'lab', 'engineer-report'].includes(r))
-    return { r, id: null };
+  if (['pm', 'work', 'bench', 'review', 'engineer-report'].includes(r)) return { r, id: null };
+  // #/lab/<row>: the system profile, scrolled to one recognizer (a lens card's way in).
+  if (r === 'lab') return { r, id: id ? decodeURIComponent(id) : null };
   if ((r === 'task' || r === 'doc') && id) return { r, id: decodeURIComponent(id) };
   if (isRegisteredRoute(r)) return { r, id: id ? decodeURIComponent(id) : null };
   // The engineer's desk (#/engineer/<ticket>) and a review's report (#/engineer-review/<review>).
@@ -644,6 +709,7 @@ function go(route, opts = {}) {
   commit();
   dropUndo();
   if ((WS.includes(route) || route === 'review') && !current()) route = 'pm';
+  if (route === 'lab' && ui.route !== 'lab' && current()) ui.labReturn = hashOf(ui.route, ui.routeId);
   const id = opts.id || null;
   const from = ui.route,
     fromId = ui.routeId;
@@ -675,6 +741,7 @@ window.addEventListener('popstate', () => {
   const from = ui.route,
     fromId = ui.routeId,
     p = parseRoute();
+  if (p.r === 'lab' && from !== 'lab' && current()) ui.labReturn = hashOf(from, fromId);
   const update = () => {
     ui.route = p.r;
     ui.routeId = p.id;
@@ -698,7 +765,23 @@ function render() {
     ui.route = p.r;
     ui.routeId = p.id;
   }
+  // One practice, one language: inside a practice the interface speaks the practice's own
+  // language; on home, the job page and the lab the preference does. A change redraws through
+  // onLocaleChange, so this pass stops here.
+  if (setPracticeLocale(practiceUiLocale())) return;
   const r = ui.route;
+  // One practice, one role: the other role's screens are not this practice's (phase 2). A
+  // practice from before roles has none and keeps both.
+  const role = current() && inPractice() ? roleOf(current().id) : null;
+  if (role === 'pm' && ENGINEER_ROUTES.includes(r)) {
+    go('work');
+    return;
+  }
+  if (role === 'engineer' && ['work', 'task', 'doc', 'bench', 'investigate', 'review'].includes(r)) {
+    const ticket = lastTicket(current().id);
+    go('engineer', ticket ? { id: ticket } : {});
+    return;
+  }
   if (r === 'task' && current() && !current().tasks.some((t) => t.id === ui.routeId)) {
     ui.route = 'work';
     ui.routeId = null;
@@ -713,17 +796,22 @@ function render() {
   else if (r === 'review' && current()) app.innerHTML = banner + renderReview();
   else if (r === 'lab') app.innerHTML = banner + renderLab();
   else if (r === 'engineer-report') app.innerHTML = banner + renderEngineerReport();
-  else if (ENGINEER_ROUTES.includes(r) && current() && L.nativeWorkspace(current()))
-    app.innerHTML = banner + renderEngineer();
   else app.innerHTML = banner + renderCareers();
   afterRender();
   restoreFocus(key);
 }
 // Being on a hat's own screen puts that hat on; the desk's ticket is remembered for the switch.
+const ticketOf = (id) => {
+  const t = String(id || '').split('?')[0];
+  return t.startsWith('ticket-') ? t : null;
+};
 function syncHat() {
   const a = current();
   if (!a || !inPractice()) return;
-  if (ui.route === 'engineer' && ui.routeId) setLastTicket(a.id, ui.routeId);
+  // Only a real ticket is worth coming back to (not the intro or the revision page, whose id
+  // part is "?intro…"); a query after the id is not part of it.
+  const ticketId = ticketOf(ui.routeId);
+  if (ui.route === 'engineer' && ticketId) setLastTicket(a.id, ticketId);
   if (ENGINEER_ROUTES.includes(ui.route)) setHat(a.id, 'engineer');
   else if (WS.slice(0, 4).includes(ui.route) || ui.route === 'review') setHat(a.id, 'pm');
 }
@@ -734,7 +822,7 @@ function mountNativeSlots() {
   });
 }
 function renderLab() {
-  const back = `<a class="btn quiet back" href="${current() ? '#/review' : '#/'}">${icon('back')}<span>${esc(current() ? T('交付与反馈', 'Submission and feedback') : T('首页', 'Home'))}</span></a>`;
+  const back = `<a class="btn quiet back" href="${current() ? ui.labReturn || (hatHere(current()) === 'engineer' ? '#/engineer' : '#/work') : '#/'}">${icon('back')}<span>${esc(current() ? T('返回工作区', 'Back to your work') : T('首页', 'Home'))}</span></a>`;
   return `${topbar(back)}<main id="main" class="page rc-lab" data-rc-lab tabindex="-1"></main>`;
 }
 // The lab keeps its element across redraws: mounted once per entry into the route, and
@@ -751,6 +839,7 @@ function mountLabPage() {
   if (skip) skip.textContent = T('跳到主要内容', 'Skip to content');
   if (labView?.key === key) {
     slot.replaceWith(labView.el);
+    labJump(ui.routeId);
     return;
   }
   const refresh = !labView;
@@ -768,8 +857,17 @@ function mountLabPage() {
       sessionKey,
       refresh,
       submitted,
-    }),
+    }).then(() => labJump(ui.routeId)),
   );
+}
+// Opened from a lens card (#/lab/<row>): its recognizer's entry in the register, focused.
+function labJump(row) {
+  const entry = row && document.getElementById(`rc-${row}`);
+  if (!entry) return;
+  entry.scrollIntoView({ block: 'start', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  entry.setAttribute('tabindex', '-1');
+  entry.focus({ preventScroll: true });
+  entry.dataset.jumped = '';
 }
 // #/engineer-report: read-only sample regression reports; the page keeps itself across re-renders.
 function renderEngineerReport() {
@@ -787,35 +885,17 @@ function mountEngineerReportRoute() {
       if (root.isConnected) m.mountEngineerReportPage(root, { language: locale() });
     });
 }
-// The engineer's screens: back goes up one level (report -> desk -> product board); the screens
-// themselves live in features/engineer-desk and keep their element across redraws.
-function renderEngineer() {
-  const back =
-    ui.route === 'engineer'
-      ? `<a class="btn quiet back" href="#/work" aria-label="${esc(T('回到产品经理工作板', 'Back to the product board'))}">${icon('back')}<span>${esc(T('产品经理工作板', 'Product board'))}</span></a>`
-      : `<a class="btn quiet back" href="${esc(engineerBackHref(ui.routeId))}" data-engineer-back>${icon('back')}<span>${esc(T('签字台', 'Sign-off desk'))}</span></a>`;
-  return `${topbar(back)}<main id="main" class="page" data-engineer-screen tabindex="-1"></main>`;
-}
-function mountEngineer() {
-  const a = current();
-  const root = document.querySelector('[data-engineer-screen]');
-  if (!a || !root) return;
-  document.title = `${ui.route === 'engineer' ? T('签字台', 'Sign-off desk') : T('复核报告', 'Review report')} · ${PRODUCT_NAME}`;
-  mountEngineerRoute(
-    root,
-    { route: ui.route, id: ui.routeId, sessionId: a.id, language: locale() },
-    () => ({
-      caseTitle: CASE(a.scenarioId).title,
-      transport: L.gatewayTransport(a),
-      agentHost: L.v4Host(a),
-      navigate: (route, id) => go(route, { id, transition: true }),
-      notify,
-      download,
-    }),
-  );
-}
 function afterRender() {
   afterShellRender();
+  Greetings.mountGreetings(
+    (WS.includes(ui.route) || ENGINEER_ROUTES.includes(ui.route) || isRegisteredRoute(ui.route)) &&
+      current() &&
+      statusOf(current()) === 'active'
+      ? current().id
+      : null,
+    locale(),
+  );
+  discoverRole(current());
   syncHat();
   mountShellBar();
   refreshAgentIssued();
@@ -830,10 +910,6 @@ function afterRender() {
   }
   if (ui.route === 'engineer-report') {
     mountEngineerReportRoute();
-    return;
-  }
-  if (ENGINEER_ROUTES.includes(ui.route)) {
-    mountEngineer();
     return;
   }
   mountNativeSlots();
@@ -855,6 +931,8 @@ function afterRender() {
   updateSave();
   syncPanels();
   markRead();
+  markNotesRead();
+  refreshGreeting();
   const a = current();
   const activeWork = a && ui.obj?.type === 'work' ? artifact() : null;
   if (activeWork?.kind === 'investigation') loadInvestigationSources(a, shown(activeWork));
@@ -955,7 +1033,20 @@ function langItems() {
   return `${item('auto', T('跟随系统', 'Match system'), detect() === 'zh' ? '中文' : 'English')}${item('zh', '中文')}${item('en', 'English')}`;
 }
 function langMenu() {
+  if (practiceLocale()) return practiceLangNote();
   return `<div class="menu right" role="menu">${langItems()}</div>`;
+}
+// The language of the practice on screen, or null off a practice (home, job page, lab, samples).
+function practiceUiLocale() {
+  const a = current();
+  if (!a) return null;
+  const r = ui.route;
+  const here = WS.includes(r) || r === 'review' || r === 'lab' || ENGINEER_ROUTES.includes(r) || isRegisteredRoute(r);
+  return here ? workLang(a) : null;
+}
+// Inside a practice the language is the practice's: say so instead of offering a half switch.
+function practiceLangNote() {
+  return `<div class="menu right lang-note" role="dialog" aria-label="${esc(T('界面语言', 'Language'))}"><p class="lang-note__head">${icon('globe', 'i-sm')}<span>${T('这一局是中文的', 'This practice is in English')}</span></p><p class="lang-note__body">${T('界面跟着它走。想用英文练，回首页切到 English 再开一局。', 'The interface follows it. To practise in Chinese, go home, switch to 中文 and start a new practice.')}</p>${btn(T('回首页', 'Go home'), 'home', 'small')}</div>`;
 }
 // Inside a practice every screen (board, result, sign-off desk, registered screens) shares one
 // shell bar; elsewhere (home, job page, lab) the light topbar stays.
@@ -1048,6 +1139,7 @@ function continueInfo(a) {
     stage: submitted ? T('已交付', 'Delivered') : stepWords('pm', a),
     submitted,
     engineer: everEngineer(a.id) ? { stage: stepWords('engineer', a) } : null,
+    lang: workLang(a),
   };
 }
 
@@ -1059,7 +1151,9 @@ function engineerCareerCard() {
     a &&
     caseShown(a.scenarioId) &&
     L.nativeWorkspace(a) &&
-    ENGINEER_CASES.includes(a.scenarioId)
+    ENGINEER_CASES.includes(a.scenarioId) &&
+    // Taking the ticket inside a practice is the old two-hat way: only for one without a role.
+    !roleOf(a.id)
   );
   return engineerCareerCardHtml({ practice });
 }
@@ -1245,7 +1339,7 @@ function renderWorkspace() {
   ui.notesCache = Coach.notes(a, E);
   const html = `<div class="ws view-${ui.route} ${arriving ? 'arriving' : ''} ${ui.railOpen ? 'rail-open' : ''}" data-status="${statusOf(a)}">
     ${wsToolbar(a)}
-    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div></main>
+    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div></main>
     ${docLayer()}
     <aside class="rail" id="ws-rail" aria-label="${esc(T('同事与需要你回应的事', 'Colleagues and what needs you'))}">${wsRail(a)}</aside>
     <button type="button" class="scrim" data-action="close-panels" aria-label="${esc(T('关闭面板', 'Close panel'))}" tabindex="-1"></button>
@@ -1260,10 +1354,21 @@ const routeTask = (a) =>
 function wsToolbar(a) {
   const t = routeTask(a);
   const m = ui.route === 'doc' ? E.getMaterials(a).find((x) => x.id === ui.routeId) : null;
+  // A screen another line registered (My agent…) is worn in the practice's hat: in the
+  // engineer's, "back" leads to the sign-off desk, not the product manager's board. The desk
+  // itself is the engineer's home screen (no way back, like the board); its report and any
+  // other screen go back to it.
+  const deskBack =
+    isRegisteredRoute(ui.route) && ui.route !== 'engineer' && hatHere(a) === 'engineer';
+  const ticket = deskBack ? ticketOf(lastTicket(a.id)) : null;
   const back =
-    ui.route === 'work'
+    ui.route === 'work' || (ui.route === 'engineer' && isRegisteredRoute('engineer'))
       ? ''
-      : `<button type="button" class="btn quiet back up" data-action="to-board">${icon('back')}<span>${T('工作板', 'Board')}</span></button>`;
+      : deskBack
+        ? ticket
+          ? `<a class="btn quiet back up" style="text-decoration: none" href="${esc(hashOf('engineer', ticket))}">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></a>`
+          : `<button type="button" class="btn quiet back up" data-action="hat-switch" data-hat="engineer">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></button>`
+        : `<button type="button" class="btn quiet back up" data-action="to-board">${icon('back')}<span>${T('工作板', 'Board')}</span></button>`;
   const here = t
     ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${esc(taskTitle(t))}</span>`
     : m
@@ -1304,7 +1409,6 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
       : '';
   const typing = typingRole(a);
   const replying = replyingRoles(a);
-  const noteRoles = new Set((ui.notesCache || []).map((x) => x.role));
   // The title is what this hat is working on: the case's question for the product manager, the
   // ticket for the engineer (its line registers it as Stage.title; until then a neutral name).
   const hat = hatHere(a);
@@ -1346,7 +1450,7 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
     <span class="sep before-hat" aria-hidden="true"></span>
     ${islandSlot('shell-hatscale')}
     <div class="spacer"></div>
-    <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: unread(a, r) > 0 || noteRoles.has(r) })).join('')}</button>
+    <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: true })).join('')}<span class="team-compact">${icon('team', 'i-sm')}${unreadBadge(ROLES.reduce((n, r) => n + unread(a, r), 0))}</span></button>
     ${lamp}${record}${moreWrap}
     ${islandSlot('shell-primary')}
   </header>`;
@@ -1384,13 +1488,22 @@ function mountShellBar() {
       label: T('帽子', 'Hat'),
       busy: T('正在换帽子', 'Switching hats'),
     },
-    canSwitch: !!L.nativeWorkspace(a) && !sessionOf(a)?.v2ReadOnly,
-    steps,
-    scaleLabel: hat === 'pm' ? T('这一局的阶段', 'Stage') : T('签字的步骤', 'Sign-off steps'),
+    canSwitch: !!L.nativeWorkspace(a) && !sessionOf(a)?.v2ReadOnly && !roleOf(a.id),
+    // The practice's one role, said once in the bar (phase 2); the switch is gone.
+    fixed: roleOf(a.id)
+      ? roleOf(a.id) === 'pm'
+        ? T('产品经理 · 本人', 'Product manager · you')
+        : T('工程师 · 本人', 'Engineer · you')
+      : undefined,
+    // The product manager's place is the problem ruler at the top of the stage (mountProgress);
+    // the bar keeps only the engineer's sign-off steps.
+    steps: hat === 'pm' ? [] : steps,
+    scaleLabel: T('签字的步骤', 'Sign-off steps'),
     stepName,
     delivered,
     lang: locale(),
   });
+  if (hat === 'pm') mountProgress(a);
   const p = stage?.primary;
   if (p)
     keepIsland('shell-primary', PrimaryKey, {
@@ -1410,6 +1523,373 @@ function mountShellBar() {
       icon: p.action === 'submit' ? 'stamp' : 'none',
     });
 }
+/* ---------- one role per practice (phase 2, step 3) ---------- */
+// Written once on the server right after the practice starts (engineer store, learner_role).
+// If it cannot be written the practice is not quietly taken as a product manager's: the page
+// says so and offers to try again.
+async function keepRole(a, role) {
+  rememberRole(a.id, role);
+  try {
+    await writeLearnerRole(L.gatewayTransport(a), a.id, role);
+    if (ui.roleUnsaved?.id === a.id) ui.roleUnsaved = null;
+  } catch (err) {
+    ui.roleUnsaved = { id: a.id, role };
+    notify(
+      T(
+        `这一局的岗位没记到服务器上：${err?.message || err}`,
+        `This practice’s role did not reach the server: ${err?.message || err}`,
+      ),
+      { action: { label: T('重试', 'Try again'), run: () => keepRole(a, role) } },
+    );
+  }
+  if (WS.includes(ui.route) || ENGINEER_ROUTES.includes(ui.route)) refreshWS(['toolbar', 'stage']);
+}
+// A practice opened here that this browser has no role for: ask the server once. One started
+// before roles answers null and keeps both hats.
+const roleAsked = new Set();
+function discoverRole(a) {
+  if (!a || !L.nativeWorkspace(a) || roleOf(a.id) || roleAsked.has(a.id)) return;
+  roleAsked.add(a.id);
+  readLearnerRole(L.gatewayTransport(a), a.id)
+    .then((role) => {
+      if (!role || current()?.id !== a.id) return;
+      rememberRole(a.id, role);
+      render();
+    })
+    .catch(() => roleAsked.delete(a.id));
+}
+const roleBanner = (a) =>
+  ui.roleUnsaved?.id === a.id
+    ? `<div class="stage-banner is-warn" role="alert"><span class="grow">${T('这一局的岗位还没记到服务器上，先重试一次再继续。', 'This practice’s role is not on the server yet. Try again before you go on.')}</span>${btn(T('重试', 'Try again'), 'role-retry', 'small')}</div>`
+    : '';
+
+/* ---------- the problem ruler (phase 2, step 1) ---------- */
+// What the six layers are read from: the person's own records only (shell/progress.ts).
+const ROLE_OF_TURN = { manager: 'manager', business: 'business', technical: 'technical' };
+function progressFacts(a) {
+  const tests = a.tests || [];
+  const list = works(a).filter((w) => !w.removedAt);
+  const s = sessionOf(a);
+  return {
+    accepted: Board.walkInAccepted(a.id),
+    tests: tests.map((t) => ({
+      id: t.id,
+      answer: t.answer,
+      question: t.question,
+      indexVersion: t.indexVersion,
+      previousTestId: t.recognition?.find((r) => r.task === 'drift')?.outputs?.previous_test_id,
+      policyVersion: Number(t.policyVersion) || 1,
+      configVersion: Number(t.configVersion) || 0,
+      noted: !!(String(t.expectation || '').trim() || String(t.diagnosis || '').trim()),
+    })),
+    asked: Object.keys(ROLE_OF_TURN).filter((r) =>
+      (a.conversations?.[r] || []).some((m) => m.role === 'user'),
+    ),
+    works: list.map((w) => ({
+      id: w.id,
+      decision: E.intentOf(w.purpose) === 'commit',
+      hasBody:
+        !!String(w.body || '').trim() ||
+        (w.cases || []).length > 0 ||
+        (w.blocks || []).some((b) => String(b.text || b.body || '').trim() || b.testId),
+      evidence: [
+        ...(w.evidence || []).map((e) => ({
+          kind: e.type === 'test' ? 'test' : 'material',
+          id: e.id,
+        })),
+        ...(w.blocks || [])
+          .flatMap((b) => [b.testId, ...(b.testIds || [])])
+          .filter(Boolean)
+          .map((id) => ({ kind: 'test', id })),
+        ...(w.cases || []).flatMap((c) =>
+          (c.refs || []).map((r) => ({ kind: 'material', id: r.id })),
+        ),
+      ],
+    })),
+    policyVersion: Number(a.world?.policyVersion) || 1,
+    configVersion: Number(a.configVersion) || 0,
+    baseConfigVersion: 0,
+    pendingRequests: (a.requests || []).filter((r) => r.status === 'pending').length,
+    approvedRequests: (a.events || []).filter(
+      (e) => e.server && ['approve_request', 'resource_grant_committed'].includes(e.type),
+    ).length,
+    delivered: statusOf(a) === 'submitted',
+    feedback: !!(s?.feedback || a.feedback),
+  };
+}
+const PROGRESS_FOLD = 'rolecraft.progress.folded.v2';
+const foldKey = () => (ui.route === 'work' ? 'board' : 'page');
+const PROGRESS_SEEN = 'rolecraft.progress.passed.v1';
+const readJson = (k, d) => {
+  try {
+    return JSON.parse(localStorage.getItem(k) || '') ?? d;
+  } catch {
+    return d;
+  }
+};
+const writeJson = (k, v) => {
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch {
+    /* this page only */
+  }
+};
+// The layers this practice had passed when last shown here. A layer passing since arrives once
+// with its distillation; the first time a practice is shown, what it already passed is taken as
+// seen (a returning person is not shown a burst of old summaries).
+function passedNow(a, p) {
+  const all = readJson(PROGRESS_SEEN, {});
+  const done = p.layers
+    .filter((l) => l.state === 'done' || l.state === 'reopened')
+    .map((l) => l.id);
+  if (!all[a.id]) {
+    all[a.id] = done;
+    writeJson(PROGRESS_SEEN, all);
+  }
+  const seen = new Set(all[a.id]);
+  return { arrived: done.filter((id) => !seen.has(id)).at(-1), all };
+}
+// The ruler sits at the top of the stage, in the same light and gutters as the board, on every
+// product manager's screen of the practice.
+const progressSlot = (a) =>
+  ['work', 'engineer'].includes(ui.route) && Board.entryPending(a)
+    ? ''
+    : (hatHere(a) === 'pm'
+        ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
+        : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
+function nextSuggestion(a) {
+  if (!(a.tests || []).length)
+    return T('先试一个员工会问的问题。', 'Try a question an employee would ask.');
+  const p = progressOf(progressFacts(a)),
+    layer = p.layers.find((l) => l.id === p.current);
+  return layer?.missing.length
+    ? T(layer.missing[0][0], layer.missing[0][1])
+    : T(
+        '整理已有证据，形成你的试点决定。',
+        'Bring the evidence together in your pilot recommendation.',
+      );
+}
+function nextStep(a) {
+  if (statusOf(a) !== 'active' || hatHere(a) !== 'engineer') return '';
+  const stage = stageOf('engineer', a),
+    step = stage?.steps.find((s) => s.state === 'current');
+  const next = stage?.primary?.label;
+  const label = step?.label;
+  return `<p class="rc-entry-next" data-entry-next><b>${label ? esc(T(label[0], label[1])) : T('复现', 'Reproduce')}</b><span>${T('下一步：', 'Next: ')}${next ? esc(T(next[0], next[1])) : T('先复现委托里的问题。', 'Reproduce the issue in the ticket.')}</span></p>`;
+}
+function mountProgress(a) {
+  if (!document.querySelector('[data-island="shell-progress"]')) return;
+  const p = progressOf(progressFacts(a));
+  const tx = (t) => T(t[0], t[1]);
+  const { arrived } = passedNow(a, p);
+  const now = pmCurrent(a);
+  const routeLayer =
+    ui.route === 'investigate' ? 'understand' : ui.route === 'review' ? 'reflect' : undefined;
+  keepIsland('shell-progress', ProgressBand, {
+    lang: locale(),
+    suggestion: { label: T('下一步', 'Next step'), text: nextSuggestion(a) },
+    current: p.current,
+    carried: carried(p).map(tx),
+    arrived,
+    // The current summary stays visible; the six-layer overview opens on request.
+    folded: readJson(PROGRESS_FOLD, {})[foldKey()] ?? null,
+    foldedByDefault: true,
+    routeViewing: routeLayer,
+    back: routeLayer ? stageBack(a) : undefined,
+    actions: {
+      // The dossier of findings, once there is something in it.
+      understand:
+        ui.route === 'investigate' || !(a.tests || []).length
+          ? undefined
+          : {
+              label: T('看调查记录', 'See what you found'),
+              action: 'stage-pm',
+              data: { step: 'investigate' },
+            },
+      ...(statusOf(a) === 'submitted' && ui.route !== 'review'
+        ? {
+            reflect: {
+              label: T('看结果', 'See the result'),
+              action: 'stage-pm',
+              data: { step: 'delivered' },
+            },
+          }
+        : {}),
+      ...(now !== 'delivered' && ui.route !== 'work'
+        ? { [p.current]: { label: T('回到工作板', 'Back to the board'), action: 'to-board' } }
+        : {}),
+    },
+    layers: p.layers.map((l) => {
+      const d = distillation(p, l.id);
+      return {
+        id: l.id,
+        n: l.n,
+        label: tx(l.label),
+        goal: tx(l.goal),
+        state: l.state,
+        confirmed: l.confirmed.map(tx),
+        compactConfirmed: l.compactConfirmed?.map(tx),
+        compactMissing: l.compactMissing?.map(tx),
+        missing: l.missing.map(tx),
+        ...(l.reopened ? { reopened: tx(l.reopened) } : {}),
+        ...(d ? { distilled: { confirmed: d.confirmed.map(tx), kept: d.kept.map(tx) } } : {}),
+      };
+    }),
+    words: {
+      label: T('这一局走到哪了', 'Where this practice stands'),
+      now: T('当前问题', 'Current question'),
+      missing: T('还差', 'Still missing'),
+      nothingMissing: T('这一层的依据都在了', 'This layer has what it needs'),
+      confirmed: T('已确认', 'Confirmed'),
+      next: T('下一层', 'Next'),
+      after: T('再下一层', 'After that'),
+      basis: T('依据：你的记录', 'Based on your records'),
+      basisHint: T(
+        '进度只看你的记录：测试、你写下的判断、引用了依据的作品、应用的设置和交付。点击次数、聊天轮数和读了多少资料都不算；一篇草稿本身也不算过关。政策变了，只重新打开受影响的那一层。',
+        'Progress reads only your records: tests, the judgements you wrote, work that cites evidence, applied settings and what you submitted. Clicks, chat turns and pages read do not count, and a draft on its own passes nothing. A policy change reopens only the layer it affects.',
+      ),
+      map: T('工作地图', 'Work map'),
+      fold: T('收起六层', 'Hide layers'),
+      unfold: T('展开六层', 'Show six layers'),
+      viewing: T('正在看', 'Viewing'),
+      backToNow: T('回到当前这一层', 'Back to where you are'),
+      distilled: T('本层提炼', 'Layer summary'),
+      kept: T('仍保留：', 'Still open: '),
+      gotIt: T('知道了', 'Got it'),
+      close: T('关闭', 'Close'),
+      mapTitle: T('整件工作的地图', 'The whole piece of work'),
+      mapLead: T(
+        '六层是常见的顺序，不是关卡：随时可以回看、提前提方案或有依据地延期。每一层写着已确认的、还差的，以及仍要带着走的事。',
+        'Six layers in the usual order, not gates: look back, propose early or defer with reasons at any time. Each says what is confirmed, what is missing and what you still carry forward.',
+      ),
+      states: {
+        done: T('已完成', 'Done'),
+        current: T('当前', 'Current'),
+        reopened: T('需要再看', 'Needs another look'),
+        todo: T('还没到', 'Ahead'),
+        uncovered: T('这局没覆盖', 'Not covered this time'),
+      },
+      ending: {
+        title: T('接下来可以', 'What can follow'),
+        items: [
+          T('修订作品，关联到原来的交付', 'Revise the work, linked to what you submitted'),
+          T(
+            '换一个条件再练：期限提前或容量收紧',
+            'Practise again under new conditions: an earlier deadline or less capacity',
+          ),
+        ],
+      },
+      stepOf: (n, total, label) =>
+        T(`第 ${n} 层，共 ${total} 层：${label}`, `Layer ${n} of ${total}: ${label}`),
+    },
+    onFold: (v) => {
+      writeJson(PROGRESS_FOLD, { ...readJson(PROGRESS_FOLD, {}), [foldKey()]: v });
+      mountProgress(current());
+    },
+    onArrivedSeen: (id) => {
+      const all = readJson(PROGRESS_SEEN, {});
+      all[a.id] = [...new Set([...(all[a.id] || []), id])];
+      writeJson(PROGRESS_SEEN, all);
+      mountProgress(current());
+    },
+  });
+}
+// The product manager's steps and their screens: Investigate → the findings dossier; Decide → the
+// board; Delivered → the result. The board is also where the Investigate step is worked, so it
+// counts as the current step's own screen until the practice is delivered.
+const pmCurrent = (a) =>
+  statusOf(a) === 'submitted'
+    ? 'delivered'
+    : works(a).some((x) => String(editorView(a, x).body || '').trim())
+      ? 'decide'
+      : 'investigate';
+function pmViewing(a) {
+  const now = pmCurrent(a);
+  if (ui.route === 'investigate') return 'investigate';
+  if (ui.route === 'review') return now === 'delivered' ? null : 'delivered';
+  if (now === 'delivered' && ['work', 'task', 'doc', 'bench'].includes(ui.route)) return 'decide';
+  return null;
+}
+// The way back to the current step's own screen, as the scale's ghost key and the dossier's.
+function stageBack(a) {
+  const now = pmCurrent(a);
+  const label =
+    now === 'delivered'
+      ? T('回到结果', 'Back to the result')
+      : pmViewing(a) === now
+        ? T('回到工作板', 'Back to the board')
+        : now === 'decide'
+          ? T('回到决定', 'Back to Decide')
+          : T('回到调查', 'Back to Investigate');
+  return { label, action: 'stage-back' };
+}
+// Between the board and the dossier the old page leaves first (160ms, fading and blurring a
+// little), then the new one rises 10px into place (280ms): two pages of text never overlap.
+// Reduced motion: the new page fades in over 160ms.
+// The problem ruler stays put while the page under it changes.
+const stageBody = (el) => [...el.children].filter((c) => !c.classList.contains('rc-prog-wrap'));
+function switchStage(run) {
+  const old = document.getElementById('ws-stage');
+  const arrive = () => {
+    const next = document.getElementById('ws-stage');
+    if (!next) return;
+    for (const part of stageBody(next))
+      part.animate(
+        reduceMotion.matches
+          ? [{ opacity: 0 }, { opacity: 1 }]
+          : [
+              { opacity: 0, transform: 'translateY(10px)' },
+              { opacity: 1, transform: 'none' },
+            ],
+        { duration: reduceMotion.matches ? 160 : 280, easing: 'cubic-bezier(.23,1,.32,1)' },
+      );
+  };
+  if (!old || reduceMotion.matches) {
+    run();
+    arrive();
+    return;
+  }
+  Promise.all(
+    stageBody(old).map(
+      (part) =>
+        part.animate(
+          [
+            { opacity: 1, filter: 'blur(0)' },
+            { opacity: 0, filter: 'blur(2px)' },
+          ],
+          { duration: 160, easing: 'ease-out', fill: 'forwards' },
+        ).finished,
+    ),
+  ).then(() => {
+    run();
+    arrive();
+  });
+}
+// Going back to the board puts it where it was left.
+function goBoard() {
+  const y = ui.boardY || 0;
+  const held = ui.boardH || 0;
+  switchStage(() => {
+    go('work');
+    if (!y) return;
+    // The board is drawn at its old height and scroll before it rises; its cards mount a moment
+    // later, then the held height is let go. So it arrives where it was, without a jump.
+    const stage = document.getElementById('ws-stage');
+    const main = document.getElementById('main');
+    if (stage && held) stage.style.minHeight = `${held}px`;
+    if (main) main.scrollTop = y;
+    Board.tasksDrawn(1, 1500).then(() =>
+      requestAnimationFrame(() => {
+        if (stage?.isConnected) stage.style.minHeight = '';
+      }),
+    );
+  });
+}
+const keepBoardPlace = () => {
+  if (ui.route !== 'work') return;
+  ui.boardY = document.getElementById('main')?.scrollTop || 0;
+  ui.boardH = document.getElementById('ws-stage')?.offsetHeight || 0;
+};
 // The bar never overlaps itself. The title gives way first (down to its minimum, with an
 // ellipsis); if the row still does not fit, things fold in a fixed order: the lamp's words and
 // the disabled key's reason, then the scale to "1/3", then the hat switch into ⋯.
@@ -1473,13 +1953,17 @@ function moreMenu(a) {
     sessionOf(a)?.protocol === 2 ? menuItem('continue-code', recovery.menuLabel(), 'sync') : '',
     lensMenuItems(),
     `<div class="menu-sep" role="separator"></div>`,
-    `<button type="button" role="menuitem" data-action="menu" data-menu="lang">${icon('globe', 'i-sm')}<span class="grow">${T('界面语言', 'Language')}</span><span class="menu-value">${locale() === 'zh' ? '中文' : 'English'}</span></button>`,
+    // Inside a practice the language is the practice's: the row says so and is marked locked.
+    `<button type="button" role="menuitem" data-action="menu" data-menu="lang">${icon('globe', 'i-sm')}<span class="grow">${T('语言', 'Language')}</span><span class="menu-value">${practiceLocale() ? T('跟随这一局', 'Follows this practice') : locale() === 'zh' ? '中文' : 'English'}</span>${practiceLocale() ? icon('lock', 'i-xs lang-lock') : ''}</button>`,
     modelStatusOf(a)
       ? `<button type="button" role="menuitem" data-action="menu" data-menu="model">${icon('circle', 'i-sm')}<span class="grow">${T('模型', 'Model')}</span><span class="menu-value">${esc(modelStatusOf(a).short)}</span></button>`
       : '',
     `<span class="narrow-item">${menuItem('open-rail', T('团队与信号', 'Team and signals'), 'team')}</span>`,
-    L.nativeWorkspace(a)
+    L.nativeWorkspace(a) && !roleOf(a.id)
       ? `<span class="phone-item">${menuItem('hat-switch', hatHere(a) === 'pm' ? T('换成工程师', 'Switch to Engineer') : T('换成产品经理', 'Switch to Product manager'), 'sync', `data-hat="${hatHere(a) === 'pm' ? 'engineer' : 'pm'}"`)}</span>`
+      : '',
+    L.nativeWorkspace(a)
+      ? menuItem('walk-tour', T('重看入门引导', 'Walk me through again'), 'question')
       : '',
     menuItem('about', T('关于这个工作台', 'About this workspace'), 'info'),
     menuItem('to-entry', T('离开工作台', 'Leave the workspace'), 'back'),
@@ -1548,7 +2032,7 @@ const materialNameOf = (a) => (id) => {
 };
 /** A test run's recognition signals: quiet facts by default, chips in the lens. */
 function runSignals(a, x) {
-  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a) })}</div>`;
+  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a), cards: { comparison: { current: x, tests: a.tests || [] } } })}</div>`;
 }
 /** Redraw only the recognition parts of the current page when the lens opens or closes. */
 onLensChange((on) => {
@@ -1564,6 +2048,7 @@ onLensChange((on) => {
           context: 'test',
           lens: lensOn(),
           materialName: materialNameOf(a),
+          cards: { comparison: { current: run, tests: a.tests || [] } },
         })
       : '';
   });
@@ -1610,14 +2095,16 @@ function conditions(a, cls = '') {
   </div>`;
 }
 function wsStage(a) {
+  if (['work', 'engineer'].includes(ui.route) && Board.entryPending(a)) return Board.entryStory(a);
   const st = statusOf(a);
-  const lock = sessionOf(a)?.v2ReadOnly
+  let lock = sessionOf(a)?.v2ReadOnly
     ? `<div class="stage-banner" role="status"><span class="grow">${T('这个练习使用旧版场景，原记录可以只读查看。要继续练习，请开始新的工作。', 'This practice uses an earlier scenario. View its original records read-only, or start new work to continue practising.')}</span>${btn(T('开始新的练习', 'Start a new practice'), 'v4-new-practice', 'small')}</div>`
     : st === 'paused'
       ? `<div class="stage-banner">${icon('pause', 'i-sm')}<span class="grow">${T('练习已暂停。资料可以看，操作要先恢复。', 'Paused. You can read; resume to act.')}</span>${btn(T('恢复', 'Resume'), 'live-session', 'small')}</div>`
       : st === 'submitted'
         ? `<div class="stage-banner is-submitted">${icon('stamp', 'i-sm')}${handedIn(a)}</div>`
         : '';
+  lock = roleBanner(a) + lock;
   const registered = registeredRoute(ui.route);
   if (registered) return lock + registered.render(ui.routeId);
   const t = routeTask(a);
@@ -1670,16 +2157,20 @@ function boardTray(a) {
   const html = Board.agentTray({ connected: Board.agentConnected() || drafts.length > 0, drafts });
   return html ? `<div data-flip="tray">${html}</div>` : '';
 }
+const canWriteBoard = (a) => canWrite(a) && !sealedSession(a);
 function boardView(a) {
+  const writable = canWriteBoard(a);
+  const blocked = writable ? '' : 'disabled aria-describedby="tasks-write-reason"';
   return `<div class="board">
     ${boardBrief(a)}
     ${practiceOriginNote(a)}
     <div data-flip="product">${productBar(a)}</div>
     ${boardTray(a)}
     <section class="work-sec" aria-labelledby="tasks-h" data-flip="tasks" data-board-tasks>
-      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint"><span class="hint-drag">${T('拖动卡片调整优先级', 'Drag to reprioritise')}</span><span class="hint-keys">${T('，或按住 Option 用方向键', ', or hold Option and use the arrow keys')}</span></span><span class="spacer"></span>
-        <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${ui.menu === 'rank'}"`)}${ui.menu === 'rank' ? rankMenu() : ''}</div>
-        ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small')}</header>
+      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint" ${writable ? '' : 'hidden'}><span class="hint-drag">${T('拖动卡片调整优先级', 'Drag to reprioritise')}</span><span class="hint-keys">${T('，或按住 Option 用方向键', ', or hold Option and use the arrow keys')}</span></span><span class="spacer"></span>
+        <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${writable && ui.menu === 'rank'}" ${blocked}`)}${writable && ui.menu === 'rank' ? rankMenu() : ''}</div>
+        ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small', blocked)}</header>
+      ${writable ? '' : `<p id="tasks-write-reason" class="meta">${statusOf(a) === 'submitted' ? T('这一局已只读，开始修订后可以继续。', 'This practice is read-only. Start a revision to continue.') : T('当前不能更改事项或提问。', 'Tasks and questions cannot be changed right now.')}</p>`}
       ${revisionNote(a)}
       <p id="move-help" class="sr-only">${T('按住 ⌥ Option 或 Alt：← → 改优先级，↑ ↓ 调顺序。', 'Hold ⌥ Option or Alt, then ← → to change priority and ↑ ↓ to reorder.')}</p>
       <div class="kanban">${['first', 'next', 'later'].map((p) => column(a, p)).join('')}</div>
@@ -2008,12 +2499,86 @@ const citedMaterials = (a) =>
       (shown(x).evidence || []).filter((ev) => ev.type === 'material').map((ev) => ev.id),
     ),
   );
+// The first sentence of a text, without Markdown, for a one-line summary.
+const firstLine = (text, max = 140) => {
+  const t = String(text || '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/[*_`>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const one = t.split(/(?<=[。！？])|(?<=[.!?])\s/)[0] || t;
+  return one.length > max ? `${one.slice(0, max - 1)}…` : one;
+};
+// What has been found so far, for the Investigate dossier: plain facts the practice already
+// holds (reads, citations, conversations, test runs, tasks and works). No model, no recognition.
+function findingsOf(a) {
+  const read = readSet(a);
+  const cited = citedMaterials(a);
+  const docs = E.getMaterials(a).map((m) => {
+    const acked = (a.acks || []).includes(`read-${m.id}-v${m.version}`);
+    const group = cited.has(m.id)
+      ? 'cited'
+      : m.version > 1 && !acked
+        ? 'new'
+        : read.has(m.id) || acked
+          ? 'read'
+          : 'unread';
+    return { id: m.id, title: materialTitle(m), version: m.version, group };
+  });
+  const people = ROLES.map((r) => {
+    const msgs = a.conversations[r] || [];
+    const asked = msgs.filter((m) => m.role === 'user').at(-1);
+    const reply = msgs.filter((m) => m.role !== 'user').at(-1);
+    return {
+      role: r,
+      name: PEOPLE[r].name,
+      title: ROLE_TITLE(r),
+      asked: asked ? firstLine(asked.text, 120) : '',
+      reply: reply ? previewLine(reply.text) || firstLine(reply.text, 120) : '',
+      count: msgs.length,
+    };
+  });
+  const old = (x) => (x.stale !== undefined ? !!x.stale : x.indexVersion < x.policyVersion);
+  const tests = a.tests
+    .slice()
+    .reverse()
+    .map((r) => {
+      const tk = r.taskId && a.tasks.find((t) => t.id === r.taskId);
+      return {
+        id: r.id,
+        question: r.question,
+        answer: firstLine(r.answer),
+        versions: T(
+          `政策 v${r.policyVersion} · 索引 v${r.indexVersion}`,
+          `Policy v${r.policyVersion} · index v${r.indexVersion}`,
+        ),
+        stale: old(r),
+        task: tk ? taskTitle(tk) : '',
+      };
+    });
+  const workOf = (w) => ({
+    id: w.id,
+    title: shown(w).title || T('未命名', 'Untitled'),
+    purpose: purposeLabel(shown(w).purpose),
+    version: workVersion(w.revision || 1),
+    adopted: !!w.adopted,
+  });
+  const tasks = a.tasks.map((t) => ({
+    id: t.id,
+    title: taskTitle(t),
+    status: t.status,
+    statusLabel: STATUS(t.status),
+    works: taskWorks(a, t.id).map(workOf),
+  }));
+  const unfiled = (a.artifacts || []).filter((w) => !w.taskId && !w.removedAt).map(workOf);
+  return { docs, people, tests, tasks, unfiled };
+}
 function docGrid(a) {
   const list = E.getMaterials(a);
   const read = readSet(a);
   const cited = citedMaterials(a);
   const rows = list.map((m) => {
-    const fresh = m.version > 1 && !(a.acks || []).includes('read-' + m.id + '-v' + m.version);
+    const fresh = m.version > 1 && !(a.acks || []).includes(`read-${m.id}-v${m.version}`);
     const state = fresh
       ? 'new'
       : Board.agentReading(m.id)
@@ -2062,12 +2627,71 @@ function taskView(a, t) {
       <div class="th-row">${priPick(t.id, t.priority, taskTitle(t))}<h2 class="th-title">${esc(taskTitle(t))}</h2><span class="spacer"></span>
         <div class="segmented status-seg" role="group" aria-label="${esc(T('进展', 'Progress'))}"><span class="thumb"></span>${['open', 'working', 'done'].map((k) => `<button type="button" aria-pressed="${t.status === k}" data-action="set-status" data-status="${k}" data-id="${t.id}">${statusMark(k)}<span>${STATUS(k)}</span></button>`).join('')}</div>${btn(icon('more'), 'edit-task', 'icon quiet small', `data-id="${t.id}" aria-label="${esc(T('编辑事项', 'Edit task'))}"`)}</div>
       ${taskNote(t) ? `<p class="th-note">${esc(taskNote(t))}</p>` : ''}
+      ${itemBrief(a, t)}
     </header>
     <div class="task-body">
       <nav class="outline" aria-label="${esc(T('这件事的内容', 'What this task holds'))}">${outline(a, t)}</nav>
       <section class="object" id="ws-object">${objectView(a, t)}</section>
     </div>
   </div>`;
+}
+// Under the item's title (story board P07): where its thinking stands, from its own records
+// only. Current lean (the latest decision or comparison, else the latest work), evidence (its
+// tests and the documents its work cites), open conditions (tests that predate the policy, a
+// decision citing nothing, requests still waiting) and the latest change. Empty parts are left
+// out; with nothing to say, there is no line at all.
+function itemBrief(a, t) {
+  const list = taskWorks(a, t.id).map(shown);
+  const tests = (a.tests || []).filter((r) => r.taskId === t.id);
+  const lean =
+    list.filter((w) => ['commit', 'option'].includes(E.intentOf(w.purpose))).at(-1) || list.at(-1);
+  const firstLine = (txt) =>
+    String(txt || '')
+      .split('\n')
+      .map((x) => x.replace(/^#+\s*|^[-*]\s*/, '').trim())
+      .find(Boolean) || '';
+  const leanText = lean ? firstLine(lean.body) || lean.title : '';
+  const docs = new Set(
+    list.flatMap((w) => (w.evidence || []).filter((e) => e.type === 'material').map((e) => e.id)),
+  );
+  const evidence = [
+    tests.length ? T(`${tests.length} 次测试`, `${tests.length} test${tests.length > 1 ? 's' : ''}`) : '',
+    docs.size ? T(`${docs.size} 份资料`, `${docs.size} document${docs.size > 1 ? 's' : ''}`) : '',
+  ].filter(Boolean);
+  const v = a.world.policyVersion;
+  const stale = tests.length > 0 && tests.every((r) => r.policyVersion < v);
+  const decision = list.find((w) => E.intentOf(w.purpose) === 'commit' && String(w.body || '').trim());
+  const waiting = (a.requests || []).filter((r) => r.status === 'pending').length;
+  const open = [
+    stale ? T(`测试都早于政策 v${v}`, `Every test predates policy v${v}`) : '',
+    decision && !(decision.evidence || []).length
+      ? T('决定还没引用依据', 'The decision cites nothing yet')
+      : '',
+    waiting ? T(`${waiting} 项申请等批复`, `${waiting} request${waiting > 1 ? 's' : ''} waiting`) : '',
+  ].filter(Boolean);
+  const lastTest = tests.slice().sort((x, y) => String(x.createdAt).localeCompare(String(y.createdAt))).at(-1);
+  const lastWork = list
+    .slice()
+    .sort((x, y) => String(x.updatedAt || '').localeCompare(String(y.updatedAt || '')))
+    .at(-1);
+  const change =
+    stale
+      ? T(`差旅政策更新到 v${v}`, `Travel policy moved to v${v}`)
+      : lastTest && (!lastWork || String(lastTest.createdAt) >= String(lastWork.updatedAt || ''))
+        ? T(`测了「${lastTest.question}」· ${when(lastTest.createdAt)}`, `Tested “${lastTest.question}” · ${when(lastTest.createdAt)}`)
+        : lastWork?.updatedAt
+          ? T(`《${lastWork.title}》第 ${lastWork.revision || 1} 版 · ${when(lastWork.updatedAt)}`, `“${lastWork.title}” v${lastWork.revision || 1} · ${when(lastWork.updatedAt)}`)
+          : '';
+  const cells = [
+    leanText ? [T('当前倾向', 'Leaning'), leanText] : null,
+    evidence.length ? [T('已有依据', 'Evidence'), evidence.join(T('、', ', '))] : null,
+    open.length ? [T('未决条件', 'Still open'), open.join(T('；', '; ')), 'warn'] : null,
+    change ? [T('最近变化', 'Latest change'), change] : null,
+  ].filter(Boolean);
+  if (!cells.length) return '';
+  return `<dl class="th-brief">${cells
+    .map(([k, val, tone]) => `<div class="th-brief__cell${tone ? ` is-${tone}` : ''}"><dt>${k}</dt><dd>${esc(val)}</dd></div>`)
+    .join('')}</dl>`;
 }
 function outline(a, t) {
   const removed = a.artifacts.filter((x) => x.taskId === t.id && x.removedAt);
@@ -2591,7 +3215,7 @@ const KIND = (k) =>
 function marginNote(n) {
   return `<div class="note ${n.kind} who-${n.role}" data-note="${esc(n.key)}">
     <p class="note-head">${avatar(n.role, 'xs')}<b>${PEOPLE[n.role].name}</b><span class="note-kind">${KIND(n.kind)}</span><span class="rule-tag" title="${esc(T('按场景规则生成，不是同事实时回复', 'Generated from scenario rules, not a live reply'))}">${T('规则', 'Rule')}</span></p>
-    <p class="note-text">${esc(n.text)}</p>
+    <p class="note-text" data-note-message-id="${esc(noteKey(n.key))}">${esc(n.text)}</p>
     <div class="note-actions"><button type="button" class="link" data-action="reply-note" data-key="${esc(n.key)}">${T('回应', 'Reply')}</button><button type="button" class="link quiet" data-action="ack" data-key="note:${esc(n.key)}">${T('先放下', 'Set aside')}</button></div>
   </div>`;
 }
@@ -2669,7 +3293,7 @@ function bench(a, t) {
             : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`
         }
         ${configUseLine(use)}
-      </div><div class="console-tools">${L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && a.tests.length ? btn(icon('branch', 'i-sm') + T('交给工程', 'Hand to engineering'), 'engineer-handover', 'small quiet') : ''}${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
+      </div><div class="console-tools">${L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && a.tests.length ? btn(icon('branch', 'i-sm') + (roleOf(a.id) === 'pm' ? T('交给 Daniel', 'Hand to Daniel') : T('交给工程', 'Hand to engineering')), 'engineer-handover', 'small quiet') : ''}${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
       <form class="console-compose" data-form="run-test">
         <label class="sr-only" for="lab-q">${T('你想问助手什么', 'Your question for the assistant')}</label>
         <textarea id="lab-q" name="question" class="console-q" rows="2" required maxlength="4000" placeholder="${esc(T('像员工那样问它一个问题…', 'Ask what an employee would ask…'))}">${esc(s?.inputs.question || ui.labPrefill)}</textarea>
@@ -2712,23 +3336,27 @@ function groupRuns(a) {
 }
 function runGroup(a, runs) {
   const r = runs[0];
+  const comparison = comparisonFor(r, a.tests);
+  const paired = comparison.referenced ? [r, ...(comparison.previous ? [comparison.previous] : [])] : runs.slice(0, 2);
+  const ordinal = (x) => a.tests.findIndex((t) => t.id === x.id) + 1;
   // `stale` is the server's own flag: the cited version differs from the current source.
   const old = (x) => (x.stale !== undefined ? !!x.stale : x.indexVersion < x.policyVersion);
   const tk = r.taskId && a.tasks.find((t) => t.id === r.taskId);
   return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}" id="run-${esc(r.id)}">
     <header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(r.question)}>${esc(r.question)}</h3>${runs.length > 1 ? `<span class="meta">${T(runs.length + ' 次', runs.length + ' runs')}</span>` : ''}${tk && ui.route !== 'task' ? `<button type="button" class="run-task" data-action="open-task" data-id="${tk.id}">${icon('note', 'i-xs')}${esc(taskTitle(tk))}</button>` : ''}</header>
     ${r.expectation ? `<p class="run-expect">${icon('eye', 'i-xs')}<span${zhAttr(r.expectation)}>${esc(r.expectation)}</span></p>` : ''}
-    <div class="run-cols ${runs.length > 1 ? 'two' : ''}">${runs
-      .slice(0, 2)
+    <div class="run-cols ${paired.length > 1 ? 'two' : ''}">${paired
       .map(
         (
           x,
           i,
-        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${i === 0 ? T('最新', 'Latest') : T('上一次', 'Previous')}</p>` : ''}
+        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${(i === 0 ? T('最新', 'Latest') : comparison.referenced ? T('识别基准', 'Recognition baseline') : T('上一次', 'Previous')) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
-      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div>${runSignals(a, x)}</div>`,
+      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
+    <div class="run-lens">${runSignals(a, r)}${paired[1] ? `<details class="run-baseline-signals"><summary>${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, paired[1])}</details>` : ''}</div>
+    ${comparison.referenced && !comparison.previous ? `<p class="meta">${T('识别记录指定的比较对象未载入；没有用上一次测试代替。', 'The recorded comparison baseline is not loaded; the previous run has not been substituted.')}</p>` : ''}
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
     <div class="run-actions">${btn(icon('layers', 'i-xs') + T('看依据', 'Check sources'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;
@@ -2770,17 +3398,19 @@ function railTeam(a) {
   const needs = Board.needsYou(signals, signalPeople(), Board.freshSignals(signals.map((x) => x.id)));
   return `<div class="rail-board">
     ${needs}
-    <section aria-labelledby="people-h"><h3 class="mini-title" id="people-h">${T('同事', 'Colleagues')}</h3><ul class="people">${ROLES.map((r) => {
-      const last = (a.conversations[r] || []).filter((m) => m.role !== 'user').at(-1);
-      const n = unread(a, r);
-      const waits = typing === r || replying.has(r);
-      const line = waits
-        ? `<span class="person-replying">${T('正在回复…', 'Replying…')}</span>`
-        : (last && teamLine(last.text)) || esc(Board.roleLine(r));
-      return `<li><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="unread-mark"><span class="sr-only">${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}</span></span>` : ''}</button></li>`;
-    }).join('')}
+    <section aria-labelledby="people-h"><h3 class="mini-title" id="people-h">${T('同事', 'Colleagues')}</h3><ul class="people">${ROLES.map(
+      (r) => {
+        const last = (a.conversations[r] || []).filter((m) => m.role !== 'user').at(-1);
+        const n = unread(a, r);
+        const waits = typing === r || replying.has(r);
+        const line = waits
+          ? `<span class="person-replying">${T('正在回复…', 'Replying…')}</span>`
+          : (last && teamLine(last.text)) || esc(Board.roleLine(r));
+        return `<li class="person-row"><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${unreadBadge(n)}</button><button type="button" class="btn quiet small rc-greet-recall" data-action="greet-chat" data-role="${r}" aria-label="${esc(T(`回看 ${PEOPLE[r].name} 的介绍`, `Read ${PEOPLE[r].name}’s introduction`))}">${T('介绍', 'Intro')}</button></li>`;
+      },
+    ).join('')}
       <li class="people-sep" role="separator"></li>
-      <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a))}</span></span></button></li>
+      <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a, hatOf(a.id), agentConnection(), feedStore.snapshot().events))}</span></span></button></li>
     </ul></section>
   </div>`;
 }
@@ -2806,12 +3436,6 @@ function replyingRoles(a) {
     return new Set();
   }
 }
-function agentLine(a) {
-  const exp = (a.exports || []).length;
-  const back = a.artifacts.filter((x) => !x.removedAt && x.source !== 'user').length;
-  if (!exp && !back) return T('还没交出任务', 'Nothing handed over yet');
-  return T(`交出 ${exp} 次，带回 ${back} 份`, `${exp} handed over, ${back} returned`);
-}
 function railChat(a, role) {
   const msgs = a.conversations[role] || [];
   const t = routeTask(a);
@@ -2833,7 +3457,8 @@ function railChat(a, role) {
   const tools = `${a.tests.length ? `<button type="button" class="composer-tool${quote ? ' on' : ''}" data-action="prefill-run" aria-label="${esc(T('附上最近一次测试', 'Attach the latest test run'))}" title="${esc(T('附上最近一次测试', 'Attach the latest test run'))}">${icon('flask', 'i-sm')}</button>` : ''}${x ? `<button type="button" class="composer-tool" data-action="prefill-artifact" aria-label="${esc(T('分享这份作品', 'Share this work'))}" title="${esc(T('分享这份作品', 'Share this work'))}">${icon('doc', 'i-sm')}</button>` : ''}`;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
-    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
+    <div data-chat-greeting>${Greetings.hasArrived(a.id, role) ? Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a)) : ''}</div>
+    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? messageRows(msgs).map(({ message, key }) => msgHtml(a, message, key)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
     ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
     <form class="composer" data-form="chat">${attached}<div class="composer-line">${tools ? `<span class="composer-tools">${tools}</span>` : ''}<label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="1" maxlength="4000" required enterkeyhint="send" aria-describedby="chat-hint" placeholder="${esc(quote ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></div></form>
     <p class="composer-hint" id="chat-hint">${T('回车发送 · Shift+回车换行', 'Enter to send · Shift+Enter for a new line')}</p>
@@ -2841,7 +3466,7 @@ function railChat(a, role) {
 }
 // The server's local provider answers with a fact list, not a reply. Label it so nobody mistakes it for the colleague.
 const LOCAL_REPLY = /^本地事实模式[:：]\s*/;
-function msgHtml(a, role, m) {
+function msgHtml(a, m, messageId) {
   const mine = m.role === 'user';
   const local = !mine && LOCAL_REPLY.test(m.text);
   const text = local
@@ -2861,7 +3486,7 @@ function msgHtml(a, role, m) {
     (local
       ? `<span class="msg-local" title="${esc(T('后端以本地模式运行，没有接模型：这里列出的是这位同事掌握的事实，并没有读你的问题。', 'The server runs in local mode with no model: this lists facts the colleague holds and does not read your question.'))}">${T('本地模式', 'Local mode')}</span>`
       : '');
-  return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
+  return `<div ${mine ? '' : `data-message-id="${esc(messageId)}"`} class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
 // The rail no longer carries the result (it lives on the result page, the main screen). Until
 // the board line drops this tab, it holds one line and the way there.
@@ -4095,6 +4720,11 @@ function noticeArrivals() {
   let dirtyRecord = false;
   for (const r of ROLES) {
     const msgs = (a.conversations[r] || []).filter((m) => m.role !== 'user');
+    Greetings.receipts.seed(
+      a.id,
+      r,
+      replyIds(a, r).slice(0, a.readTurns[r] ?? (history ? msgs.length : 0)),
+    );
     if (a.readTurns[r] === undefined) {
       a.readTurns[r] = msgs.length;
       dirtyRecord = true;
@@ -4184,23 +4814,43 @@ function noticeArrivals() {
   if (dirtyRecord) persist();
 }
 const railVisible = () => window.matchMedia('(min-width: 1280px)').matches || ui.railOpen;
+let readRoot = null;
+let stopReading = () => {};
 function markRead() {
-  const a = current();
-  if (
-    !a ||
-    !WS.includes(ui.route) ||
-    ui.railTab !== 'team' ||
-    ui.rail !== 'chat' ||
-    !ui.chatRole ||
-    !railVisible()
-  )
-    return;
-  const n = (a.conversations[ui.chatRole] || []).filter((m) => m.role !== 'user').length;
-  a.readTurns = a.readTurns || {};
-  if (a.readTurns[ui.chatRole] !== n) {
-    a.readTurns[ui.chatRole] = n;
-    persist();
-  }
+  const a = current(),
+    root = document.querySelector('#ws-rail .chat');
+  if (root === readRoot) return;
+  stopReading();
+  readRoot = root;
+  if (!a || !root || !ui.chatRole) return;
+  const role = ui.chatRole;
+  stopReading = Greetings.watchMessages(
+    root,
+    (id) => {
+      if (Greetings.receipts.read(a.id, role, id)) paintUnread();
+    },
+    () =>
+      current()?.id === a.id &&
+      ui.rail === 'chat' &&
+      ui.chatRole === role &&
+      railVisible() &&
+      !sheet.open &&
+      !document.querySelector('.rc-tour'),
+  );
+}
+
+let notesReadRoot = null;
+let stopReadingNotes = () => {};
+function markNotesRead() {
+  const a = current(), root = document.querySelector('.ws');
+  if (root === notesReadRoot) return;
+  stopReadingNotes();
+  notesReadRoot = root;
+  if (!a || !root) return;
+  stopReadingNotes = Greetings.watchMessages(root, id => {
+    const note = (ui.notesCache || []).find(n => noteKey(n.key) === id);
+    if (note && Greetings.receipts.read(a.id, note.role, id)) paintUnread();
+  }, () => current()?.id === a.id && !sheet.open && !document.querySelector('.rc-tour'), '[data-note-message-id]');
 }
 
 /* ---------- workspace refresh ---------- */
@@ -4245,7 +4895,7 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     // shorter and the scroll position clamped. Hold the old height until the cards are back.
     const held = document.getElementById('ws-stage')?.offsetHeight || 0;
     document.getElementById('ws-stage').outerHTML =
-      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div>`;
+      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div>`;
     const next = document.getElementById('ws-stage');
     if (next && held) {
       next.style.minHeight = `${held}px`;
@@ -4408,7 +5058,7 @@ function openChat(role, prefill = '') {
   ui.chatRole = role;
   ui.menu = null;
   if (narrowRail()) ui.railOpen = true;
-  if (!WS.includes(ui.route)) {
+  if (!WS.includes(ui.route) && !ENGINEER_ROUTES.includes(ui.route) && !isRegisteredRoute(ui.route)) {
     go('work');
   } else refreshWS(['rail', 'toolbar']);
   if (a) markRead();
@@ -4602,12 +5252,13 @@ function resetAttemptUi() {
 function startingOrder(caseId) {
   return caseId === 'pilot' ? seedOrder() : [];
 }
-async function startAttempt(caseId, opts) {
+async function startAttempt(caseId, opts, learnerJob = 'pm') {
   if (!caseShown(caseId)) throw new Error(T('这个情境暂不开放。', 'This situation is not open.'));
   const a = await L.start(caseId, {
     ...opts,
     initialTasks: SEED_KEYS.map((key) => ({ title: seedText(key) })),
   });
+  Greetings.prepareGreetings(a.id, learnerJob);
   ui.arriving = true;
   return freshAttemptUi(a);
 }
@@ -4623,9 +5274,7 @@ function freshAttemptUi(a) {
   persist();
   return a;
 }
-// Into the board. Taking on the brief walks in (screens/home walk-in: the slips lift, the key
-// waits, then they fly to their cards); any other way in swaps the page with the view transition,
-// or fades it in when motion is reduced.
+// A new practice lands on Grace’s commission. Cards arrive only after the person starts.
 async function enterWork(fn, trigger) {
   const show = () => {
     if (sheet.open) closeSheet(true);
@@ -4637,27 +5286,23 @@ async function enterWork(fn, trigger) {
   };
   if (trigger) {
     if (ui.walkIn) return;
-    await walkIn({
-      trigger,
-      hold: (on) => {
-        ui.walkIn = on;
-        if (ui.route === 'pm') render();
-      },
-      open: async () => {
-        await fn();
-        // The walk-in is the entrance; the board's own arrival would play under it.
-        ui.arriving = false;
-        resetSeedOrder();
-      },
-      show,
-    });
+    ui.walkIn = true;
+    if (ui.route === 'pm') render();
+    try {
+      await fn();
+      ui.arriving = false;
+      resetSeedOrder();
+      show();
+    } finally {
+      ui.walkIn = false;
+    }
     return;
   }
   await fn();
   if (reduceMotion.matches) {
     show();
     fadeIn();
-  } else withTransition(show);
+  } else await withTransition(show);
 }
 async function runQuestion(question, expectation) {
   if (ui.busy) return;
@@ -5109,15 +5754,20 @@ async function act(el, ev = new Event('rc-action')) {
       await leaveForBrief();
       go('pm');
       break;
-    // The engineer card: a new practice with the engineer's hat on, starting from its ticket.
+    // The engineer card: a new practice with the engineer's hat on, starting from its ticket
+    // (the intro first: "same practice, second hat").
     case 'engineer-start': {
       el.disabled = true;
       el.textContent = T('正在准备委托…', 'Preparing the ticket…');
       try {
-        const na = await startAttempt('pilot', {});
+        const na = await startAttempt('pilot', {}, 'engineer');
+        await keepRole(na, 'engineer');
         const ticket = await openEngineerTicket(L.gatewayTransport(na), na.id, { from: 'seeded' });
         setHat(na.id, 'engineer');
-        go('engineer', { id: ticket.id, transition: true });
+        go('engineer', {
+          id: ticket.id,
+          transition: true,
+        });
       } finally {
         if (el.isConnected) {
           el.disabled = false;
@@ -5128,11 +5778,11 @@ async function act(el, ev = new Event('rc-action')) {
     }
     // The same practice, the other hat: the ticket that comes with the situation.
     case 'engineer-take': {
+      // The ticket that comes with the situation, only while its problem exists here (189);
+      // a delivered practice opens a revision first (on the intro).
       el.disabled = true;
       try {
-        const ticket = await openEngineerTicket(L.gatewayTransport(a), a.id, { from: 'seeded' });
-        setHat(a.id, 'engineer');
-        go('engineer', { id: ticket.id, transition: true });
+        await takeInPractice(a);
       } finally {
         if (el.isConnected) el.disabled = false;
       }
@@ -5140,6 +5790,29 @@ async function act(el, ev = new Event('rc-action')) {
     }
     // The test bench: hand chosen tests to engineering and put on the engineer's hat.
     case 'engineer-handover':
+      if (roleOf(a.id) === 'pm') {
+        // A product manager's practice: Daniel takes the tests; his report comes back here.
+        await openEngineerHandover({
+          transport: L.gatewayTransport(a),
+          sessionId: a.id,
+          tests: a.tests
+            .slice()
+            .reverse()
+            .map((t) => ({ id: t.id, question: t.question, answer: t.answer, stale: !!t.stale })),
+          open: () => {},
+          colleague: {
+            taskId: routeTask(a)?.id ?? null,
+            done: async (ticket) => {
+              const failed = await colleagueReported(L.gatewayTransport(a), a.id, ticket, () =>
+                L.load(a),
+              ).catch((e) => e?.message || String(e));
+              if (failed) notify(failed);
+              refreshWS(['rail']);
+            },
+          },
+        });
+        break;
+      }
       await openEngineerHandover({
         transport: L.gatewayTransport(a),
         sessionId: a.id,
@@ -5147,8 +5820,12 @@ async function act(el, ev = new Event('rc-action')) {
           .slice()
           .reverse()
           .map((t) => ({ id: t.id, question: t.question, answer: t.answer, stale: !!t.stale })),
-        open: (ticketId) => go('engineer', { id: ticketId, transition: true }),
+        open: (ticketId) => navigateStage('engineer', engineerEntryId(a.id, ticketId, 'handover')),
       });
+      break;
+    // The practice's role did not reach the server: write it again (nothing else waits on it).
+    case 'role-retry':
+      if (a && ui.roleUnsaved?.id === a.id) await keepRole(a, ui.roleUnsaved.role);
       break;
     case 'set-lang':
       ui.menu = null;
@@ -5246,6 +5923,7 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     }
     case 'new-task':
+      if (!canWriteBoard(a)) break;
       sheetTask();
       break;
     case 'edit-task':
@@ -5592,6 +6270,7 @@ async function act(el, ev = new Event('rc-action')) {
       const triage = startingOrder(caseId);
       await enterWork(async () => {
         const na = await startAttempt(caseId, { priorities: triage });
+        if (L.nativeWorkspace(na)) await keepRole(na, 'pm');
         if (!L.nativeWorkspace(na))
           triage.forEach((p, i) => {
             if (na.tasks[i] && p !== na.tasks[i].priority)
@@ -5605,6 +6284,7 @@ async function act(el, ev = new Event('rc-action')) {
     }
     case 'menu': {
       const m = el.dataset.menu;
+      if (m === 'rank' && !canWriteBoard(a)) break;
       // On the result page ⋯ opens in place (a redraw would remount the feedback): its
       // language and model rows swap the menu for their panel there too.
       const inPlace = el.closest('[data-review-menu]');
@@ -5722,12 +6402,43 @@ async function act(el, ev = new Event('rc-action')) {
       go('engineer', { id: ticket });
       break;
     }
-    // A step on the product manager's scale: Delivered opens the result, the others the board.
-    case 'stage-pm':
+    // A step on the product manager's scale opens that step's screen, read only where it is not
+    // the current one: Investigate the findings dossier, Decide the board, Delivered the result
+    // (before submitting, a line saying so).
+    case 'stage-pm': {
       if (!a) break;
-      if (el.dataset.step === 'delivered') {
-        if (statusOf(a) === 'submitted') go('review', { transition: true });
-      } else if (ui.route !== 'work') go('work', { transition: true });
+      const step = el.dataset.step;
+      if (step === 'delivered') {
+        if (statusOf(a) === 'submitted') {
+          keepBoardPlace();
+          go('review', { transition: true });
+        }
+        // What to do next, by where the practice stands.
+        else
+          notify(
+            pmCurrent(a) === 'decide'
+              ? T(
+                  '交付以后这里是结果。准备好了就点右上角「交付」。',
+                  'Your result shows here once you submit. When you are ready, use Submit at the top right.',
+                )
+              : T(
+                  '交付以后这里是结果。先写一份作品草稿，再点右上角「交付」。',
+                  'Your result shows here once you submit. Draft your work first, then use Submit at the top right.',
+                ),
+          );
+      } else if (step === 'investigate') {
+        if (ui.route !== 'investigate') {
+          keepBoardPlace();
+          switchStage(() => go('investigate'));
+        }
+      } else if (ui.route !== 'work') goBoard();
+      break;
+    }
+    // Back to the current step's own screen: the result once delivered, else the board.
+    case 'stage-back':
+      if (!a) break;
+      if (statusOf(a) === 'submitted') go('review', { transition: true });
+      else goBoard();
       break;
     // The agent lamp: the My agent screen once the agent line registers it; until then the
     // rail's agent tab.
@@ -5838,6 +6549,7 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     }
     case 'ask-priority':
+      if (!canWriteBoard(a)) break;
       openChat(el.dataset.role, priorityQuestion(a));
       break;
     case 'situation-task': {
@@ -5999,6 +6711,128 @@ async function act(el, ev = new Event('rc-action')) {
       if (WS.includes(ui.route)) refreshWS(['toolbar']);
       sheetResources();
       break;
+    case 'greet-dismiss':
+      Greetings.dismissGreetings(a.id);
+      break;
+    case 'greet-chat':
+      Greetings.showIntroduction(a.id, el.dataset.role);
+      openChat(el.dataset.role);
+      {
+        const slot = document.querySelector('[data-chat-greeting]');
+        if (slot)
+          slot.innerHTML = Greetings.introductionHtml(
+            a.id,
+            hatHere(a) === 'engineer' ? 'engineer' : 'pm',
+            el.dataset.role,
+            locale(),
+            true,
+            canWrite(a),
+          );
+      }
+      break;
+    case 'greet-ask': {
+      const person = el.dataset.role;
+      const attemptId = a.id;
+      await Greetings.askGreeting(
+        a.id,
+        hatHere(a) === 'engineer' ? 'engineer' : 'pm',
+        person,
+        Number(el.dataset.question),
+        locale(),
+        async (question) => {
+          openChat(person);
+          // Let the existing native slot bind its permissions and composer. It owns submission,
+          // pending requests, retries and the eventual real reply; no alternate send API is added.
+          for (let i = 0; i < 100; i += 1) {
+            if (current()?.id !== attemptId || ui.chatRole !== person) return false;
+            const form = document.querySelector('.composer');
+            const input = document.getElementById('chat-input');
+            const send = form?.querySelector('button[type="submit"]');
+            if (
+              form &&
+              input &&
+              send &&
+              !send.disabled &&
+              form.dataset.rolesBound === ROLE_ID[person]
+            ) {
+              if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
+                notify(
+                  T(
+                    '你的草稿和引用已保留。先处理它们，再点建议问题。',
+                    'Your draft and attachment are safe. Send or clear them before choosing a suggested question.',
+                  ),
+                );
+                return false;
+              }
+              // Submit synchronously through the bound owner. Its send method saves the draft;
+              // a synthetic input event here could remount the form before submit.
+              input.value = question;
+              return await new Promise((resolve) => {
+                const token = crypto.randomUUID();
+                let revised = false;
+                const changed = (event) => {
+                  if (
+                    current()?.id === attemptId &&
+                    ui.chatRole === person &&
+                    event.target.id === 'chat-input'
+                  )
+                    revised = true;
+                };
+                const cleanup = () => {
+                  clearTimeout(timeout);
+                  document.removeEventListener('input', changed, true);
+                  form.removeEventListener('rolecraft:greeting-result', settled);
+                };
+                const settled = async (event) => {
+                  if (event.detail?.token !== token) return;
+                  clearTimeout(timeout);
+                  form.removeEventListener('rolecraft:greeting-result', settled);
+                  try {
+                    if (event.detail.accepted && !revised) {
+                      const host = L.v4Host(a);
+                      const key = `question:${ROLE_ID[person]}`;
+                      if (host?.draft('roles', key) === question)
+                        await host.keepDraft('roles', key, '');
+                      const liveInput = document.getElementById('chat-input');
+                      if (
+                        !revised &&
+                        current()?.id === attemptId &&
+                        ui.chatRole === person &&
+                        liveInput?.value === question
+                      )
+                        liveInput.value = '';
+                    }
+                    resolve(!!event.detail.accepted);
+                  } catch (error) {
+                    notify(errText(error));
+                    resolve(false);
+                  } finally {
+                    cleanup();
+                  }
+                };
+                const timeout = setTimeout(() => {
+                  cleanup();
+                  resolve(false);
+                }, 25000);
+                document.addEventListener('input', changed, true);
+                form.addEventListener('rolecraft:greeting-result', settled);
+                form.dataset.greetingRequest = token;
+                form.requestSubmit(send);
+              });
+            }
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+          notify(
+            T(
+              '对话还没就绪，请稍后再点这个问题。',
+              'The conversation is not ready yet. Try the question again shortly.',
+            ),
+          );
+          return false;
+        },
+      );
+      break;
+    }
     case 'chat':
       if (ui.rail !== 'chat' || ui.railTab !== 'team') Board.railPush('in');
       openChat(el.dataset.role);
@@ -7135,6 +7969,8 @@ const workFolders = installWorkFolders(document, {
   },
 });
 installV4References(() => L.v4Host(current()));
+// Lens chips open saved records in place. Each carrier names its own provenance.
+installCardToggles(locale);
 // Board cards drawn by the native workspace read tests, reminders and the revision start here.
 provideTaskCardFacts((taskId) => {
   const a = current();
@@ -7151,7 +7987,40 @@ provideTaskCardFacts((taskId) => {
     ],
     reviseHere: revisionTaskIds(a).has(taskId),
     policyVersion: a.world.policyVersion,
+    handedBy: Board.handedTask(a.id) === taskId ? 'manager' : undefined,
   };
+});
+// The walk-in: Grace's note, the brief landing on the policy item, the three-step walk-through.
+Board.installWalkThrough({
+  current,
+  fresh: (a) =>
+    !!a &&
+    L.nativeWorkspace(a) &&
+    statusOf(a) === 'active' &&
+    !sessionOf(a)?.v2ReadOnly &&
+    Greetings.hasEntryStory(a.id),
+  job: (a) => (hatHere(a) === 'engineer' ? 'engineer' : 'pm'),
+  prepareTour: () => {
+    ui.menu = null;
+    ui.rail = 'team';
+    ui.railTab = 'team';
+    if (hatHere(current()) === 'pm' && ui.route !== 'work') go('work');
+    else refreshWS(['toolbar', 'rail', 'stage']);
+  },
+  finish: (id) => Greetings.finishArrivals(id),
+  openTicket: async () => {
+    const a = current(), id = ui.routeId?.split('?')[0];
+    if (!a || !id) return;
+    const ticket = await engineerApi(L.gatewayTransport(a), a.id).ticket(id);
+    if (current()?.id !== a.id) return;
+    openSheet(esc(T('Grace 的工程委托', 'Grace’s engineering ticket')),
+      `<h3>${esc(ticket.title)}</h3>${ticket.target_tests.map(t => `<section><h4>${esc(t.query)}</h4><blockquote>${esc(t.answer_summary)}</blockquote></section>`).join('')}<p>${T('只改允许的设置，复现并试跑后，由你亲自签字交回复核。', 'Change only supported settings, reproduce and test the issue, then sign the report yourself and hand it back for review.')}</p>`);
+  },
+  policyTask: (a) =>
+    (a.tasks || []).find((t) => t.title === SEEDS.policy.zh[0] || t.title === SEEDS.policy.en[0])
+      ?.id ?? null,
+  refresh: (parts) => refreshWS(parts),
+  text: (zh, en, a) => worldText(a)(zh, en),
 });
 L.attach(state, onLive);
 // Like a poll: a read dropped while the page loads only marks the connection lost.
@@ -7210,7 +8079,11 @@ provideAgentPage({
       return [
         {
           key: 'ticket',
-          label: [`${PEOPLE.technical.name} 的工单`, `${PEOPLE.technical.ref}’s ticket`],
+          // An engineer's practice: the ticket is Grace's (the product side, phase 2).
+          label:
+            roleOf(a.id) === 'engineer'
+              ? [`${PEOPLE.manager.name} 的委托`, `${PEOPLE.manager.ref}’s ticket`]
+              : [`${PEOPLE.technical.name} 的工单`, `${PEOPLE.technical.ref}’s ticket`],
           value: T('进行中', 'Open'),
         },
         ...rows.filter((r) => r.key !== 'brief' && r.key !== 'tasks'),
@@ -7251,10 +8124,24 @@ provideAgentPage({
   back: () => go('work'),
 });
 installShell((el, ev) => act(el, ev));
+// The engineer's screens (201): what they need from this file to draw inside the workspace.
+installEngineer({
+  current,
+  language: () => locale(),
+  native: (a) => !!L.nativeWorkspace(a),
+  transport: (a) => L.gatewayTransport(a),
+  agentHost: (a) => L.v4Host(a),
+  navigate: (route, id, transition) => go(route, { id, transition }),
+  refresh: (parts) => {
+    if (current() && WS.includes(ui.route)) refreshWS(parts);
+  },
+  notify,
+  download,
+});
 onAgentEvent(pulseLamp);
 onAgentConnection(() => {
   if (inPractice()) {
-    if (WS.includes(ui.route)) refreshWS(['toolbar']);
+    if (WS.includes(ui.route)) refreshWS(['toolbar', 'rail']);
     else {
       const lamp = document.querySelector('.agent-lamp');
       if (lamp) lamp.dataset.state = agentConnection().state;
@@ -7319,6 +8206,12 @@ Board.installBoard({
 });
 // The result page is a screen of the workspace: the shell keeps the topbar and the people.
 registerRoute('review', () => (current() ? renderReview() : ''));
+// "Investigate" on the scale: what has been found so far, read only (screens/investigate).
+registerRoute('investigate', () => {
+  const a = current();
+  return a ? dossierHtml(findingsOf(a), stageBack(a)) : '';
+});
+installDossier({ redraw: () => refreshWS(['stage']) });
 registerResultScreen({
   host: (a) => (a && L.nativeWorkspace(a) ? L.v4Host(a) : null),
   sessionOf: (a) => (a && L.nativeWorkspace(a) ? a.id : null),

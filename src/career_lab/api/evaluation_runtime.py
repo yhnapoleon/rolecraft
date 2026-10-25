@@ -5,7 +5,11 @@ carry either the source quote or the actual saved approval/configuration ref.
 """
 
 import json
+from collections import OrderedDict
+from concurrent.futures import Future
+from threading import Lock
 from typing import TYPE_CHECKING
+from weakref import WeakKeyDictionary
 
 from sqlalchemy import select
 
@@ -36,6 +40,8 @@ class ScenarioEvidencePort:
 
         self.store, self.module = store, module
         self._window_cache = {}
+        self._record_cache = {}
+        self._reference_cache = set()
         adapter = ScenarioFactAdapter(
             module,
             authorize=lambda auth: store.authorize(auth, "read"),
@@ -158,14 +164,28 @@ class ScenarioEvidencePort:
     def record(self, auth, ref, at):
         if at is None:
             return self.store.query(auth, lambda view: view.get(ref))
-        return self.store.query_at(auth, at, lambda view: view.get(ref))
+        # Exact historical values are immutable inside this one evaluator. Keep live
+        # credential/object checks, but do not decode the same full window per criterion.
+        self.store.authorize(auth, "read", object_ids=(ref.object_id,))
+        key = C.digest(
+            [auth.model_dump(mode="json"), ref.model_dump(mode="json"), at.model_dump(mode="json")]
+        )
+        if key not in self._record_cache:
+            self._record_cache[key] = self.store.query_at(auth, at, lambda view: view.get(ref))
+        return self._record_cache[key]
 
     def reference(self, auth, ref, at):
         def read(view):
             if view.reference_allowed is None or not view.reference_allowed(ref):
                 raise C.ProtocolError("object_not_found", status=404)
 
-        return self.store.query_at(auth, at, read)
+        self.store.authorize(auth, "read", object_ids=(ref.object_id,))
+        key = C.digest(
+            [auth.model_dump(mode="json"), ref.model_dump(mode="json"), at.model_dump(mode="json")]
+        )
+        if key not in self._reference_cache:
+            self.store.query_at(auth, at, read)
+            self._reference_cache.add(key)
 
 
 class OncePerInputModel:
@@ -175,6 +195,7 @@ class OncePerInputModel:
 
     def __init__(self, model):
         self.model, self.revision, self.seen = model, model.revision, set()
+        self.provider = getattr(model, "provider", None)
 
     def complete(self, messages, tools):
         key = C.digest(messages[:2])
@@ -349,7 +370,14 @@ def create_feedback_handler(
         )
         return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader, engine)
 
-    return run
+    def audited_run(store, view, envelope, auth):
+        from career_lab.runtime.model_audit import audit_scope, phase
+
+        with audit_scope(session_id=auth.session_id, request_id=envelope.command.request_id):
+            with phase("feedback_handler"):
+                return run(store, view, envelope, auth)
+
+    return audited_run
 
 
 def installed_evaluation(module):
@@ -367,6 +395,33 @@ def installed_evaluation(module):
     return bundle, tuple(CriterionPolicy(**p) for p in protocol["policies"])
 
 
+class RuleCheckEvidencePort(ScenarioEvidencePort):
+    """One HTTP rule check reuses its authorized, versioned historical window.
+
+    This port is not used by the feedback/colleague/assistant model input builders.
+    No result survives the request. Credentials and object scope are checked on
+    every access; material references still use the store's exact-time resolver.
+    """
+
+    def record(self, auth, ref, at):
+        if at is None or auth.allowed_objects is not None:
+            return super().record(auth, ref, at)
+        self.store.authorize(auth, "read", object_ids=(ref.object_id,))
+        window = self.window(auth, at)
+        record = next((row for row in window.objects if row.ref == ref), None)
+        if record is None:
+            raise C.ProtocolError("object_not_found", status=404)
+        return record
+
+    def reference(self, auth, ref, at):
+        if ref.kind == "material":
+            # source_reader has already validated this exact window. Resolving a
+            # material does not require projecting every saved feedback again.
+            self.store.resolve_reference(auth, ref, storage_revision=at.storage_revision)
+            return None
+        return super().reference(auth, ref, at)
+
+
 class SubmissionRuleChecks:
     """Read-only rule checks for sessions of one scenario module: the inputs a person is about
     to submit (draft), or a saved submission again at its own point (saved). The rule items
@@ -376,9 +431,11 @@ class SubmissionRuleChecks:
     def __init__(self, module, policies):
         self.module = module
         self.policies = policies
+        self._saved_cache = WeakKeyDictionary()
+        self._cache_lock = Lock()
 
     def draft(self, store, auth, request: C.SubmissionRuleCheckRequest) -> C.SubmissionRuleCheck:
-        source = ScenarioEvidencePort(store, self.module)
+        source = RuleCheckEvidencePort(store, self.module)
         reader = self._reader(store, auth, source, source.draft_submission_rules)
         submission = unsaved_submission(store, auth, reader, request)
         return self._check(auth, source, reader, submission, "draft")
@@ -417,7 +474,47 @@ class SubmissionRuleChecks:
         }
 
     def saved(self, store, auth, submission_id: str) -> C.SubmissionRuleCheck:
-        source = ScenarioEvidencePort(store, self.module)
+        # Only the owner's unrestricted reads can reuse a result. The module is
+        # bound to one immutable scenario/evaluation package; the store, complete
+        # authorization and current persisted point isolate the remaining inputs.
+        if (
+            auth.actor_id != "learner"
+            or auth.executor.kind != "human"
+            or auth.allowed_objects is not None
+        ):
+            return self._saved_uncached(store, auth, submission_id)
+        _, at = store.session_metadata(auth)
+        key = (C.canonical(auth), C.canonical(at), submission_id)
+        with self._cache_lock:
+            cache = self._saved_cache.setdefault(store, OrderedDict())
+            future = cache.get(key)
+            compute = future is None
+            if compute:
+                future = Future()
+                cache[key] = future
+                # Bounded per store/package, including in-flight entries. Evicted
+                # callers still own their Future and receive their result normally.
+                while len(cache) > 64:
+                    cache.popitem(last=False)
+            else:
+                cache.move_to_end(key)
+        if compute:
+            try:
+                result = self._saved_uncached(store, auth, submission_id)
+            except BaseException as error:
+                with self._cache_lock:
+                    if cache.get(key) is future:
+                        del cache[key]
+                future.set_exception(error)
+                raise
+            future.set_result(result)
+        result = future.result()
+        # Waiting on another reader is not permission to outlive a revocation.
+        store.authorize(auth, "read")
+        return result.model_copy(deep=True)
+
+    def _saved_uncached(self, store, auth, submission_id: str) -> C.SubmissionRuleCheck:
+        source = RuleCheckEvidencePort(store, self.module)
         reader = self._reader(store, auth, source, source.submission_rules)
         submission = saved_submission(store, auth, submission_id)
         return self._check(auth, source, reader, submission, "saved")

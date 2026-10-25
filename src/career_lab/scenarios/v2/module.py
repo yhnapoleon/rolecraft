@@ -510,7 +510,71 @@ class ScenarioModule:
         run = with_drift(self.package, view, run)
         for ref in run.result.citations:
             self.check_evidence(view, auth, ref)
-        return result_plan(self, run)
+        return self.policy_after_test(view, run.result, result_plan(self, run))
+
+    # When the travel-policy change arrives (场景与训练闭环 §4.3). A package that says nothing
+    # keeps the first explicit configuration apply as the only trigger (engine.apply_config);
+    # a package with ``initial_plan_trigger: first_policy_test_or_apply`` also lets the first
+    # policy-related test bring it, right after that test returns: the test itself keeps the
+    # answer it got, and the change lands once, whichever comes first. Read from the package
+    # the session is bound to, so a session on an earlier package keeps its own rule.
+    PLAN_TRIGGERS = ("first_explicit_apply_config", "first_policy_test_or_apply")
+
+    def policy_after_test(self, view, test, mutation: Mutation) -> Mutation:
+        # evaluation_facts imports this module; read its policy test lazily.
+        from .evaluation_facts import relevant_to_policy
+
+        trigger = self.package.rules.get("initial_plan_trigger", self.PLAN_TRIGGERS[0])
+        if trigger not in self.PLAN_TRIGGERS:
+            raise ProtocolError("scenario_rule_invalid", status=500)
+        if (
+            trigger != "first_policy_test_or_apply"
+            or "initial_plan_applied" in view.state.applied_milestones
+            or not relevant_to_policy(test, self.work_language)
+        ):
+            return mutation
+        current = view.private_scenario_state
+        if current is None:
+            raise ProtocolError("scenario_state_missing", status=503)
+        before = dict(current.source_versions)
+        updates = self.package.rules["initial_plan_material_updates"]
+        after = {**before, **updates}
+        # The test's own event comes first in this transaction; the change is the next one.
+        at = view.state.business_seq + len(mutation.events) + 1
+        private = current.model_copy(
+            update={
+                "version": current.version + 1,
+                "source_versions": after,
+                "material_activation": {
+                    **current.material_activation,
+                    **{f"{mid}:{version}": at for mid, version in updates.items()},
+                },
+            }
+        )
+        return replace(
+            mutation,
+            writes=(
+                *mutation.writes,
+                self.write(private, "scenario_state", current.version, visible_to=("system",)),
+            ),
+            events=(
+                *mutation.events,
+                EventDraft(
+                    type="initial_plan_applied",
+                    visible_to=("learner", "supervisor", "tech_lead", "business_lead"),
+                    data={
+                        "trigger": "first_policy_test",
+                        "notice": localized_text(self.package, "policy_notice"),
+                        "before_versions": before,
+                        "after_versions": after,
+                    },
+                ),
+            ),
+            state_changes={
+                **mutation.state_changes,
+                "applied_milestones": (*view.state.applied_milestones, "initial_plan_applied"),
+            },
+        )
 
     def list_tests(self, view, payload, auth):
         self.check_bindings(view.bindings)

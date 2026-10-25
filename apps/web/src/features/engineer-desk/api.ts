@@ -3,7 +3,9 @@
  * envelope; the engineer operations do not check its version point, but it is filled in from the
  * session's current state like every other write. */
 import { ApiError } from '../../api';
+import type { AssistantConfig } from '../../contracts-v2';
 import type { GatewayTransport } from '../../gateway-transport';
+import type { SettingsInput } from '../../v4-host-operations';
 import { engineerErrorText } from './copy';
 import type {
   DraftInput,
@@ -15,7 +17,33 @@ import type {
 } from './model';
 import type { EngineerReviewRecord } from '../engineer-report';
 
-export type TicketSource = { from: 'seeded' } | { from: 'tests'; test_ids: readonly string[] };
+export type TicketSource =
+  | { from: 'seeded' }
+  | {
+      from: 'tests';
+      test_ids: readonly string[];
+      /** 'colleague': Daniel takes it (a product manager's practice only). */
+      assignee?: 'self' | 'colleague';
+      task_id?: string | null;
+    };
+/** The one role a practice is played as (written once, right after it starts). */
+export type LearnerRole = 'pm' | 'engineer';
+/** What happens to a colleague's report (see engineer/session.py TicketDecision). */
+export type TicketDecision = 'ask' | 'return' | 'apply' | 'handover';
+export interface DecisionResult {
+  readonly ticket: TicketDetail;
+  readonly decision: {
+    readonly decision?: TicketDecision;
+    readonly result?: 'applied' | 'applied_with_changes' | 'returned';
+    readonly reasons?: readonly string[];
+    readonly probe_ids?: readonly string[];
+    readonly hidden_probes?: number;
+    readonly reply?: string;
+    readonly from_version?: number;
+    readonly to_version?: number;
+    readonly other_changes?: Readonly<Record<string, unknown>>;
+  };
+}
 export interface SignResult {
   readonly signoff: { readonly review_id: string; readonly already_signed: boolean };
   readonly review: EngineerReviewRecord;
@@ -23,6 +51,7 @@ export interface SignResult {
 }
 
 type Wrapped<T> = { result: T };
+type WorkbenchRead = { timeline?: { workspace?: { config?: unknown } } };
 
 export function engineerApi(transport: GatewayTransport, sessionId: string) {
   const base = `/sessions/${encodeURIComponent(sessionId)}`;
@@ -51,6 +80,28 @@ export function engineerApi(transport: GatewayTransport, sessionId: string) {
         'engineer.tickets.create',
         source,
       ),
+    /** Writes the practice's role; the same role again is fine, a different one is refused. */
+    setRole: (role: LearnerRole) =>
+      command<{ learner_role: LearnerRole; created: boolean }>(
+        `${base}/engineer/tickets`,
+        'engineer.tickets.create',
+        { from: 'role', role },
+      ),
+    /** The practice's role as the server keeps it; null for one started before roles existed. */
+    learnerRole: async () =>
+      (await read<{ learner_role: LearnerRole | null }>(`${base}/engineer/tickets`)).learner_role ??
+      null,
+    decide: (
+      ticketId: string,
+      decision: TicketDecision,
+      extra: { note?: string; config_version?: number } = {},
+    ) =>
+      command<DecisionResult>(`${base}/engineer/tickets`, 'engineer.tickets.create', {
+        from: 'decision',
+        ticket_id: ticketId,
+        decision,
+        ...extra,
+      }),
     tickets: async () =>
       (
         await read<{
@@ -87,6 +138,42 @@ export function engineerApi(transport: GatewayTransport, sessionId: string) {
         draft_id: draftId,
         impact_note: impactNote,
       }),
+    /** The practice's state: 'active', or 'submitted' once delivered. */
+    status: async () => ((await transport(base)) as { state: { status: string } }).state.status,
+    /** The latest delivery of the practice, as the reference a revision starts from. */
+    latestSubmission: async () => {
+      const value = (await transport(`${base}/submissions`)) as {
+        result: {
+          items?: { id: string; version: number }[];
+          result?: { items?: { id: string; version: number }[] };
+        };
+      };
+      const items = value.result.result?.items ?? value.result.items ?? [];
+      const last = items.at(-1);
+      return last
+        ? { session_id: sessionId, kind: 'submission', object_id: last.id, version: last.version }
+        : null;
+    },
+    /** Reopen a delivered practice (a revision): the delivery and its feedback stay. */
+    beginRevision: (
+      parent: { session_id: string; kind: string; object_id: string; version: number },
+      reason: string,
+    ) =>
+      command<{ cycle: unknown }>(`${base}/revision-cycles`, 'begin_revision', {
+        parent_submission: parent,
+        reason,
+      }),
+    /** The pilot's configuration as it is now (the workbench read). */
+    pilotConfig: async () => {
+      const value = (await transport(`${base}/workbench`)) as {
+        result: { result?: WorkbenchRead } & WorkbenchRead;
+      };
+      const read = value.result.result ?? value.result;
+      return (read.timeline?.workspace?.config ?? null) as AssistantConfig | null;
+    },
+    /** The product manager's update of the pilot (existing configuration.apply). */
+    applyConfig: (input: SettingsInput) =>
+      command<{ config: AssistantConfig }>(`${base}/configuration`, 'configuration.apply', input),
     reviews: async (ticketId: string) =>
       (
         await read<{ reviews: (ReviewSummary & { ticket_id: string })[] }>(

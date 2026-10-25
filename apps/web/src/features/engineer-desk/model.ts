@@ -60,6 +60,9 @@ export interface ExperimentSummary {
   readonly executor: Executor;
   readonly created_at: string;
   readonly changed_fields?: readonly string[];
+  /** Each changed setting with its baseline and tried value (absent from older servers). */
+  readonly changes?: Readonly<Record<string, Change>>;
+  readonly config_hash?: string | null;
   readonly counts: Readonly<Record<string, number>>;
   readonly status: string;
 }
@@ -116,6 +119,17 @@ export interface DraftView {
   readonly change_statements: readonly Statement[];
   readonly claimed_results: Readonly<Record<string, Outcome>>;
   readonly unresolved: readonly Unresolved[];
+  readonly config_hash?: string | null;
+}
+export interface DraftSummary {
+  readonly id: string;
+  readonly executor?: Executor;
+  readonly created_at?: string;
+  readonly config_hash?: string | null;
+  readonly changed_fields?: readonly string[];
+  readonly explanation_summary?: string;
+  readonly claimed?: boolean;
+  readonly unresolved_count?: number;
 }
 export interface ReviewSummary {
   readonly review_id: string;
@@ -123,6 +137,8 @@ export interface ReviewSummary {
   readonly signed_at: string;
   readonly signed_by: Executor;
   readonly draft_id: string;
+  /** Who wrote the signed draft (absent from older servers). */
+  readonly draft_executor?: Executor & { readonly delegation_id?: string | null };
 }
 type Budget = { readonly used: number; readonly limit: number };
 export interface TicketDetail {
@@ -141,9 +157,56 @@ export interface TicketDetail {
   readonly draft_budget: Budget;
   readonly retrieval: { readonly mode: string; readonly note?: string | null };
   readonly trials: readonly ExperimentSummary[];
-  readonly drafts: readonly { readonly id: string }[];
+  readonly drafts: readonly DraftSummary[];
   readonly latest_draft: DraftView | null;
   readonly reviews: readonly ReviewSummary[];
+  /** 'colleague' when Daniel took the ticket (a product manager's practice). */
+  readonly assignee?: 'self' | 'colleague';
+  readonly origin?: {
+    readonly task_id: string | null;
+    readonly test_ids: readonly string[];
+  } | null;
+  readonly handover?: Handover;
+}
+/** A colleague's run and what became of its report (engineer/session.py run_daniel, decide). */
+export interface Handover {
+  readonly state:
+    | 'queued'
+    | 'reproducing'
+    | 'trying'
+    | 'signing'
+    | 'reported'
+    | 'failed'
+    | 'applied'
+    | 'applied_with_changes'
+    | 'returned';
+  readonly actor?: {
+    readonly name: string;
+    readonly role_id: string;
+    readonly orchestration: string;
+  };
+  readonly rule?: {
+    readonly id: string;
+    readonly why: string;
+    readonly changes: Readonly<Record<string, { before: unknown; after: unknown }>>;
+  };
+  readonly tried?: readonly {
+    readonly rule: string;
+    readonly trial_id: string;
+    readonly changes: Readonly<Record<string, { before: unknown; after: unknown }>>;
+    readonly counts: {
+      readonly passed: number;
+      readonly failed: number;
+      readonly errors: number;
+      readonly unchecked: number;
+      readonly total: number;
+    };
+  }[];
+  readonly skipped?: readonly { readonly rule: string; readonly code: string }[];
+  readonly review_id?: string;
+  readonly review_status?: string;
+  readonly failed_reason?: string;
+  readonly decisions?: readonly Record<string, unknown>[];
 }
 /** What a draft sends (POST …/drafts), less the ticket ID. */
 export interface DraftInput {
@@ -672,4 +735,128 @@ export function nextAfterReview(view: EngineerReportView): 'board' | 'again' {
   return view.verdict?.state === 'fixed' && !view.verdict.turn && regression?.tone === 'good'
     ? 'board'
     : 'again';
+}
+
+/* ---------- what a reproduction found ---------- */
+
+export interface ReproductionVerdict {
+  /** still: the rerun matches the record, so the problem is still there; differs: the answer
+   * changed since it was recorded; error: nothing to compare. */
+  readonly kind: 'still' | 'differs' | 'error';
+  /** Amber for "still broken" (out of date is the problem itself), ink for a plain fact, grey
+   * when unknown. Never green: matching the record means it is still wrong. */
+  readonly tone: 'warn' | 'ink' | 'unknown';
+  readonly label: string;
+  readonly sentence: string;
+}
+
+/** A reproduction (whole, or as listed) read as the problem's state. */
+export function reproductionVerdict(
+  run: Pick<ExperimentSummary, 'counts' | 'status'>,
+  ticket: TicketDetail,
+): ReproductionVerdict {
+  const total = run.counts.total ?? 0;
+  const matched = run.counts.matched ?? 0;
+  if (total > 0 && matched === total) {
+    const targets = ticket.target_tests;
+    const one = targets.length === 1 ? targets[0] : null;
+    const cite = one?.citations[0];
+    const warned = one?.status === 'answered_with_warning';
+    const sentence = one
+      ? cite
+        ? T(
+            `仍引用${sourceName(cite.object_id)} v${cite.version}，${warned ? '带了提醒' : '没有提醒'}。`,
+            `It still cites ${sourceName(cite.object_id)} v${cite.version} ${warned ? 'with a warning' : 'with no warning'}.`,
+          )
+        : T(`仍然${statusWord(one.status)}。`, `It still ${statusWord(one.status).toLowerCase()}.`)
+      : T(`这 ${total} 条的回答都和记录一致。`, `All ${total} answers match what was recorded.`);
+    return { kind: 'still', tone: 'warn', label: T('问题还在', 'Still broken'), sentence };
+  }
+  if (total > 0)
+    return {
+      kind: 'differs',
+      tone: 'ink',
+      label: T('和记录不同', 'Differs from the record'),
+      sentence: T(
+        '这次的回答和委托记录不一样，先看看是不是别人改过设置。',
+        'This answer differs from the ticket’s record. Check whether someone changed the settings.',
+      ),
+    };
+  return {
+    kind: 'error',
+    tone: 'unknown',
+    label: T('没有结果', 'No result'),
+    sentence: T(
+      '这次复现没有可比的结果，可以再试一次。',
+      'This rerun has nothing to compare. Try again.',
+    ),
+  };
+}
+
+/* ---------- changes as a diff ---------- */
+
+export interface DiffRow {
+  readonly field: string;
+  readonly name: string;
+  readonly before: string;
+  readonly after: string;
+}
+
+const isChange = (value: unknown): value is Change =>
+  !!value && typeof value === 'object' && !Array.isArray(value) && 'after' in value;
+
+/** Settings that differ from the baseline, in the ticket's field order, with values in words.
+ * Takes candidate values (field: value) or recorded changes (field: {before, after}). */
+export function settingsDiff(
+  baseline: Settings,
+  changes: Readonly<Record<string, JsonValue | Change>>,
+  fields: readonly Pick<EditableField, 'field'>[],
+): DiffRow[] {
+  const order = new Map(fields.map((f, i) => [f.field, i]));
+  return Object.entries(changes)
+    .map(([field, value]) => {
+      const before = isChange(value) ? value.before : baseline[field];
+      const after = isChange(value) ? value.after : value;
+      return { field, before, after };
+    })
+    .filter((c) => !sameValue(c.before, c.after))
+    .sort((a, b) => (order.get(a.field) ?? 99) - (order.get(b.field) ?? 99))
+    .map((c) => ({
+      field: c.field,
+      name: fieldName(c.field),
+      before: valueText(c.field, c.before),
+      after: valueText(c.field, c.after),
+    }));
+}
+
+/** One line for a log row: `freshness_guard 不处理→加提醒 · min_score 0.35→0.2`. */
+export function diffShort(rows: readonly DiffRow[]): string {
+  return rows.map((r) => `${r.field} ${r.before}→${r.after}`).join(' · ');
+}
+
+/* ---------- small spaces ---------- */
+
+/** An answer quoted where there is room for about one sentence (the intro's "to fix" slip): the
+ * whole answer when it is one sentence, else the sentence that holds a number (the limit the
+ * person is checking), marked "…" where it was cut. Decimals and the like are not sentence ends. */
+export function quoteExcerpt(text: string): string {
+  // The server may already have cut it ("…" at the end): count that as a cut, once.
+  const cut = /…$/.test(text.trim());
+  const whole = text.trim().replace(/…$/, '');
+  const parts = whole
+    .split(/(?<=[。；！？])|(?<=[.;!?])\s+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length <= 1) return cut ? `${whole.replace(/[。；;.!?！？]+$/, '')}…` : whole;
+  const index = Math.max(
+    0,
+    parts.findIndex((p) => /\d/.test(p)),
+  );
+  const body = parts[index].replace(/[。；;.!?！？]+$/, '');
+  return `${index > 0 ? '…' : ''}${body}…`;
+}
+
+/** The draft on the sheet when the key went down is no longer the latest: don't sign it. */
+export function signedDraftStale(heldDraftId: string, ticket: TicketDetail): boolean {
+  return !ticket.latest_draft || ticket.latest_draft.id !== heldDraftId;
 }

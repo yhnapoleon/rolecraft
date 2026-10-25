@@ -1,4 +1,4 @@
-import { waitFor, clickReady, submitDelivery } from './browser-support.mjs';
+import { acceptEntryStory, waitFor, clickReady, submitDelivery } from './browser-support.mjs';
 import { askHowToPrioritise, openEvidence, readActivity } from './activity-evidence.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
@@ -17,6 +17,7 @@ async function enterWorkspace(context) {
   await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
   await browser.click('[data-action="open-career"]');
   await browser.click('.case-hero [data-action="take-case"]');
+  await acceptEntryStory(browser);
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
   assert.equal(
     await browser.ev(`document.querySelectorAll('[data-v4-region="workspace"]').length`),
@@ -132,6 +133,18 @@ async function toolbarHoldsStill(context) {
   await delay(300);
   assert.equal(await browser.ev(kept), true, 'A notice that leaves the toolbar unchanged keeps it');
   await browser.ev(`window.PracticeLive.store.report({ notice: '' })`);
+  await browser.click('#ws-toolbar [data-menu="more"]');
+  await waitFor(browser, `!document.querySelector('#ws-toolbar .menu')`);
+  // The held control is More; its language row opens the practice-language note, not a switch.
+  await browser.click('#ws-toolbar [data-menu="more"]');
+  await browser.click('#ws-toolbar .menu [data-menu="lang"]');
+  await waitFor(browser, `!!document.querySelector('#ws-toolbar .menu.lang-note')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('#ws-toolbar [data-action="set-lang"]').length`),
+    0,
+    'The practice language note does not offer an in-practice language switch',
+  );
+  await browser.click('#ws-toolbar [data-menu="more"]');
   await browser.click('#ws-toolbar [data-menu="more"]');
   await waitFor(browser, `!document.querySelector('#ws-toolbar .menu')`);
 }

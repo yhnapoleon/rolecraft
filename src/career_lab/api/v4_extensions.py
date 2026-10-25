@@ -101,7 +101,7 @@ def _human(auth):
 
 def _rule_checks(registry, store, auth):
     """The rule checks of this session's installed package."""
-    bindings = store.query(auth, lambda view: view.bindings)
+    bindings, _ = store.session_metadata(auth)
     checks = registry.rule_checks.get(C.canonical(bindings))
     if checks is not None:
         return checks

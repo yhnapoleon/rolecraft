@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import Column, Integer, MetaData, String, Table, Text, insert, select, update
 
+from career_lab.engineer.seeded import SEEDED_TICKETS
 from career_lab.storage.v2_tables import v2_credentials
 
 _META = MetaData()
@@ -91,6 +92,15 @@ def _page(structured):
     return page if isinstance(page, dict) else {}
 
 
+def ticket_name(title):
+    """The short name of a seeded ticket for its full title in either language, else the title."""
+    for entry in SEEDED_TICKETS.values():
+        for language, full in entry.get("title", {}).items():
+            if title == full and entry.get("short", {}).get(language):
+                return entry["short"][language]
+    return title
+
+
 def touched(name, arguments, structured):
     """Objects one call touched and, for list reads, how many rows it returned."""
     arguments = arguments if isinstance(arguments, dict) else {}
@@ -134,6 +144,13 @@ def touched(name, arguments, structured):
     material = payload.get("material") if isinstance(payload.get("material"), dict) else None
     if material:
         add(material.get("kind"), material.get("object_id"), material.get("version"))
+    # Reading tickets names them; later rows on the same ticket borrow the name. A seeded
+    # ticket is named by its short name, not its full title.
+    if name == "engineer.tickets.read":
+        rows = page.get("tickets") if isinstance(page.get("tickets"), list) else []
+        for ticket in [*rows, page.get("ticket")]:
+            if isinstance(ticket, dict):
+                add("ticket", ticket.get("id"), title=ticket_name(ticket.get("title")))
     # Engineer writes answer with the experiment or draft they recorded.
     for key, kind in (("reproduction", "experiment"), ("trial", "experiment"), ("draft", "draft")):
         record = page.get(key)

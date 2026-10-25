@@ -31,7 +31,7 @@ function note(s: Signal, people: SignalPeople) {
   const who = s.person && people[s.person];
   return `<article class="needs-note who-${esc(s.person || '')}" data-signal-id="${esc(s.id)}">
     <p class="needs-who">${s.person ? avatar(s.person, 'xs') : ''}<b>${esc(who?.name || '')}</b><span>${esc(who?.title || '')}</span></p>
-    <p class="needs-text">${esc(s.text)}</p>
+    <p class="needs-text"${s.id.startsWith('note:') ? ` data-note-message-id="${esc(s.id)}"` : ''}>${esc(s.text)}</p>
     ${s.action || s.dismissible ? `<div class="needs-keys">${key(s, '')}${aside(s)}</div>` : ''}
   </article>`;
 }
@@ -67,7 +67,7 @@ function report(s: Signal, parts: { kicker: string; text: string }) {
   const head = `${icon('branch', 'i-xs')}<span>${esc(parts.kicker)}</span>${s.at ? `<span aria-hidden="true">·</span><time datetime="${esc(s.at)}">${esc(when(s.at))}</time>` : ''}`;
   return `<article class="needs-report is-${s.source}" data-signal-id="${esc(s.id)}">
     <p class="needs-kicker">${head}</p>
-    <p class="needs-conclusion">${toneMark(tone)}<span>${esc(parts.text)}</span>${tone === 'warn' ? `<span class="sr-only">${T('（有新增失败）', ' (new failures)')}</span>` : ''}</p>
+    <p class="needs-conclusion">${toneMark(tone)}<span>${esc(parts.text)}</span></p>
     ${s.action || s.dismissible ? `<div class="needs-keys">${key(s, '')}${aside(s)}</div>` : ''}
   </article>`;
 }

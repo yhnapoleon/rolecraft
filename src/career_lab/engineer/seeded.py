@@ -23,6 +23,8 @@ SEEDED_TICKETS: dict[str, dict[str, Any]] = {
             "zh": "委托：住宿报销上限的回答需要排查",
             "en": "Ticket: the hotel reimbursement limit answer needs investigation",
         },
+        # How a line names the ticket, e.g. the Agent's call stream ("Ran a trial on …").
+        "short": {"zh": "住宿上限委托", "en": "the hotel-limit ticket"},
     }
 }
 
@@ -80,6 +82,7 @@ def seed_record(
         operation_name=operation,
         # Rule-based like reproduction, trials and reviews, so it can be re-run exactly.
         recognize=False,
+        rule_replay=True,
     ).result
     for ref in record.citations:
         module.check_evidence(view, auth, ref)

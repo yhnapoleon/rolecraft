@@ -2,7 +2,7 @@
  * only the workbench's own static icon markup is inserted as HTML (`iconNode`). */
 import { agentMark, icon } from '../../app/art.js';
 
-export type Child = Node | string | null | undefined | false;
+export type Child = Node | string | null | undefined | false | readonly Child[];
 export type Attrs = Record<string, string | number | boolean | null | undefined>;
 
 export function el<K extends keyof HTMLElementTagNameMap>(
@@ -25,8 +25,12 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 export function append(parent: Node, ...children: Child[]) {
   for (const child of children) {
     if (child === null || child === undefined || child === false) continue;
+    if (Array.isArray(child)) {
+      append(parent, ...child);
+      continue;
+    }
     const doc = parent.ownerDocument ?? (parent as Document);
-    parent.appendChild(typeof child === 'string' ? doc.createTextNode(child) : child);
+    parent.appendChild(typeof child === 'string' ? doc.createTextNode(child) : (child as Node));
   }
 }
 
@@ -61,7 +65,7 @@ export function button(
   attrs: Attrs = {},
 ): HTMLButtonElement {
   const node = el(doc, 'button', { type: 'button', class: className, ...attrs });
-  append(node, ...(Array.isArray(label) ? label : [label]));
+  append(node, label);
   return node;
 }
 

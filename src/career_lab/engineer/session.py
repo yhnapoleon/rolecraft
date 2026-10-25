@@ -33,7 +33,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import ConfigDict, Field, JsonValue, RootModel
+from pydantic import ConfigDict, Field, JsonValue, RootModel, model_validator
 
 from career_lab.api.modules import Operation
 from career_lab.contracts import v2 as C
@@ -56,9 +56,21 @@ from .candidate import (
     supported_settings,
 )
 from .capture import capture, package_files
+from .colleague import (
+    DANIEL,
+    DANIEL_ACTOR,
+    GRACE,
+    GRACE_ACTOR,
+    credential,
+    facts_of,
+    grace_reply,
+    grace_rule,
+    pick,
+    rules_for,
+)
 from .execution import matches, run_query, suite_probes
 from .files import encode, file_ref, publish, retained_documentation
-from .golive import go_live
+from .golive import go_live, revoke
 from .pack import reproduce_pack
 from .review import review_configuration
 from .review_evaluation import stored_evaluation
@@ -86,7 +98,10 @@ IMPACT_NOTE_LIMIT = 500
 HANDOVER_LIMIT = 10  # tests handed over in one ticket
 DRAFT_TEXT_LIMIT = 2000  # explanation + statement reasons and values + unresolved descriptions
 UNRESOLVED_LIMIT = 10
-PAGE_LIMIT = 40  # tickets or reviews per listed page
+PAGE_LIMIT = 40  # tickets per listed page
+# Reviews per listed page: each row names two executors (signer and draft author), so a full
+# page of Agent-drafted reviews stays under the MCP result limit.
+REVIEW_PAGE_LIMIT = 30
 QUERY_SUMMARY = 100
 ANSWER_SUMMARY = 160
 EXPLANATION_SUMMARY = 160
@@ -103,16 +118,65 @@ LISTED_TRIALS = 10
 LISTED_DRAFTS = 10
 DETAIL_BUDGET = 19_500
 RETRIEVAL_NOTE = {
-    "zh": "试跑与复核固定使用规则版检索，与是否配置识别器无关。",
-    "en": "Trials and reviews always use the rule-based retrieval, whether or not "
-    "recognizers are configured.",
+    "zh": "复现、试跑与复核固定使用规则版检索与原文抽取，保留原配置记录；不重放模型生成。",
+    "en": "Reproduction, trials and reviews use rule-based retrieval and extraction. "
+    "Original configurations are retained; model generation is not replayed.",
 }
 
 
-class TicketCreate(C.V2):
+class _Create(C.V2):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-    source: Literal["seeded", "tests"] = Field(alias="from")
+
+
+class SeededTicket(_Create):
+    source: Literal["seeded"] = Field(alias="from")
+
+
+class TestsTicket(_Create):
+    source: Literal["tests"] = Field(alias="from")
     test_ids: tuple[C.Identifier, ...] = ()
+    # "colleague": Daniel takes it (a product manager's practice only); "self": the person.
+    assignee: Literal["self", "colleague"] = "self"
+    # The work item the tests came from, so the report lands back on it.
+    task_id: C.Identifier | None = None
+
+
+class RoleChoice(_Create):
+    """The one role this practice is played as; written once, right after it starts."""
+
+    source: Literal["role"] = Field(alias="from")
+    role: Literal["pm", "engineer"]
+
+
+class TicketDecision(_Create):
+    """What happens to a colleague's report: in a product manager's practice the person asks,
+    returns or records that they applied it (through ``configuration.apply`` themself); in an
+    engineer's practice the person hands their signed report to Grace."""
+
+    source: Literal["decision"] = Field(alias="from")
+    ticket_id: C.Identifier
+    decision: Literal["ask", "return", "apply", "handover"]
+    note: Annotated[str, Field(max_length=1000)] = ""
+    # For "apply": the configuration version the person's own apply produced.
+    config_version: Annotated[int, Field(ge=0)] | None = None
+
+
+# One body for POST .../engineer/tickets, told apart by "from"; each kind is strict on its own
+# (Contract forbids extra fields), so a mixed body is a 422 rather than a guess. The operation
+# registry takes a V2 model, so the union sits under ``body``: the request is wrapped as it
+# arrives and its shape on the wire is unchanged.
+class TicketCreate(C.V2):
+    body: Annotated[
+        SeededTicket | TestsTicket | RoleChoice | TicketDecision,
+        Field(discriminator="source"),
+    ]
+
+    @model_validator(mode="before")
+    @classmethod
+    def wrap(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "body" not in data:
+            return {"body": data}
+        return data
 
 
 class TicketQuery(C.V2):
@@ -290,14 +354,31 @@ class EngineerService:
         self, store: V2Store, payload: TicketCreate, auth: C.AuthContext, request_id: str
     ) -> dict[str, Any]:
         human_only(auth, "engineer_ticket_requires_human")
+        body = payload.body
+        if isinstance(body, RoleChoice):
+            return self.set_role(store, body, auth)
+        if isinstance(body, TicketDecision):
+            return self.decide(store, body, auth, request_id)
+        colleague = isinstance(body, TestsTicket) and body.assignee == "colleague"
+        if colleague and self.learner_role(auth.session_id) != "pm":
+            # Daniel takes tickets only in a product manager's practice; an engineer's practice
+            # (or one with no role yet, an older one) keeps its own desk.
+            raise C.ProtocolError("assignee_not_allowed", status=409)
+        result = self.open_ticket(store, body, auth)
+        if colleague:
+            result["ticket"] = self.run_daniel(store, auth, result["ticket"]["id"], request_id)
+        return result
+
+    def open_ticket(
+        self, store: V2Store, payload: "SeededTicket | TestsTicket", auth: C.AuthContext
+    ) -> dict[str, Any]:
         module = self.bound_module(store, auth, OP_CREATE)
         # Without an engineer suite the review would run authored probes with their own
         # preconditions under one configuration: false regressions. No engineer path then.
         require_suite(module.package)
         sid = auth.session_id
+        colleague = isinstance(payload, TestsTicket) and payload.assignee == "colleague"
         if payload.source == "seeded":
-            if payload.test_ids:
-                raise C.ProtocolError("engineer_ticket_source_invalid")
             _, query = seeded_ticket(module)
             ticket_id = record_id("ticket", [sid, "seeded", module.package.bundle.id, query])
         else:
@@ -309,7 +390,10 @@ class EngineerService:
                     "engineer_test_selection_too_large",
                     f"at most {HANDOVER_LIMIT} tests per ticket",
                 )
-            ticket_id = record_id("ticket", [sid, "tests", ids])
+            # Daniel's ticket is its own: the same tests handed to him are not the person's.
+            ticket_id = record_id(
+                "ticket", [sid, "tests", ids, *(["colleague"] if colleague else [])]
+            )
         folder = self.files.ticket(sid, ticket_id)
         with self.files.lock(sid, "tickets"):
             if (folder / "ticket.json").is_file():
@@ -349,9 +433,406 @@ class EngineerService:
                     "target_test_ids": [ref["object_id"] for ref in pack["failures"]],
                     "seed_test_sha256": seed_sha,
                     "world_setup": setup,
+                    "assignee": "colleague" if colleague else "self",
+                    **(
+                        {
+                            "origin": {
+                                "task_id": payload.task_id,
+                                "test_ids": ids,
+                            },
+                            "handover": {"state": "queued", "decisions": []},
+                        }
+                        if colleague
+                        else {}
+                    ),
                 },
             )
         return {"ticket": self.detail(module, sid, ticket_id), "created": True}
+
+    # The practice's one role -------------------------------------------------------------
+    # Kept in the engineer directory beside the tickets: the session record has no role field
+    # and the public contract stays unchanged. Debt: it belongs with the session's bindings
+    # (v2_sessions) once the contract moves; see the 223 receipt.
+
+    def role_path(self, sid: str) -> Path:
+        return self.files.session(sid) / "learner-role.json"
+
+    def learner_role(self, sid: str) -> str | None:
+        path = self.role_path(sid)
+        return read_json(path).get("role") if path.is_file() else None
+
+    def set_role(self, store: V2Store, payload: RoleChoice, auth: C.AuthContext) -> dict[str, Any]:
+        self.bound_module(store, auth, OP_CREATE)
+        sid = auth.session_id
+        with self.files.lock(sid, "role"):
+            current = self.learner_role(sid)
+            if current is not None and current != payload.role:
+                raise C.ProtocolError("learner_role_fixed", status=409)
+            if current is None:
+                path = self.role_path(sid)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                write_json(
+                    path,
+                    {
+                        "schema_version": 1,
+                        "role": payload.role,
+                        "set_at": now(),
+                        "set_by": executor_view(auth.executor),
+                    },
+                )
+        return {"learner_role": payload.role, "created": current is None}
+
+    # Daniel: the rule orchestration ------------------------------------------------------
+
+    def handover_state(self, sid: str, ticket_id: str, **changes: Any) -> dict[str, Any]:
+        folder, ticket = self.ticket(sid, ticket_id)
+        ticket["handover"] = {**ticket.get("handover", {}), **changes}
+        write_json(folder / "ticket.json", ticket)
+        return ticket["handover"]
+
+    def run_daniel(
+        self, store: V2Store, owner: C.AuthContext, ticket_id: str, request_id: str
+    ) -> dict[str, Any]:
+        """Reproduce, try candidates from the rule table, draft and sign as Daniel, through the
+        ordinary engineer tools and the same trusted review. A run that cannot finish says so
+        (failed with a reason); it is never dressed up as a report."""
+        module = self.bound_module(store, owner, OP_CREATE)
+        sid = owner.session_id
+        folder, ticket = self.ticket(sid, ticket_id)
+        state = ticket.get("handover", {}).get("state")
+        if state in (
+            "reproducing",
+            "trying",
+            "signing",
+            "reported",
+            "applied",
+            "applied_with_changes",
+        ):
+            return self.detail(module, sid, ticket_id)
+        language = ticket["work_language"]
+        auth = credential(
+            store,
+            owner,
+            DANIEL,
+            ("read", "act", "submit"),
+            (OP_READ, OP_REPRODUCE, OP_TRIAL, OP_DRAFT, OP_SIGN),
+        )
+        run = f"{request_id}-daniel-{len(ticket.get('handover', {}).get('runs', []))}"
+        try:
+            self.handover_state(sid, ticket_id, state="reproducing", started_at=now())
+            self.reproduce(store, TicketTarget(ticket_id=ticket_id), auth, run + "-reproduce")
+            index, pack_files = verified_pack(
+                store,
+                module,
+                auth,
+                folder / "pack",
+                seeded=self.seeds(folder, ticket),
+                operation=OP_TRIAL,
+            )
+            targets = [C.TestResultV2.model_validate_json(pack_files[r.path]) for r in index.tests]
+            baseline = C.AssistantConfig.model_validate_json(pack_files[index.config.path])
+            rules = rules_for(facts_of(targets))
+            if not rules:
+                return self.daniel_failed(module, sid, ticket_id, "no_rule")
+            self.handover_state(sid, ticket_id, state="trying")
+            tried, skipped = [], []
+            for rule in rules:
+                try:
+                    candidate_config(module.package, baseline, dict(rule.changes), sid)
+                except C.ProtocolError as error:
+                    skipped.append({"rule": rule.id, "code": error.code})
+                    continue
+                out = self.trial(
+                    store,
+                    TrialInput(ticket_id=ticket_id, changes=dict(rule.changes)),
+                    auth,
+                    f"{run}-trial-{rule.id}",
+                )["trial"]
+                tried.append((rule, out))
+            if not tried:
+                return self.daniel_failed(module, sid, ticket_id, "no_valid_candidate", skipped)
+            rule, chosen = pick(tried)
+            public = [row for row in chosen["rows"] if row["kind"] == "public_probe"]
+            failing = [row["id"] for row in public if row["result"] != "pass"]
+            changes = chosen["changes"]
+            self.handover_state(sid, ticket_id, state="signing")
+            draft = self.draft(
+                store,
+                DraftInput(
+                    ticket_id=ticket_id,
+                    changes=dict(rule.changes),
+                    explanation=rule.why[language],
+                    change_statements=tuple(
+                        ChangeStatement(
+                            field=name,
+                            before=value["before"],
+                            after=value["after"],
+                            reason=rule.why[language][:500],
+                        )
+                        for name, value in changes.items()
+                    ),
+                    claimed_results={
+                        row["id"]: (
+                            "pass"
+                            if row["result"] == "pass"
+                            else "error"
+                            if row["result"] == "error"
+                            else "fail"
+                        )
+                        for row in public
+                    },
+                    unresolved=tuple(
+                        UnresolvedInput(
+                            description=(
+                                "这条公开检查在这个改动下仍未通过。"
+                                if language == "zh"
+                                else "This public check still fails with this change."
+                            ),
+                            probe_ids=(probe,),
+                        )
+                        for probe in failing[:UNRESOLVED_LIMIT]
+                    ),
+                ),
+                auth,
+                run + "-draft",
+            )["draft"]
+            signed = self._sign(
+                store,
+                SignInput(
+                    ticket_id=ticket_id,
+                    draft_id=draft["id"],
+                    impact_note=rule.why[language][:IMPACT_NOTE_LIMIT],
+                ),
+                auth,
+                run + "-sign",
+                actor=DANIEL_ACTOR,
+            )
+            self.handover_state(
+                sid,
+                ticket_id,
+                state="reported",
+                actor=DANIEL_ACTOR,
+                rule={"id": rule.id, "why": rule.why[language], "changes": changes},
+                tried=[
+                    {
+                        "rule": r.id,
+                        "trial_id": t["id"],
+                        "changes": t["changes"],
+                        "counts": t["counts"],
+                    }
+                    for r, t in tried
+                ],
+                skipped=skipped,
+                review_id=signed["signoff"]["review_id"],
+                review_status=signed["review"]["status"],
+                reported_at=now(),
+            )
+        except C.ProtocolError as error:
+            return self.daniel_failed(module, sid, ticket_id, error.code)
+        finally:
+            revoke(store, auth)
+        return self.detail(module, sid, ticket_id)
+
+    def daniel_failed(
+        self,
+        module: ScenarioModule,
+        sid: str,
+        ticket_id: str,
+        reason: str,
+        skipped: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        self.handover_state(
+            sid,
+            ticket_id,
+            state="failed",
+            failed_reason=reason,
+            actor=DANIEL_ACTOR,
+            skipped=skipped or [],
+            failed_at=now(),
+        )
+        return self.detail(module, sid, ticket_id)
+
+    # Decisions on a colleague's report ---------------------------------------------------
+
+    def decide(
+        self, store: V2Store, payload: TicketDecision, auth: C.AuthContext, request_id: str
+    ) -> dict[str, Any]:
+        module = self.bound_module(store, auth, OP_CREATE)
+        sid = auth.session_id
+        role = self.learner_role(sid)
+        folder, ticket = self.ticket(sid, payload.ticket_id)
+        if payload.decision == "handover":
+            if role != "engineer" or ticket.get("assignee") == "colleague":
+                raise C.ProtocolError("decision_not_allowed", status=409)
+            return self.grace_handover(store, module, auth, ticket, request_id)
+        if role != "pm" or ticket.get("assignee") != "colleague":
+            raise C.ProtocolError("decision_not_allowed", status=409)
+        handover = ticket.get("handover", {})
+        if handover.get("state") not in ("reported", "applied", "applied_with_changes", "returned"):
+            raise C.ProtocolError("handover_not_reported", status=409)
+        config = store.query(auth, lambda view: module.snapshot(view).config, operation=OP_CREATE)
+        current = config.config_version
+        entry: dict[str, Any] = {
+            "decision": payload.decision,
+            "note": payload.note,
+            "at": now(),
+            "by": executor_view(auth.executor),
+            "config_version": current,
+        }
+        if payload.decision == "apply":
+            # The person applied it themself through configuration.apply; this records that the
+            # current configuration is the one their apply produced, and that it carries the
+            # report's change. Every setting the report changed must have the report's value
+            # (otherwise 409: the record would claim a change that is not there); settings the
+            # report left alone but the person also changed are listed, as "applied_with_changes".
+            if payload.config_version is None or payload.config_version != current:
+                raise C.ProtocolError("config_version_mismatch", status=409)
+            entry.update(self.compare_with_report(folder, config))
+        state = {"apply": "applied", "return": "returned"}.get(payload.decision, handover["state"])
+        if entry.get("result") == "applied_with_changes":
+            state = "applied_with_changes"
+        with self.files.lock(sid, payload.ticket_id):
+            self.handover_state(
+                sid,
+                payload.ticket_id,
+                state=state,
+                decisions=[*handover.get("decisions", []), entry],
+            )
+        return {"ticket": self.detail(module, sid, payload.ticket_id), "decision": entry}
+
+    def compare_with_report(self, folder: Path, config: C.AssistantConfig) -> dict[str, Any]:
+        signoffs = self.signoffs(folder)
+        if not signoffs:
+            raise C.ProtocolError("handover_not_reported", status=409)
+        draft = read_json(folder / "drafts" / (signoffs[-1]["draft_id"] + ".json"))
+        reported = supported_settings(C.AssistantConfig.model_validate(draft["candidate"]))
+        now_settings = supported_settings(config)
+        changed = set(draft["changes"])
+        missing = sorted(name for name in changed if now_settings[name] != reported[name])
+        if missing:
+            raise C.ProtocolError(
+                "config_not_from_report",
+                "the current configuration does not carry the report's change: "
+                + ", ".join(missing),
+                status=409,
+            )
+        extra = {
+            name: {"report": reported[name], "current": now_settings[name]}
+            for name in sorted(set(EDITABLE_FIELDS) - changed)
+            if now_settings[name] != reported[name]
+        }
+        return {
+            "result": "applied_with_changes" if extra else "applied",
+            "review_id": signoffs[-1]["review_id"],
+            "other_changes": extra,
+        }
+
+    def grace_handover(
+        self,
+        store: V2Store,
+        module: ScenarioModule,
+        owner: C.AuthContext,
+        ticket: dict[str, Any],
+        request_id: str,
+    ) -> dict[str, Any]:
+        """Grace takes the person's latest signed report for the product side and decides by
+        rule (colleague.grace_rule). Applying goes through configuration.apply as Grace, with
+        the same version check as anyone's apply; the events say Grace applied it."""
+        sid = owner.session_id
+        folder = self.files.ticket(sid, ticket["id"])
+        signoffs = self.signoffs(folder)
+        if not signoffs:
+            raise C.ProtocolError("handover_needs_signoff", status=409)
+        last = signoffs[-1]
+        language = ticket["work_language"]
+        evaluation = stored_evaluation(self.files.private_reviews(sid), last["review_id"])
+        decision = grace_rule(evaluation.model_dump(mode="json"), last["review_status"])
+        decision.update(review_id=last["review_id"], actor=GRACE_ACTOR, at=now())
+        if decision["result"] == "applied":
+            draft = read_json(folder / "drafts" / (last["draft_id"] + ".json"))
+            index, pack_files = verified_pack(
+                store,
+                module,
+                owner,
+                folder / "pack",
+                seeded=self.seeds(folder, ticket),
+                operation=OP_CREATE,
+            )
+            built_on = C.AssistantConfig.model_validate_json(pack_files[index.config.path])
+            applied = self.grace_apply(store, module, owner, built_on, draft, language)
+            if applied is None:
+                decision.update(result="returned", reasons=["config_moved"])
+            else:
+                decision.update(applied)
+        decision["reply"] = grace_reply(language, decision)
+        handover = ticket.get("handover", {})
+        with self.files.lock(sid, ticket["id"]):
+            self.handover_state(
+                sid,
+                ticket["id"],
+                state=decision["result"],
+                receiver=GRACE_ACTOR,
+                decisions=[*handover.get("decisions", []), decision],
+            )
+        return {"ticket": self.detail(module, sid, ticket["id"]), "decision": decision}
+
+    def grace_apply(
+        self,
+        store: V2Store,
+        module: ScenarioModule,
+        owner: C.AuthContext,
+        built_on: C.AssistantConfig,
+        draft: dict[str, Any],
+        language: str,
+    ) -> dict[str, Any] | None:
+        """None when the configuration moved since the report was built (version check)."""
+
+        def current(view: TransactionView):
+            return view.state, module.snapshot(view).config
+
+        state, config = store.query(owner, current, operation=OP_CREATE)
+        if config.config_version != built_on.config_version:
+            return None
+        settings = C.AssistantConfig.model_validate(draft["candidate"]).model_dump(mode="json")
+        before, after = config.config_version, config.config_version + 1
+        note = {
+            "origin": "colleague_apply",
+            "note": (
+                f"已由 Grace 应用，配置从 v{before} 变为 v{after}"
+                if language == "zh"
+                else f"Applied by Grace: configuration v{before} → v{after}"
+            ),
+            "actor": GRACE_ACTOR,
+        }
+        command = C.Command(
+            schema_version=2,
+            request_id=f"grace-apply-{draft['id']}",
+            operation="configuration.apply",
+            payload={
+                "base": ref_for("config", config).model_dump(mode="json"),
+                "settings": {name: settings[name] for name in EDITABLE_FIELDS},
+            },
+            expected_version=state.business_seq,
+            expected_workspace_revision=state.workspace_revision,
+        )
+        handler = self.apply_handler()
+
+        def labelled(view: TransactionView, cmd: C.Command, auth: C.AuthContext):
+            mutation = handler(view, cmd, auth)
+            events = tuple(
+                event.model_copy(update={"data": {**event.data, **note}})
+                for event in mutation.events
+            )
+            return replace(mutation, events=events)
+
+        context = credential(
+            store, owner, GRACE, ("read", "act"), ("configuration.apply", "apply_config")
+        )
+        try:
+            store.execute(context, command, labelled, capability="act")
+        finally:
+            revoke(store, context)
+        return {"from_version": before, "to_version": after}
 
     @staticmethod
     def check_baseline(store: V2Store, module: ScenarioModule, auth: C.AuthContext) -> None:
@@ -397,8 +878,12 @@ class EngineerService:
     ) -> dict[str, Any]:
         module = self.module(view.bindings)
         sid = auth.session_id
+        role = self.learner_role(sid)
         if payload.ticket_id is not None:
-            return {"ticket": self.detail(module, sid, payload.ticket_id, view)}
+            return {
+                "ticket": self.detail(module, sid, payload.ticket_id, view),
+                "learner_role": role,
+            }
         folder = self.files.tickets(sid)
         rows = []
         if folder.is_dir():
@@ -410,7 +895,8 @@ class EngineerService:
         return {
             "tickets": rows[
                 payload.cursor : payload.cursor + max(1, min(payload.limit, PAGE_LIMIT))
-            ]
+            ],
+            "learner_role": role,
         }
 
     def ticket_summary(self, ticket: dict[str, Any]) -> dict[str, Any]:
@@ -423,6 +909,12 @@ class EngineerService:
             "created_at": ticket["created_at"],
             "created_by": ticket["created_by"],
             "role": ticket["role"],
+            "assignee": ticket.get("assignee", "self"),
+            **(
+                {"handover": ticket["handover"], "origin": ticket.get("origin")}
+                if "handover" in ticket
+                else {}
+            ),
         }
 
     def title(self, ticket: dict[str, Any]) -> str:
@@ -539,7 +1031,16 @@ class EngineerService:
         return sorted(records(folder), key=lambda row: (row["created_at"], row["id"]))
 
     def signoffs(self, folder: Path) -> list[dict[str, Any]]:
-        return [row for row in self.ordered(folder / "signoffs") if row["state"] == "complete"]
+        rows = self.ordered(folder / "signoffs")
+        return [self.with_author(folder, row) for row in rows if row["state"] == "complete"]
+
+    @staticmethod
+    def with_author(folder: Path, row: dict[str, Any]) -> dict[str, Any]:
+        """A sign-off written before the draft's author was kept reads it from the draft."""
+        if "draft_executor" not in row:
+            draft = read_json(folder / "drafts" / (row["draft_id"] + ".json"))
+            row["draft_executor"] = draft["executor"]
+        return row
 
     @staticmethod
     def budget(signoffs: list[dict[str, Any]]) -> dict[str, int]:
@@ -547,13 +1048,15 @@ class EngineerService:
 
     @staticmethod
     def trial_summary(row: dict[str, Any]) -> dict[str, Any]:
-        """A listed experiment: which settings it changed; the full change is in its result."""
+        """A listed experiment: each changed setting with its ticket-baseline value and the
+        value tried; per-probe rows stay in the experiment's own result."""
         return {
             **{
                 key: row[key]
                 for key in ("id", "kind", "executor", "role", "created_at", "config_hash")
             },
             "changed_fields": list(row["changes"]),
+            "changes": row["changes"],
             **{key: row[key] for key in ("counts", "status")},
         }
 
@@ -581,7 +1084,12 @@ class EngineerService:
             "status": row["review_status"],
             "signed_at": row["signed_at"],
             "signed_by": row["signed_by"],
+            # An AI colleague who signed under its own executor (Daniel); absent for the person,
+            # whose review keeps its shape.
+            **({"actor": row["actor"]} if row.get("actor") else {}),
             "draft_id": row["draft_id"],
+            # Who wrote the draft the person signed: the person or their Agent.
+            "draft_executor": row["draft_executor"],
         }
 
     # Experiments -------------------------------------------------------------------------
@@ -890,6 +1398,22 @@ class EngineerService:
         self, store: V2Store, payload: SignInput, auth: C.AuthContext, request_id: str
     ) -> dict[str, Any]:
         human_only(auth, "engineer_signoff_requires_human")
+        # In a product manager's practice the person does not sign engineering work: Daniel
+        # does. The role never switches inside one practice.
+        if self.learner_role(auth.session_id) == "pm":
+            raise C.ProtocolError("learner_role_cannot_sign", status=409)
+        return self._sign(store, payload, auth, request_id)
+
+    def _sign(
+        self,
+        store: V2Store,
+        payload: SignInput,
+        auth: C.AuthContext,
+        request_id: str,
+        actor: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """The sign-off and its trusted review, for the person or, with ``actor``, for an AI
+        colleague signing under its own executor (never the person's)."""
         note = payload.impact_note.strip()
         if not note:
             raise C.ProtocolError("engineer_impact_note_required")
@@ -922,6 +1446,7 @@ class EngineerService:
         with self.files.lock(sid, payload.ticket_id):
             record = read_json(path) if path.is_file() else None
             if record is not None and record["state"] == "complete":
+                record = self.with_author(folder, record)
                 return self.signed(sid, folder, record, already_signed=True)
             if self.budget(self.signoffs(folder))["used"] >= REVIEW_LIMIT:
                 raise C.ProtocolError("engineer_review_budget_exhausted", status=409)
@@ -934,8 +1459,10 @@ class EngineerService:
                     "signed_by": signer,
                     "role": ROLE,
                     "created_at": now(),
+                    **({"actor": actor} if actor else {}),
                 }
             record["impact_note"] = note
+            record.setdefault("draft_executor", draft["executor"])
             write_json(path, record)
             staged = folder / "submission-inputs" / signoff_id
             publish(staged, self.submission_files(folder, record, draft, module, auth))
@@ -1046,6 +1573,7 @@ class EngineerService:
                 "ticket_id": record["ticket_id"],
                 "draft_id": record["draft_id"],
                 "signed_by": record["signed_by"],
+                **({"actor": record["actor"]} if record.get("actor") else {}),
                 "role": record["role"],
                 "impact_note": record["impact_note"],
                 "signed_at": record["signed_at"],
@@ -1093,7 +1621,8 @@ class EngineerService:
                 raise C.ProtocolError("engineer_review_not_found", status=404)
             return {"review": self.review_view(sid, match)}
         unique = list({row["review_id"]: row for row in rows}.values())
-        page = unique[payload.cursor : payload.cursor + max(1, min(payload.limit, PAGE_LIMIT))]
+        width = max(1, min(payload.limit, REVIEW_PAGE_LIMIT))
+        page = unique[payload.cursor : payload.cursor + width]
         return {
             "reviews": [{**self.review_summary(row), "ticket_id": row["ticket_id"]} for row in page]
         }

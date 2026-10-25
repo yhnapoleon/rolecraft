@@ -1,0 +1,464 @@
+/* Lens chips that open, and the profile card they open (profile-card.ts). The chip is the same
+   capsule with a small chevron; the card is instrument material under the row: what this call
+   found (its own numbers), how it works, and the published figures on the same measure. Colour
+   keeps its meaning: the axis is ink, the side past a threshold a light ink wash, never red. */
+.rc-sig--key {
+  border: 0;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background-color var(--fast) var(--ease-out);
+}
+.rc-sig--key:hover {
+  background: var(--fill-2);
+}
+.rc-sig--key[data-tone='good']:hover,
+.rc-sig--key[data-tone='bad']:hover {
+  filter: saturate(1.15);
+}
+.rc-sig--key:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.rc-sig--key[aria-expanded='true'] {
+  background: var(--ink);
+  color: var(--on-primary);
+}
+.rc-sig--key[aria-expanded='true'] .rc-cat {
+  color: inherit;
+  opacity: 1;
+  border-color: currentColor;
+}
+.rc-sig__chev {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+  transition: transform var(--fast) var(--ease-out);
+}
+.rc-sig--key[aria-expanded='true'] .rc-sig__chev {
+  transform: rotate(180deg);
+}
+
+.rc-card-slot {
+  container-type: inline-size;
+}
+.rc-card-slot:not([hidden]) {
+  animation: rc-card-in var(--mid) var(--ease-out);
+}
+@keyframes rc-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.rc-card {
+  margin: 8px 0 2px;
+  padding: 14px 16px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.rc-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+.rc-card__name {
+  margin: 0;
+  font: 600 15px/1.3 var(--display);
+}
+.rc-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+}
+.rc-card .rc-family,
+.rc-mode {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.rc-mode[data-mode='real'] {
+  background: var(--ink);
+  color: var(--on-primary);
+}
+.rc-mode[data-mode='fallback'],
+.rc-mode[data-mode='replay'] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ink-4);
+  color: var(--ink-2);
+}
+.rc-card__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 0 24px;
+}
+.rc-card__how {
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+.rc-card__eyebrow {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.rc-card__now p {
+  margin: 0 0 8px;
+}
+.rc-card__method {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.rc-card__note {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.rc-card__quiet {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.rc-card__rev {
+  margin: 6px 0 0;
+  font: 11px/1.4 var(--mono);
+  color: var(--ink-3);
+  word-break: break-all;
+}
+/* Where a score falls against its threshold. */
+.rc-axis {
+  position: relative;
+  height: 46px;
+  margin: 18px 4px 6px;
+}
+.rc-axis::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--line-2);
+}
+.rc-axis__beyond {
+  position: absolute;
+  right: 0;
+  top: 16px;
+  height: 14px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, var(--fill-2) 0 4px, transparent 4px 8px);
+}
+.rc-axis__tick {
+  position: absolute;
+  top: 12px;
+  width: 2px;
+  height: 22px;
+  margin-left: -1px;
+  background: var(--ink-2);
+}
+.rc-axis__tick b,
+.rc-axis__dot b {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 500 11px/1 var(--mono);
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+.rc-axis__tick b {
+  top: 26px;
+}
+.rc-axis__dot {
+  position: absolute;
+  top: 16px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow:
+    inset 0 0 0 3px var(--ink),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+  animation: rc-dot-in var(--slow) var(--ease-out) both;
+}
+.rc-axis__dot[data-over='true'] {
+  background: var(--ink);
+}
+.rc-axis__dot b {
+  top: -16px;
+  color: var(--ink);
+  font-weight: 600;
+}
+@keyframes rc-dot-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+.rc-card__big {
+  font-size: 14px;
+}
+.rc-card__big b {
+  font: 600 20px/1 var(--display);
+  margin-right: 4px;
+}
+.rc-card__change {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font: 600 22px/1.2 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+.rc-card__change s {
+  color: var(--ink-3);
+  font-weight: 500;
+  text-decoration-thickness: 1.5px;
+}
+.rc-card__change span[aria-hidden] {
+  color: var(--ink-3);
+  font-size: 16px;
+}
+.rc-card__metrics {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.rc-card__metrics li {
+  display: grid;
+  gap: 1px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.rc-card__metrics .rc-metric-text {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.rc-card__metrics .rc-metric-text b {
+  font-size: 15px;
+}
+.rc-card__metrics .rc-metric-set {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.rc-card__open {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-2);
+}
+.rc-card__open:hover {
+  text-decoration-color: currentColor;
+}
+
+.rc-strip {
+  display: flex;
+  height: 22px;
+  margin: 8px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  gap: 2px;
+}
+.rc-strip i {
+  display: grid;
+  place-items: center;
+  min-width: 4.5em;
+  font: 500 11px/1 var(--sans);
+  font-style: normal;
+  white-space: nowrap;
+}
+.rc-strip i[data-k='supported'] {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.rc-strip i[data-k='contradicted'] {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.rc-strip i[data-k='insufficient'] {
+  background: var(--fill);
+  color: var(--ink-2);
+}
+.rc-bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rc-bars li {
+  display: grid;
+  grid-template-columns: 7em 1fr 3em;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.rc-bars li[data-top] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.rc-bars__bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+}
+.rc-bars__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink-3);
+}
+.rc-bars li[data-top] .rc-bars__bar i {
+  background: var(--ink);
+}
+.rc-bars__p {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rc-hits,
+.rc-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rc-hits li {
+  display: grid;
+  grid-template-columns: 1.6em 1fr;
+  gap: 0 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.rc-hits__rank {
+  font: 600 12px/1.5 var(--mono);
+  color: var(--ink-3);
+}
+.rc-hits q {
+  grid-column: 2;
+  color: var(--ink-3);
+  quotes: '“' '”';
+}
+.rc-lines li {
+  display: grid;
+  gap: 2px;
+  padding: 5px 0 5px 12px;
+  border-left: 3px solid var(--ink-4);
+  margin-bottom: 4px;
+  font-size: 12.5px;
+}
+.rc-lines li[data-label='supported'] {
+  border-left-color: var(--good);
+}
+.rc-lines li[data-label='contradicted'],
+.rc-lines li[data-label='leak'] {
+  border-left-color: var(--bad);
+}
+.rc-lines li[data-label='insufficient'],
+.rc-lines li[data-label='deferred'] {
+  border-left-style: dashed;
+}
+.rc-lines q {
+  color: var(--ink);
+}
+.rc-lines__mark {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+.rc-arbiter {
+  display: flex;
+  gap: 18px;
+  margin: 4px 0 0;
+}
+.rc-arbiter dt {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.rc-arbiter dd {
+  margin: 0;
+  font: 500 13px/1.4 var(--mono);
+}
+/* A narrow place (one column of the bench's before / after, a phone): one column. */
+@container (max-width: 560px) {
+  .rc-card__cols {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .rc-card__how {
+    padding: 12px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+@media (max-width: 720px) {
+  .rc-card__cols {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .rc-card__how {
+    padding: 12px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-card-slot:not([hidden]),
+  .rc-axis__dot {
+    animation: none;
+  }
+}
+
+/* No translucent text on a translucent ancestor. Expanded fallback chips use the same
+   explicit ink/on-primary pair as the other expanded chips. */
+.rc-sig.rc-sig--key { color: var(--ink); }
+.rc-sig.rc-sig--key .rc-cat { color: var(--ink); opacity: 1; white-space: normal; }
+.rc-sig.rc-sig--key[aria-expanded='true'] { background: var(--ink); color: var(--on-primary); }
+.rc-sig.rc-sig--key[aria-expanded='true'] .rc-cat { color: var(--on-primary); opacity: 1; }
+
+.rc-compare { margin: 12px 0; }
+.rc-compare__question { font-weight: 600; }
+.rc-compare__pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.rc-compare__pair > div { min-width: 0; padding: 12px; background: var(--paper); border-radius: var(--r-paper); box-shadow: var(--shadow-paper); }
+.rc-compare h5 { margin: 0 0 6px; font-size: 12px; }
+.rc-compare blockquote { margin: 10px 0; font-size: 15px; line-height: 1.55; }
+.rc-compare q { display: block; margin: 4px 0; font-size: 12px; color: var(--ink-2); }
+.rc-compare__versions { font-size: 11px; }
+.rc-card[data-task='drift'] .rc-card__cols { grid-template-columns: 1fr; }
+@media (max-width: 720px) { .rc-compare__pair { grid-template-columns: 1fr; } }
+
+.rc-report-facts { margin: 0; display: grid; gap: 12px; }
+.rc-report-facts > div { display: grid; grid-template-columns: 100px 1fr; gap: 12px; font-size: 13px; }
+.rc-report-facts dt { color: var(--ink-2); }
+.rc-report-facts dd { margin: 0; }
+@media (max-width: 720px) { .rc-report-facts > div { grid-template-columns: 1fr; gap: 3px; } }
+
+.run-lens { margin: 12px 0; }
+.run-baseline-signals { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
+.run-baseline-signals summary { cursor: pointer; }
+
+.rc-compare__anchor { background: var(--surface-2); padding: 8px 0; border-bottom: 1px solid var(--line-2); }
+.rc-compare__anchor h4 { margin: 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+.rc-compare__anchor p { margin: 3px 0 0; font-size: 12px; color: var(--ink-2); }
+@media (max-width: 720px) {
+ .rc-compare__anchor { position: sticky; top: calc(var(--progress-dock-height, 0px) + 12px); z-index: 2; }
+ .rc-compare__anchor h4 { font-size: 18px; }
+}

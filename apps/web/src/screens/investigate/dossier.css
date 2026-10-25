@@ -1,0 +1,353 @@
+/* The findings dossier: a quiet head on the desk, then one sheet of paper (the board's paper:
+   --paper, --r-paper, --shadow-paper). Lists are hairline rows, no cards. */
+.dossier-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 40px 96px;
+  display: grid;
+  gap: 20px;
+}
+.dossier-head {
+  display: grid;
+  gap: 6px;
+}
+.dossier-kicker {
+  font: 500 12.5px / 1.3 var(--sans);
+  color: var(--ink-3);
+}
+.dossier-title {
+  font: 600 28px / 1.15 var(--sans);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+:lang(zh) .dossier-title {
+  letter-spacing: 0;
+}
+.dossier-note {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+/* The way back sits under the line, its text aligned with the line's start. */
+.dossier-note .btn {
+  margin-left: -10px;
+}
+.dossier .dz-docs {
+  margin: 0;
+}
+.dossier {
+  display: grid;
+  gap: 28px;
+  padding: 26px 32px 30px;
+  border-radius: var(--r-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+/* Four readings across the top, in the instrument language of the board's conditions. */
+.dz-readings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px 28px;
+  margin: 0;
+}
+.dz-reading {
+  display: grid;
+  gap: 4px;
+  padding-top: 10px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.dz-reading dt {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.dz-reading dd {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+}
+.dz-reading b {
+  font: 500 30px / 1 var(--sans);
+  font-stretch: 78%;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--ink);
+}
+.dz-reading span {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.dz-part {
+  display: grid;
+  gap: 8px;
+}
+.dz-part-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.dz-part-head h2 {
+  font: 600 16px / 1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+:lang(zh) .dz-part-head h2 {
+  letter-spacing: 0;
+}
+.dz-count {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.dz-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dz-rows > li {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.dz-rows > li:last-child {
+  box-shadow:
+    inset 0 1px 0 var(--line),
+    inset 0 -1px 0 var(--line);
+}
+.dz-row {
+  appearance: none;
+  width: 100%;
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+p.dz-row {
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.dz-row:hover,
+  .dz-work:hover {
+    background: var(--fill);
+  }
+}
+.dz-row:focus-visible,
+.dz-work:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.dz-i {
+  color: var(--ink-3);
+}
+.dz-v {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dz-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--ink-2);
+  background: var(--fill);
+}
+.dz-tag.is-cited {
+  color: var(--ink);
+  background: var(--fill-2);
+}
+.dz-tag.is-new {
+  color: var(--warn);
+  background: var(--warn-tint);
+}
+/* Documents: icon, title in the world's serif, how far you got with it, version. */
+/* Colleagues: who, what you asked, the first sentence of their latest reply. */
+.dz-person {
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: start;
+}
+.dz-person-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.dz-person-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.dz-person-name b {
+  font-weight: 600;
+}
+.dz-person-name small {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.dz-said {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.dz-said > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dz-said-who {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.dz-said.is-none {
+  display: block;
+  color: var(--ink-3);
+}
+.dz-open {
+  align-self: center;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+/* Tests: the question you asked, the first line of the answer, the versions it used. */
+.dz-test {
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: start;
+}
+.dz-test .dz-i {
+  margin-top: 2px;
+}
+.dz-test-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.dz-q {
+  font-weight: 500;
+}
+.dz-a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.dz-test-meta {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+.dz-task {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+/* Tasks: the task, then its works in serif underneath. */
+.dz-task-block {
+  padding-bottom: 6px;
+}
+.dz-task-row {
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+}
+.dz-task-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.dz-works {
+  display: grid;
+  padding-left: 36px;
+}
+.dz-work {
+  appearance: none;
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.dz-work-title {
+  font: 400 15px / 1.35 var(--serif);
+  color: var(--ink);
+}
+.dz-work-meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.dz-empty {
+  padding: 4px 0 2px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.dz-empty.is-inline {
+  padding: 2px 0 6px 36px;
+}
+.dz-more {
+  justify-self: start;
+  appearance: none;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--r-key);
+  background: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .dz-more:hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
+}
+@media (max-width: 720px) {
+  .dossier-page {
+    padding: 20px 16px 96px;
+  }
+  .dossier-title {
+    font-size: 23px;
+  }
+  .dossier {
+    padding: 18px 16px 22px;
+    gap: 24px;
+  }
+  .dz-readings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dz-reading b {
+    font-size: 26px;
+  }
+  .dz-open,
+  .dz-task {
+    display: none;
+  }
+  .dz-person {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+  .dz-said {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

@@ -82,7 +82,7 @@
 }
 /* Before the lens has read them, the sentences wait in grey. */
 .delivery-reading__paper[data-pending="true"] .delivery-reading__text {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .native-feedback .delivery-reading__empty {
   margin: 0;
@@ -97,9 +97,10 @@
 }
 @media (max-width: 720px) {
   #sheet.deliver-sheet {
-    width: 100vw;
-    height: 100dvh;
-    border-radius: 0;
+    width: calc(100vw - 2 * var(--sheet-inset));
+    height: calc(100dvh - 2 * var(--sheet-inset));
+    margin: var(--sheet-inset);
+    border-radius: var(--r-dialog);
   }
   .delivery-reading__paper {
     padding: 20px 18px 22px;

@@ -19,6 +19,8 @@ export interface TaskCardFacts {
   requestedBy?: CardRole;
   /** A question was asked in this task's context. */
   asked?: boolean;
+  /** The colleague whose brief landed on this task in the walk-in (this browser). */
+  handedBy?: CardRole;
 }
 type Provider = (taskId: string) => TaskCardFacts | null;
 let provider: Provider | null = null;

@@ -1,41 +1,49 @@
-/** The sign-off desk: the engineer's own screen in a practice (the second hat).
+/** The sign-off desk (plan §13.4–13.9): the engineer's own screen in a practice.
  *
- * The ticket arrives as a paper slip; the candidate settings are an instrument; the trial log is a
- * recessed tape of runs by you and by your Agent; the sign sheet is paper with one signature line.
- * Only the person signs. Everything shown comes from the engineer API; nothing here applies a
- * setting to the pilot. The element is kept across the workbench's re-renders, so typing, open
- * rows and scroll survive; ids on every control let the workbench put focus back. */
+ * Daniel's ticket on paper, then three steps (reproduce · fix & trial · sign off), one open at a
+ * time, done ones folded to a line. Beside them, your Agent: what it can do, what it handed in.
+ * Everything comes from the engineer API; nothing here applies a setting to the pilot. The element
+ * is kept across the workbench's re-renders, so typing, open rows and the candidate survive;
+ * ids on every control let focus come back. */
 import { T } from '../../app/i18n';
-import { renderAgentConnection, type ConnectionHost } from '../../app/agent-connection';
+import type { ConnectionHost } from '../../app/agent-connection';
+import { engineerReportView, type EngineerReviewRecord } from '../engineer-report';
+import { reviewViewOptions } from '../engineer-report/page';
+import { AgentPanel } from './agent-activity/panel';
 import { failureText, type EngineerApi } from './api';
-import { fieldName, valueText, choiceText } from './copy';
-import { agentNode, button, el, fill, iconNode, workLang, type Child } from './dom';
+import { engineerHatTitle } from './copy';
+import { chip, countNode, key, progressMark, setBusy, setCount } from './bits';
+import { el, iconNode, workLang } from './dom';
 import {
   candidateChanges,
-  claimsFromTrial,
   clock,
-  draftTextLength,
-  DRAFT_TEXT_LIMIT,
-  experimentRows,
-  IMPACT_NOTE_LIMIT,
-  parseField,
-  signSheet,
+  diffShort,
+  nextAfterReview,
+  reproductionVerdict,
+  settingsDiff,
   signState,
-  ticketFacts,
-  trialLine,
-  UNRESOLVED_LIMIT,
+  signedDraftStale,
   validateDraft,
   validateImpactNote,
-  type DraftInput,
+  type Change,
   type EditableField,
   type Experiment,
   type ExperimentSummary,
   type JsonValue,
-  type Mark,
-  type Outcome,
   type Settings,
   type TicketDetail,
+  IMPACT_NOTE_LIMIT,
 } from './model';
+import { arrive, byKeyboard, light, move, reducedMotion } from './motion';
+import { composeForm, draftInput, newDraftForm, type DraftForm } from './steps/compose';
+import { fieldRow, markField, releaseFieldIslands } from './steps/fields';
+import { Signature, sheetBody } from './steps/sign';
+import { failedRow, pendingRow, tapeRow } from './steps/tape';
+import { ticketPaper, ticketTask } from './steps/ticket';
+import type { StepId } from './stage';
+import { setLastTicket, roleOf } from '../../shell';
+import { reviewResult } from './hand-back';
+import { attachDesk, deskStage, detachDesk, publishDesk, publishReview, reviewFacts } from './wire';
 
 /** The Agent side of the practice's data host (v4-data-host): grants and the connection card. */
 export interface AgentHost extends ConnectionHost {
@@ -54,7 +62,6 @@ export interface AgentHost extends ConnectionHost {
 export interface DeskContext {
   readonly doc: Document;
   readonly sessionId: string;
-  readonly caseTitle: string;
   readonly api: EngineerApi;
   readonly agentHost: AgentHost | null;
   navigate(route: 'engineer' | 'engineer-review' | 'work', id?: string): void;
@@ -62,20 +69,14 @@ export interface DeskContext {
   download(data: unknown, name: string): void;
   /** Remember which ticket a review belongs to (for the report's way back). */
   remember(reviewId: string, ticketId: string): void;
+  /** Hand a just-signed review to the report screen so it draws at once. */
+  cacheReview(record: EngineerReviewRecord, ticket: TicketDetail): void;
+  /** The tab's title: the task's short name. */
+  title(short: string): void;
 }
 
-/** The five engineer tools an Agent may use, plus the two reads the server asks it to start with. */
-export const ENGINEER_AGENT_ACTIONS = [
-  'engineer.tickets.read',
-  'engineer.reproduce',
-  'engineer.trial',
-  'engineer.submissions.draft',
-  'engineer.reviews.read',
-  'observation',
-  'tools',
-] as const;
-const GRANT_MINUTES = 60;
 const POLL_MS = 4000;
+const STEPS: readonly StepId[] = ['reproduce', 'fix', 'signoff'];
 // Settings grouped by what they are about; anything new from the server joins the last group.
 const GROUPS: readonly { title: () => string; fields: readonly string[] }[] = [
   {
@@ -89,15 +90,6 @@ const GROUPS: readonly { title: () => string; fields: readonly string[] }[] = [
   },
   { title: () => T('开发安排', 'Engineering work'), fields: ['work_items'] },
 ];
-
-type StatementRow = { field: string; before: JsonValue; after: JsonValue; reason: string };
-interface DraftForm {
-  explanation: string;
-  statements: StatementRow[];
-  claimsOn: boolean;
-  claims: Record<string, Outcome | ''>;
-  unresolved: { description: string; probes: string[] }[];
-}
 
 /** Redraw a part without losing the person's place: focus and caret come back to the same control. */
 function keepingFocus(doc: Document, draw: () => void) {
@@ -123,6 +115,17 @@ function keepingFocus(doc: Document, draw: () => void) {
 }
 
 const storeKey = (sid: string) => `rolecraft.engineer.experiments.${sid}`;
+const isAgent = (kind: string | undefined) =>
+  kind === 'external_agent' || kind === 'reference_agent';
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+interface StepParts {
+  section: HTMLElement;
+  head: HTMLButtonElement;
+  body: HTMLElement;
+  inner: HTMLElement;
+  why: HTMLElement;
+}
 
 export class EngineerDesk {
   readonly element: HTMLElement;
@@ -132,47 +135,105 @@ export class EngineerDesk {
   private readonly experiments = new Map<string, Experiment>();
   private readonly expanded = new Set<string>();
   private readonly drawn = new Set<string>();
+  /** Settings the person took from their Agent's draft or trial: field → where it came from. */
+  private readonly agentFilled = new Map<string, string>();
   private compose: DraftForm | null = null;
-  private busy: '' | 'reproduce' | 'trial' | 'draft' | 'sign' | 'grant' = '';
-  private errors = { bench: '', sheet: '', agent: '', compose: [] as string[], load: '' };
+  private busy: '' | 'reproduce' | 'trial' | 'draft' | 'sign' = '';
+  private errors = { reproduce: '', trial: '', compose: [] as string[], load: '' };
   private signature = '';
+  private open: StepId = 'reproduce';
+  private chosen = false;
+  private landing = '';
+  private hiddenTotal: number | null = null;
+  private readonly asked = new Set<string>();
   private impact: HTMLTextAreaElement | null = null;
+  private sign: Signature | null = null;
+  /** The draft on the sheet when the key went down: only that one is signed. */
+  private heldDraft = '';
+  /** The draft last drawn on the sheet, and a line at its head once a newer one replaced it. */
+  private shownDraft = '';
+  private draftNotice = '';
+  /** A redraw of the sheet held back while the key is held. */
+  private sheetPending = false;
+  private panel: AgentPanel | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
-  private unwatchHost: () => void = () => {};
+  private observer: IntersectionObserver | null = null;
+  private sheetInView = false;
+  private readonly steps = {} as Record<StepId, StepParts>;
   private readonly parts: Record<string, HTMLElement> = {};
+  private readonly handler = {
+    sessionId: '',
+    run: (action: string, id?: string) => this.run(action, id),
+  };
 
   constructor(
     private readonly ctx: DeskContext,
     private ticketId: string | null,
+    initial: TicketDetail | null = null,
   ) {
     const doc = ctx.doc;
+    this.handler.sessionId = ctx.sessionId;
     this.element = el(doc, 'div', { class: 'ed', 'data-engineer-desk-root': true });
-    this.element.append(
-      el(
-        doc,
-        'p',
-        { class: 'ed-loading', role: 'status' },
-        T('正在打开委托…', 'Opening the ticket…'),
-      ),
-    );
     this.restoreExperiments();
-    void this.load();
+    attachDesk(this.handler);
+    if (initial && (!ticketId || initial.id === ticketId)) {
+      this.ticketId = initial.id;
+      this.accept(initial);
+      this.build();
+    } else {
+      this.element.append(
+        el(
+          doc,
+          'p',
+          { class: 'ed-loading', role: 'status' },
+          T('正在打开委托…', 'Opening the ticket…'),
+        ),
+      );
+      void this.load();
+    }
     this.timer = setInterval(() => void this.poll(), POLL_MS);
   }
 
-  /** Back on screen after a redraw or a report: read the ticket again (an Agent may have worked). */
-  resume() {
-    if (this.ticket) void this.refresh();
+  /** Back on screen after a redraw or a report: read again (an Agent may have worked), and open
+   * the step the route asks for. */
+  resume(step?: StepId | null) {
+    attachDesk(this.handler);
+    this.panel?.attach();
+    if (step) this.chosen = true;
+    if (this.ticket) {
+      this.publish();
+      void this.refresh();
+      this.ctx.title(engineerHatTitle(this.ticket));
+    }
+    if (step && this.ticket) this.openStep(step, { scroll: true, focus: true });
+    else if (step) this.open = step;
   }
 
-  /** Stop polling and watching (the instance is dropped). */
+  /** Off screen (another engineer screen took its place): the shell's actions and the Agent's
+   * events stop reaching it until `resume`. */
+  suspend() {
+    detachDesk(this.handler);
+    this.panel?.detach();
+  }
+
   destroy() {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
-    this.unwatchHost();
+    this.observer?.disconnect();
+    this.panel?.destroy();
+    detachDesk(this.handler);
   }
 
   /* ---------- data ---------- */
+
+  private accept(ticket: TicketDetail) {
+    this.ticket = ticket;
+    setLastTicket(this.ctx.sessionId, ticket.id);
+    this.values = structuredClone(ticket.baseline_config);
+    this.signature = this.signatureOf(ticket);
+    for (const r of ticket.reviews) this.ctx.remember(r.review_id, ticket.id);
+    for (const t of ticket.trials) this.drawn.add(t.id);
+  }
 
   private async load() {
     try {
@@ -184,12 +245,7 @@ export class EngineerDesk {
         this.drawNoTicket();
         return;
       }
-      const ticket = await this.ctx.api.ticket(this.ticketId);
-      this.ticket = ticket;
-      this.values = structuredClone(ticket.baseline_config);
-      this.signature = this.signatureOf(ticket);
-      for (const r of ticket.reviews) this.ctx.remember(r.review_id, ticket.id);
-      for (const t of ticket.trials) this.drawn.add(t.id);
+      this.accept(await this.ctx.api.ticket(this.ticketId));
       this.build();
     } catch (error) {
       this.errors.load = failureText(error);
@@ -222,13 +278,22 @@ export class EngineerDesk {
       for (const r of ticket.reviews) this.ctx.remember(r.review_id, ticket.id);
       if (signature === this.signature) return;
       this.signature = signature;
-      this.drawLog();
-      this.drawSheet();
-      this.drawReviews();
-      this.drawBenchState();
+      this.drawChanged();
     } catch {
       /* A dropped read changes nothing; the next poll reads again. */
     }
+  }
+
+  /** Everything that follows from the ticket's runs, drafts and reviews. */
+  private drawChanged() {
+    this.drawTicketCount();
+    this.drawReproduce();
+    this.drawFixState();
+    this.drawTape();
+    this.drawSign();
+    this.panel?.update(this.ticket as TicketDetail);
+    this.readOutcomes();
+    this.publish();
   }
 
   private restoreExperiments() {
@@ -251,19 +316,72 @@ export class EngineerDesk {
     }
   }
 
-  /* ---------- frame ---------- */
+  /** How each signed review came out (for the scale, the key and the step summary). */
+  private readOutcomes() {
+    const t = this.ticket;
+    if (!t) return;
+    for (const r of t.reviews) {
+      if (this.asked.has(r.review_id)) continue;
+      this.asked.add(r.review_id);
+      void this.ctx.api
+        .review(r.review_id)
+        .then((record) => {
+          this.learnReview(record);
+          this.drawStepHeads();
+          this.drawSign();
+          this.publish();
+        })
+        .catch(() => this.asked.delete(r.review_id));
+    }
+  }
+
+  private learnReview(record: EngineerReviewRecord) {
+    const language = T('zh', 'en') as 'zh' | 'en';
+    const view = engineerReportView(record.report, reviewViewOptions(record, language));
+    const hidden = record.report.hidden;
+    this.hiddenTotal = hidden.passed + hidden.failed + hidden.errors;
+    const result = reviewResult(record, language);
+    publishReview(record.review_id, {
+      ticketId: record.ticket_id,
+      outcome: nextAfterReview(view) === 'board' ? 'clean' : 'regressed',
+      newFailures: result.newFailures,
+      result,
+      source: this.ticket?.id === record.ticket_id ? this.ticket.source : undefined,
+    });
+  }
+
+  private changes(): Settings {
+    return candidateChanges((this.ticket as TicketDetail).baseline_config, this.values);
+  }
+
+  private publish() {
+    const t = this.ticket;
+    if (!t) return;
+    publishDesk(this.ctx.sessionId, {
+      ticket: t,
+      candidate: this.changes(),
+      blocked: Object.keys(this.fieldErrors).length
+        ? ['先改正标红的设置。', 'Fix the setting marked in red first.']
+        : undefined,
+      // The sheet's own key takes the ink while it is in view (the top bar's key steps back).
+      sheetInView: this.sheetInView && this.open === 'signoff',
+    });
+    this.drawStepHeads();
+  }
+
+  /* ---------- the frame ---------- */
 
   private drawNoTicket() {
     const doc = this.ctx.doc;
-    const open = button(doc, T('开一份委托', 'Open a ticket'), 'btn primary', {
-      id: 'ed-open-seeded',
-    });
+    const open = key(doc, T('开一份委托', 'Open a ticket'), 'primary', { id: 'ed-open-seeded' });
     open.addEventListener('click', async () => {
+      setBusy(open, true);
       open.disabled = true;
       try {
         const { ticket } = await this.ctx.api.createTicket({ from: 'seeded' });
         this.ctx.navigate('engineer', ticket.id);
       } catch (error) {
+        setBusy(open, false);
         open.disabled = false;
         this.ctx.notify(failureText(error));
       }
@@ -286,7 +404,7 @@ export class EngineerDesk {
 
   private drawLoadFailure() {
     const doc = this.ctx.doc;
-    const retry = button(doc, T('再读一次', 'Read again'), 'btn small', { id: 'ed-retry' });
+    const retry = key(doc, T('重试', 'Try again'), 'ghost', { id: 'ed-retry' }, 'refresh');
     retry.addEventListener('click', () => {
       this.element.replaceChildren(
         el(
@@ -312,353 +430,585 @@ export class EngineerDesk {
   private build() {
     const doc = this.ctx.doc;
     const t = this.ticket as TicketDetail;
-    const section = (name: string, cls: string, labelId?: string) => {
-      const node = el(doc, 'section', { class: cls, 'aria-labelledby': labelId ?? null });
-      this.parts[name] = node;
-      return node;
-    };
-    this.parts.head = el(doc, 'header', { class: 'ed-head' });
-    // Two columns on a wide desk (the work, and beside it the Agent, the probes and the reviews);
-    // one column on a phone, where the Agent comes right after the ticket (desk.css orders it).
-    const grid = el(
+    const task = ticketTask(t);
+    this.ctx.title(engineerHatTitle(t));
+    const { paper, leftNode } = ticketPaper(
       doc,
-      'div',
-      { class: 'ed-grid' },
-      el(
-        doc,
-        'div',
-        { class: 'ed-main' },
-        section('slip', 'ed-slip', 'ed-slip-h'),
-        section('bench', 'ed-bench', 'ed-bench-h'),
-        section('log', 'ed-log', 'ed-log-h'),
-        section('sheet', 'ed-sheet', 'ed-sheet-h'),
-      ),
-      el(
-        doc,
-        'div',
-        { class: 'ed-side' },
-        section('agent', 'ed-agent', 'ed-agent-h'),
-        section('probes', 'ed-probes', 'ed-probes-h'),
-        section('reviews', 'ed-reviews', 'ed-reviews-h'),
-      ),
+      t,
+      roleOf(this.ctx.sessionId) === 'engineer' ? 'manager' : 'technical',
     );
-    this.element.replaceChildren(this.parts.head, grid);
-    this.element.lang = workLang(T('zh', 'en') as 'zh' | 'en');
-    this.drawHead();
-    this.drawSlip();
-    this.drawAgent();
-    this.drawProbes();
-    this.drawBench();
-    this.drawLog();
-    this.drawSheet();
-    this.drawReviews();
-    void t;
-  }
-
-  private drawHead() {
-    const doc = this.ctx.doc;
-    const t = this.ticket as TicketDetail;
-    const facts = ticketFacts(t);
-    const head = this.parts.head;
-    // The way back to the product hat is the page's own back key ("产品经理工作板", top left).
-    fill(
+    this.parts.left = leftNode;
+    const head = el(
+      doc,
+      'header',
+      { class: 'ed-head' },
+      el(
+        doc,
+        'p',
+        { class: 'ed-eyebrow' },
+        T('工程委托 · 知识助手试点', 'Engineering ticket · Knowledge-assistant pilot'),
+      ),
+      el(doc, 'h1', { class: 'ed-title', id: 'ed-title', tabindex: '-1' }, task.title),
+    );
+    this.panel = new AgentPanel({
+      doc,
+      notify: this.ctx.notify,
+      compare: () => this.run('engineer.signoff.focus', 'compare'),
+      refresh: () => void this.refresh(),
+    });
+    const list = el(doc, 'div', { class: 'ed-steps' }, ...STEPS.map((id) => this.stepShell(id)));
+    this.element.replaceChildren(
       head,
       el(
         doc,
-        'p',
-        { class: 'ed-hat' },
-        el(doc, 'span', { class: 'ed-hat__role' }, T('工程师', 'Engineer')),
-        el(doc, 'span', { class: 'ed-hat__case' }, this.ctx.caseTitle),
+        'div',
+        { class: 'ed-layout' },
+        el(doc, 'div', { class: 'ed-layout__ticket' }, paper),
+        el(doc, 'aside', { class: 'ed-layout__agent' }, this.panel.element),
+        el(doc, 'div', { class: 'ed-layout__steps' }, list),
       ),
-      el(
-        doc,
-        'h1',
-        { class: 'ed-title', id: 'ed-title', tabindex: '-1', lang: workLang(t.work_language) },
-        t.title,
-      ),
-      el(
-        doc,
-        'p',
-        { class: 'ed-facts' },
-        el(doc, 'span', { class: 'ed-fact' }, facts.source),
-        el(doc, 'span', { class: 'ed-fact', title: t.retrieval.note ?? '' }, facts.retrieval),
-      ),
-      facts.setup
-        ? el(doc, 'p', { class: 'ed-setup' }, iconNode(doc, 'info', 'i-xs'), facts.setup)
-        : null,
     );
+    this.element.lang = workLang(T('zh', 'en') as 'zh' | 'en');
+    this.buildReproduce();
+    this.buildFix();
+    this.buildSign();
+    this.panel.update(t);
+    this.publish();
+    const first = this.firstOpen();
+    this.openStep(first, { animate: false });
+    this.readOutcomes();
+    this.observeSheet();
   }
 
-  /* ---------- the ticket slip ---------- */
+  private firstOpen(): StepId {
+    if (this.chosen) return this.open;
+    publishDesk(this.ctx.sessionId, {
+      ticket: this.ticket as TicketDetail,
+      candidate: this.changes(),
+    });
+    const stage = deskStage(this.ctx.sessionId);
+    const current = stage.steps.find((s) => s.state === 'current')?.id as StepId | undefined;
+    return current ?? 'signoff';
+  }
 
-  private drawSlip() {
-    const doc = this.ctx.doc;
+  private drawTicketCount() {
     const t = this.ticket as TicketDetail;
-    const facts = ticketFacts(t);
-    const lang = workLang(t.work_language);
-    const reproduce = button(
+    setCount(this.parts.left, Math.max(0, t.review_budget.limit - t.review_budget.used));
+  }
+
+  /** The shell's actions while this desk is on screen. */
+  private run(action: string, id?: string): boolean {
+    // Kept for a round trip but off the page: let the shell take the person to the desk.
+    if (!this.ticket || !this.element.isConnected) return false;
+    switch (action) {
+      case 'engineer.reproduce':
+        this.openStep('reproduce', { scroll: true });
+        void this.reproduce();
+        return true;
+      case 'engineer.trial':
+        this.openStep('fix', { scroll: true });
+        void this.trial();
+        return true;
+      case 'engineer.draft.open':
+        this.openStep('signoff', { scroll: true });
+        if (!this.compose) this.toggleCompose();
+        return true;
+      case 'engineer.signoff.focus':
+        this.openStep('signoff', { scroll: true });
+        requestAnimationFrame(() => {
+          const target =
+            id === 'compare'
+              ? this.ctx.doc.getElementById('ed-actual-h')
+              : this.ctx.doc.getElementById(this.impact?.value.trim() ? 'ed-sign' : 'ed-impact');
+          target?.focus({ preventScroll: false });
+        });
+        return true;
+      case 'engineer.step':
+        if (id === 'reproduce' || id === 'fix' || id === 'signoff') {
+          this.chosen = true;
+          this.openStep(id, { scroll: true, focus: true });
+        }
+        return true;
+      case 'engineer.fix-again':
+        this.openStep('fix', { scroll: true });
+        requestAnimationFrame(() =>
+          (
+            this.steps.fix.inner.querySelector(
+              'input:checked, input, textarea',
+            ) as HTMLElement | null
+          )?.focus(),
+        );
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /* ---------- the three steps ---------- */
+
+  private stepShell(id: StepId): HTMLElement {
+    const doc = this.ctx.doc;
+    const n = STEPS.indexOf(id) + 1;
+    const names: Record<StepId, string> = {
+      reproduce: T('复现', 'Reproduce'),
+      fix: T('修复与试跑', 'Fix & trial'),
+      signoff: T('签字', 'Sign off'),
+    };
+    const whys: Record<StepId, string> = {
+      reproduce: T(
+        '先确认问题还在，不然你修的可能是别的问题。',
+        'First make sure the problem is still there, or you may fix something else.',
+      ),
+      fix: T(
+        '只改你认为是根因的地方。试跑只看得到公开的 4 条。',
+        'Change only what you think is the root cause. A trial sees only the 4 public checks.',
+      ),
+      signoff: T(
+        '签字表示你看过实际改动，想过它还会影响什么，并为它负责。',
+        'Signing means you’ve seen what actually changed, thought about what else it touches, and you vouch for it.',
+      ),
+    };
+    const head = el(
       doc,
-      [iconNode(doc, 'refresh', 'i-xs'), T('复现这个问题', 'Reproduce the problem')],
-      'btn small',
-      { id: 'ed-reproduce' },
+      'button',
+      {
+        type: 'button',
+        class: 'ed-step__head',
+        id: `ed-step-${id}`,
+        'aria-expanded': 'false',
+        'aria-controls': `ed-step-${id}-body`,
+      },
+      el(doc, 'span', { class: 'ed-step__mark' }),
+      el(doc, 'span', { class: 'ed-step__n', 'aria-hidden': 'true' }, `0${n}`),
+      el(doc, 'span', { class: 'ed-step__name' }, names[id]),
+      el(doc, 'span', { class: 'ed-step__sum' }),
+      el(doc, 'span', { class: 'ed-step__chev' }, iconNode(doc, 'down', 'i-xs')),
     );
-    reproduce.addEventListener('click', () => void this.reproduce());
-    this.parts.reproduce = reproduce;
-    this.parts.slip.replaceChildren(
+    head.addEventListener('click', () => {
+      this.chosen = true;
+      if (this.open === id) return;
+      this.openStep(id, { animate: !byKeyboard() });
+    });
+    head.addEventListener('keydown', (e) => {
+      const i = STEPS.indexOf(id);
+      const to =
+        e.key === 'ArrowDown'
+          ? STEPS[(i + 1) % 3]
+          : e.key === 'ArrowUp'
+            ? STEPS[(i + 2) % 3]
+            : e.key === 'Home'
+              ? STEPS[0]
+              : e.key === 'End'
+                ? STEPS[2]
+                : null;
+      if (!to) return;
+      e.preventDefault();
+      this.steps[to].head.focus();
+    });
+    const why = el(doc, 'p', { class: 'ed-step__why', tabindex: '-1' }, whys[id]);
+    const inner = el(doc, 'div', { class: 'ed-step__inner' }, why);
+    const body = el(
+      doc,
+      'div',
+      {
+        class: 'ed-step__body',
+        id: `ed-step-${id}-body`,
+        role: 'region',
+        'aria-labelledby': `ed-step-${id}`,
+      },
+      el(doc, 'div', { class: 'ed-step__clip' }, inner),
+    );
+    const section = el(
+      doc,
+      'section',
+      { class: 'ed-step', 'data-step': id },
+      el(doc, 'h2', { class: 'ed-step__h' }, head),
+      body,
+    );
+    this.steps[id] = { section, head, body, inner, why };
+    return section;
+  }
+
+  /** One step open at a time (accordion). Mouse opens animate; keys switch at once. */
+  private openStep(
+    id: StepId,
+    opts: { animate?: boolean; scroll?: boolean; focus?: boolean } = {},
+  ) {
+    const changed = this.open !== id;
+    this.open = id;
+    const animate = opts.animate !== false && !byKeyboard() && !reducedMotion();
+    for (const s of STEPS) {
+      const p = this.steps[s];
+      if (!p) continue;
+      const on = s === id;
+      p.section.classList.toggle('no-anim', !animate);
+      p.section.classList.toggle('is-open', on);
+      p.head.setAttribute('aria-expanded', String(on));
+      p.body.toggleAttribute('inert', !on);
+    }
+    this.drawStepHeads();
+    this.publish();
+    if (opts.scroll)
+      requestAnimationFrame(() =>
+        this.steps[id]?.section.scrollIntoView({
+          block: 'start',
+          behavior: animate ? 'smooth' : 'auto',
+        }),
+      );
+    if (opts.focus) this.steps[id]?.why.focus({ preventScroll: true });
+    void changed;
+  }
+
+  private drawStepHeads() {
+    const t = this.ticket;
+    if (!t || !this.steps.reproduce) return;
+    const stage = deskStage(this.ctx.sessionId);
+    for (const step of stage.steps) {
+      const id = step.id as StepId;
+      const p = this.steps[id];
+      const mark = p.head.querySelector('.ed-step__mark') as HTMLElement;
+      const previous = p.section.dataset.state;
+      if (previous !== step.state) {
+        mark.replaceChildren(progressMark(this.ctx.doc, step.state));
+        p.section.dataset.state = step.state;
+        // The tick draws itself the first time a step is done (a few times a practice).
+        if (previous && step.state === 'done' && !reducedMotion()) mark.classList.add('is-ticking');
+        else mark.classList.remove('is-ticking');
+      }
+      const sum = p.head.querySelector('.ed-step__sum') as HTMLElement;
+      const text = this.summary(id);
+      if (sum.textContent !== text) sum.textContent = text;
+    }
+  }
+
+  private summary(id: StepId): string {
+    const t = this.ticket as TicketDetail;
+    if (id === 'reproduce') {
+      const run = [...t.trials].reverse().find((r) => r.kind === 'reproduce');
+      if (!run) return T('还没复现', 'Not reproduced yet');
+      return `${reproductionVerdict(run, t).label} · ${clock(run.created_at)}`;
+    }
+    if (id === 'fix') {
+      const run = [...t.trials].reverse().find((r) => r.kind === 'trial');
+      const edits = Object.keys(this.changes()).length;
+      if (!run)
+        return edits
+          ? T(`改了 ${edits} 处，还没试跑`, `${edits} changed, not tried yet`)
+          : T('还没试跑', 'No trial yet');
+      const n = (run.changes ? Object.keys(run.changes) : (run.changed_fields ?? [])).length;
+      return T(
+        `改 ${n} 处 · 公开 ${run.counts.passed ?? 0}/${t.public_probes.length} 通过`,
+        `${n} changed · public ${run.counts.passed ?? 0}/${t.public_probes.length} passed`,
+      );
+    }
+    const draft = t.latest_draft;
+    if (!draft) return T('还没有草稿', 'No draft yet');
+    const index = t.reviews.findIndex((r) => r.draft_id === draft.id);
+    if (index < 0)
+      return isAgent(draft.executor.kind)
+        ? T('你的 Agent 交来一份草稿', 'A draft from your agent')
+        : T('有草稿待签', 'A draft to sign');
+    const facts = reviewFacts(t.reviews[index].review_id);
+    if (!facts) return T(`已签 · 第 ${index + 1} 次复核`, `Signed · review ${index + 1}`);
+    return facts.outcome === 'clean'
+      ? T(`已签 · 第 ${index + 1} 次复核全过`, `Signed · review ${index + 1} all clear`)
+      : T(`已签 · 第 ${index + 1} 次复核没全过`, `Signed · review ${index + 1} not clear`);
+  }
+
+  /* ---------- ① reproduce ---------- */
+
+  private buildReproduce() {
+    const doc = this.ctx.doc;
+    const run = key(
+      doc,
+      T('复现问题', 'Reproduce the problem'),
+      'secondary',
+      { id: 'ed-reproduce' },
+      'refresh',
+    );
+    run.addEventListener('click', () => void this.reproduce());
+    this.parts.reproduce = run;
+    // The result is announced once, through the page's announcer (not as a live region too).
+    this.parts.reproduceResult = el(doc, 'div', { class: 'ed-result' });
+    this.steps.reproduce.inner.append(
       el(
         doc,
         'div',
-        { class: 'ed-slip__paper paper' },
-        el(doc, 'h2', { class: 'ed-sec', id: 'ed-slip-h' }, T('要修的问题', 'What to fix')),
-        ...facts.targets.map((target) =>
-          el(
-            doc,
-            'article',
-            { class: 'ed-target' },
-            el(doc, 'p', { class: 'ed-target__q', lang }, target.query),
-            el(
-              doc,
-              'figure',
-              { class: 'ed-target__a' },
-              el(doc, 'figcaption', {}, T(`当时${target.said}：`, `At the time, ${target.said}:`)),
-              el(doc, 'blockquote', { lang }, target.answer),
-            ),
-            el(
-              doc,
-              'ul',
-              { class: 'ed-target__facts' },
-              ...target.versions.map((v) =>
-                el(doc, 'li', { class: 'is-stale' }, iconNode(doc, 'stale', 'i-xs'), v.text),
-              ),
-              el(doc, 'li', {}, target.cited),
-              el(doc, 'li', { lang }, target.origin),
-              target.config ? el(doc, 'li', {}, target.config) : null,
-            ),
-          ),
-        ),
-        el(
-          doc,
-          'div',
-          { class: 'ed-slip__foot' },
-          reproduce,
-          el(
-            doc,
-            'p',
-            { class: 'meta' },
-            T(
-              '用委托打包时的快照重跑，确认问题还在。',
-              'Reruns it on the ticket’s snapshot to confirm the problem is still there.',
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /* ---------- the Agent ---------- */
-
-  private drawAgent() {
-    const doc = this.ctx.doc;
-    const host = this.ctx.agentHost;
-    const available =
-      host?.snapshot().available?.['delegations.create'] === true && !host?.snapshot().readOnly;
-    const grant = button(
-      doc,
-      T('授权 Agent 处理这份委托', 'Give your agent this ticket'),
-      'btn small',
-      { id: 'ed-grant', disabled: !available || this.busy === 'grant' },
-    );
-    grant.addEventListener('click', () => void this.grant());
-    const keys = el(doc, 'div', { class: 'ed-agent__keys' }, grant);
-    this.parts.agentKeys = keys;
-    const card = el(doc, 'div', { class: 'ed-agent__card' });
-    this.parts.agentCard = card;
-    // A new card element starts empty: draw the connection into it again.
-    this.connectionShown = '';
-    fill(
-      this.parts.agent,
-      el(doc, 'h2', { class: 'ed-sec', id: 'ed-agent-h' }, T('带上你的 Agent', 'Bring your agent')),
-      el(
-        doc,
-        'p',
-        { class: 'ed-agent__line' },
-        agentNode(doc, 'sm'),
+        { class: 'ed-step__do' },
+        run,
         el(
           doc,
           'span',
-          {},
-          T(
-            '它可以复现、试跑、起草；签字只能由你来。',
-            'It can reproduce, run trials and draft; only you can sign.',
-          ),
+          { class: 'ed-meta' },
+          T('用委托打包时的快照重跑一次', 'Reruns it on the ticket’s snapshot'),
         ),
       ),
-      keys,
-      !available
-        ? el(
-            doc,
-            'p',
-            { class: 'meta' },
-            T('这个练习暂时不能授权 Agent。', 'This practice can’t grant agent access right now.'),
-          )
-        : null,
-      this.errors.agent
-        ? el(doc, 'p', { class: 'ed-error', role: 'alert' }, this.errors.agent)
-        : null,
-      card,
+      this.parts.reproduceResult,
     );
-    this.drawConnection();
-    if (host) {
-      this.unwatchHost();
-      this.unwatchHost = host.subscribe(() => this.drawConnection());
-    }
+    this.drawReproduce();
   }
 
-  private connectionShown = '';
-  private drawConnection() {
-    const host = this.ctx.agentHost;
-    const card = this.parts.agentCard;
-    if (!card) return;
-    const issued = host?.issuedDelegation() ?? null;
-    // While a grant is offered here, its card stands in for the grant key.
-    if (this.parts.agentKeys) this.parts.agentKeys.hidden = !!issued;
-    const identity = JSON.stringify(issued);
-    if (identity === this.connectionShown && card.isConnected) return;
-    this.connectionShown = identity;
-    renderAgentConnection(card, host, {
-      origin: location.origin,
-      notify: this.ctx.notify,
-      download: this.ctx.download,
-      refresh: () => {
-        this.connectionShown = '';
-        this.drawConnection();
-      },
-    });
-  }
-
-  private async grant() {
-    const host = this.ctx.agentHost;
-    if (!host || this.busy) return;
-    this.busy = 'grant';
-    this.errors.agent = '';
-    this.drawAgent();
-    try {
-      const result = await host.command('delegations.create', {
-        agent_label: T('工程委托', 'Engineering ticket'),
-        capabilities: ['read', 'act'],
-        allowed_actions: [...ENGINEER_AGENT_ACTIONS],
-        expires_at: new Date(Date.now() + GRANT_MINUTES * 60_000).toISOString(),
-      });
-      if (result.status !== 'confirmed')
-        this.errors.agent = T(
-          '授权还没确认，到产品经理工作板的 Agent 标签核对原请求。',
-          'The access isn’t confirmed yet. Check the original request in the Agent tab on the product board.',
-        );
-    } catch (error) {
-      this.errors.agent = failureText(error);
-    } finally {
-      this.busy = '';
-      this.drawAgent();
-      (
-        this.ctx.doc.querySelector('[data-connection-action="copy-claude"]') as HTMLElement | null
-      )?.focus();
-    }
-  }
-
-  /* ---------- public probes and reviews ---------- */
-
-  private drawProbes() {
+  private drawReproduce(fresh = false) {
     const doc = this.ctx.doc;
     const t = this.ticket as TicketDetail;
-    const targets = new Set(t.target_tests.map((x) => x.query));
-    const lang = workLang(t.work_language);
-    this.parts.probes.replaceChildren(
+    const box = this.parts.reproduceResult;
+    if (!box) return;
+    const button = this.parts.reproduce as HTMLButtonElement;
+    // While its own run is out the key stays focusable (busy, not disabled): focus stays in ①.
+    button.disabled = !!this.busy && this.busy !== 'reproduce';
+    setBusy(button, this.busy === 'reproduce');
+    if (this.busy === 'reproduce') {
+      const target = t.target_tests[0];
+      box.replaceChildren(
+        el(
+          doc,
+          'div',
+          { class: 'ed-result__row is-pending' },
+          el(doc, 'span', { class: 'ed-square', 'data-mark': 'unknown' }),
+          el(
+            doc,
+            'p',
+            { class: 'ed-result__q', lang: workLang(t.work_language) },
+            target?.query ?? '',
+          ),
+          el(doc, 'span', { class: 'ed-meta' }, T('复现中…', 'Reproducing…')),
+        ),
+      );
+      return;
+    }
+    if (this.errors.reproduce) {
+      const retry = key(doc, T('重试', 'Try again'), 'ghost', {}, 'refresh');
+      retry.addEventListener('click', () => void this.reproduce());
+      box.replaceChildren(
+        el(
+          doc,
+          'div',
+          { class: 'ed-result__row is-error' },
+          el(doc, 'span', { class: 'ed-square', 'data-mark': 'unknown' }),
+          el(doc, 'p', { role: 'alert' }, this.errors.reproduce),
+          retry,
+        ),
+      );
+      return;
+    }
+    const run = [...t.trials].reverse().find((r) => r.kind === 'reproduce');
+    if (!run) {
+      box.replaceChildren();
+      return;
+    }
+    const verdict = reproductionVerdict(run, t);
+    const agent = isAgent(run.executor.kind);
+    const full = this.experiments.get(run.id);
+    const answer =
+      (full?.rows?.[0] && 'reproduced' in full.rows[0]
+        ? full.rows[0].reproduced.answer_summary
+        : '') || (verdict.kind === 'still' ? (t.target_tests[0]?.answer_summary ?? '') : '');
+    const quote = el(
+      doc,
+      'blockquote',
+      { class: 'ed-result__quote is-clamped', lang: workLang(t.work_language) },
+      answer,
+    );
+    const more = key(doc, T('展开', 'Show all'), 'ghost', { class: 'ed-result__more' });
+    more.addEventListener('click', () => {
+      const clamped = quote.classList.toggle('is-clamped');
+      (more.querySelector('.ed-k__label') as HTMLElement).textContent = clamped
+        ? T('展开', 'Show all')
+        : T('收起', 'Show less');
+    });
+    const row = el(
+      doc,
+      'div',
+      { class: 'ed-result__row', 'data-tone': verdict.tone },
       el(
         doc,
-        'h2',
-        { class: 'ed-sec', id: 'ed-probes-h' },
-        T(`公开探针 · ${t.public_probes.length} 条`, `Public probes · ${t.public_probes.length}`),
+        'p',
+        { class: 'ed-result__head' },
+        chip(doc, verdict.label, verdict.tone),
+        agent
+          ? el(
+              doc,
+              'span',
+              { class: 'ed-result__by' },
+              T('你的 Agent 复现了：', 'Your agent reproduced it:'),
+            )
+          : null,
+        el(doc, 'span', { class: 'ed-result__time' }, clock(run.created_at)),
+      ),
+      el(doc, 'p', { class: 'ed-result__line' }, verdict.sentence),
+      answer ? quote : null,
+      answer && answer.length > 60 ? more : null,
+    );
+    box.replaceChildren(row);
+    if (fresh && !byKeyboard()) arrive(row, 4);
+  }
+
+  private announce(text: string) {
+    const region = this.ctx.doc.getElementById('announcer');
+    if (!region) return;
+    region.textContent = '';
+    setTimeout(() => {
+      region.textContent = text;
+    }, 30);
+  }
+
+  private async reproduce() {
+    if (!this.ticket || this.busy) return;
+    this.busy = 'reproduce';
+    this.errors.reproduce = '';
+    this.drawReproduce();
+    this.drawFixState();
+    this.publish();
+    this.drawSign();
+    try {
+      const record = await this.ctx.api.reproduce(this.ticket.id);
+      this.keepExperiment(record);
+      this.busy = '';
+      await this.refresh();
+      this.drawReproduce(true);
+      const verdict = reproductionVerdict(record, this.ticket as TicketDetail);
+      this.announce(
+        T(
+          `复现完成：${verdict.label}，${verdict.sentence}`,
+          `Reproduced: ${verdict.label}. ${verdict.sentence}`,
+        ),
+      );
+      // Step ② opens on its own after a beat, unless the person is reading ①'s result.
+      const step = this.steps.reproduce.section;
+      setTimeout(() => {
+        if (
+          this.open !== 'reproduce' ||
+          step.matches(':hover') ||
+          step.contains(this.ctx.doc.activeElement)
+        )
+          return;
+        this.openStep('fix');
+      }, 280);
+    } catch (error) {
+      this.busy = '';
+      this.errors.reproduce = failureText(error);
+    } finally {
+      this.busy = '';
+      this.drawReproduce();
+      this.drawFixState();
+      this.drawTape();
+      this.drawSign();
+      this.publish();
+    }
+  }
+
+  /* ---------- ② fix & trial ---------- */
+
+  private buildFix() {
+    const doc = this.ctx.doc;
+    const t = this.ticket as TicketDetail;
+    // b. the changes bar
+    const count = countNode(doc, 0);
+    this.parts.changeCount = count;
+    const useAgent = key(doc, '', 'secondary', { id: 'ed-use-agent', hidden: true }, 'spark');
+    useAgent.addEventListener('click', () => this.useAgentSettings());
+    const reset = key(
+      doc,
+      T('恢复基线', 'Back to baseline'),
+      'ghost',
+      { id: 'ed-reset' },
+      'refresh',
+    );
+    reset.addEventListener('click', () => this.resetCandidate());
+    this.parts.useAgent = useAgent;
+    this.parts.reset = reset;
+    const bar = el(
+      doc,
+      'div',
+      { class: 'ed-bar' },
+      el(
+        doc,
+        'p',
+        { class: 'ed-bar__count' },
+        T('本次改动 · ', 'Changes · '),
+        count,
+        el(doc, 'span', { class: 'ed-bar__unit' }, T(' 处', '')),
+      ),
+      el(doc, 'div', { class: 'ed-bar__keys' }, useAgent, reset),
+    );
+    // c. the instrument
+    this.parts.form = el(doc, 'form', { class: 'ed-form', id: 'ed-form', novalidate: true });
+    this.parts.form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void this.trial();
+    });
+    // d. the public checks (moved here from the side)
+    const targets = new Set(t.target_tests.map((x) => x.query));
+    const lang = workLang(t.work_language);
+    this.parts.hiddenNote = el(doc, 'p', { class: 'ed-meta' });
+    const checks = el(
+      doc,
+      'section',
+      { class: 'ed-checks', 'aria-labelledby': 'ed-checks-h' },
+      el(
+        doc,
+        'h3',
+        { class: 'ed-label', id: 'ed-checks-h' },
+        T(
+          `试跑会检查这 ${t.public_probes.length} 个问题`,
+          `A trial checks these ${t.public_probes.length} questions`,
+        ),
       ),
       el(
         doc,
         'ol',
-        { class: 'ed-probe-list' },
+        { class: 'ed-checks__list' },
         ...t.public_probes.map((p) =>
           el(
             doc,
             'li',
             {},
-            el(doc, 'span', { class: 'ed-id' }, p.id),
-            el(doc, 'span', { class: 'ed-probe-list__q', lang }, p.query),
-            targets.has(p.query) ? el(doc, 'span', { class: 'ed-tag' }, T('目标', 'Target')) : null,
+            el(doc, 'code', { class: 'ed-key', lang: 'en' }, p.id),
+            el(doc, 'span', { class: 'ed-checks__q', lang }, p.query),
+            targets.has(p.query)
+              ? chip(doc, T('要修的', 'To fix'), 'outline')
+              : chip(doc, T('不能变坏', 'Must not break'), 'plain'),
           ),
         ),
       ),
-      el(
-        doc,
-        'p',
-        { class: 'meta' },
-        T(
-          '复核时另跑隐藏探针，只给计数。',
-          'The review also runs hidden probes and reports only their counts.',
-        ),
-      ),
+      this.parts.hiddenNote,
     );
+    // e. run it
+    const trial = key(doc, T('试跑', 'Run a trial'), 'secondary', { id: 'ed-trial' }, 'play');
+    trial.addEventListener('click', () => void this.trial());
+    this.parts.trial = trial;
+    this.parts.budgetCount = countNode(doc, t.experiment_budget.used);
+    this.parts.budget = el(
+      doc,
+      'span',
+      { class: 'ed-meta' },
+      T('已试 ', ''),
+      this.parts.budgetCount,
+      `/${t.experiment_budget.limit}`,
+      T(' 次', ' runs used'),
+    );
+    this.parts.trialNote = el(doc, 'p', { class: 'ed-meta ed-trial__note', hidden: true });
+    // f. the tape
+    this.parts.tape = el(doc, 'div', { class: 'ed-log' });
+    this.steps.fix.inner.append(
+      bar,
+      this.parts.form,
+      checks,
+      el(doc, 'div', { class: 'ed-step__do' }, trial, this.parts.budget),
+      this.parts.trialNote,
+      this.parts.tape,
+    );
+    this.drawFields();
+    this.drawTape();
   }
 
-  private drawReviews() {
+  private moreOpen = false;
+  /** The settings of a trial that did not go through (its row stays in the log). */
+  private failedTrial = '';
+  private drawFields() {
     const doc = this.ctx.doc;
-    const t = this.ticket as TicketDetail;
-    const node = this.parts.reviews;
-    if (!t.reviews.length) {
-      node.hidden = true;
-      node.replaceChildren();
-      return;
-    }
-    node.hidden = false;
-    node.replaceChildren(
-      el(doc, 'h2', { class: 'ed-sec', id: 'ed-reviews-h' }, T('复核记录', 'Reviews')),
-      el(
-        doc,
-        'ol',
-        { class: 'ed-review-list' },
-        ...t.reviews.map((r, i) => {
-          const open = button(
-            doc,
-            [
-              el(
-                doc,
-                'span',
-                { class: 'ed-review-list__n' },
-                T(`第 ${i + 1} 次`, `Review ${i + 1}`),
-              ),
-              el(
-                doc,
-                'span',
-                { class: 'ed-review-list__s' },
-                r.status === 'incomplete'
-                  ? T('复核未完成', 'Review incomplete')
-                  : r.status === 'report_mismatch'
-                    ? T('复核完成，自报不符', 'Reviewed, self-report differs')
-                    : T('复核完成', 'Reviewed'),
-              ),
-              el(doc, 'time', { datetime: r.signed_at }, clock(r.signed_at)),
-              iconNode(doc, 'chev', 'i-xs'),
-            ],
-            'ed-review-list__open',
-            { id: `ed-review-${i}` },
-          );
-          open.addEventListener('click', () => this.ctx.navigate('engineer-review', r.review_id));
-          return el(doc, 'li', {}, open);
-        }),
-      ),
-    );
-  }
-
-  /* ---------- candidate settings ---------- */
-
-  private drawBench() {
-    const doc = this.ctx.doc;
+    // The rows are drawn anew: release the islands of the old ones first.
+    releaseFieldIslands(this.parts.form);
     const t = this.ticket as TicketDetail;
     const fields = new Map(t.editable_fields.map((f) => [f.field, f]));
     const placed = new Set<string>();
@@ -678,65 +1028,10 @@ export class EngineerDesk {
             'fieldset',
             { class: 'ed-group' },
             el(doc, 'legend', { class: 'ed-group__title' }, g.title()),
-            ...all.map((name) => this.fieldRow(fields.get(name) as EditableField)),
+            ...all.map((name) => this.field(fields.get(name) as EditableField)),
           )
         : null;
     });
-    const trial = button(
-      doc,
-      [iconNode(doc, 'play', 'i-xs'), T('试跑这组设置', 'Run a trial with these')],
-      'btn small',
-      { id: 'ed-trial' },
-    );
-    trial.addEventListener('click', () => void this.trial());
-    const reset = button(doc, T('恢复基线', 'Reset to baseline'), 'btn small quiet', {
-      id: 'ed-reset',
-    });
-    reset.addEventListener('click', () => this.resetCandidate());
-    this.parts.trial = trial;
-    this.parts.reset = reset;
-    this.parts.diff = el(doc, 'div', { class: 'ed-diff', 'aria-live': 'polite' });
-    this.parts.benchMeta = el(doc, 'span', { class: 'meta ed-bench__budget' });
-    this.parts.benchError = el(doc, 'p', { class: 'ed-error', role: 'alert', hidden: true });
-    this.parts.bench.replaceChildren(
-      el(
-        doc,
-        'header',
-        { class: 'ed-bench__head' },
-        el(doc, 'h2', { class: 'ed-sec', id: 'ed-bench-h' }, T('候选设置', 'Candidate settings')),
-        el(
-          doc,
-          'p',
-          { class: 'meta' },
-          T(
-            '只改候选，试跑和复核用它；不会应用到试点。',
-            'Changes only the candidate for trials and review; the pilot stays as it is.',
-          ),
-        ),
-      ),
-      el(
-        doc,
-        'form',
-        { class: 'ed-form', id: 'ed-form', novalidate: true },
-        el(doc, 'div', { class: 'ed-form__main' }, ...groups.slice(0, 2)),
-        this.moreSettings(groups.slice(2)),
-      ),
-      this.parts.diff,
-      el(doc, 'div', { class: 'ed-bench__keys' }, trial, reset, this.parts.benchMeta),
-      this.parts.benchError,
-    );
-    (this.parts.bench.querySelector('form') as HTMLFormElement).addEventListener('submit', (e) => {
-      e.preventDefault();
-      void this.trial();
-    });
-    this.drawBenchState();
-  }
-
-  /** The scope and engineering-work settings, folded: rarely the fix, still one click away.
-   * The fold says how many of its settings the candidate changed, and stays open once opened. */
-  private moreOpen = false;
-  private moreSettings(groups: Child[]): HTMLElement {
-    const doc = this.ctx.doc;
     const count = el(doc, 'span', { class: 'ed-more__count' });
     this.parts.moreCount = count;
     const more = el(
@@ -750,799 +1045,650 @@ export class EngineerDesk {
         el(doc, 'span', {}, T('知识范围与开发安排', 'Knowledge scope and engineering work')),
         count,
       ),
-      el(doc, 'div', { class: 'ed-form__main' }, ...groups),
+      el(doc, 'div', { class: 'ed-form__groups' }, ...groups.slice(2)),
     );
     more.addEventListener('toggle', () => {
       this.moreOpen = more.open;
     });
     this.parts.more = more;
-    return more;
+    keepingFocus(doc, () =>
+      this.parts.form.replaceChildren(
+        el(
+          doc,
+          'div',
+          { class: 'ed-instrument' },
+          el(doc, 'div', { class: 'ed-form__groups' }, ...groups.slice(0, 2)),
+          more,
+        ),
+      ),
+    );
+    this.drawFixState();
   }
 
-  private fieldRow(field: EditableField): HTMLElement {
-    const doc = this.ctx.doc;
+  private field(field: EditableField): HTMLElement {
     const name = field.field;
-    const id = `ed-f-${name}`;
-    const value = this.values[name];
-    let control: HTMLElement;
-    const labelId = `${id}-label`;
-    const update = (next: JsonValue) => {
-      this.values[name] = next;
-      delete this.fieldErrors[name];
-      this.drawBenchState();
-    };
-    if (field.type === 'set' || field.type === 'choice' || field.type === 'boolean') {
-      const choices: readonly (string | boolean)[] =
-        field.type === 'boolean' ? [true, false] : (field.choices ?? []);
-      const multiple = field.type === 'set';
-      control = el(doc, 'div', {
-        class: 'choices wrap ed-choices',
-        role: multiple ? 'group' : 'radiogroup',
-        'aria-labelledby': labelId,
-      });
-      for (const choice of choices) {
-        const key = String(choice);
-        const checked = multiple
-          ? Array.isArray(value) && value.map(String).includes(key)
-          : value === choice;
-        const input = el(doc, 'input', {
-          type: multiple ? 'checkbox' : 'radio',
-          name: id,
-          value: key,
-          id: `${id}-${key}`,
-          checked,
-        });
-        input.addEventListener('change', () => {
-          if (multiple) {
-            const picked = [...control.querySelectorAll<HTMLInputElement>('input:checked')].map(
-              (x) => x.value,
-            );
-            update((field.choices ?? []).filter((c) => picked.includes(c)));
-          } else update(field.type === 'boolean' ? key === 'true' : key);
-        });
-        const cost = field.costs?.[key];
-        control.append(
-          el(
-            doc,
-            'label',
-            { class: 'choice' },
-            input,
-            el(
-              doc,
-              'span',
-              {},
-              typeof choice === 'boolean' ? valueText(name, choice) : choiceText(name, key),
-              cost !== undefined ? el(doc, 'small', {}, T(`${cost} 人日`, `${cost} pd`)) : null,
-            ),
+    return fieldRow(this.ctx.doc, field, this.values[name], {
+      change: (next: JsonValue) => {
+        this.values[name] = next;
+        delete this.fieldErrors[name];
+        this.agentFilled.delete(name);
+        this.drawFixState();
+        this.publish();
+      },
+      invalid: (message) => {
+        this.fieldErrors[name] = message;
+        this.drawFixState();
+        this.publish();
+      },
+      restore: () => {
+        const t = this.ticket as TicketDetail;
+        this.values[name] = structuredClone(t.baseline_config[name]);
+        delete this.fieldErrors[name];
+        this.agentFilled.delete(name);
+        this.drawFields();
+        this.publish();
+        this.ctx.doc.getElementById(`ed-f-${name}`)?.focus?.();
+        (
+          this.ctx.doc.querySelector(`[data-field="${name}"] input:checked`) as HTMLElement | null
+        )?.focus();
+      },
+    });
+  }
+
+  /** The Agent's latest settings (its newest draft, else its newest trial with values). */
+  private agentSettings(): {
+    changes: Readonly<Record<string, Change>>;
+    title: (f: string) => string;
+    draft: boolean;
+  } | null {
+    const t = this.ticket as TicketDetail;
+    const draft = t.latest_draft;
+    const trial = [...t.trials]
+      .reverse()
+      .find((r) => r.kind === 'trial' && isAgent(r.executor.kind) && r.changes);
+    // Only what is still news: a draft not yet signed, or a trial after the last signature.
+    const lastSigned = t.reviews.at(-1)?.signed_at ?? '';
+    const draftOpen = !!draft && !t.reviews.some((r) => r.draft_id === draft.id);
+    const trialNew = !!trial && trial.created_at > lastSigned;
+    const useDraft =
+      draft &&
+      draftOpen &&
+      isAgent(draft.executor.kind) &&
+      (!trialNew || draft.created_at >= (trial?.created_at ?? ''));
+    if (useDraft)
+      return {
+        changes: draft.changes,
+        draft: true,
+        title: () =>
+          T(
+            `你的 Agent 在 ${clock(draft.created_at)} 的草稿里改的`,
+            `Your agent changed this in its ${clock(draft.created_at)} draft`,
           ),
-        );
-      }
-    } else if (field.type === 'text_list') {
-      const area = el(doc, 'textarea', {
-        class: 'textarea ed-topics',
-        id,
-        rows: 2,
-        'aria-labelledby': labelId,
-        'aria-describedby': `${id}-error`,
-        placeholder: T('每行一个主题', 'One topic per line'),
-      });
-      area.value = Array.isArray(value) ? value.join('\n') : '';
-      area.addEventListener('input', () => {
-        const parsed = parseField(field, area.value);
-        if ('value' in parsed) update(parsed.value);
-        else {
-          this.fieldErrors[name] = parsed.error;
-          this.drawBenchState();
-        }
-      });
-      control = area;
-    } else {
-      const input = el(doc, 'input', {
-        class: 'input ed-num',
-        id,
-        type: 'text',
-        inputmode: field.type === 'integer' ? 'numeric' : 'decimal',
-        'aria-labelledby': labelId,
-        'aria-describedby': `${id}-error`,
-        autocomplete: 'off',
-      });
-      input.value = value === null || value === undefined ? '' : String(value);
-      input.addEventListener('input', () => {
-        const parsed = parseField(field, input.value);
-        if ('value' in parsed) update(parsed.value);
-        else {
-          this.fieldErrors[name] = parsed.error;
-          this.drawBenchState();
-        }
-      });
-      control = input;
+      };
+    if (trialNew && trial?.changes)
+      return {
+        changes: trial.changes,
+        draft: false,
+        title: () =>
+          T(
+            `你的 Agent 在 ${clock(trial.created_at)} 的试跑里改的`,
+            `Your agent changed this in its ${clock(trial.created_at)} trial`,
+          ),
+      };
+    return null;
+  }
+
+  private useAgentSettings() {
+    const source = this.agentSettings();
+    const t = this.ticket as TicketDetail;
+    if (!source) return;
+    this.values = structuredClone(t.baseline_config);
+    this.fieldErrors = {};
+    this.agentFilled.clear();
+    for (const [field, change] of Object.entries(source.changes)) {
+      this.values[field] = structuredClone(change.after);
+      this.agentFilled.set(field, source.title(field));
     }
-    return el(
-      doc,
-      'div',
-      { class: 'ed-field', 'data-field': name },
-      el(
-        doc,
-        'div',
-        { class: 'ed-field__label', id: labelId },
-        el(doc, 'span', { class: 'ed-field__name' }, fieldName(name)),
-        el(doc, 'code', { class: 'ed-key', lang: 'en' }, name),
-      ),
-      control,
-      el(doc, 'p', { class: 'ed-field__was', 'data-was': name, hidden: true }),
-      el(doc, 'p', { class: 'ed-field__error', id: `${id}-error`, hidden: true }),
+    this.drawFields();
+    this.publish();
+    this.ctx.notify(
+      source.draft
+        ? T(
+            '你的 Agent 草稿里的设置已经填进来了。试跑之前什么都不会运行。',
+            'Your agent’s draft settings are now in the form. Nothing runs until you run a trial.',
+          )
+        : T(
+            '你的 Agent 试跑的设置已经填进来了。试跑之前什么都不会运行。',
+            'Your agent’s trial settings are now in the form. Nothing runs until you run a trial.',
+          ),
     );
   }
 
-  private changes(): Settings {
-    return candidateChanges((this.ticket as TicketDetail).baseline_config, this.values);
-  }
-
-  private drawBenchState() {
-    const doc = this.ctx.doc;
+  private drawFixState() {
     const t = this.ticket;
-    if (!t || !this.parts.diff) return;
+    if (!t || !this.parts.form) return;
     const changes = this.changes();
-    for (const row of this.parts.bench.querySelectorAll<HTMLElement>('.ed-field')) {
+    for (const row of this.parts.form.querySelectorAll<HTMLElement>('.ed-field')) {
       const name = row.dataset.field as string;
-      const changed = name in changes;
-      row.classList.toggle('is-changed', changed);
-      const was = row.querySelector<HTMLElement>('.ed-field__was') as HTMLElement;
-      was.hidden = !changed;
-      was.textContent = changed
-        ? T(
-            `基线：${valueText(name, t.baseline_config[name])}`,
-            `Baseline: ${valueText(name, t.baseline_config[name])}`,
-          )
-        : '';
-      const error = row.querySelector<HTMLElement>('.ed-field__error') as HTMLElement;
-      error.hidden = !this.fieldErrors[name];
-      error.textContent = this.fieldErrors[name] ?? '';
-      row.classList.toggle('has-error', !!this.fieldErrors[name]);
+      markField(
+        row,
+        name in changes ? { before: t.baseline_config[name], after: changes[name] } : null,
+        name in changes ? (this.agentFilled.get(name) ?? null) : null,
+        this.fieldErrors[name] ?? '',
+      );
     }
-    const entries = Object.entries(changes);
+    const n = Object.keys(changes).length;
+    setCount(this.parts.changeCount, n);
+    this.parts.reset.hidden = !n && !Object.keys(this.fieldErrors).length;
     const folded = [...(this.parts.more?.querySelectorAll<HTMLElement>('.ed-field') ?? [])].filter(
       (row) => (row.dataset.field as string) in changes,
     ).length;
     if (this.parts.moreCount)
       this.parts.moreCount.textContent = folded ? T(`改了 ${folded} 项`, `${folded} changed`) : '';
-    this.parts.diff.replaceChildren(
-      entries.length
-        ? el(
-            doc,
-            'p',
-            {},
-            el(
-              doc,
-              'span',
-              { class: 'ed-diff__lead' },
-              T('候选与基线不同：', 'Differs from the baseline: '),
-            ),
-            ...entries.flatMap(([name, after], i) => [
-              i ? el(doc, 'span', { class: 'ed-diff__sep', 'aria-hidden': 'true' }, ' · ') : null,
-              el(
-                doc,
-                'span',
-                { class: 'ed-diff__item' },
-                el(doc, 'b', {}, fieldName(name)),
-                ' ',
-                valueText(name, t.baseline_config[name]),
-                el(doc, 'span', { class: 'ed-arrow' }, ' → '),
-                valueText(name, after),
-              ),
-            ]),
-          )
-        : el(
-            doc,
-            'p',
-            { class: 'ed-diff__same' },
-            T('和委托基线相同。', 'Same as the ticket baseline.'),
-          ),
-    );
+    // "Use your agent's settings" when its latest differs from the candidate.
+    const agent = this.agentSettings();
+    const differs =
+      !!agent &&
+      JSON.stringify(
+        Object.entries(agent.changes)
+          .map(([f, c]) => [f, c.after])
+          .sort(),
+      ) !== JSON.stringify(Object.entries(changes).sort());
+    const useAgent = this.parts.useAgent as HTMLButtonElement;
+    useAgent.hidden = !differs;
+    if (agent)
+      (useAgent.querySelector('.ed-k__label') as HTMLElement).textContent = agent.draft
+        ? T('用 Agent 草稿的设置', 'Use your agent’s draft settings')
+        : T('用 Agent 试跑的设置', 'Use your agent’s trial settings');
+    // The run key and its budget.
     const blocked = Object.keys(this.fieldErrors).length > 0;
+    const full = t.experiment_budget.used >= t.experiment_budget.limit;
     const trial = this.parts.trial as HTMLButtonElement;
-    trial.disabled = !!this.busy || blocked;
-    trial.replaceChildren(
-      iconNode(doc, 'play', 'i-xs'),
-      this.busy === 'trial'
-        ? T('试跑中…', 'Running…')
-        : T('试跑这组设置', 'Run a trial with these'),
-    );
-    (this.parts.reset as HTMLButtonElement).disabled = !!this.busy || (!entries.length && !blocked);
-    const reproduce = this.parts.reproduce as HTMLButtonElement;
-    reproduce.disabled = !!this.busy;
-    reproduce.replaceChildren(
-      iconNode(doc, 'refresh', 'i-xs'),
-      this.busy === 'reproduce'
-        ? T('复现中…', 'Reproducing…')
-        : T('复现这个问题', 'Reproduce the problem'),
-    );
-    this.parts.benchMeta.textContent = T(
-      `已试 ${t.experiment_budget.used}/${t.experiment_budget.limit} 次`,
-      `${t.experiment_budget.used}/${t.experiment_budget.limit} runs used`,
-    );
-    this.parts.benchError.hidden = !this.errors.bench;
-    this.parts.benchError.textContent = this.errors.bench;
+    trial.disabled = (!!this.busy && this.busy !== 'trial') || blocked || full;
+    setBusy(trial, this.busy === 'trial');
+    this.parts.form.toggleAttribute('aria-busy', this.busy === 'trial');
+    this.parts.form.classList.toggle('is-sent', this.busy === 'trial');
+    setCount(this.parts.budgetCount, t.experiment_budget.used);
+    const note = this.parts.trialNote;
+    note.hidden = !(blocked || full);
+    note.textContent = full
+      ? T(
+          `这份委托已经试满 ${t.experiment_budget.limit} 次。可以直接起草签字。`,
+          `This ticket has used all ${t.experiment_budget.limit} runs. You can draft a sign-off now.`,
+        )
+      : blocked
+        ? T('先改正标红的设置，才能试跑。', 'Fix the setting marked in red before a trial.')
+        : '';
+    this.parts.hiddenNote.textContent =
+      this.hiddenTotal === null
+        ? T(
+            '复核还会跑一组隐藏检查，只给计数。',
+            'The review also runs hidden checks and gives only their counts.',
+          )
+        : T(
+            `复核还会跑 ${this.hiddenTotal} 条隐藏检查，只给计数。`,
+            `The review also runs ${this.hiddenTotal} hidden checks and gives only their counts.`,
+          );
   }
 
   private resetCandidate() {
     const t = this.ticket as TicketDetail;
     this.values = structuredClone(t.baseline_config);
     this.fieldErrors = {};
-    const focusId = this.ctx.doc.activeElement?.id;
-    this.drawBench();
-    this.ctx.doc.getElementById(focusId ?? 'ed-trial')?.focus();
+    this.agentFilled.clear();
+    this.drawFields();
+    this.publish();
+    this.ctx.doc.getElementById('ed-trial')?.focus();
     this.ctx.notify(T('候选已恢复为基线。', 'The candidate is back to the baseline.'));
-  }
-
-  /** Say the run's result to screen readers, through the workbench's own live region. */
-  private announceRun(record: Experiment) {
-    const t = this.ticket as TicketDetail;
-    const line = trialLine(record, t.public_probes.length);
-    const region = this.ctx.doc.getElementById('announcer');
-    if (!region) return;
-    region.textContent = '';
-    setTimeout(() => {
-      region.textContent = `${line.verb}${T('完成：', ' done: ')}${line.tally}`;
-    }, 30);
-  }
-
-  private async reproduce() {
-    if (!this.ticket || this.busy) return;
-    this.busy = 'reproduce';
-    this.errors.bench = '';
-    this.drawBenchState();
-    try {
-      const record = await this.ctx.api.reproduce(this.ticket.id);
-      this.keepExperiment(record);
-      this.expanded.add(record.id);
-      await this.refresh();
-      this.announceRun(record);
-    } catch (error) {
-      this.errors.bench = failureText(error);
-    } finally {
-      this.busy = '';
-      this.drawBenchState();
-      this.drawLog();
-    }
   }
 
   private async trial() {
     if (!this.ticket || this.busy || Object.keys(this.fieldErrors).length) return;
+    const t = this.ticket;
+    if (t.experiment_budget.used >= t.experiment_budget.limit) return;
+    const changes = this.changes();
     this.busy = 'trial';
-    this.errors.bench = '';
-    this.drawBenchState();
+    this.errors.trial = '';
+    this.failedTrial = '';
+    this.parts.tape.querySelector('.ed-line.is-failed')?.remove();
+    this.drawFixState();
+    this.publish();
+    this.drawSign();
+    // The run drops into the tape at once, its squares grey and dashed until it answers.
+    const short =
+      diffShort(settingsDiff(t.baseline_config, changes, t.editable_fields)) ||
+      T('基线设置', 'Baseline settings');
+    const pending = pendingRow(this.ctx.doc, t, short, 'trial');
+    this.tapeList()?.prepend(pending);
+    this.parts.tape.querySelector('.ed-log__empty')?.remove();
+    if (!byKeyboard())
+      move(
+        pending,
+        { opacity: [0, 1], transform: ['translateY(-8px)', 'translateY(0)'] },
+        { ease: undefined },
+      );
     try {
-      const record = await this.ctx.api.trial(this.ticket.id, this.changes());
+      const record = await this.ctx.api.trial(t.id, changes);
       this.keepExperiment(record);
       this.expanded.clear();
       this.expanded.add(record.id);
+      this.landing = record.id;
+      this.busy = '';
       await this.refresh();
-      this.announceRun(record);
+      const passed = record.counts.passed ?? 0;
+      this.announce(
+        T(
+          `试跑完成：公开 ${t.public_probes.length} 条通过 ${passed} 条。`,
+          `Trial done: ${passed} of ${t.public_probes.length} public checks passed.`,
+        ),
+      );
     } catch (error) {
-      this.errors.bench = failureText(error);
+      // The row stays where it dropped, squares still grey and dashed, with "try again".
+      this.errors.trial = failureText(error);
+      this.failedTrial = short;
     } finally {
       this.busy = '';
-      this.drawBenchState();
-      this.drawLog();
+      this.drawFixState();
+      this.drawTape();
+      this.drawSign();
+      this.publish();
     }
   }
 
-  /* ---------- the trial log ---------- */
+  private tapeList(): HTMLElement | null {
+    return this.parts.tape?.querySelector('.ed-tape') ?? null;
+  }
 
-  private drawLog() {
+  private drawTape() {
     const doc = this.ctx.doc;
     const t = this.ticket;
-    const node = this.parts.log;
+    const node = this.parts.tape;
     if (!t || !node) return;
-    const publicCount = t.public_probes.length;
+    if (this.busy === 'trial') return; // the pending row stays until the run answers
     const lines = [...t.trials].reverse();
     const tape = el(doc, 'ol', { class: 'ed-tape' });
-    for (const summary of lines) tape.append(this.logLine(summary, publicCount));
+    if (this.failedTrial) {
+      const retry = key(doc, T('重试', 'Try again'), 'ghost', { id: 'ed-trial-retry' }, 'refresh');
+      retry.addEventListener('click', () => void this.trial());
+      tape.append(failedRow(doc, t, this.failedTrial, this.errors.trial, retry));
+    }
+    for (const summary of lines) tape.append(this.tapeLine(summary));
+    const reproduced = t.trials.some((r) => r.kind === 'reproduce');
     keepingFocus(doc, () =>
       node.replaceChildren(
         el(
           doc,
-          'header',
-          { class: 'ed-log__head' },
-          el(doc, 'h2', { class: 'ed-sec', id: 'ed-log-h' }, T('试验记录', 'Trial log')),
+          'h3',
+          { class: 'ed-label' },
+          T('试验记录', 'Trial log'),
+          el(
+            doc,
+            'span',
+            { class: 'ed-meta' },
+            T(' · 你和你的 Agent 的每一次', ' · every run by you and your agent'),
+          ),
         ),
-        lines.length
+        lines.length || this.failedTrial
           ? tape
           : el(
               doc,
               'p',
-              { class: 'ed-tape ed-tape--empty' },
-              T(
-                '先复现一次，确认问题还在。',
-                'Reproduce the problem first to confirm it’s still there.',
-              ),
-            ),
-      ),
-    );
-    for (const s of lines) this.drawn.add(s.id);
-  }
-
-  private logLine(summary: ExperimentSummary, publicCount: number): HTMLElement {
-    const doc = this.ctx.doc;
-    const line = trialLine(summary, publicCount);
-    const full = this.experiments.get(summary.id);
-    const open = this.expanded.has(summary.id);
-    const fresh = !this.drawn.has(summary.id);
-    const rowsId = `ed-rows-${summary.id}`;
-    const head = button(
-      doc,
-      [
-        el(doc, 'time', { class: 'ed-line__time', datetime: summary.created_at }, line.time),
-        el(doc, 'span', { class: 'ed-line__who' }, line.agent ? agentNode(doc) : null, line.who),
-        el(doc, 'span', { class: 'ed-line__verb' }, line.verb),
-        el(
-          doc,
-          'span',
-          { class: 'ed-line__fields' },
-          line.fields || (summary.kind === 'trial' ? T('基线设置', 'Baseline settings') : ''),
-        ),
-        this.pips(summary, full, publicCount),
-        el(doc, 'span', { class: 'ed-line__tally', 'data-tone': line.tone }, line.tally),
-      ],
-      'ed-line__head',
-      { id: `ed-line-${summary.id}`, 'aria-expanded': String(open), 'aria-controls': rowsId },
-    );
-    head.addEventListener('click', () => {
-      if (this.expanded.has(summary.id)) this.expanded.delete(summary.id);
-      else this.expanded.add(summary.id);
-      this.drawLog();
-    });
-    const rows = el(doc, 'div', { class: 'ed-line__rows', id: rowsId, hidden: !open });
-    if (open) rows.append(this.lineRows(summary, full));
-    return el(
-      doc,
-      'li',
-      {
-        class: `ed-line${fresh ? ' is-new' : ''}`,
-        'data-kind': summary.kind,
-        'data-agent': line.agent ? 'true' : null,
-      },
-      head,
-      rows,
-    );
-  }
-
-  private pips(
-    summary: ExperimentSummary,
-    full: Experiment | undefined,
-    publicCount: number,
-  ): HTMLElement {
-    const doc = this.ctx.doc;
-    const marks: { mark: Mark; label: string }[] = [];
-    if (full?.rows) {
-      for (const row of experimentRows(full))
-        if (row.id || summary.kind === 'reproduce')
-          marks.push({ mark: row.mark, label: `${row.id ? `${row.id} ` : ''}${row.verdict}` });
-    } else if (summary.kind === 'trial') {
-      const c = summary.counts;
-      const passed = c.passed ?? 0;
-      const failed = c.failed ?? 0;
-      for (let i = 0; i < publicCount; i++)
-        marks.push({
-          mark: i < passed ? 'good' : i < passed + failed ? 'ink' : 'unknown',
-          label: '',
-        });
-    } else {
-      const c = summary.counts;
-      for (let i = 0; i < (c.total ?? 0); i++)
-        marks.push({ mark: i < (c.matched ?? 0) ? 'good' : 'warn', label: '' });
-    }
-    return el(
-      doc,
-      'span',
-      { class: 'ed-pips', 'aria-hidden': 'true' },
-      ...marks.slice(0, 12).map((m, i) =>
-        el(doc, 'span', {
-          class: 'ed-pip',
-          'data-mark': m.mark,
-          style: `--i:${i}`,
-          title: m.label || null,
-        }),
-      ),
-    );
-  }
-
-  private lineRows(summary: ExperimentSummary, full: Experiment | undefined): Node {
-    const doc = this.ctx.doc;
-    if (!full?.rows) {
-      const own = summary.executor.kind === 'human';
-      return el(
-        doc,
-        'p',
-        { class: 'ed-rows-note' },
-        own
-          ? T(
-              '这次试验的逐行结果不在这个页面上，这里只有计数。',
-              'This run’s rows aren’t on this page; only its counts are.',
-            )
-          : T(
-              '逐行结果在你的 Agent 那里，这里只有计数。',
-              'Your agent has this run’s rows; only its counts are here.',
-            ),
-      );
-    }
-    const t = this.ticket as TicketDetail;
-    const lang = workLang(t.work_language);
-    const reproduction = summary.kind === 'reproduce';
-    const changes = Object.entries(full.changes ?? {});
-    return el(
-      doc,
-      'div',
-      {},
-      changes.length
-        ? el(
-            doc,
-            'p',
-            { class: 'ed-rows-config' },
-            ...changes.flatMap(([name, change], i) => [
-              i ? ' · ' : null,
-              el(
-                doc,
-                'span',
-                {},
-                el(doc, 'b', {}, fieldName(name)),
-                ' ',
-                valueText(name, change.before),
-                el(doc, 'span', { class: 'ed-arrow' }, ' → '),
-                valueText(name, change.after),
-              ),
-            ]),
-          )
-        : null,
-      el(
-        doc,
-        'ol',
-        { class: 'ed-rows' },
-        ...experimentRows(full).map((row) =>
-          el(
-            doc,
-            'li',
-            { class: 'ed-row', 'data-mark': row.mark },
-            el(doc, 'span', { class: 'ed-row__mark', 'aria-hidden': 'true' }),
-            el(doc, 'span', { class: 'ed-row__id' }, row.id),
-            el(
-              doc,
-              'span',
-              { class: 'ed-row__q', lang },
-              row.query,
-              row.target && !reproduction
-                ? el(
-                    doc,
-                    'span',
-                    { class: 'ed-tag', lang: workLang(T('zh', 'en') as 'zh' | 'en') },
-                    T('目标', 'Target'),
+              { class: 'ed-tape ed-log__empty' },
+              reproduced
+                ? T(
+                    '还没有试跑。改好设置后点试跑。',
+                    'No trial yet. Change a setting, then run a trial.',
                   )
-                : null,
+                : T('还没有试验。先复现一次。', 'Nothing run yet. Reproduce it first.'),
             ),
-            el(
-              doc,
-              'span',
-              { class: 'ed-row__io' },
-              row.expected
-                ? `${reproduction ? T('记录 ', 'Recorded: ') : T('期望 ', 'Expected: ')}${row.expected} · `
-                : '',
-              `${reproduction ? T('复现 ', 'Rerun: ') : T('实际 ', 'Got: ')}${row.actual}`,
-            ),
-            el(doc, 'span', { class: 'ed-row__verdict', 'data-mark': row.mark }, row.verdict),
-            row.answer ? el(doc, 'p', { class: 'ed-row__answer', lang }, row.answer) : null,
-          ),
-        ),
       ),
+    );
+    // A run that just answered: its squares light one by one, its tally rolls from zero.
+    const landing = this.landing;
+    this.landing = '';
+    for (const summary of lines) {
+      const row = tape.querySelector<HTMLElement>(`[data-id="${CSS.escape(summary.id)}"]`);
+      if (!row) continue;
+      if (summary.id === landing && !reducedMotion()) {
+        row.querySelectorAll('.ed-line__head .ed-square').forEach((sq, i) => {
+          light(sq, i * 0.04);
+        });
+        const count = row.querySelector('.ed-line__tally number-flow');
+        if (count) {
+          const target = summary.counts.passed ?? 0;
+          setCount(count, 0);
+          requestAnimationFrame(() => setCount(count, target));
+        }
+      } else if (!this.drawn.has(summary.id) && !byKeyboard()) arrive(row, -8, { ease: undefined });
+      this.drawn.add(summary.id);
+    }
+  }
+
+  private tapeLine(summary: ExperimentSummary): HTMLElement {
+    return tapeRow(
+      this.ctx.doc,
+      this.ticket as TicketDetail,
+      summary,
+      this.experiments.get(summary.id),
+      this.expanded.has(summary.id),
+      () => {
+        if (this.expanded.has(summary.id)) this.expanded.delete(summary.id);
+        else this.expanded.add(summary.id);
+        this.drawTape();
+      },
     );
   }
 
-  /* ---------- the sign sheet ---------- */
+  /* ---------- ③ sign off ---------- */
 
-  private drawSheet() {
+  private buildSign() {
+    const doc = this.ctx.doc;
+    this.impact = el(doc, 'textarea', {
+      class: 'ed-input ed-impact__field',
+      id: 'ed-impact',
+      rows: 3,
+      maxlength: IMPACT_NOTE_LIMIT,
+      'aria-describedby': 'ed-impact-count',
+      required: true,
+    });
+    this.parts.impactCount = countNode(doc, 0);
+    this.parts.impactError = el(doc, 'p', {
+      class: 'ed-error',
+      id: 'ed-impact-error',
+      role: 'alert',
+      hidden: true,
+    });
+    this.impact.addEventListener('input', () => {
+      const area = this.impact as HTMLTextAreaElement;
+      // Grows with its text; at least three lines.
+      area.style.height = 'auto';
+      area.style.height = `${Math.max(area.scrollHeight, 0)}px`;
+      setCount(this.parts.impactCount, [...area.value.trim()].length);
+      if (area.value.trim()) this.parts.impactError.hidden = true;
+    });
+    this.sign = new Signature(doc, {
+      precheck: () => {
+        const problem = validateImpactNote(this.impact?.value ?? '');
+        this.parts.impactError.hidden = !problem;
+        this.parts.impactError.textContent = problem;
+        if (problem) this.impact?.focus();
+        else this.heldDraft = this.ticket?.latest_draft?.id ?? '';
+        return problem;
+      },
+      sign: () => void this.signNow(),
+      openReview: (id) => this.ctx.navigate('engineer-review', id),
+      released: () => {
+        if (this.sheetPending) this.drawSign();
+      },
+    });
+    this.parts.sheet = el(doc, 'div', { class: 'ed-signoff' });
+    this.steps.signoff.inner.append(this.parts.sheet);
+    this.drawSign();
+  }
+
+  private drawSign() {
     const doc = this.ctx.doc;
     const t = this.ticket;
     const node = this.parts.sheet;
-    if (!t || !node) return;
-    keepingFocus(doc, () => this.drawSheetInner(t, node));
-  }
-
-  private drawSheetInner(t: TicketDetail, node: HTMLElement) {
-    const doc = this.ctx.doc;
-    const latest = t.latest_draft;
-    const composeLabel = latest
-      ? T('自己重新起草', 'Write your own draft')
-      : T('自己起草', 'Write a draft');
-    const compose = button(doc, [iconNode(doc, 'edit', 'i-xs'), composeLabel], 'btn small quiet', {
-      id: 'ed-compose',
-      'aria-expanded': String(!!this.compose),
-    });
-    compose.addEventListener('click', () => this.toggleCompose());
-    const parts: Child[] = [];
-    if (this.compose) parts.push(this.composeForm());
-    else if (latest) parts.push(this.sheetBody());
-    else
-      parts.push(
-        el(
-          doc,
-          'p',
-          { class: 'ed-sheet__empty' },
-          T(
-            '还没有草稿：等你的 Agent 起草，或者自己起草。',
-            'No draft yet: wait for your agent’s, or write one yourself.',
-          ),
-        ),
-      );
-    if (!this.impact) {
-      this.impact = el(doc, 'textarea', {
-        class: 'textarea ed-impact__field',
-        id: 'ed-impact',
-        rows: 3,
-        maxlength: IMPACT_NOTE_LIMIT,
-        'aria-describedby': 'ed-impact-count',
-        required: true,
-      });
-      this.impact.addEventListener('input', () => this.drawSignState());
-    }
-    const state = signState(t);
-    const sign = button(
-      doc,
-      T('签字提交复核', 'Sign and submit for review'),
-      'btn primary ed-sign__key',
-      { id: 'ed-sign' },
-    );
-    sign.addEventListener('click', () => void this.sign());
-    this.parts.sign = sign;
-    this.parts.signWho = el(doc, 'p', { class: 'ed-sign__who' });
-    this.parts.signNote = el(doc, 'p', { class: 'ed-sign__note' });
-    this.parts.impactCount = el(doc, 'span', { class: 'ed-impact__count', id: 'ed-impact-count' });
-    this.parts.sheetError = el(
-      doc,
-      'p',
-      { class: 'ed-error', role: 'alert', hidden: !this.errors.sheet },
-      this.errors.sheet,
-    );
-    const signedLink =
-      state.signedReview && !this.compose
-        ? (() => {
-            const b = button(
-              doc,
-              T('看这次复核的报告', 'See this review’s report'),
-              'btn small quiet',
-              { id: 'ed-signed-report' },
-            );
-            b.addEventListener('click', () =>
-              this.ctx.navigate('engineer-review', state.signedReview),
-            );
-            return b;
-          })()
-        : null;
-    node.replaceChildren(
-      el(
-        doc,
-        'div',
-        { class: 'ed-sheet__paper paper' },
-        el(
-          doc,
-          'header',
-          { class: 'ed-sheet__head' },
-          el(doc, 'h2', { class: 'ed-sec', id: 'ed-sheet-h' }, T('签字单', 'Sign-off sheet')),
-          compose,
-        ),
-        ...parts,
-        latest && !this.compose
-          ? el(
-              doc,
-              'div',
-              { class: 'ed-impact' },
-              el(
-                doc,
-                'label',
-                { class: 'ed-impact__label', for: 'ed-impact' },
-                T('这个改动还可能影响哪些问题', 'Which other questions might this change affect?'),
-              ),
-              this.impact,
-              el(doc, 'div', { class: 'ed-impact__meta' }, this.parts.impactCount),
-            )
-          : null,
-        this.parts.sheetError,
-        el(
-          doc,
-          'footer',
-          { class: 'ed-sign' },
-          el(doc, 'div', { class: 'ed-sign__line' }, this.parts.signWho, this.parts.signNote),
-          el(doc, 'div', { class: 'ed-sign__keys' }, signedLink, sign),
-        ),
-      ),
-    );
-    this.drawSignState();
-  }
-
-  private sheetBody(): HTMLElement {
-    const doc = this.ctx.doc;
-    const t = this.ticket as TicketDetail;
-    const sheet = signSheet(t.latest_draft as NonNullable<TicketDetail['latest_draft']>);
-    const lang = workLang(t.work_language);
-    const change = (c: { name: string; before: string; after: string }) =>
-      el(
-        doc,
-        'span',
-        { class: 'ed-change' },
-        el(doc, 'b', {}, c.name),
-        el(
-          doc,
-          'span',
-          { class: 'ed-change__values' },
-          c.before,
-          el(doc, 'span', { class: 'ed-arrow' }, ' → '),
-          c.after,
-        ),
-      );
-    return el(
-      doc,
-      'div',
-      { class: 'ed-sheet__body' },
-      el(
-        doc,
-        'p',
-        { class: 'ed-sheet__byline' },
-        sheet.agent ? agentNode(doc) : null,
-        T(
-          `${sheet.agent ? '你的 Agent 起草' : '你起草'} · ${sheet.time}`,
-          `${sheet.agent ? 'Drafted by your agent' : 'Drafted by you'} · ${sheet.time}`,
-        ),
-      ),
-      el(
-        doc,
-        'div',
-        { class: 'ed-compare' },
-        el(
-          doc,
-          'div',
-          { class: 'ed-compare__col' },
-          el(doc, 'h3', { class: 'ed-sub' }, T('实际改动', 'Actual change')),
-          sheet.actual.length
-            ? el(
-                doc,
-                'ul',
-                { class: 'ed-compare__list' },
-                ...sheet.actual.map((c) => el(doc, 'li', {}, change(c))),
-              )
-            : el(
-                doc,
-                'p',
-                { class: 'meta' },
-                T('和基线相同，没有改动。', 'Same as the baseline; nothing changed.'),
-              ),
-        ),
-        el(
-          doc,
-          'div',
-          { class: 'ed-compare__col' },
-          el(doc, 'h3', { class: 'ed-sub' }, T('说明里写的改动', 'Change as stated')),
-          sheet.stated.length
-            ? el(
-                doc,
-                'ul',
-                { class: 'ed-compare__list' },
-                ...sheet.stated.map((c) =>
-                  el(
-                    doc,
-                    'li',
-                    {},
-                    change(c),
-                    el(doc, 'span', { class: 'ed-change__reason', lang }, c.reason),
-                  ),
-                ),
-              )
-            : el(doc, 'p', { class: 'meta' }, T('没有逐条写改动。', 'No change is stated.')),
-        ),
-      ),
-      sheet.explanation
-        ? el(
-            doc,
-            'div',
-            { class: 'ed-explain' },
-            el(doc, 'h3', { class: 'ed-sub' }, T('说明', 'Explanation')),
-            el(doc, 'p', { class: 'ed-explain__text', lang }, sheet.explanation),
-          )
-        : null,
-      el(
-        doc,
-        'div',
-        { class: 'ed-claims' },
-        el(doc, 'h3', { class: 'ed-sub' }, T('自报结果', 'Self-reported results')),
-        sheet.claims.length
-          ? el(
-              doc,
-              'ul',
-              { class: 'ed-claims__list' },
-              ...sheet.claims.map((c) =>
-                el(doc, 'li', {}, el(doc, 'span', { class: 'ed-id' }, c.id), c.text),
-              ),
-            )
-          : el(doc, 'p', { class: 'meta' }, T('没有附自报结果。', 'No self-report attached.')),
-      ),
-      el(
-        doc,
-        'div',
-        { class: 'ed-unresolved' },
-        el(doc, 'h3', { class: 'ed-sub' }, T('未修复项', 'Unresolved')),
-        sheet.unresolved.length
-          ? el(
-              doc,
-              'ul',
-              {},
-              ...sheet.unresolved.map((u) =>
-                el(
-                  doc,
-                  'li',
-                  {},
-                  el(doc, 'span', { lang }, u.description),
-                  u.probes ? el(doc, 'span', { class: 'ed-id' }, u.probes) : null,
-                ),
-              ),
-            )
-          : el(doc, 'p', { class: 'meta' }, T('没有写未修复项。', 'None listed.')),
-      ),
-    );
-  }
-
-  private drawSignState() {
-    const t = this.ticket;
-    if (!t || !this.parts.sign) return;
-    const state = signState(t);
-    const note = this.impact?.value ?? '';
-    const count = [...note.trim()].length;
-    if (this.parts.impactCount) {
-      this.parts.impactCount.textContent = `${count}/${IMPACT_NOTE_LIMIT}`;
-      this.parts.impactCount.dataset.over = String(count > IMPACT_NOTE_LIMIT);
-    }
-    const sign = this.parts.sign as HTMLButtonElement;
-    sign.disabled = !state.can || !!this.busy || !!this.compose;
-    sign.textContent =
-      this.busy === 'sign'
-        ? T('正在复核…', 'Reviewing…')
-        : T('签字提交复核', 'Sign and submit for review');
-    this.parts.signWho.textContent = T(
-      `只能由你签 · 还剩 ${state.left} 次复核`,
-      `Only you can sign · ${state.left} ${state.left === 1 ? 'review' : 'reviews'} left`,
-    );
-    this.parts.signNote.textContent = this.compose
-      ? T('先保存或取消草稿。', 'Save or cancel the draft first.')
-      : state.reason;
-    this.parts.signNote.hidden = !this.parts.signNote.textContent;
-  }
-
-  private async sign() {
-    const t = this.ticket;
-    if (!t || this.busy || !t.latest_draft) return;
-    const problem = validateImpactNote(this.impact?.value ?? '');
-    if (problem) {
-      this.errors.sheet = problem;
-      this.drawSheet();
-      this.impact?.focus();
+    if (!t || !node || !this.sign) return;
+    if (this.busy === 'sign') return; // the sheet stays as signed while the review runs
+    // Held (or the 400ms of a key press): the sheet the person is signing stays as it is.
+    if (this.sign.holding()) {
+      this.sheetPending = true;
       return;
     }
-    this.busy = 'sign';
-    this.errors.sheet = '';
-    this.drawSignState();
-    try {
-      const result = await this.ctx.api.sign(
-        t.id,
-        t.latest_draft.id,
-        (this.impact as HTMLTextAreaElement).value.trim(),
+    this.sheetPending = false;
+    const latest = t.latest_draft;
+    const state = signState(t);
+    const signedReview = latest ? t.reviews.find((r) => r.draft_id === latest.id) : undefined;
+    // A newer draft came in while the sheet was out: say so at its head (until it is signed).
+    if (latest && this.shownDraft && latest.id !== this.shownDraft && !signedReview)
+      this.draftNotice = T(
+        `草稿刚换成 ${clock(latest.created_at)} 那一份。签字前先看一眼。`,
+        `The draft just changed to the ${clock(latest.created_at)} one. Look it over before you sign.`,
       );
+    if (signedReview) this.draftNotice = '';
+    this.shownDraft = latest?.id ?? '';
+    // While another run is out, signing waits for it (and says why).
+    const waiting =
+      this.busy === 'reproduce'
+        ? T('复现跑完再签。', 'Wait for the reproduction to finish.')
+        : this.busy === 'trial'
+          ? T('试跑跑完再签。', 'Wait for the trial to finish.')
+          : this.busy === 'draft'
+            ? T('草稿保存好再签。', 'Wait for the draft to save.')
+            : '';
+    keepingFocus(doc, () => {
+      const children: (Node | null)[] = [];
+      const redo = key(
+        doc,
+        this.compose
+          ? T('收起草稿', 'Close the draft')
+          : latest
+            ? T('自己重新起草', 'Write your own draft')
+            : T('自己起草', 'Write a draft'),
+        latest || this.compose ? 'ghost' : 'secondary',
+        { id: 'ed-compose', 'aria-expanded': String(!!this.compose) },
+        'edit',
+      );
+      redo.addEventListener('click', () => this.toggleCompose());
+      if (this.compose) {
+        children.push(
+          el(
+            doc,
+            'div',
+            { class: 'ed-sheet is-compose' },
+            el(
+              doc,
+              'header',
+              { class: 'ed-sheet__top' },
+              el(doc, 'h3', { class: 'ed-label' }, T('自己起草', 'Your own draft')),
+              redo,
+            ),
+            composeForm({
+              doc,
+              ticket: t,
+              form: this.compose,
+              changes: this.changes(),
+              latestTrial: [...t.trials]
+                .reverse()
+                .map((s) => this.experiments.get(s.id))
+                .find((e) => e?.kind === 'trial' && e.rows),
+              busy: this.busy === 'draft',
+              errors: this.errors.compose,
+              redraw: (focusId) => {
+                this.drawSign();
+                if (focusId) this.ctx.doc.getElementById(focusId)?.focus();
+              },
+              cancel: () => this.toggleCompose(),
+              save: () => void this.saveDraft(),
+            }),
+          ),
+        );
+      } else if (!latest) {
+        children.push(
+          el(
+            doc,
+            'div',
+            { class: 'ed-empty' },
+            el(
+              doc,
+              'p',
+              {},
+              T(
+                '还没有草稿：等你的 Agent 交来，或者自己起草。',
+                'No draft yet: wait for your agent’s, or write one yourself.',
+              ),
+            ),
+            redo,
+          ),
+        );
+      } else {
+        const sign = this.sign as Signature;
+        sign.update({
+          left: state.left,
+          can: state.can && !waiting,
+          reason: signedReview ? '' : waiting || state.reason,
+          signedAt: signedReview?.signed_at,
+          signedReview: signedReview?.review_id,
+          exhausted: state.left <= 0 && !signedReview,
+        });
+        const exhausted =
+          state.left <= 0 && !signedReview
+            ? el(
+                doc,
+                'div',
+                { class: 'ed-sheet__spent' },
+                ...t.reviews.map((r, i) => {
+                  const k = key(
+                    doc,
+                    T(`第 ${i + 1} 次复核`, `Review ${i + 1}`),
+                    'ghost',
+                    {},
+                    'chev',
+                  );
+                  k.addEventListener('click', () =>
+                    this.ctx.navigate('engineer-review', r.review_id),
+                  );
+                  return k;
+                }),
+              )
+            : null;
+        (this.impact as HTMLTextAreaElement).readOnly = !!signedReview;
+        children.push(
+          el(
+            doc,
+            'article',
+            { class: 'ed-sheet', 'aria-labelledby': 'ed-sheet-h' },
+            el(
+              doc,
+              'header',
+              { class: 'ed-sheet__top' },
+              el(
+                doc,
+                'h3',
+                { class: 'ed-sheet__title', id: 'ed-sheet-h' },
+                T('签字单', 'Sign-off sheet'),
+              ),
+              redo,
+            ),
+            this.draftNotice
+              ? el(doc, 'p', { class: 'ed-sheet__notice', role: 'status' }, this.draftNotice)
+              : null,
+            sheetBody(doc, t),
+            signedReview
+              ? null
+              : el(
+                  doc,
+                  'div',
+                  { class: 'ed-impact' },
+                  el(
+                    doc,
+                    'label',
+                    { class: 'ed-label', for: 'ed-impact' },
+                    T(
+                      '这个改动还可能影响哪些问题？',
+                      'Which other questions might this change affect?',
+                    ),
+                    el(doc, 'span', { class: 'ed-required' }, T('（必填）', ' (required)')),
+                  ),
+                  this.impact,
+                  el(
+                    doc,
+                    'p',
+                    { class: 'ed-impact__meta', id: 'ed-impact-count' },
+                    this.parts.impactCount,
+                    `/${IMPACT_NOTE_LIMIT}`,
+                  ),
+                  this.parts.impactError,
+                ),
+            sign.element,
+            exhausted,
+          ),
+        );
+      }
+      node.replaceChildren(...children.filter((c): c is Node => !!c));
+    });
+  }
+
+  private observeSheet() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) this.sheetInView = e.intersectionRatio >= 0.4;
+        this.publish();
+      },
+      { threshold: [0, 0.4, 1] },
+    );
+    this.observer.observe(this.parts.sheet);
+  }
+
+  private async signNow() {
+    const t = this.ticket;
+    const sign = this.sign;
+    if (!t?.latest_draft || !sign || this.busy) {
+      sign?.failed('');
+      return;
+    }
+    // The draft changed under the held key (a poll read a newer one): don't sign what wasn't seen.
+    if (signedDraftStale(this.heldDraft, t)) {
+      sign.failed('');
+      this.drawSign();
+      this.ctx.doc.querySelector<HTMLElement>('.ed-sheet__notice')?.focus?.();
+      return;
+    }
+    const draftId = this.heldDraft;
+    const note = (this.impact as HTMLTextAreaElement).value.trim();
+    (this.impact as HTMLTextAreaElement).readOnly = true;
+    // Signed: the note becomes plain read-only text and keeps its words until the page has gone.
+    const impactBox = this.impact?.closest('.ed-impact');
+    impactBox?.classList.add('is-signed');
+    this.busy = 'sign';
+    this.publish();
+    const started = Date.now();
+    const left = Math.max(0, t.review_budget.limit - t.review_budget.used - 1);
+    sign.startReview(new Date().toISOString(), {
+      publicCount: t.public_probes.length,
+      hidden: this.hiddenTotal,
+      left,
+    });
+    setCount(this.parts.left, left);
+    this.draftNotice = '';
+    try {
+      const result = await this.ctx.api.sign(t.id, draftId, note);
       const reviewId = result.signoff.review_id;
       this.ctx.remember(reviewId, t.id);
-      if (this.impact) this.impact.value = '';
+      // The stamp needs its moment: at least 900ms before the page moves on (not pretending to work).
+      const wait = 900 - (Date.now() - started);
+      if (wait > 0) await sleep(wait);
+      sign.finished();
+      this.learnReview(result.review);
+      const ticket = await this.ctx.api.ticket(t.id).catch(() => t);
+      this.ticket = ticket;
+      this.signature = '';
+      this.ctx.cacheReview(result.review, ticket);
+      await sleep(240);
+      // The stamp becomes the report's headline mark (shared element, one moment per practice;
+      // desk.css names both only while this class is on).
+      this.ctx.doc.documentElement.classList.add('ed-vt-sign');
+      setTimeout(() => this.ctx.doc.documentElement.classList.remove('ed-vt-sign'), 900);
       this.busy = '';
-      await this.refresh();
+      sign.release();
       this.ctx.navigate('engineer-review', reviewId);
+      this.drawChanged();
+      // The next round starts with an empty note, emptied only once the sheet is off screen.
+      setTimeout(() => {
+        if (this.impact) this.impact.value = '';
+        setCount(this.parts.impactCount, 0);
+        impactBox?.classList.remove('is-signed');
+      }, 700);
     } catch (error) {
       this.busy = '';
-      this.errors.sheet = failureText(error);
-      this.drawSheet();
+      impactBox?.classList.remove('is-signed');
+      (this.impact as HTMLTextAreaElement).readOnly = false;
+      setCount(this.parts.left, Math.max(0, t.review_budget.limit - t.review_budget.used));
+      sign.failed(failureText(error));
+      this.publish();
     }
   }
 
@@ -1551,427 +1697,42 @@ export class EngineerDesk {
   private toggleCompose() {
     if (this.compose) this.compose = null;
     else {
-      const t = this.ticket as TicketDetail;
-      const changes = this.changes();
-      this.compose = {
-        explanation: '',
-        statements: Object.entries(changes).map(([field, after]) => ({
-          field,
-          before: t.baseline_config[field],
-          after,
-          reason: '',
-        })),
-        claimsOn: false,
-        claims: Object.fromEntries(t.public_probes.map((p) => [p.id, ''])),
-        unresolved: [],
-      };
+      this.compose = newDraftForm(this.ticket as TicketDetail, this.changes());
       this.errors.compose = [];
     }
-    this.drawSheet();
+    this.drawSign();
     this.ctx.doc.getElementById(this.compose ? 'ed-draft-explanation' : 'ed-compose')?.focus();
-  }
-
-  private draftInput(): DraftInput {
-    const form = this.compose as DraftForm;
-    return {
-      changes: this.changes(),
-      explanation: form.explanation.trim(),
-      change_statements: form.statements.map((s) => ({ ...s, reason: s.reason.trim() })),
-      claimed_results: form.claimsOn
-        ? (Object.fromEntries(Object.entries(form.claims).filter(([, v]) => v)) as Record<
-            string,
-            Outcome
-          >)
-        : {},
-      unresolved: form.unresolved.map((u) => ({
-        description: u.description.trim(),
-        probe_ids: u.probes,
-      })),
-    };
-  }
-
-  private composeForm(): HTMLElement {
-    const doc = this.ctx.doc;
-    const t = this.ticket as TicketDetail;
-    const form = this.compose as DraftForm;
-    const fields = new Map(t.editable_fields.map((f) => [f.field, f]));
-    const counter = el(doc, 'span', { class: 'ed-compose__count', 'aria-live': 'polite' });
-    const recount = () => {
-      const n = draftTextLength(this.draftInput());
-      counter.textContent = T(
-        `已写 ${n}/${DRAFT_TEXT_LIMIT} 字`,
-        `${n}/${DRAFT_TEXT_LIMIT} characters`,
-      );
-      counter.dataset.over = String(n > DRAFT_TEXT_LIMIT);
-    };
-    const changes = Object.entries(this.changes());
-    const explanation = el(doc, 'textarea', {
-      class: 'textarea',
-      id: 'ed-draft-explanation',
-      rows: 3,
-    });
-    explanation.value = form.explanation;
-    explanation.addEventListener('input', () => {
-      form.explanation = explanation.value;
-      recount();
-    });
-    const statementRow = (s: StatementRow, i: number) => {
-      const field = fields.get(s.field);
-      const valueControl = (which: 'before' | 'after') => {
-        const id = `ed-st-${i}-${which}`;
-        const label = which === 'before' ? T('改前', 'Before') : T('改后', 'After');
-        const set = (v: JsonValue) => {
-          s[which] = v;
-          recount();
-        };
-        if (field && (field.type === 'choice' || field.type === 'boolean')) {
-          const select = el(doc, 'select', {
-            class: 'select ed-st__value',
-            id,
-            'aria-label': `${fieldName(s.field)} · ${label}`,
-          });
-          const options: (string | boolean)[] =
-            field.type === 'boolean' ? [true, false] : [...(field.choices ?? [])];
-          for (const o of options)
-            select.append(
-              el(
-                doc,
-                'option',
-                { value: String(o), selected: s[which] === o },
-                typeof o === 'boolean' ? valueText(s.field, o) : choiceText(s.field, o),
-              ),
-            );
-          select.addEventListener('change', () =>
-            set(field.type === 'boolean' ? select.value === 'true' : select.value),
-          );
-          return select;
-        }
-        if (field && (field.type === 'integer' || field.type === 'number')) {
-          const input = el(doc, 'input', {
-            class: 'input ed-st__value',
-            id,
-            inputmode: 'decimal',
-            'aria-label': `${fieldName(s.field)} · ${label}`,
-            autocomplete: 'off',
-          });
-          input.value = s[which] === null || s[which] === undefined ? '' : String(s[which]);
-          input.addEventListener('input', () => {
-            const n = Number(input.value.trim());
-            set(input.value.trim() !== '' && Number.isFinite(n) ? n : input.value);
-          });
-          return input;
-        }
-        return el(doc, 'span', { class: 'ed-st__fixed', id }, valueText(s.field, s[which]));
-      };
-      const reason = el(doc, 'input', {
-        class: 'input',
-        id: `ed-st-${i}-reason`,
-        maxlength: 500,
-        placeholder: T('为什么这样改', 'Why this change'),
-        'aria-label': `${fieldName(s.field)} · ${T('理由', 'Reason')}`,
-        autocomplete: 'off',
-      });
-      reason.value = s.reason;
-      reason.addEventListener('input', () => {
-        s.reason = reason.value;
-        recount();
-      });
-      const remove = button(
-        doc,
-        [
-          iconNode(doc, 'x', 'i-xs'),
-          el(
-            doc,
-            'span',
-            { class: 'sr-only' },
-            T(`不写「${fieldName(s.field)}」这一条`, `Leave out “${fieldName(s.field)}”`),
-          ),
-        ],
-        'btn icon small quiet',
-        { id: `ed-st-${i}-remove` },
-      );
-      remove.addEventListener('click', () => {
-        form.statements.splice(i, 1);
-        this.drawSheet();
-        this.ctx.doc
-          .getElementById(
-            form.statements.length
-              ? `ed-st-${Math.min(i, form.statements.length - 1)}-reason`
-              : 'ed-draft-explanation',
-          )
-          ?.focus();
-      });
-      return el(
-        doc,
-        'li',
-        { class: 'ed-st' },
-        el(doc, 'span', { class: 'ed-st__name' }, fieldName(s.field)),
-        el(
-          doc,
-          'span',
-          { class: 'ed-st__values' },
-          valueControl('before'),
-          el(doc, 'span', { class: 'ed-arrow', 'aria-hidden': 'true' }, '→'),
-          valueControl('after'),
-        ),
-        reason,
-        remove,
-      );
-    };
-    // Self-report: every public probe or none.
-    const claimsOn = el(doc, 'input', {
-      type: 'checkbox',
-      id: 'ed-claims-on',
-      checked: form.claimsOn,
-    });
-    const latestTrial = [...t.trials]
-      .reverse()
-      .map((s) => this.experiments.get(s.id))
-      .find((e) => e?.kind === 'trial' && e.rows);
-    const fill = button(
-      doc,
-      T('用最近一次试跑结果填', 'Fill from the latest trial'),
-      'btn small quiet',
-      { id: 'ed-claims-fill', disabled: !latestTrial },
-    );
-    fill.addEventListener('click', () => {
-      const claims = latestTrial
-        ? claimsFromTrial(
-            latestTrial,
-            t.public_probes.map((p) => p.id),
-          )
-        : null;
-      if (!claims) return;
-      form.claimsOn = true;
-      form.claims = claims;
-      this.drawSheet();
-      this.ctx.doc.getElementById('ed-claims-fill')?.focus();
-    });
-    claimsOn.addEventListener('change', () => {
-      form.claimsOn = claimsOn.checked;
-      this.drawSheet();
-      this.ctx.doc.getElementById('ed-claims-on')?.focus();
-    });
-    const claimRows = form.claimsOn
-      ? el(
-          doc,
-          'ul',
-          { class: 'ed-claim-picks' },
-          ...t.public_probes.map((p) => {
-            const select = el(
-              doc,
-              'select',
-              {
-                class: 'select',
-                id: `ed-claim-${p.id}`,
-                'aria-label': `${p.id} · ${T('自报结果', 'Self-reported result')}`,
-              },
-              el(doc, 'option', { value: '', selected: !form.claims[p.id] }, T('未填', 'Not set')),
-              ...(['pass', 'fail', 'error'] as const).map((o) =>
-                el(
-                  doc,
-                  'option',
-                  { value: o, selected: form.claims[p.id] === o },
-                  {
-                    pass: T('通过', 'Passed'),
-                    fail: T('未通过', 'Did not pass'),
-                    error: T('执行出错', 'Run failed'),
-                  }[o],
-                ),
-              ),
-            );
-            select.addEventListener('change', () => {
-              form.claims[p.id] = select.value as Outcome | '';
-            });
-            return el(
-              doc,
-              'li',
-              {},
-              el(doc, 'label', { class: 'ed-id', for: `ed-claim-${p.id}` }, p.id),
-              select,
-            );
-          }),
-        )
-      : null;
-    // Unresolved items.
-    const unresolvedRows = form.unresolved.map((u, i) => {
-      const text = el(doc, 'input', {
-        class: 'input',
-        id: `ed-un-${i}`,
-        maxlength: 1000,
-        placeholder: T('还没修好的问题', 'What is still not fixed'),
-        'aria-label': T(`未修复项 ${i + 1}`, `Unresolved item ${i + 1}`),
-        autocomplete: 'off',
-      });
-      text.value = u.description;
-      text.addEventListener('input', () => {
-        u.description = text.value;
-        recount();
-      });
-      const probes = el(
-        doc,
-        'div',
-        {
-          class: 'choices ed-un__probes',
-          role: 'group',
-          'aria-label': T('涉及的公开探针', 'Public probes involved'),
-        },
-        ...t.public_probes.map((p) => {
-          const box = el(doc, 'input', {
-            type: 'checkbox',
-            id: `ed-un-${i}-${p.id}`,
-            value: p.id,
-            checked: u.probes.includes(p.id),
-          });
-          box.addEventListener('change', () => {
-            u.probes = t.public_probes
-              .map((x) => x.id)
-              .filter((id) => (id === p.id ? box.checked : u.probes.includes(id)));
-          });
-          return el(doc, 'label', { class: 'choice' }, box, el(doc, 'span', {}, p.id));
-        }),
-      );
-      const remove = button(
-        doc,
-        [
-          iconNode(doc, 'x', 'i-xs'),
-          el(doc, 'span', { class: 'sr-only' }, T('删去这一条', 'Remove this item')),
-        ],
-        'btn icon small quiet',
-        { id: `ed-un-${i}-remove` },
-      );
-      remove.addEventListener('click', () => {
-        form.unresolved.splice(i, 1);
-        this.drawSheet();
-        this.ctx.doc.getElementById('ed-un-add')?.focus();
-      });
-      return el(doc, 'li', { class: 'ed-un' }, text, probes, remove);
-    });
-    const addUnresolved = button(
-      doc,
-      [iconNode(doc, 'plus', 'i-xs'), T('添加一条未修复项', 'Add an unresolved item')],
-      'btn small quiet',
-      { id: 'ed-un-add', disabled: form.unresolved.length >= UNRESOLVED_LIMIT },
-    );
-    addUnresolved.addEventListener('click', () => {
-      form.unresolved.push({ description: '', probes: [] });
-      this.drawSheet();
-      this.ctx.doc.getElementById(`ed-un-${form.unresolved.length - 1}`)?.focus();
-    });
-    const cancel = button(doc, T('取消', 'Cancel'), 'btn small quiet', { id: 'ed-draft-cancel' });
-    cancel.addEventListener('click', () => this.toggleCompose());
-    const save = button(
-      doc,
-      this.busy === 'draft' ? T('正在保存…', 'Saving…') : T('保存草稿', 'Save the draft'),
-      'btn small',
-      { id: 'ed-draft-save', disabled: !!this.busy },
-    );
-    save.addEventListener('click', () => void this.saveDraft());
-    const view = el(
-      doc,
-      'div',
-      { class: 'ed-compose' },
-      el(
-        doc,
-        'p',
-        { class: 'ed-compose__from' },
-        changes.length
-          ? T(
-              '草稿的设置取自上面的候选：',
-              'The draft takes its settings from the candidate above: ',
-            ) + changes.map(([f]) => fieldName(f)).join(T('、', ', '))
-          : T(
-              '候选和基线相同，草稿不会改任何设置。',
-              'The candidate matches the baseline, so the draft changes nothing.',
-            ),
-      ),
-      el(
-        doc,
-        'label',
-        { class: 'ed-compose__label', for: 'ed-draft-explanation' },
-        T('说明', 'Explanation'),
-      ),
-      explanation,
-      el(
-        doc,
-        'div',
-        { class: 'ed-compose__block' },
-        el(doc, 'h3', { class: 'ed-sub' }, T('逐条变更', 'Changes, one by one')),
-        form.statements.length
-          ? el(doc, 'ol', { class: 'ed-st-list' }, ...form.statements.map(statementRow))
-          : el(doc, 'p', { class: 'meta' }, T('没有要写的变更。', 'No changes to state.')),
-      ),
-      el(
-        doc,
-        'div',
-        { class: 'ed-compose__block' },
-        el(
-          doc,
-          'div',
-          { class: 'ed-compose__row' },
-          el(
-            doc,
-            'label',
-            { class: 'ed-check', for: 'ed-claims-on' },
-            claimsOn,
-            el(doc, 'span', {}, T('附上自报结果', 'Attach a self-report')),
-          ),
-          fill,
-        ),
-        claimRows,
-      ),
-      el(
-        doc,
-        'div',
-        { class: 'ed-compose__block' },
-        el(doc, 'h3', { class: 'ed-sub' }, T('未修复项', 'Unresolved')),
-        unresolvedRows.length ? el(doc, 'ol', { class: 'ed-un-list' }, ...unresolvedRows) : null,
-        addUnresolved,
-      ),
-      this.errors.compose.length
-        ? el(
-            doc,
-            'ul',
-            { class: 'ed-error ed-compose__errors', role: 'alert' },
-            ...this.errors.compose.map((e) => el(doc, 'li', {}, e)),
-          )
-        : null,
-      el(doc, 'div', { class: 'ed-compose__keys' }, counter, cancel, save),
-    );
-    recount();
-    return view;
   }
 
   private async saveDraft() {
     const t = this.ticket;
     if (!t || !this.compose || this.busy) return;
-    const input = this.draftInput();
+    const input = draftInput(this.compose, this.changes());
     const problems = validateDraft(
       input,
       t.public_probes.map((p) => p.id),
     );
     if (problems.length) {
       this.errors.compose = problems;
-      this.drawSheet();
+      this.drawSign();
       this.ctx.doc.getElementById('ed-draft-save')?.focus();
       return;
     }
     this.busy = 'draft';
     this.errors.compose = [];
-    this.drawSheet();
+    this.drawSign();
     try {
       await this.ctx.api.draft(t.id, input);
       this.compose = null;
       this.busy = '';
       await this.refresh();
-      this.drawSheet();
-      this.drawBenchState();
+      this.drawSign();
+      this.publish();
       this.impact?.focus();
-      // The sheet itself now shows the draft and the note field has focus: that is the landing.
     } catch (error) {
       this.busy = '';
       this.errors.compose = [failureText(error)];
-      this.drawSheet();
+      this.drawSign();
     }
   }
 }

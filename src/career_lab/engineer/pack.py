@@ -66,6 +66,7 @@ def reproduce_test(
             operation_name=operation,
             # Engineering re-execution is rule-based, as are trials and reviews.
             recognize=False,
+            rule_replay=True,
         ).result
         for ref in actual.citations:
             module.check_evidence(view, auth, ref)
@@ -75,6 +76,8 @@ def reproduce_test(
             "matches_record": recorded == reproduced,
             "recorded": recorded,
             "reproduced": reproduced,
+            "execution_mode": "rule_based_replay",
+            "configured_generator": test.config.requested.generator,
             "execution": actual.execution.model_dump(
                 mode="json", include={"attempts", "cost_complete"}
             ),

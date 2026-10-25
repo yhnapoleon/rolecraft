@@ -10,7 +10,8 @@ export function createPageTransition(
       activeTransition = null;
     }
   };
-  const run = (update: () => void) => {
+  // Resolves once the new page is drawn (and, inside a practice, speaks its language).
+  const run = (update: () => void): Promise<void> => {
     skip();
     if (
       !document.startViewTransition ||
@@ -18,7 +19,7 @@ export function createPageTransition(
       document.visibilityState === 'hidden'
     ) {
       update();
-      return;
+      return Promise.resolve();
     }
     const transition = document.startViewTransition(update);
     activeTransition = transition;
@@ -31,6 +32,7 @@ export function createPageTransition(
     void transition.updateCallbackDone.catch((error) => reportError(error));
     // finally() would leave its own rejected promise unhandled on a failed update.
     void transition.finished.then(clear, clear);
+    return transition.updateCallbackDone.catch(() => {});
   };
   const afterFinished = (callback: () => void) => {
     if (activeTransition)

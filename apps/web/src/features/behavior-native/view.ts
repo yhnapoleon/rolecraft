@@ -292,7 +292,7 @@ export function behaviorHtml(
         .map((c) => `<span class="rc-cat"${c.fallback ? ' data-fallback=""' : ''}>${esc(c.text)}</span>`)
         .join('')}</p>`
     : '';
-  const head = `<h2>${esc(view.title)}</h2>${cats}<p class="meta">${esc(view.lead)}</p>`;
+  const head = `<h2>${esc(view.title)}</h2><p class="rc-behavior__origin">${l === 'zh' ? '现在在本地重新计算 · 当前可见操作记录' : 'Recomputed locally now · currently visible action records'}</p>${cats}<p class="meta">${esc(view.lead)}</p>`;
   if (view.empty) return `${head}<p class="meta">${esc(view.empty)}</p>`;
   const bar = view.phases
     .map(

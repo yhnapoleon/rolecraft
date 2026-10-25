@@ -3,7 +3,7 @@
  * keeps the actions. Shapes follow D「仪器与纸」(197-visual-d.md); decisions 5–7 of 199. */
 import './home.css';
 import { agentMark, avatar, icon, PEOPLE } from '../../app/art.js';
-import { T } from '../../app/i18n';
+import { locale, T } from '../../app/i18n';
 import { PRI } from '../../app/vocab.js';
 
 export { fadeIn, walkIn } from './walk-in';
@@ -21,8 +21,8 @@ const JOB_PM = () => T('AI 产品经理', 'AI Product Manager');
 const JOB_ENG = () => T('AI 应用工程师', 'AI Application Engineer');
 const TWO_HATS = () =>
   T(
-    '一局练习，两顶帽子。产品经理和工程师在同一局里，进去后用顶栏切换，进度都在。',
-    'One practice, two hats. Product manager and engineer share it; switch from the top bar and nothing is lost.',
+    '一局只演一个岗位。另一边的工作由 AI 同事承担：你做产品经理，工程修复由 Daniel 负责；你做工程师，产品侧由 Grace 接收。',
+    'One practice, one role. An AI colleague takes the other side: as product manager, Daniel handles the engineering fix; as engineer, Grace receives it for the product side.',
   );
 const reduced = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -46,6 +46,8 @@ export type ContinueInfo = {
   submitted: boolean;
   /** Present when this practice has had the engineer's hat on at least once. */
   engineer: { stage: string } | null;
+  /** The practice's own language; inside it the interface speaks it. */
+  lang?: 'zh' | 'en' | null;
 };
 
 const HAT = (h: Hat) =>
@@ -71,7 +73,7 @@ function continueSlip(c: ContinueInfo): string {
     <span class="hm-cont__glyph" aria-hidden="true"><i></i></span>
     <div class="hm-cont__body">
       <p class="hm-cont__line"><span class="hm-cont__kicker">${T('接着做', 'Continue')}</span><span class="hm-cont__title" id="hm-cont-title">${esc(c.title)}</span></p>
-      <p class="hm-cont__row">${pmLine}${eng ? `<span class="hm-cont__sep" aria-hidden="true"></span>${eng}` : ''}</p>
+      <p class="hm-cont__row">${pmLine}${eng ? `<span class="hm-cont__sep" aria-hidden="true"></span>${eng}` : ''}${c.lang && c.lang !== locale() ? `<span class="hm-cont__lang">${c.lang === 'zh' ? T('', 'This practice is in Chinese') : T('这一局用英文', '')}</span>` : ''}</p>
     </div>
     <div class="hm-cont__go">${main}</div>
     <p class="hm-cont__note">${TWO_HATS()}</p>
@@ -144,7 +146,7 @@ export function homeHtml(o: {
         <article class="hm-job hm-job--pm">
           <h2 class="hm-job__name">${JOB_PM()}</h2>
           <p class="hm-job__what">${T('判断一个 AI 功能该不该上线、先给谁用、怎样保障，并为这个决定负责。', 'Decide whether an AI feature should launch, who gets it first and how it stays safe, then own the call.')}</p>
-          <p class="hm-job__meta">${T('3 个情境，每次 20–30 分钟。没有倒计时，随时可停。', '3 situations, 20–30 min each. No countdown, pause any time.')}</p>
+          <p class="hm-job__meta">${T('3 个情境，每次 20–30 分钟。没有倒计时，随时可停。工程修复交给 Daniel（AI 同事），用不用由你决定。', '3 situations, 20–30 min each. No countdown, pause any time. Engineering fixes go to Daniel (AI colleague); you decide whether to use them.')}</p>
           <div class="hm-job__go">${(() => {
             const label = o.resume ? T('看看所有情境', 'See all situations') : T('开始', 'Start');
             return key(label, 'open-career', o.resume ? '' : 'primary', named(label, JOB_PM()));

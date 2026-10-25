@@ -13,6 +13,7 @@ REVIEW_KEYS = {
     "signed_at",
     "signed_by",
     "draft_id",
+    "draft_executor",
     "ticket_id",
     "impact_note",
     "retrieval",

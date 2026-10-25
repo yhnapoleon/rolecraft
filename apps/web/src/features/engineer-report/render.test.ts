@@ -29,7 +29,7 @@ describe('engineer regression report · DOM', () => {
     expect(root.tagName).toBe('article');
     expect(root.dataset.engineerReport).toBe(ROOT_ZH.report.id);
     expect(headings(root)).toEqual([
-      'h2 目标问题已修好',
+      'h2 目标修好了，没有新增失败',
       'h3 公开探针 · 4 条',
       'h3 隐藏探针 · 9 条',
       'h3 规则核对',
@@ -273,7 +273,9 @@ describe('engineer regression report · DOM', () => {
   it('ER-47 not fixed and new failures: the target line carries the ink ✕, singular when one', () => {
     const report = notFixedEn as unknown as EngineerPublicReport;
     const lineMarks = (r: EngineerPublicReport) => {
-      const root = asFake(renderEngineerReport(fakeDocument(), engineerReportView(r, { language: 'en' })));
+      const root = asFake(
+        renderEngineerReport(fakeDocument(), engineerReportView(r, { language: 'en' })),
+      );
       const verdict = root.byClass('er-verdict')[0];
       return {
         title: verdict.byClass('er-verdict__title')[0].textContent,

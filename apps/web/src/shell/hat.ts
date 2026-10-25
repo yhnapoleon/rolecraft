@@ -17,9 +17,40 @@ function read(): Record<string, Hat> {
   return memory;
 }
 
-/** The hat for this practice; a practice nobody switched is a product manager's. */
+/** The hat for this practice: its one role when it has one, else the one last worn (a practice
+ * from before roles, nobody switched: a product manager's). */
 export function hatOf(sessionKey: string): Hat {
+  const fixed = roleOf(sessionKey);
+  if (fixed) return fixed;
   return read()[sessionKey] === 'engineer' ? 'engineer' : 'pm';
+}
+
+/* ---------- the practice's one role (phase 2) ---------- */
+// Chosen on the home page and kept by the server (engineer store, learner_role); this is the
+// browser's copy so the bar can draw it at once. A practice from before roles has none and keeps
+// the old switch between hats.
+const ROLE = 'rolecraft.role.v1';
+function roles(): Record<string, Hat> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ROLE) || '{}');
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch {
+    return roleMemory;
+  }
+}
+let roleMemory: Record<string, Hat> = {};
+export function roleOf(sessionKey: string): Hat | null {
+  const r = roles()[sessionKey] ?? roleMemory[sessionKey];
+  return r === 'pm' || r === 'engineer' ? r : null;
+}
+export function rememberRole(sessionKey: string, role: Hat): void {
+  roleMemory = { ...roleMemory, [sessionKey]: role };
+  try {
+    localStorage.setItem(ROLE, JSON.stringify({ ...roles(), [sessionKey]: role }));
+  } catch {
+    /* this page only */
+  }
+  setHat(sessionKey, role);
 }
 
 export function setHat(sessionKey: string, hat: Hat): void {

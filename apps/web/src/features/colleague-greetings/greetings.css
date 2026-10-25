@@ -1,0 +1,123 @@
+.rc-greet-hello {
+  font-weight: 500;
+}
+.rc-greet-questions {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.rc-greet-question {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  text-align: start;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-key);
+  padding: 8px 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.rc-greet-question > span[aria-hidden] {
+  flex: none;
+}
+.rc-greet-question:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.rc-greet-question:disabled {
+  color: var(--ink-3);
+  cursor: default;
+}
+.rc-greet-question:hover:not(:disabled) {
+  background: var(--fill-2);
+}
+.rc-greet-chat {
+  margin: 0 14px 8px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border-radius: var(--r-paper);
+  font-size: 13px;
+  line-height: 1.55;
+  max-height: 40vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.rc-greet-chat summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.rc-greet-chat p {
+  margin: 8px 0;
+}
+.person-row {
+  display: flex;
+  align-items: center;
+}
+.person-row > .person {
+  flex: 1;
+  min-width: 0;
+}
+.person-row > .rc-greet-recall {
+  flex: none;
+  margin-right: 6px;
+  font-size: 11px;
+}
+.chat:has(.rc-greet-chat[open]) .rc-roles__empty--opening {
+  display: none;
+}
+
+/* Red is explicitly reserved here for unread social messages, per the entry brief. */
+.rail-board .person .unread-mark,
+.team-btn .av-dot {
+  background: var(--bad);
+}
+.unread-mark[hidden],
+.av-dot[hidden] {
+  display: none;
+}
+[data-chat-greeting] {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.rail-board .person .unread-mark:not([hidden]) {
+  background: var(--bad);
+}
+.team-compact {
+  display: none;
+  position: relative;
+}
+@media (max-width: 720px) {
+  .ws .shell-bar .team-btn {
+    display: inline-flex;
+    flex: none;
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+  .ws .shell-bar .team-btn .av {
+    display: none;
+  }
+  .ws .shell-bar .team-compact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+  .team-compact .unread-mark {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    top: 0;
+    right: 0;
+    border-radius: 50%;
+    background: var(--bad);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+}
