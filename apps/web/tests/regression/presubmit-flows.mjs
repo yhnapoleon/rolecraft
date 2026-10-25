@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { waitFor, submitDelivery } from './browser-support.mjs';
+import { acceptEntryStory, waitFor, submitDelivery } from './browser-support.mjs';
 
 const base = process.env.BASE;
 assert.ok(base && process.env.OUT, 'BASE and OUT are required');
@@ -128,6 +128,7 @@ async function startPractice(browser, language, t) {
   await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
   await browser.click('[data-action="open-career"]');
   await browser.click('.case-hero [data-action="take-case"]');
+  await acceptEntryStory(browser);
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
   assert.equal(
     await browser.ev(`window.PracticeLive.store.active().v2Binding.workLanguage`),
