@@ -661,6 +661,7 @@ function go(route, opts = {}) {
   commit();
   dropUndo();
   if ((WS.includes(route) || route === 'review') && !current()) route = 'pm';
+  if (route === 'lab' && ui.route !== 'lab' && current()) ui.labReturn = hashOf(ui.route, ui.routeId);
   const id = opts.id || null;
   const from = ui.route,
     fromId = ui.routeId;
@@ -692,6 +693,7 @@ window.addEventListener('popstate', () => {
   const from = ui.route,
     fromId = ui.routeId,
     p = parseRoute();
+  if (p.r === 'lab' && from !== 'lab' && current()) ui.labReturn = hashOf(from, fromId);
   const update = () => {
     ui.route = p.r;
     ui.routeId = p.id;
@@ -772,7 +774,7 @@ function mountNativeSlots() {
   });
 }
 function renderLab() {
-  const back = `<a class="btn quiet back" href="${current() ? '#/review' : '#/'}">${icon('back')}<span>${esc(current() ? T('交付与反馈', 'Submission and feedback') : T('首页', 'Home'))}</span></a>`;
+  const back = `<a class="btn quiet back" href="${current() ? (ui.labReturn || (hatHere(current()) === 'engineer' ? '#/engineer' : '#/work')) : '#/'}">${icon('back')}<span>${esc(current() ? T('返回工作区', 'Back to your work') : T('首页', 'Home'))}</span></a>`;
   return `${topbar(back)}<main id="main" class="page rc-lab" data-rc-lab tabindex="-1"></main>`;
 }
 // The lab keeps its element across redraws: mounted once per entry into the route, and
@@ -981,7 +983,7 @@ function practiceUiLocale() {
   const a = current();
   if (!a) return null;
   const r = ui.route;
-  const here = WS.includes(r) || r === 'review' || ENGINEER_ROUTES.includes(r) || isRegisteredRoute(r);
+  const here = WS.includes(r) || r === 'review' || r === 'lab' || ENGINEER_ROUTES.includes(r) || isRegisteredRoute(r);
   return here ? workLang(a) : null;
 }
 // Inside a practice the language is the practice's: say so instead of offering a half switch.
