@@ -171,6 +171,7 @@ import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
 import { carried, distillation, progressOf } from '../shell/progress';
 import { comparisonFor } from '../features/recognition-native/test-comparison';
+import * as Greetings from '../features/colleague-greetings';
 import { ProgressBand } from '../shell/progress-band';
 import '../shell/progress.css';
 import { agentLine } from '../screens/board/agent-line';
@@ -840,6 +841,7 @@ function mountEngineerReportRoute() {
 }
 function afterRender() {
   afterShellRender();
+  Greetings.mountGreetings(['work', 'engineer'].includes(ui.route) && current() && statusOf(current()) === 'active' ? current().id : null, locale());
   discoverRole(current());
   syncHat();
   mountShellBar();
@@ -1596,7 +1598,8 @@ function passedNow(a, p) {
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every
 // product manager's screen of the practice.
 const progressSlot = (a) =>
-  hatHere(a) === 'pm' ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>` : '';
+  (hatHere(a) === 'pm' ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>` : '') +
+  (['work', 'engineer'].includes(ui.route) ? Greetings.greetSlot(a.id) : '');
 function mountProgress(a) {
   if (!document.querySelector('[data-island="shell-progress"]')) return;
   const p = progressOf(progressFacts(a));
@@ -3323,7 +3326,7 @@ function railTeam(a) {
       const line = waits
         ? `<span class="person-replying">${T('正在回复…', 'Replying…')}</span>`
         : (last && teamLine(last.text)) || esc(Board.roleLine(r));
-      return `<li><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="unread-mark"><span class="sr-only">${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}</span></span>` : ''}</button></li>`;
+      return `<li class="person-row"><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="unread-mark"><span class="sr-only">${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}</span></span>` : ''}</button><button type="button" class="btn quiet small rc-greet-recall" data-action="greet-chat" data-role="${r}" aria-label="${esc(T(`回看 ${PEOPLE[r].name} 的介绍`, `Read ${PEOPLE[r].name}’s introduction`))}">${T('介绍', 'Intro')}</button></li>`;
     }).join('')}
       <li class="people-sep" role="separator"></li>
       <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a, hatOf(a.id), agentConnection(), feedStore.snapshot().events))}</span></span></button></li>
@@ -3373,6 +3376,7 @@ function railChat(a, role) {
   const tools = `${a.tests.length ? `<button type="button" class="composer-tool${quote ? ' on' : ''}" data-action="prefill-run" aria-label="${esc(T('附上最近一次测试', 'Attach the latest test run'))}" title="${esc(T('附上最近一次测试', 'Attach the latest test run'))}">${icon('flask', 'i-sm')}</button>` : ''}${x ? `<button type="button" class="composer-tool" data-action="prefill-artifact" aria-label="${esc(T('分享这份作品', 'Share this work'))}" title="${esc(T('分享这份作品', 'Share this work'))}">${icon('doc', 'i-sm')}</button>` : ''}`;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
+    ${Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a))}
     <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
     ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
     <form class="composer" data-form="chat">${attached}<div class="composer-line">${tools ? `<span class="composer-tools">${tools}</span>` : ''}<label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="1" maxlength="4000" required enterkeyhint="send" aria-describedby="chat-hint" placeholder="${esc(quote ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></div></form>
@@ -4948,7 +4952,7 @@ function openChat(role, prefill = '') {
   ui.chatRole = role;
   ui.menu = null;
   if (narrowRail()) ui.railOpen = true;
-  if (!WS.includes(ui.route)) {
+  if (!WS.includes(ui.route) && !ENGINEER_ROUTES.includes(ui.route) && !isRegisteredRoute(ui.route)) {
     go('work');
   } else refreshWS(['rail', 'toolbar']);
   if (a) markRead();
@@ -5142,12 +5146,13 @@ function resetAttemptUi() {
 function startingOrder(caseId) {
   return caseId === 'pilot' ? seedOrder() : [];
 }
-async function startAttempt(caseId, opts) {
+async function startAttempt(caseId, opts, learnerJob = 'pm') {
   if (!caseShown(caseId)) throw new Error(T('这个情境暂不开放。', 'This situation is not open.'));
   const a = await L.start(caseId, {
     ...opts,
     initialTasks: SEED_KEYS.map((key) => ({ title: seedText(key) })),
   });
+  Greetings.prepareGreetings(a.id, learnerJob);
   ui.arriving = true;
   return freshAttemptUi(a);
 }
@@ -5655,7 +5660,7 @@ async function act(el, ev = new Event('rc-action')) {
       el.disabled = true;
       el.textContent = T('正在准备委托…', 'Preparing the ticket…');
       try {
-        const na = await startAttempt('pilot', {});
+        const na = await startAttempt('pilot', {}, 'engineer');
         await keepRole(na, 'engineer');
         const ticket = await openEngineerTicket(L.gatewayTransport(na), na.id, { from: 'seeded' });
         setHat(na.id, 'engineer');
@@ -6602,6 +6607,74 @@ async function act(el, ev = new Event('rc-action')) {
       if (WS.includes(ui.route)) refreshWS(['toolbar']);
       sheetResources();
       break;
+    case 'greet-dismiss':
+      Greetings.dismissGreetings(a.id);
+      break;
+    case 'greet-chat':
+      Greetings.showIntroduction(a.id, el.dataset.role);
+      openChat(el.dataset.role);
+      break;
+    case 'greet-ask': {
+      const person = el.dataset.role;
+      const attemptId = a.id;
+      await Greetings.askGreeting(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', person, Number(el.dataset.question), locale(), async (question) => {
+        openChat(person);
+        // Let the existing native slot bind its permissions and composer. It owns submission,
+        // pending requests, retries and the eventual real reply; no alternate send API is added.
+        for (let i = 0; i < 100; i += 1) {
+          if (current()?.id !== attemptId || ui.chatRole !== person) return false;
+          const form = document.querySelector('.composer');
+          const input = document.getElementById('chat-input');
+          const send = form?.querySelector('button[type="submit"]');
+          if (form && input && send && !send.disabled && form.dataset.rolesBound === ROLE_ID[person]) {
+            if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
+              notify(T('你的草稿和引用已保留。先处理它们，再点建议问题。', 'Your draft and attachment are safe. Send or clear them before choosing a suggested question.'));
+              return false;
+            }
+            // Submit synchronously through the bound owner. Its send method saves the draft;
+            // a synthetic input event here could remount the form before submit.
+            input.value = question;
+            return await new Promise((resolve) => {
+              const token = crypto.randomUUID();
+              let revised = false;
+              const changed = (event) => {
+                if (current()?.id === attemptId && ui.chatRole === person && event.target.id === 'chat-input') revised = true;
+              };
+              const cleanup = () => {
+                clearTimeout(timeout);
+                document.removeEventListener('input', changed, true);
+                form.removeEventListener('rolecraft:greeting-result', settled);
+              };
+              const settled = async (event) => {
+                if (event.detail?.token !== token) return;
+                clearTimeout(timeout);
+                form.removeEventListener('rolecraft:greeting-result', settled);
+                try {
+                  if (event.detail.accepted && !revised) {
+                    const host = L.v4Host(a);
+                    const key = `question:${ROLE_ID[person]}`;
+                    if (host?.draft('roles', key) === question) await host.keepDraft('roles', key, '');
+                    const liveInput = document.getElementById('chat-input');
+                    if (!revised && current()?.id === attemptId && ui.chatRole === person && liveInput?.value === question) liveInput.value = '';
+                  }
+                  resolve(!!event.detail.accepted);
+                } catch (error) { notify(errText(error)); resolve(false); }
+                finally { cleanup(); }
+              };
+              const timeout = setTimeout(() => { cleanup(); resolve(false); }, 25000);
+              document.addEventListener('input', changed, true);
+              form.addEventListener('rolecraft:greeting-result', settled);
+              form.dataset.greetingRequest = token;
+              form.requestSubmit(send);
+            });
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        notify(T('对话还没就绪，请稍后再点这个问题。', 'The conversation is not ready yet. Try the question again shortly.'));
+        return false;
+      });
+      break;
+    }
     case 'chat':
       if (ui.rail !== 'chat' || ui.railTab !== 'team') Board.railPush('in');
       openChat(el.dataset.role);
@@ -7768,9 +7841,11 @@ Board.installWalkThrough({
     hatHere(a) === 'pm' &&
     statusOf(a) === 'active' &&
     !sessionOf(a)?.v2ReadOnly &&
-    !(a.tests || []).length &&
-    !(sessionOf(a)?.v2Workspace?.products || []).length &&
-    !Object.values(a.conversations || {}).some((l) => (l || []).some((m) => m.role === 'user')),
+    (Greetings.hasGreetingEntry(a.id) || (
+      !(a.tests || []).length &&
+      !(sessionOf(a)?.v2Workspace?.products || []).length &&
+      !Object.values(a.conversations || {}).some((l) => (l || []).some((m) => m.role === 'user'))
+    )),
   policyTask: (a) =>
     (a.tasks || []).find((t) => t.title === SEEDS.policy.zh[0] || t.title === SEEDS.policy.en[0])
       ?.id ?? null,

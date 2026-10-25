@@ -1,0 +1,152 @@
+/* A short welcome on the work surface. Authored openings remain distinct from live replies. */
+.rc-greetings {
+  margin: 20px auto 12px;
+  width: calc(100% - 80px);
+  max-width: 1100px;
+  color: var(--ink);
+}
+.rc-greetings-head {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+.rc-greetings-head h2 {
+  font-size: 19px;
+  margin: 0 0 4px;
+}
+.rc-greetings-head p {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin: 0;
+}
+.rc-greetings-head > button {
+  flex-shrink: 0;
+}
+.rc-greetings-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.rc-greet-card {
+  padding: 16px;
+  border-radius: var(--r-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.rc-greet-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rc-greet-card header div {
+  display: grid;
+  line-height: 1.35;
+}
+.rc-greet-card header div span,
+.rc-greet-card header small {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.rc-greet-card header small {
+  margin-left: auto;
+}
+.rc-greet-card p {
+  margin: 10px 0;
+}
+.rc-greet-hello {
+  font-weight: 500;
+}
+.rc-greet-questions {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.rc-greet-question {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  text-align: start;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-key);
+  padding: 8px 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.rc-greet-question > span[aria-hidden] {
+  flex: none;
+}
+.rc-greet-question:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.rc-greet-question:disabled {
+  color: var(--ink-3);
+  cursor: default;
+}
+.rc-greet-question:hover:not(:disabled) {
+  background: var(--fill-2);
+}
+.rc-greet-chat {
+  margin: 0 14px 8px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border-radius: var(--r-paper);
+  font-size: 13px;
+  line-height: 1.55;
+  max-height: 40vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.rc-greet-chat summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.rc-greet-chat p {
+  margin: 8px 0;
+}
+.person-row {
+  display: flex;
+  align-items: center;
+}
+.person-row > .person {
+  flex: 1;
+  min-width: 0;
+}
+.person-row > .rc-greet-recall {
+  flex: none;
+  margin-right: 6px;
+  font-size: 11px;
+}
+.chat:has(.rc-greet-chat[open]) .rc-roles__empty--opening {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .rc-greetings-list {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 720px) {
+  .rc-greetings {
+    width: calc(100% - 28px);
+    margin-top: 12px;
+  }
+  .rc-greetings-head {
+    gap: 8px;
+  }
+  .rc-greetings-head h2 {
+    font-size: 17px;
+  }
+  .rc-greet-card {
+    padding: 14px;
+  }
+}

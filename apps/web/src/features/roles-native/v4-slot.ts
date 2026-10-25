@@ -455,11 +455,20 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       );
       return;
     }
+    // UI-only acknowledgement for a suggested opening question. The command and prompt are unchanged.
+    const greetingToken = form.dataset.greetingRequest;
+    delete form.dataset.greetingRequest;
+    const greetingResult = (accepted: boolean) => {
+      if (greetingToken) form.dispatchEvent(new CustomEvent('rolecraft:greeting-result', {
+        detail: { token: greetingToken, accepted },
+      }));
+    };
     const sending = adapter.send({ roleId: selected, text });
     // The thread shows it at once, marked sending until the client confirms it.
     noteOutgoing(sid, selected, text, sending);
     void sending
       .then(() => {
+        greetingResult(true);
         if (quote && !destroyed)
           form.dispatchEvent(
             new CustomEvent('rolecraft:quote-sent', {
@@ -468,7 +477,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
             }),
           );
       })
-      .catch(fail)
+      .catch(() => { greetingResult(false); fail(); })
       .finally(() => {
         void Promise.resolve(reading)
           .catch(() => {})
@@ -478,6 +487,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       });
   };
   form.addEventListener('submit', onSubmit);
+  if (form.dataset) form.dataset.rolesBound = selected;
   inputNode.addEventListener('input', onInput);
   function update(snapshot: Readonly<V4HostSnapshot>) {
     if (destroyed) return;
@@ -504,6 +514,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     ++readTicket;
     unsubscribe();
     form.removeEventListener('submit', onSubmit);
+    if (form.dataset) delete form.dataset.rolesBound;
     inputNode.removeEventListener('input', onInput);
     view.destroy();
   }
