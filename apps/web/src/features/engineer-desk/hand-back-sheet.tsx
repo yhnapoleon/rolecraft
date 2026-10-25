@@ -172,7 +172,7 @@ export function HandBackSheet(v: HandBackView) {
       </SheetContent>
       <Dialog.Root open={v.confirm} onOpenChange={(open) => !v.applying && v.onConfirmChange(open)}>
         <Dialog.Portal>
-          <Dialog.Overlay className="rc-portal rc-sheet-scrim tw:fixed tw:inset-0 tw:z-[90] tw:bg-[var(--dim)]" />
+          <Dialog.Overlay className="rc-portal rc-sheet-scrim tw:fixed tw:inset-0 tw:z-[90] tw:bg-[var(--scrim-b)]" />
           <Dialog.Content
             // Opening reads from the top: the title takes focus (no ring), not the first key.
             onOpenAutoFocus={(e) => {
