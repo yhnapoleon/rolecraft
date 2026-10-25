@@ -170,6 +170,7 @@ import {
 import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
 import { carried, distillation, progressOf } from '../shell/progress';
+import { comparisonFor } from '../features/recognition-native/test-comparison';
 import { ProgressBand } from '../shell/progress-band';
 import '../shell/progress.css';
 import { agentLine } from '../screens/board/agent-line';
@@ -1948,7 +1949,7 @@ const materialNameOf = (a) => (id) => {
 };
 /** A test run's recognition signals: quiet facts by default, chips in the lens. */
 function runSignals(a, x) {
-  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a), cards: {} })}</div>`;
+  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a), cards: { comparison: { current: x, tests: a.tests || [] } } })}</div>`;
 }
 /** Redraw only the recognition parts of the current page when the lens opens or closes. */
 onLensChange((on) => {
@@ -1964,7 +1965,7 @@ onLensChange((on) => {
           context: 'test',
           lens: lensOn(),
           materialName: materialNameOf(a),
-          cards: {},
+          cards: { comparison: { current: run, tests: a.tests || [] } },
         })
       : '';
   });
@@ -3251,23 +3252,27 @@ function groupRuns(a) {
 }
 function runGroup(a, runs) {
   const r = runs[0];
+  const comparison = comparisonFor(r, a.tests);
+  const paired = comparison.referenced ? [r, ...(comparison.previous ? [comparison.previous] : [])] : runs.slice(0, 2);
+  const ordinal = (x) => a.tests.findIndex((t) => t.id === x.id) + 1;
   // `stale` is the server's own flag: the cited version differs from the current source.
   const old = (x) => (x.stale !== undefined ? !!x.stale : x.indexVersion < x.policyVersion);
   const tk = r.taskId && a.tasks.find((t) => t.id === r.taskId);
   return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}" id="run-${esc(r.id)}">
     <header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(r.question)}>${esc(r.question)}</h3>${runs.length > 1 ? `<span class="meta">${T(runs.length + ' 次', runs.length + ' runs')}</span>` : ''}${tk && ui.route !== 'task' ? `<button type="button" class="run-task" data-action="open-task" data-id="${tk.id}">${icon('note', 'i-xs')}${esc(taskTitle(tk))}</button>` : ''}</header>
     ${r.expectation ? `<p class="run-expect">${icon('eye', 'i-xs')}<span${zhAttr(r.expectation)}>${esc(r.expectation)}</span></p>` : ''}
-    <div class="run-cols ${runs.length > 1 ? 'two' : ''}">${runs
-      .slice(0, 2)
+    <div class="run-cols ${paired.length > 1 ? 'two' : ''}">${paired
       .map(
         (
           x,
           i,
-        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${i === 0 ? T('最新', 'Latest') : T('上一次', 'Previous')}</p>` : ''}
+        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${(i === 0 ? T('最新', 'Latest') : comparison.referenced ? T('识别基准', 'Recognition baseline') : T('上一次', 'Previous')) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
-      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div>${runSignals(a, x)}</div>`,
+      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
+    <div class="run-lens">${runSignals(a, r)}${paired[1] ? `<details class="run-baseline-signals"><summary>${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, paired[1])}</details>` : ''}</div>
+    ${comparison.referenced && !comparison.previous ? `<p class="meta">${T('识别记录指定的比较对象未载入；没有用上一次测试代替。', 'The recorded comparison baseline is not loaded; the previous run has not been substituted.')}</p>` : ''}
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
     <div class="run-actions">${btn(icon('layers', 'i-xs') + T('看依据', 'Check sources'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;

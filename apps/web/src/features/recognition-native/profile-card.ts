@@ -14,6 +14,7 @@ import { REGISTER, rowMetricsHtml } from '../recognition-lab/register';
 import type { Language } from '../results-native/localization';
 import { arbiterOutcome, type RecognitionRecord } from './badge';
 import './profile-card.css';
+import { comparisonFor, type TestRecord } from './test-comparison';
 import { actualMethod } from './actual-method';
 
 /** Which register row (system profile section) explains each task. */
@@ -138,6 +139,7 @@ const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFin
 const lab = (language: Language, key: string) => LAB[language][key as LabKey] ?? '';
 
 export type CardOptions = {
+  comparison?: {current: TestRecord; tests: TestRecord[]};
   source?: 'delivery' | 'saved' | 'current';
   materialName?: (id: string) => string;
   /** The practice was opened with a continue code: its records are replayed, not recomputed. */
@@ -194,6 +196,24 @@ const INTENT: Record<string, [string, string]> = {
   other: ['其他', 'Other'],
 };
 
+function driftComparison(language: Language, o: CardOptions) {
+  if (!o.comparison) return '';
+  const { current, tests } = o.comparison;
+  const { previous } = comparisonFor(current, tests);
+  const t = (zh: string, en: string) => (language === 'zh' ? zh : en);
+  const item = (run: TestRecord | undefined, heading: string) => {
+    if (!run)
+      return `<div><h5>${heading}</h5><p>${t('比较对象未载入；不替换为相邻记录', 'Baseline not loaded; no adjacent run substituted')}</p></div>`;
+    const n = tests.findIndex((x) => x.id === run.id) + 1;
+    const hits = run.recognition?.find((x) => x.task === 'retrieval')?.outputs?.top;
+    const quotes = Array.isArray(hits)
+      ? hits.filter((h) => h && typeof h.quote === 'string').slice(0, 2)
+      : [];
+    return `<div><h5>${heading} · ${t('第', 'Run ')} ${n}${t(' 次测试', '')}</h5><p class="rc-compare__versions">${t('索引', 'Index')} <b>v${esc(run.indexVersion)}</b> · ${t('政策源', 'Policy')} v${esc(run.policyVersion)} · ${t('配置', 'Config')} v${esc(run.configVersion)}</p><blockquote>${esc(plain(run.answer, 1000))}</blockquote><p class="rc-card__eyebrow">${t('当时检索的原文片段', 'Source passages retrieved then')}</p>${quotes.length ? quotes.map((h) => `<q>${esc(h.quote)}</q>`).join('') : `<p class="rc-card__quiet">${t('记录未保存原文片段', 'No source passage saved in this record')}</p>`}</div>`;
+  };
+  return `<div class="rc-compare"><p class="rc-compare__question">${esc(current.question)}</p><div class="rc-compare__pair">${item(previous, t('识别基准', 'Recognition baseline'))}${item(current, t('本次回答', 'This answer'))}</div></div>`;
+}
+
 /** What this call found, drawn from its own fields only. */
 function thisTime(record: RecognitionRecord, language: Language, o: CardOptions) {
   const w = W[language];
@@ -213,6 +233,7 @@ function thisTime(record: RecognitionRecord, language: Language, o: CardOptions)
         return `<p>${esc(fill(w.scopeLine, { score: n2(record.score), thr: n2(record.threshold), side: record.label === 'out' ? w.outside : w.inside }))}</p>${axis(record.score, record.threshold, w)}`;
       return `<p>${esc(fill(w.scopeRule, { rule: language === 'zh' ? (out.rule === 'no_retrieval_hit' ? '有无相关检索命中' : '记录中的范围规则') : (out.rule === 'no_retrieval_hit' ? 'whether retrieval found a relevant hit' : 'the recorded scope rule') }))}</p>`;
     case 'drift': {
+      const comparison = driftComparison(language, o);
       const before = ((out.numbers_before ?? []) as string[]).join('/');
       const after = ((out.numbers_after ?? []) as string[]).join('/');
       const numbers = out.numeric_change
@@ -220,9 +241,9 @@ function thisTime(record: RecognitionRecord, language: Language, o: CardOptions)
         : '';
       if (isNum(record.score) && isNum(record.threshold)) {
         const byRule = out.numeric_change && record.score <= record.threshold;
-        return `<p>${esc(fill(w.driftLine, { score: n2(record.score), thr: n2(record.threshold) }))}</p>${axis(record.score, record.threshold, w)}${numbers}${byRule ? `<p class="rc-card__note">${esc(w.driftByRule)}</p>` : ''}`;
+        return `${comparison}<p>${esc(fill(w.driftLine, { score: n2(record.score), thr: n2(record.threshold) }))}</p>${axis(record.score, record.threshold, w)}${numbers}${byRule ? `<p class="rc-card__note">${esc(w.driftByRule)}</p>` : ''}`;
       }
-      return `<p>${esc(w.driftRule)}</p>${numbers}`;
+      return `${comparison}<p>${esc(w.driftRule)}</p>${numbers}`;
     }
     case 'retrieval': {
       const top = Array.isArray(out.top) ? (out.top as Record<string, unknown>[]).slice(0, 3) : [];

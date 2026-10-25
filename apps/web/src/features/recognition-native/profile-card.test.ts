@@ -107,6 +107,17 @@ describe('actual method labels', () => {
  });
 });
 
+it('shows the referenced baseline, versions and source quotes in the drift comparison', () => {
+ const first={id:'a',question:'Cap?',answer:'500',policyVersion:2,indexVersion:1,configVersion:1,recognition:[{...dense,outputs:{method:'bm25',top:[{quote:'Original cap 500'}]}}]};
+ const middle={...first,id:'b',answer:'400',indexVersion:2};
+ const last={...middle,id:'c',recognition:[{...drift,outputs:{...drift.outputs,previous_test_id:'a'}}]};
+ const html=cardHtml(last.recognition[0],'en',{comparison:{current:last,tests:[first,middle,last]}});
+ expect(html).toContain('Recognition baseline · Run  1');
+ expect(html).toContain('This answer · Run  3');
+ expect(html).toContain('Original cap 500');expect(html).toContain('<b>v1</b>');expect(html).toContain('<b>v2</b>');
+ const missing=cardHtml(last.recognition[0],'en',{comparison:{current:last,tests:[middle,last]}});
+ expect(missing).toContain('Baseline not loaded');expect(missing).not.toContain('Original cap 500');
+});
 it('puts delivery-record provenance on the closed summary and keeps current recomputation separate',()=>{
  expect(cardsHtml([scope],'en',{context:'feedback',lens:true,cards:{}}).split('rc-card-slot')[0]).toContain('Record at delivery');
  expect(cardHtml(scope,'en',{source:'current'})).toContain('Recomputed locally now');
