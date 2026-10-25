@@ -13,7 +13,7 @@ from career_lab.evidence.v2.localization import message, validate_language
 
 # Moved to the shared model-input projection; kept importable for existing callers.
 from career_lab.models.v3.projection import relation_input as registered_relation_input
-from career_lab.runtime.model_audit import audited, complete
+from career_lab.runtime.model_audit import audited, complete, record_validation_code
 
 __all__ = ["EvidenceSupportVerifier", "SupportResult", "registered_relation_input"]
 
@@ -27,7 +27,6 @@ class SupportResult:
     output_hash: str | None = None
     reason: str = ""
     spans: tuple[dict, ...] = ()
-    code: str | None = None
 
 
 class EvidenceSupportVerifier:
@@ -185,6 +184,5 @@ class EvidenceSupportVerifier:
                 if isinstance(error, json.JSONDecodeError)
                 else "verification_failed"
             )
-            return result(
-                "unverified", "invalid_or_failed_verification", input_hash=input_hash, code=code
-            )
+            record_validation_code(code)
+            return result("unverified", "invalid_or_failed_verification", input_hash=input_hash)

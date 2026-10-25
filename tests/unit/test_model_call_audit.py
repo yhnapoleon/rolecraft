@@ -1,6 +1,7 @@
 """Model transport and validation accounting, including rejected and skipped outputs."""
 
 import json
+from dataclasses import asdict
 
 import pytest
 from test_w05_pipeline import env as env
@@ -107,5 +108,97 @@ def test_support_exposes_truncation_without_accepting_partial_json(env, ledger):
     p = package(env, criterion="R6.comparison", purpose="option")
     model = ScriptedModel([ModelReply(text='{"relation":"SUPPORTED"', finish_reason="length")])
     result = EvidenceSupportVerifier(model).verify(p, proposal(p))
-    assert result.verdict == "unverified" and result.code == "output_truncated"
+    assert result.verdict == "unverified"
+    assert "code" not in asdict(result)
     assert rows(ledger)[-1]["code"] == "output_truncated"
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "response_shape_invalid",
+        "relation_or_reason_invalid",
+        "spans_invalid",
+        "span_shape_invalid",
+        "span_id_or_quote_invalid",
+        "quote_not_unique_in_candidate",
+        "cited_span_missing",
+        "counterevidence_required",
+        "json_invalid",
+    ],
+)
+def test_support_validation_details_stay_in_ledger_and_do_not_leak_to_next_call(env, ledger, code):
+    p = package(env, criterion="R6.comparison", purpose="option")
+    body = support_reply(p)
+    if code == "response_shape_invalid":
+        body["extra"] = True
+    elif code == "relation_or_reason_invalid":
+        body["reason"] = ""
+    elif code == "spans_invalid":
+        body["spans"] = None
+    elif code == "span_shape_invalid":
+        body["spans"][0]["start"] = 0
+    elif code == "span_id_or_quote_invalid":
+        body["spans"][0]["id"] = "unknown"
+    elif code == "quote_not_unique_in_candidate":
+        body["spans"][0]["quote"] = "invented quote"
+    elif code == "cited_span_missing":
+        body["spans"] = []
+    elif code == "counterevidence_required":
+        body.update(relation="CONTRADICTED", spans=[])
+    model = ScriptedModel(
+        [
+            ModelReply(text="{" if code == "json_invalid" else json.dumps(body)),
+            ModelReply(text=json.dumps(support_reply(p))),
+        ]
+    )
+    verifier = EvidenceSupportVerifier(model)
+    failed = verifier.verify(p, proposal(p))
+    recovered = verifier.verify(p, proposal(p))
+    skipped = verifier.verify(p, proposal(p).model_copy(update={"citations": ()}))
+    assert failed.verdict == "unverified"
+    assert failed.status == "invalid_or_failed_verification"
+    assert recovered.verdict == "supported" and skipped.status == "no_citations"
+    assert all("code" not in asdict(result) for result in (failed, recovered, skipped))
+    records = rows(ledger)
+    validations = [row for row in records if row["event"] == "model_validation"]
+    assert [row["code"] for row in validations] == [code, None, None]
+    assert [row["called"] for row in validations] == [True, True, False]
+    assert len({row["call_id"] for row in validations}) == 3
+    assert sum(row["event"] == "model_call_started" for row in records) == 2
+
+
+@pytest.mark.parametrize("error_type", [TimeoutError, ValueError, RuntimeError])
+def test_support_provider_exception_body_never_enters_output_or_ledger(env, ledger, error_type):
+    p = package(env, criterion="R6.comparison", purpose="option")
+
+    class Broken:
+        revision = "test-model"
+
+        def complete(self, *_):
+            raise error_type("SECRET_HEADER_AND_BODY")
+
+    result = EvidenceSupportVerifier(Broken()).verify(p, proposal(p))
+    assert result.verdict == "unverified" and "code" not in asdict(result)
+    assert "SECRET_HEADER_AND_BODY" not in ledger.read_text() + str(asdict(result))
+    assert rows(ledger)[-1]["code"] == "verification_failed"
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_nested_support_diagnostic_is_private_and_keeps_its_own_call_id(ledger, language):
+    from tests.regression.feedback_cases import evaluate_case
+
+    outcome = evaluate_case(language, "wrong_quote")
+    assert "code" not in outcome["output"]["attempts"][0]["support"]
+    records = rows(ledger)
+    validations = {row["slot"]: row for row in records if row["event"] == "model_validation"}
+    assert validations["SUPPORT"]["code"] == "quote_not_unique_in_candidate"
+    assert validations["JUDGE"]["code"] is None
+    assert validations["SUPPORT"]["call_id"] != validations["JUDGE"]["call_id"]
+    for slot, row in validations.items():
+        assert {r["event"] for r in records if r["call_id"] == row["call_id"]} == {
+            "model_call_started",
+            "model_call_finished",
+            "model_validation",
+        }
+        assert all(r["slot"] == slot for r in records if r["call_id"] == row["call_id"])

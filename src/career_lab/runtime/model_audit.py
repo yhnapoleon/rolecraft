@@ -50,6 +50,7 @@ class ModelCallAudit:
     def __init__(self, slot, **identity):
         self.identity = {"slot": slot, "call_id": uuid4().hex, **identity}
         self.called = False
+        self.validation_code = None
 
     def write(self, event, **fields):
         emit(event, **self.identity, **fields)
@@ -100,6 +101,13 @@ def complete(model, messages, tools):
     return audit.complete(model, messages, tools) if audit else model.complete(messages, tools)
 
 
+def record_validation_code(code):
+    """Attach a caller-whitelisted code to this invocation, never to its public result."""
+    audit = _active.get()
+    if audit is not None:
+        audit.validation_code = code
+
+
 def audited(slot):
     """Keep accounting outside recognizer wrappers, which may discard inner diagnostics."""
 
@@ -120,7 +128,7 @@ def audited(slot):
                     status = record.get("status", "preflight_skipped")
                     code = record.get("code")
                 else:
-                    status, code = result.status, getattr(result, "code", None)
+                    status, code = result.status, audit.validation_code
                 audit.validation(status, code)
                 return result
             except Exception:
