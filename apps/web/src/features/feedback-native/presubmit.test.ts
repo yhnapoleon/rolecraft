@@ -493,11 +493,11 @@ describe('sentence recognition after the rule check', () => {
     return { control, shown, calls };
   }
 
-  it('leaves the card to the rules when the recognition layer is off', () => {
+  it('explicitly reports that recognition is disabled', () => {
     const { control, shown, calls } = pass();
     control.start(f17, choice);
     expect(calls).toHaveLength(0);
-    expect(shown.at(-1)).toEqual({ kind: 'idle' });
+    expect(shown.at(-1)).toEqual({ kind: 'disabled' });
   });
 
   it('shows the rules first, then the sentences once recognised', async () => {
@@ -522,10 +522,10 @@ describe('sentence recognition after the rule check', () => {
     calls[0].resolve({ enabled: true, recognition: preview as SentenceResult['recognition'] });
     await Promise.resolve();
     await Promise.resolve();
-    expect(shown.at(-1)).toEqual({ kind: 'idle' });
+    expect(shown.at(-1)).toEqual({ kind: 'disabled' });
   });
 
-  it('says so when the pass fails, and shows nothing when the layer turned out off', async () => {
+  it('distinguishes failure from a disabled recognition layer', async () => {
     const { control, shown, calls } = pass();
     control.start(withRecognition({ status: 'pending' }), choice);
     calls[0].reject(Error('timeout'));
@@ -536,7 +536,7 @@ describe('sentence recognition after the rule check', () => {
     calls[1].resolve({ enabled: false, recognition: null });
     await Promise.resolve();
     await Promise.resolve();
-    expect(shown.at(-1)).toEqual({ kind: 'idle' });
+    expect(shown.at(-1)).toEqual({ kind: 'disabled' });
   });
 
   it('uses sentences already carried by the check without a second request', () => {

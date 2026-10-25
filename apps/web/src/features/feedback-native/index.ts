@@ -526,10 +526,10 @@ export function mountNativeFeedback(
   const reading = el('div', '', 'delivery-reading');
   reading.dataset.deliveryReading = '';
   const readingPaper = el('article', '', 'delivery-reading__paper');
-  let readingKind: 'idle' | 'running' | 'ready' | 'failed' = 'idle';
+  let readingKind: 'idle' | 'running' | 'ready' | 'failed' | 'disabled' | 'empty' = 'idle';
   function syncReading(kind = readingKind) {
     readingKind = kind;
-    const lensRead = kind === 'ready' && lensOn();
+    const lensRead = kind === 'ready';
     reading.dataset.state = kind;
     reading.dataset.lens = String(lensOn());
     readingPaper.hidden = lensRead;

@@ -660,7 +660,8 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
   min-width: 220px;
 }
 @media (max-width: 720px) {
-  .shell-bar .crumbbar {
+  .shell-bar .crumbbar,
+  .shell-bar .crumbbar:has(.crumb-now) {
     min-width: 0;
   }
 }
