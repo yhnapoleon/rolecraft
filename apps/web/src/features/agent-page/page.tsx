@@ -40,13 +40,6 @@ export function AgentPage(props: AgentPageProps) {
   );
   const ready = feed.loaded && hostReady;
 
-  // The moment the agent connects, the command steps aside for the stream.
-  const was = useRef(phase);
-  useEffect(() => {
-    if (phase === 'connected' && was.current !== 'connected') setReveal(false);
-    was.current = phase;
-  }, [phase]);
-
   // While someone waits for the first connection, poll fast.
   useEffect(() => {
     feedStore.watch(phase === 'waiting');
@@ -129,8 +122,8 @@ export function AgentPage(props: AgentPageProps) {
           {allowed
             ? t(
                 lang,
-                '一条命令，粘贴一次，这一局一直有效。',
-                'One command, pasted once. It stays connected for this practice.',
+                '支持桌面 App 和命令行，复制后按步骤连接。',
+                'Desktop apps and CLIs. Copy the setup and follow the steps.',
               )
             : t(
                 lang,
@@ -220,6 +213,7 @@ export function AgentPage(props: AgentPageProps) {
           origin={props.origin}
           opener={props.opener}
           secret={secret}
+          connection={feed.connection}
         />
       ) : null}
 

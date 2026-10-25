@@ -1,10 +1,17 @@
 // Connection card for the Agent access issued on this page: the endpoint and one-step setup
 // commands for Claude Code and Codex. The token stays in the host's memory; the card shows it
 // masked and asks the host for it only when the person copies or downloads.
+import { ACCESS_MS } from '../features/agent-page/grant';
 import { locale, T } from './i18n';
 
 const SERVER = 'rolecraft';
-const TOKEN_VARIABLE = 'ROLECRAFT_MCP_TOKEN';
+
+/** Same duration as the grant actually issued by My agent. */
+export function accessDuration(lang: 'zh' | 'en') {
+  const minutes = Math.floor(ACCESS_MS / 60_000);
+  const hours = Math.floor(minutes / 60);
+  return lang === 'en' ? `${hours} h ${minutes % 60} min` : `${hours} 小时 ${minutes % 60} 分钟`;
+}
 
 export type ConnectionAction = 'copy-endpoint' | 'copy-claude' | 'copy-codex' | 'copy-token';
 
@@ -16,15 +23,56 @@ export function mcpEndpoint(origin: string, sessionId: string) {
   return `${origin.replace(/\/+$/, '')}/api/sessions/${encodeURIComponent(sessionId)}/mcp`;
 }
 
-/** Claude Code: replace any earlier entry, then add the HTTP server in the local scope only. */
+/** User scope is shared by the CLI and the desktop Code tab, across project folders. */
 export function claudeCodeCommand(endpoint: string, token: string) {
-  return `claude mcp remove ${SERVER} -s local >/dev/null 2>&1; claude mcp add -s local --transport http ${SERVER} ${shell(endpoint)} --header ${shell(`Authorization: Bearer ${token}`)}`;
+  return `claude mcp remove ${SERVER} -s user >/dev/null 2>&1; claude mcp add -s user --transport http ${SERVER} ${shell(endpoint)} --header ${shell(`Authorization: Bearer ${token}`)}`;
 }
 
-/** Codex: start a session already connected; the token lives only in that process. */
+/** Stage edits with Codex's own TOML writer: preserve unrelated settings, back up, then replace.
+ * No regex deletion of TOML sections (which can contain quoted keys or multiline strings).
+ * CODEX_HOME is respected so the exact command can be exercised without a real user profile.
+ */
 export function codexCommand(endpoint: string, token: string) {
-  const server = `mcp_servers.${SERVER}={ url = ${JSON.stringify(endpoint)}, bearer_token_env_var = "${TOKEN_VARIABLE}" }`;
-  return `${TOKEN_VARIABLE}=${shell(token)} codex -c ${shell(server)}`;
+  const script = `import json, os, pathlib, subprocess, sys, tempfile, time
+config = (pathlib.Path(os.environ.get("CODEX_HOME") or pathlib.Path.home() / ".codex") / "config.toml").resolve()
+config.parent.mkdir(parents=True, exist_ok=True)
+original = config.read_bytes() if config.exists() else None
+if original is not None:
+    backup = config.with_name("config.toml.rolecraft-backup-" + str(time.time_ns()))
+    with backup.open("xb") as f:
+        os.chmod(backup, 0o600)
+        f.write(original)
+with tempfile.TemporaryDirectory(prefix="rolecraft-mcp-") as stage:
+    staged = pathlib.Path(stage) / "config.toml"
+    if original is not None:
+        staged.write_bytes(original)
+    env = dict(os.environ, CODEX_HOME=stage)
+    def codex(*args):
+        result = subprocess.run(["codex", "mcp", *args], env=env, capture_output=True)
+        if result.returncode:
+            sys.exit("RoleCraft setup failed; original config unchanged.")
+        return result.stdout
+    codex("remove", "rolecraft")
+    codex("add", "rolecraft", "--url", sys.argv[1])
+    text = staged.read_text()
+    heading = "[mcp_servers.rolecraft]"
+    if text.count(heading) != 1:
+        sys.exit("RoleCraft section not found; original config unchanged.")
+    header = "http_headers = { Authorization = " + json.dumps("Bearer " + sys.argv[2]) + " }"
+    staged.write_text(text.replace(heading, heading + "\\n" + header, 1))
+    codex("get", "rolecraft", "--json")
+    if (config.read_bytes() if config.exists() else None) != original:
+        sys.exit("Config changed during setup; run this command again.")
+    fd, pending = tempfile.mkstemp(prefix=".rolecraft-", dir=config.parent)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(staged.read_bytes())
+        os.replace(pending, config)
+    finally:
+        if os.path.exists(pending):
+            os.unlink(pending)
+print("RoleCraft MCP configured.")`;
+  return `python3 -c ${shell(script)} ${shell(endpoint)} ${shell(token)}`;
 }
 
 export function connectionText(action: ConnectionAction, endpoint: string, token: string) {
@@ -224,8 +272,8 @@ export function renderAgentConnection(
         'p',
         'meta',
         T(
-          '在本终端直接启动已连好的 Codex，不写配置文件。',
-          'Starts Codex here, already connected; nothing is saved to its config.',
+          '配置会备份后保存；在 Codex 桌面 App 新开对话，或运行 codex。',
+          'Backs up and saves the config. Open a new desktop conversation or run codex.',
         ),
       ),
       button(T('复制命令', 'Copy command'), 'copy-codex'),
@@ -234,8 +282,8 @@ export function renderAgentConnection(
       'p',
       'meta',
       T(
-        '令牌会写进你的 Agent 配置和命令历史，最长 60 分钟失效，可随时撤销；点“完成”或离开练习后，这里不再提供。',
-        'The token goes into your agent’s config and command history, expires within 60 minutes and can be revoked any time; after Done or leaving the practice, it is no longer offered here.',
+        `令牌会写进你的 Agent 配置和命令历史，授权时长为 ${accessDuration('zh')}，可随时撤销；点“完成”或离开练习后，这里不再提供。`,
+        `The token goes into your agent’s config and command history. Access lasts ${accessDuration('en')} and can be revoked any time; after Done or leaving the practice, it is no longer offered here.`,
       ),
     ),
     more,

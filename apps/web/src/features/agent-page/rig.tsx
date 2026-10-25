@@ -289,8 +289,8 @@ export function Rig({
               )
             : t(
                 lang,
-                '能读整个工作区，能交回草稿、跑测试。这一局一直有效。',
-                'Reads the whole workspace, hands back drafts and runs tests. Stays connected for this practice.',
+                '能读整个工作区，能交回草稿、跑测试。',
+                'Reads the whole workspace, hands back drafts and runs tests.',
               )}
         </p>
       </div>

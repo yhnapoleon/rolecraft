@@ -434,6 +434,7 @@
 
 /* ---------- connecting ---------- */
 .ag-connect {
+  scroll-margin-top: calc(var(--progress-dock-height, 0px) + 16px);
   display: grid;
   gap: 18px;
   padding: 20px 22px 18px;
@@ -457,7 +458,11 @@
   padding: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-rows: min-content 1fr;
   gap: 20px;
+}
+.ag-steps > li:first-child {
+  grid-row: span 2;
 }
 .ag-steps > li {
   display: grid;
@@ -884,6 +889,9 @@
     width: 30px;
     height: 30px;
   }
+  .ag-steps > li:first-child {
+    grid-row: auto;
+  }
   .ag-steps,
   .ag-fallback-body {
     grid-template-columns: minmax(0, 1fr);
@@ -1119,4 +1127,92 @@
   right: 8px;
   height: 0.5px;
   background: var(--line);
+}
+
+/* Desktop setup: one tool choice, bounded command preview, genuine activity status. */
+.ag-connect-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 20px;
+}
+.ag-connect-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.ag-connect-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+.ag-connect-status[data-connected="true"] {
+  color: var(--good);
+}
+.ag-status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border: 1px dashed var(--ink-3);
+  border-radius: 50%;
+}
+.ag-client-options {
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 16px;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.ag-client-options button {
+  min-height: 38px;
+  white-space: normal;
+  text-align: start;
+}
+.ag-client-options button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--on-primary);
+}
+.ag-command-details {
+  min-width: 0;
+}
+.ag-command-details summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.ag-command-details pre {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px / 1.6 var(--mono);
+  color: var(--ink-2);
+}
+.ag-connect .ag-cmd code {
+  overflow-wrap: anywhere;
+}
+.ag-connect .ag-step-n {
+  flex: none;
+}
+.ag-download {
+  justify-self: start;
+}
+@media (max-width: 720px) {
+  .ag-client-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ag-client-options button {
+    justify-content: flex-start;
+    min-height: 44px;
+  }
 }
