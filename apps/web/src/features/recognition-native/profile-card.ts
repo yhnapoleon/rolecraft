@@ -14,7 +14,7 @@ import { REGISTER, rowMetricsHtml } from '../recognition-lab/register';
 import type { Language } from '../results-native/localization';
 import { arbiterOutcome, type RecognitionRecord } from './badge';
 import './profile-card.css';
-import { comparisonFor, type TestRecord } from './test-comparison';
+import { comparisonFor, singleAnswerAmount, type TestRecord } from './test-comparison';
 import { actualMethod } from './actual-method';
 
 /** Which register row (system profile section) explains each task. */
@@ -211,7 +211,12 @@ function driftComparison(language: Language, o: CardOptions) {
       : [];
     return `<div><h5>${heading} · ${t('第', 'Run ')} ${n}${t(' 次测试', '')}</h5><p class="rc-compare__versions">${t('索引', 'Index')} <b>v${esc(run.indexVersion)}</b> · ${t('政策源', 'Policy')} v${esc(run.policyVersion)} · ${t('配置', 'Config')} v${esc(run.configVersion)}</p><blockquote>${esc(plain(run.answer, 1000))}</blockquote><p class="rc-card__eyebrow">${t('当时检索的原文片段', 'Source passages retrieved then')}</p>${quotes.length ? quotes.map((h) => `<q>${esc(h.quote)}</q>`).join('') : `<p class="rc-card__quiet">${t('记录未保存原文片段', 'No source passage saved in this record')}</p>`}</div>`;
   };
-  return `<div class="rc-compare"><p class="rc-compare__question">${esc(current.question)}</p><div class="rc-compare__pair">${item(previous, t('识别基准', 'Recognition baseline'))}${item(current, t('本次回答', 'This answer'))}</div></div>`;
+  const before = previous ? singleAnswerAmount(previous.answer) : null;
+  const after = singleAnswerAmount(current.answer);
+  const money = before && after && before.currency === after.currency ? `${before.value} → ${after.value} · ` : '';
+  const title = previous ? `${money}${t('索引', 'Index')} v${previous.indexVersion} → v${current.indexVersion}` : t('比较对象未载入', 'Baseline not loaded');
+  const baseline = previous ? `${t('识别基准：第', 'Baseline: run')} ${tests.findIndex(x => x.id === previous.id) + 1}${t(' 次', '')} → ${t('本次：第', 'this run:')} ${tests.findIndex(x => x.id === current.id) + 1}${t(' 次', '')}` : t('没有用相邻记录替代', 'No adjacent run substituted');
+  return `<div class="rc-compare"><header class="rc-compare__anchor"><h4>${esc(title)}</h4><p>${esc(baseline)}</p></header><p class="rc-compare__question">${esc(current.question)}</p><div class="rc-compare__pair">${item(previous, t('识别基准', 'Recognition baseline'))}${item(current, t('本次回答', 'This answer'))}</div></div>`;
 }
 
 /** What this call found, drawn from its own fields only. */

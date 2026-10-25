@@ -454,3 +454,11 @@
 .run-lens { margin: 12px 0; }
 .run-baseline-signals { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
 .run-baseline-signals summary { cursor: pointer; }
+
+.rc-compare__anchor { background: var(--surface-2); padding: 8px 0; border-bottom: 1px solid var(--line-2); }
+.rc-compare__anchor h4 { margin: 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+.rc-compare__anchor p { margin: 3px 0 0; font-size: 12px; color: var(--ink-2); }
+@media (max-width: 720px) {
+ .rc-compare__anchor { position: sticky; top: calc(var(--progress-dock-height, 0px) + 12px); z-index: 2; }
+ .rc-compare__anchor h4 { font-size: 18px; }
+}
