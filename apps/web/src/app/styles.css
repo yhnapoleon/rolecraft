@@ -2448,11 +2448,15 @@ button.crumb:hover {
   font-size: 12.5px;
 }
 .runs {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: 16px;
   margin-top: 22px;
 }
 .run {
+  min-width: 0;
+  max-width: 100%;
   padding: 18px 20px 14px;
   border-radius: var(--r-panel);
   background: var(--glass-strong);
@@ -2483,6 +2487,7 @@ button.crumb:hover {
   font-size: 12px;
 }
 .run-q h3 {
+  overflow-wrap: anywhere;
   font-size: 16px;
   font-weight: 600;
 }
@@ -2495,12 +2500,14 @@ button.crumb:hover {
   font-size: 12.5px;
 }
 .run-cols {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: 14px;
   margin-top: 12px;
 }
 .run-cols.two {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .col-cap {
   color: var(--ink-3);
@@ -2513,6 +2520,7 @@ button.crumb:hover {
   align-items: flex-start;
 }
 .answer-body {
+  overflow-wrap: anywhere;
   flex: 1;
   min-width: 0;
   padding: 12px 14px;
@@ -4344,7 +4352,7 @@ textarea.doc-input[name="rationale"] {
     grid-template-columns: 1fr;
   }
   .run-cols.two {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .review-hero {
     grid-template-columns: 1fr;
@@ -6347,3 +6355,10 @@ ol.later-list li::marker {
   backdrop-filter: var(--sheet-foot-filter);
   box-shadow: inset 0 0.5px 0 var(--line-2);
 }
+
+/* A long English source label must shrink inside its run, including the inner main scroller. */
+.run-col, .run-q, .answer, .run-meta { min-width: 0; }
+.run-meta > .chip { min-width: 0; max-width: 100%; height: auto; min-height: 28px; padding-block: 5px; border-radius: var(--r-key); white-space: normal; text-align: start; }
+.run-meta > .chip > span:not(.ver) { min-width: 0; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.run-meta > .chip > .ver { flex-shrink: 0; }
+.run-meta > .stamp { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
