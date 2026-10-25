@@ -71,3 +71,42 @@ def test_rule_engineering_with_configured_provider(eng: Eng, generator: str) -> 
     broad_full = private_report(eng, broad_review["review_id"])
     assert any(row.result == "fail" for row in broad_full.results)
     assert eng.state() == before
+
+
+@pytest.mark.parametrize("generator", ["llm", "extractive"])
+def test_rule_engineering_after_index_refresh_keeps_faq_and_scope_guards(eng: Eng, generator: str):
+    from career_lab.engineer.execution import matches, run_query, suite_probes
+    from career_lab.engineer.suite import require_suite
+    from career_lab.scenarios.v2.module import ref_for
+
+    module = eng.app.state.scenario_v2
+    module.assistant.model = NoGeneration()
+    base = module.package.baseline(eng.sid)
+    eng.ok(
+        eng.call(
+            "/configuration",
+            "configuration.apply",
+            {
+                "base": ref_for("config", base).model_dump(mode="json"),
+                "settings": {"generator": generator},
+            },
+            "configure-fresh",
+        )
+    )
+    eng.ok(eng.call("/actions", "refresh_index", {"tool": "refresh_index"}, "refresh"))
+    store = eng.app.state.v2_store
+    auth = store.authenticate(eng.sid, eng.token)
+    snapshot = store.query(auth, module.snapshot)
+    assert snapshot.source_versions["policy"] == snapshot.indexed_versions["policy"] == 2
+    for probe in suite_probes(require_suite(module.package)):
+        if probe.id not in {"F01", "F04", "F12"}:
+            continue
+        result = run_query(module, snapshot, auth, probe.query, "fresh-" + probe.id)
+        assert result is not None
+        assert result.config.requested.generator == generator
+        assert result.execution.attempts == ()
+        if probe.id == "F01":
+            assert result.status == "answered" and "400" in result.answer
+            assert any(ref.object_id == "policy" and ref.version == 2 for ref in result.citations)
+        else:
+            assert matches(result, probe.expected)
