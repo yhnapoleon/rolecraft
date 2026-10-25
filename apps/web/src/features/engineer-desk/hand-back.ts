@@ -236,8 +236,8 @@ export function reviewDetails(record: EngineerReviewRecord, language: 'zh' | 'en
     {
       label: t('公开回归', 'Public regression'),
       text: t(
-        `${rows.filter((r) => r.result === 'pass').length}/${rows.length} 通过；已记录新增失败 ${publicNew} 条`,
-        `${rows.filter((r) => r.result === 'pass').length}/${rows.length} passed; ${publicNew} recorded new failures`,
+        `${rows.filter((r) => r.result === 'pass').length}/${rows.length} 通过（复核报告的公开探针）；已记录新增失败 ${publicNew} 条`,
+        `${rows.filter((r) => r.result === 'pass').length}/${rows.length} passed (public probes in the signed review); ${publicNew} recorded new failures`,
       ),
     },
     {

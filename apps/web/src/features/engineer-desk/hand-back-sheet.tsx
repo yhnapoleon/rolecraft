@@ -75,6 +75,9 @@ function RunLog({ run }: { run: ColleagueRun }) {
       <h3 className="tw:m-0 tw:text-[12.5px] tw:font-semibold tw:text-ink-2">
         {T(`${run.name} 的处理记录 · 规则编排`, `What ${run.name} did · rule orchestration`)}
       </h3>
+      <p className="tw:m-0 tw:text-[12px] tw:text-ink-2">
+        {T('尝试检查包含交来的目标测试和公开探针；下方公开回归只统计复核报告的公开探针。', 'Trial checks include the handed-over target tests and public probes. The public-regression count below covers only the signed review’s public probes.')}
+      </p>
       <ol className="tw:m-0 tw:p-0 tw:list-none tw:grid tw:gap-1.5">
         <li className={row}>
           {tick}
@@ -89,7 +92,7 @@ function RunLog({ run }: { run: ColleagueRun }) {
               {T(`试了「${t.label}」`, `Tried “${t.label}”`)}
               <span className="tw:text-ink-3"> · {t.changes} · </span>
               <span className="tw:tabular-nums">
-                {T(`公开检查 ${t.passed}/${t.total} 通过`, `public checks ${t.passed}/${t.total} passed`)}
+                {T(`尝试检查（含目标）${t.passed}/${t.total} 通过`, `trial checks (including targets): ${t.passed}/${t.total} passed`)}
               </span>
               {t.chosen && <b className="tw:font-semibold">{T(' · 选这个', ' · chosen')}</b>}
             </span>
