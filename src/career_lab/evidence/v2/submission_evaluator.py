@@ -6,6 +6,7 @@ its existing claim/derived-subject boundary. No local queue or auto-revision.
 
 from career_lab.contracts import v2 as C
 from career_lab.rubrics.v4.feedback import FeedbackEngine
+from career_lab.runtime.model_audit import phase
 from .assembler import EvidenceAssemblerV2
 from .factual import factual_feedback
 from .formal_feedback import attach_sections, sections
@@ -153,15 +154,17 @@ class SubmissionEvaluator:
                 "work_language": self.work_language,
             }
         at = submission.as_of
-        subject, packages = self._rubric_v2_packages(auth, submission)
-        report, diagnostics = self.engine.evaluate(
-            auth.session_id,
-            subject,
-            self.reader.evaluation,
-            at,
-            packages,
-            work_language=self.work_language,
-        )
+        with phase("evidence_assembly"):
+            subject, packages = self._rubric_v2_packages(auth, submission)
+        with phase("evaluation_and_recognition"):
+            report, diagnostics = self.engine.evaluate(
+                auth.session_id,
+                subject,
+                self.reader.evaluation,
+                at,
+                packages,
+                work_language=self.work_language,
+            )
         factual = []
         historical = []
         notes = []

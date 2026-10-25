@@ -132,3 +132,16 @@ def audited(slot):
         return evaluate
 
     return decorate
+
+
+@contextmanager
+def phase(name):
+    started = monotonic()
+    status = "completed"
+    try:
+        yield
+    except Exception:
+        status = "failed"
+        raise
+    finally:
+        emit("feedback_phase", phase=name, status=status, elapsed_seconds=monotonic() - started)
