@@ -500,7 +500,14 @@ class EngineerService:
         sid = owner.session_id
         folder, ticket = self.ticket(sid, ticket_id)
         state = ticket.get("handover", {}).get("state")
-        if state in ("reproducing", "trying", "signing", "reported", "applied"):
+        if state in (
+            "reproducing",
+            "trying",
+            "signing",
+            "reported",
+            "applied",
+            "applied_with_changes",
+        ):
             return self.detail(module, sid, ticket_id)
         language = ticket["work_language"]
         auth = credential(
@@ -661,12 +668,11 @@ class EngineerService:
         if role != "pm" or ticket.get("assignee") != "colleague":
             raise C.ProtocolError("decision_not_allowed", status=409)
         handover = ticket.get("handover", {})
-        if handover.get("state") not in ("reported", "applied", "returned"):
+        if handover.get("state") not in ("reported", "applied", "applied_with_changes", "returned"):
             raise C.ProtocolError("handover_not_reported", status=409)
-        current = store.query(
-            auth, lambda view: module.snapshot(view).config.config_version, operation=OP_CREATE
-        )
-        entry = {
+        config = store.query(auth, lambda view: module.snapshot(view).config, operation=OP_CREATE)
+        current = config.config_version
+        entry: dict[str, Any] = {
             "decision": payload.decision,
             "note": payload.note,
             "at": now(),
@@ -674,14 +680,18 @@ class EngineerService:
             "config_version": current,
         }
         if payload.decision == "apply":
-            # The person applied it themself through configuration.apply; this only records
-            # that the current configuration is the one their apply produced.
+            # The person applied it themself through configuration.apply; this records that the
+            # current configuration is the one their apply produced, and that it carries the
+            # report's change. Every setting the report changed must have the report's value
+            # (otherwise 409: the record would claim a change that is not there); settings the
+            # report left alone but the person also changed are listed, as "applied_with_changes".
             if payload.config_version is None or payload.config_version != current:
                 raise C.ProtocolError("config_version_mismatch", status=409)
+            entry.update(self.compare_with_report(folder, config))
+        state = {"apply": "applied", "return": "returned"}.get(payload.decision, handover["state"])
+        if entry.get("result") == "applied_with_changes":
+            state = "applied_with_changes"
         with self.files.lock(sid, payload.ticket_id):
-            state = {"apply": "applied", "return": "returned"}.get(
-                payload.decision, handover["state"]
-            )
             self.handover_state(
                 sid,
                 payload.ticket_id,
@@ -689,6 +699,33 @@ class EngineerService:
                 decisions=[*handover.get("decisions", []), entry],
             )
         return {"ticket": self.detail(module, sid, payload.ticket_id), "decision": entry}
+
+    def compare_with_report(self, folder: Path, config: C.AssistantConfig) -> dict[str, Any]:
+        signoffs = self.signoffs(folder)
+        if not signoffs:
+            raise C.ProtocolError("handover_not_reported", status=409)
+        draft = read_json(folder / "drafts" / (signoffs[-1]["draft_id"] + ".json"))
+        reported = supported_settings(C.AssistantConfig.model_validate(draft["candidate"]))
+        now_settings = supported_settings(config)
+        changed = set(draft["changes"])
+        missing = sorted(name for name in changed if now_settings[name] != reported[name])
+        if missing:
+            raise C.ProtocolError(
+                "config_not_from_report",
+                "the current configuration does not carry the report's change: "
+                + ", ".join(missing),
+                status=409,
+            )
+        extra = {
+            name: {"report": reported[name], "current": now_settings[name]}
+            for name in sorted(set(EDITABLE_FIELDS) - changed)
+            if now_settings[name] != reported[name]
+        }
+        return {
+            "result": "applied_with_changes" if extra else "applied",
+            "review_id": signoffs[-1]["review_id"],
+            "other_changes": extra,
+        }
 
     def grace_handover(
         self,
