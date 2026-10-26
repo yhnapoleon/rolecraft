@@ -258,3 +258,89 @@ def test_mcp_section_review_resource_tool_and_prompt_match_http(enabled):
     prompt = call("prompts/get", {"name": "aipm-next-step", "arguments": {}}, "aipm-next-step")
     assert "Sheet status: solid" in prompt["messages"][0]["content"]["text"]
     client.close()
+
+
+def test_rubric_lines_come_from_the_real_rule_check_with_the_intended_decision(tmp_path):
+    import uuid
+
+    from fastapi.testclient import TestClient
+
+    from career_lab.aipm.progress import AipmContent
+    from career_lab.aipm.types import AipmGuide
+    from career_lab.api.vertical_runtime import create_runtime_app
+
+    root = Path(__file__).resolve().parents[2]
+    app = create_runtime_app("sqlite:///" + str(tmp_path / "rubric.db"))
+    store = app.state.v2_store
+    with TestClient(app) as client:
+        created = client.post("/sessions", json={"schema_version": 2, "scenario": "pm_pilot_v2"})
+        sid, token = created.json()["session_id"], created.json()["token"]
+        auth = store.authenticate(sid, token)
+        content = AipmContent(
+            scenario_hash=store.view(auth).bindings.scenario.sha256,
+            content_revision="aipm-phase1-draft-1",
+            work_language="zh",
+            guide=AipmGuide.model_validate_json(
+                (root / "scenarios/pm_pilot/aipm-phase1/public/guide.zh.json").read_bytes()
+            ),
+            design_rules=root / "scenarios/pm_pilot/aipm-phase1/private/grading/design.json",
+        )
+        install_aipm(app, [content])
+        headers = {"Authorization": "Bearer " + token}
+
+        def command(operation, payload):
+            state = store.view(auth).state
+            return {
+                "schema_version": 2,
+                "request_id": uuid.uuid4().hex,
+                "expected_version": state.business_seq,
+                "expected_workspace_revision": state.workspace_revision,
+                "operation": operation,
+                "payload": payload,
+            }
+
+        def send(suffix, operation, payload):
+            response = client.post(
+                f"/sessions/{sid}/aipm/{suffix}", json=command(operation, payload), headers=headers
+            )
+            assert response.status_code == 200, response.text
+            return response.json()["result"]
+
+        send("enrollment", "aipm.enroll", {})
+        plan = {
+            "kind": "plan",
+            "purpose": "plan",
+            "structured_payload": {"type": "plan", "sections": {"solution": "先做检索问答。"}},
+        }
+        out = app.state.w06.call(
+            sid,
+            token,
+            "work_products.create",
+            {"session_id": sid, "command": command("work_products.create", plan)},
+        )
+        prd_ref = next(o for o in out["objects"] if o["kind"] == "product")
+        value = AipmDesign(
+            id="design",
+            session_id=sid,
+            revision=1,
+            prd_ref=prd_ref,
+            intended_decision="launch_narrow",
+        )
+        design_ref = send(
+            "designs",
+            "aipm.design.save",
+            {"design": value.model_dump(mode="json"), "expected_revision": 0},
+        )["ref"]
+        stored = send(
+            "section-reviews",
+            "aipm.section_review.create",
+            {"step_id": "solution", "prd_ref": prd_ref, "design_ref": design_ref},
+        )["review"]
+        assert stored["decision_used"] == "launch_narrow"
+        assert {r["criterion"] for r in stored["rubric"]} == {
+            "R3.capacity",
+            "R3.resources",
+            "R6.alternatives",
+            "R6.consistency",
+        }
+        assert all(r["source"] in {"verified_rule", "pending"} for r in stored["rubric"])
