@@ -16,6 +16,8 @@
 }
 .aipm-main {
   padding: 18px 0 132px;
+  /* Opening a sheet scrolls it to the top: below the sticky compass, not under it. */
+  scroll-margin-top: 56px;
 }
 .aipm-main__crumbs {
   display: flex;
@@ -70,6 +72,49 @@
   max-width: none;
   margin-inline: 0;
 }
+.aipm-main__split {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.aipm-main__split b {
+  color: var(--ink-2);
+  font-weight: 550;
+}
+/* Side by side, the sheet needs the room on its left: the sheets pile shrinks to a 48px paper
+ * (its words come back on hover), the materials pile steps away, the columns start right of it. */
+.aipm-main[data-split="true"] {
+  padding-left: 48px;
+}
+#ws-stage:has(.aipm-main[data-split="true"]) .ws-stack[data-kind="materials"] {
+  display: none;
+}
+#ws-stage:has(.aipm-main[data-split="true"])
+  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"]) {
+  width: 48px;
+}
+#ws-stage:has(.aipm-main[data-split="true"])
+  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"])
+  .ws-stack__pile {
+  width: 48px;
+  padding: 0;
+}
+#ws-stage:has(.aipm-main[data-split="true"])
+  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"])
+  .ws-stack__papers {
+  width: 48px;
+  height: 48px;
+  transform: scale(0.72);
+  transform-origin: left bottom;
+}
+#ws-stage:has(.aipm-main[data-split="true"])
+  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"])
+  .ws-stack__caption {
+  display: none;
+}
 .aipm-main[data-split="true"] .aipm-main__body {
   grid-area: body;
   max-width: none;
@@ -78,19 +123,18 @@
 .aipm-main__aside {
   grid-area: aside;
   position: sticky;
-  top: 12px;
+  top: 56px;
   align-self: start;
-  max-height: calc(100vh - var(--toolbar-h) - 88px);
+  max-height: calc(100vh - 140px);
   overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 14px;
 }
-.aipm-main__aside-head {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 4px;
+.aipm-main__aside .reader {
+  margin-top: 0;
 }
-.aipm-main__aside-head {
-  gap: 8px;
-  align-items: center;
+.aipm-main__aside .doc-title {
+  font: 600 20px / 1.35 var(--sans);
 }
 .aipm-main__aside-quote {
   height: 30px;
@@ -104,6 +148,12 @@
 }
 .aipm-main__aside-quote:hover {
   background: var(--fill-2);
+}
+.aipm-main__split .aipm-main__aside-quote {
+  height: 26px;
+  margin-left: 6px;
+  padding: 0 10px;
+  font-size: 12.5px;
 }
 .aipm-main__aside-close {
   width: 32px;
@@ -134,20 +184,60 @@
 /* The colleague side: what this colleague can see, and the PRD chip on the composer. */
 .aipm-sees {
   margin: 8px 12px 4px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--paper);
-  box-shadow: var(--shadow-card);
   color: var(--ink-2);
   font-size: 12.5px;
-  line-height: 1.55;
+  line-height: 1.5;
+}
+.aipm-sees summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: 0 0 0 0.5px var(--line-2);
+  list-style: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.aipm-sees summary::-webkit-details-marker {
+  display: none;
+}
+.aipm-sees summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 .aipm-sees b {
+  flex: none;
   color: var(--ink);
   font-weight: 600;
 }
-.aipm-sees span {
+.aipm-sees__what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aipm-sees__i {
+  flex: none;
+  margin-left: auto;
   color: var(--ink-3);
+}
+.aipm-sees p {
+  margin: 6px 4px 0;
+  color: var(--ink-3);
+}
+/* Once you have written, the introduction is one quiet line above the thread, not a card on it. */
+.chat .rc-greet-chat:not([open]) {
+  margin: 4px 12px 6px;
+  padding: 7px 12px;
+  background: none;
+  box-shadow: 0 0 0 0.5px var(--line);
+}
+.chat .rc-greet-chat:not([open]) summary {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 .aipm-prd-chip {
   display: inline-flex;
@@ -187,17 +277,16 @@
   }
 }
 
-/* While the pile is open the stage steps back (the wireframe's ghosted desk): the sheets read
- * cleanly over it, the compass and the colleagues stay as they are. */
+/* A previewed pile reads over its own frosted patch; a pinned one also sets the stage back,
+ * softly blurred so nothing behind it competes. The compass and the colleagues stay as they are. */
 #ws-stage > :not(.rc-prog-wrap, .aipm-stack-slot) {
   transition:
     opacity var(--mid) var(--ease-out),
     filter var(--mid) var(--ease-out);
 }
-#ws-stage:has(.ws-stack:is([data-open="preview"], [data-open="pinned"]))
-  > :not(.rc-prog-wrap, .aipm-stack-slot) {
-  opacity: 0.34;
-  filter: saturate(0.7);
+#ws-stage:has(.ws-stack[data-open="pinned"]) > :not(.rc-prog-wrap, .aipm-stack-slot) {
+  opacity: 0.55;
+  filter: saturate(0.8) blur(1.2px);
 }
 .aipm-stack-slot .ws-stack__scrim {
   background: transparent;
@@ -281,4 +370,60 @@
 }
 .chat:has(.rc-roles__turn:last-child .rc-sys--held) .aipm-mentor[data-when="held"] {
   display: block;
+}
+/* Selected words in the side material: an ink pill just above them. */
+.aipm-quote-pill {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--primary);
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+  color: var(--on-primary);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  animation: aipm-pill-in 140ms var(--ease-out) both;
+}
+.aipm-quote-pill[hidden] {
+  display: none;
+}
+.aipm-quote-pill button {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: 500 12.5px var(--sans);
+  cursor: pointer;
+}
+.aipm-quote-pill button:hover,
+.aipm-quote-pill button:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--on-primary) 16%, transparent);
+}
+.aipm-quote-pill span {
+  width: 1px;
+  height: 14px;
+  background: color-mix(in srgb, var(--on-primary) 30%, transparent);
+}
+@keyframes aipm-pill-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-quote-pill {
+    animation: none;
+  }
+}
+.aipm-bubble-note {
+  margin: 4px 4px 0 auto;
+  color: var(--ink-3);
+  font-size: 11px;
+  text-align: right;
 }

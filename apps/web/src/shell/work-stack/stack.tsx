@@ -61,7 +61,8 @@ export type StackProps = {
   header?: { title: string; actions: { label: string; plus?: boolean; run(): void }[] };
   /** Phone capsule text, e.g. "Sheets 2/7 ②". */
   capsule: string;
-  words: { suggested: string; close: string };
+  /** pinned: the pile's line while it is pinned open, e.g. "Pinned · Esc to close". */
+  words: { suggested: string; close: string; pinned?: string };
   /** Shown once beside the pile (first visit). */
   hint?: string;
   /** When the hint is shown it calls this once, so the caller can remember it. */
@@ -153,6 +154,10 @@ export function WorkStack(p: StackProps) {
   const [hinting, setHinting] = useState(!!p.hint);
   const onHint = useRef(p.onHint);
   onHint.current = p.onHint;
+  // A hint that arrives later (after the walk-through) still plays once.
+  useEffect(() => {
+    if (p.hint) setHinting(true);
+  }, [p.hint]);
   useEffect(() => {
     if (!hinting) return;
     onHint.current?.();
@@ -178,9 +183,16 @@ export function WorkStack(p: StackProps) {
     [],
   );
 
+  // The pile owns its keys: Esc closes the open pile (never the sheet behind it), and Enter,
+  // Space and the arrows open it with focus on the suggested sheet.
   const onPileKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowUp') {
+    if (e.key === 'Escape' && open !== 'closed') {
       e.preventDefault();
+      e.stopPropagation();
+      close(true);
+    } else if (['ArrowUp', 'ArrowDown', 'Enter', ' '].includes(e.key)) {
+      e.preventDefault();
+      clearTimeout(enter.current);
       pin(true);
     }
   };
@@ -194,6 +206,7 @@ export function WorkStack(p: StackProps) {
     const at = Math.max(0, active);
     if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       close(true);
     } else if (e.key === 'ArrowUp') move(at - cols);
     else if (e.key === 'ArrowDown') move(at + cols);
@@ -210,7 +223,13 @@ export function WorkStack(p: StackProps) {
   const isOpen = open !== 'closed';
   const panelId = `${id}-panel`;
   const quick = { duration: 0.12 };
-  const spring = { type: 'spring' as const, duration: 0.28, bounce: 0.18 };
+  // About 280ms to settle with a slight overshoot; closing runs top-down, quicker, no bounce.
+  const spring = { type: 'spring' as const, stiffness: 420, damping: 32, mass: 0.9 };
+  const away = (fromTop: number) => ({
+    duration: 0.14,
+    ease: [0.4, 0, 1, 1] as const,
+    delay: fromTop * 0.016,
+  });
 
   return (
     <div
@@ -250,7 +269,7 @@ export function WorkStack(p: StackProps) {
             exit={
               reduce
                 ? { opacity: 0, transition: quick }
-                : { opacity: 0, transition: { duration: 0.16 } }
+                : { opacity: 0, transition: { duration: 0.1, delay: shown.length * 0.016 + 0.06 } }
             }
             transition={reduce ? quick : spring}
             onKeyDown={onListKey}
@@ -285,22 +304,25 @@ export function WorkStack(p: StackProps) {
                 // Index from the pile upward, for the stagger and the fan's drift.
                 const fromPile = layout === 'fan' ? shown.length - 1 - i : i;
                 const { x, rotate } = layout === 'fan' ? fanOffset(fromPile) : { x: 0, rotate: 0 };
+                // Only the paper turns; its label stays level so the words stay sharp.
+                const tilt = { '--tilt': `${rotate}deg` } as React.CSSProperties;
                 return (
                   <motion.li
                     key={item.id}
                     className="ws-stack__row"
+                    style={tilt}
                     initial={
                       reduce
-                        ? { opacity: 0 }
+                        ? { opacity: 0, x, y: 0, scale: 1 }
                         : layout === 'fan'
-                          ? { opacity: 0, y: 18 + fromPile * 6, x: 0, rotate: 0, scale: 0.94 }
+                          ? { opacity: 0, y: 18 + fromPile * 6, x: 0, scale: 0.94 }
                           : { opacity: 0, scale: 0.96 }
                     }
-                    animate={{ opacity: 1, y: 0, x, rotate, scale: 1 }}
+                    animate={{ opacity: 1, y: 0, x, scale: 1 }}
                     exit={
                       reduce
-                        ? { opacity: 0 }
-                        : { opacity: 0, y: 10, transition: { duration: 0.16 } }
+                        ? { opacity: 0, transition: quick }
+                        : { opacity: 0, y: 10, transition: away(i) }
                     }
                     transition={reduce ? quick : { ...spring, delay: fromPile * 0.024 }}
                   >
@@ -314,11 +336,12 @@ export function WorkStack(p: StackProps) {
                       onFocus={() => setActive(i)}
                       onClick={() => choose(item)}
                     >
-                      <Thumb item={item} />
+                      <Thumb item={item} dot={layout !== 'grid'} />
+                      {layout === 'grid' && <Dot status={item.status} />}
                       <span className="ws-stack__label">
                         <span className="ws-stack__name">
                           {glyph(item)}
-                          {item.name}
+                          {layout === 'grid' ? (item.short ?? item.name) : item.name}
                           {item.suggested && (
                             <span className="ws-stack__tag">{p.words.suggested}</span>
                           )}
@@ -355,7 +378,12 @@ export function WorkStack(p: StackProps) {
         aria-controls={panelId}
         aria-label={p.ariaLabel}
         data-hint={hinting || undefined}
-        onClick={() => (open === 'pinned' ? close(false) : pin(false))}
+        onClick={() => {
+          // A click inside the hover delay must not be turned back into a preview by the timer.
+          clearTimeout(enter.current);
+          if (open === 'pinned') close(false);
+          else pin(false);
+        }}
         onKeyDown={onPileKey}
       >
         {layout === 'sheet' ? (
@@ -395,7 +423,9 @@ export function WorkStack(p: StackProps) {
             </span>
             <span className="ws-stack__caption" aria-hidden="true">
               <span className="ws-stack__title">{p.title}</span>
-              <span className="ws-stack__status">{p.status}</span>
+              <span className="ws-stack__status">
+                {open === 'pinned' && p.words.pinned ? p.words.pinned : p.status}
+              </span>
             </span>
           </>
         )}
@@ -409,15 +439,20 @@ export function WorkStack(p: StackProps) {
   );
 }
 
-// A sheet's paper: its icon, the segment's colour along the top, its state in the corner.
-function Thumb({ item }: { item: StackItem }) {
+const Dot = ({ status }: { status: StackItem['status'] }) => (
+  <span className="ws-stack__dot" data-status={status} aria-hidden="true">
+    {status === 'solid' && <Check size={9} strokeWidth={3} />}
+    {status === 'recheck' && '!'}
+  </span>
+);
+
+// A sheet's paper: its icon, the segment's colour along the top, its state in the corner (the
+// grid puts the state in the cell's corner instead, clear of the icon).
+function Thumb({ item, dot }: { item: StackItem; dot: boolean }) {
   return (
     <span className="ws-stack__thumb" data-segment={item.segment} aria-hidden="true">
       <Icon name={item.icon} size={17} />
-      <span className="ws-stack__dot" data-status={item.status}>
-        {item.status === 'solid' && <Check size={9} strokeWidth={3} />}
-        {item.status === 'recheck' && '!'}
-      </span>
+      {dot && <Dot status={item.status} />}
       {item.agentDraft && (
         <span className="ws-stack__agent ws-stack__agent--thumb">
           <Sparkle size={8} strokeWidth={2.2} />

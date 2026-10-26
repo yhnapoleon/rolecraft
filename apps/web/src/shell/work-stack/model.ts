@@ -10,6 +10,8 @@ export type StackItem = {
   /** A lucide icon name. */
   icon: string;
   name: string;
+  /** The grid's name, short enough for one line ("③ Real need"); the name when absent. */
+  short?: string;
   /** What this sheet is for, one sentence. */
   purpose: string;
   status: StackStatus;
