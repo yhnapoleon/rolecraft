@@ -1,5 +1,9 @@
 /* Section review: the result page made small. Rows, sentence marks and colleague columns use the
  * result page's own classes; this file only lays out the two sheets and the status pills. */
+.aipm-review {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .aipm-review__grid {
   display: grid;
   grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
@@ -150,7 +154,11 @@
   padding: 0;
   list-style: none;
 }
+.aipm-review .aipm-review__mentors {
+  align-items: stretch;
+}
 .aipm-review__mentor {
+  grid-template-rows: auto 1fr auto;
   padding: 12px;
   border-radius: var(--r-md);
   background: var(--surface);
@@ -190,11 +198,9 @@
   gap: 8px;
 }
 @media (max-width: 960px) {
-  .aipm-review__grid {
-    grid-template-columns: 1fr;
-  }
-  .aipm-review__mentors {
-    grid-template-columns: 1fr;
+  .aipm-review__grid,
+  .aipm-review .aipm-review__mentors {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 480px) {

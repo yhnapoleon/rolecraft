@@ -302,9 +302,11 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
         applicability: 'applicable',
       }) as unknown as Report['items'][number],
   );
+  // Pending criteria are named once below, as judged at delivery.
+  const verified = items.filter((item) => item.source === 'verified_rule');
   const lines = renderRuleLines(
     doc,
-    ruleLines(items, criterionLabels(language), language),
+    ruleLines(verified, criterionLabels(language), language),
     language,
   );
   const pending = review.rubric.filter((line) => line.source !== 'verified_rule');

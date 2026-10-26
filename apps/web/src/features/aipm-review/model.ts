@@ -84,7 +84,16 @@ export function sectionPreview(
     if (unit.decision === 'defer') counts.deferred++;
     else if (unit.label in counts) counts[unit.label as keyof typeof counts]++;
   }
-  return { ...preview, counts, units: units.map((unit, index) => ({ ...unit, index })) };
+  // The assembler's section key is not part of what the learner wrote; drop it from the quote.
+  return {
+    ...preview,
+    counts,
+    units: units.map((unit, index) => ({
+      ...unit,
+      index,
+      quote: unit.quote.replace(KEY_PREFIX, ''),
+    })),
+  };
 }
 
 // ---- Status, comparison, staleness ------------------------------------------------------
