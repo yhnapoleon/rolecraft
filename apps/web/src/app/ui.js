@@ -177,7 +177,8 @@ import * as Greetings from '../features/colleague-greetings';
 import { messageRows, noteKey } from '../features/colleague-greetings/unread';
 import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
-import { SevenStepGuide } from '../features/aipm-guide/guide';
+import { Compass } from '../features/aipm-guide/compass';
+import { WorkStack } from '../shell/work-stack/stack';
 import { createAipmPractice } from '../features/aipm-guide/practice';
 import { showDraftToast } from '../features/aipm-guide/draft-toast';
 import '../shell/progress.css';
@@ -1329,7 +1330,7 @@ function renderWorkspace() {
   ui.notesCache = Coach.notes(a, E);
   const html = `<div class="ws view-${ui.route} ${arriving ? 'arriving' : ''} ${ui.railOpen ? 'rail-open' : ''}" data-status="${statusOf(a)}">
     ${wsToolbar(a)}
-    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div></main>
+    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${aipmScreen(a) ? '' : wsStage(a)}</div></main>
     ${docLayer()}
     <aside class="rail" id="ws-rail" aria-label="${esc(T('同事与需要你回应的事', 'Colleagues and what needs you'))}">${wsRail(a)}</aside>
     <button type="button" class="scrim" data-action="close-panels" aria-label="${esc(T('关闭面板', 'Close panel'))}" tabindex="-1"></button>
@@ -1665,16 +1666,37 @@ const Aipm = createAipmPractice({
   notifyDraft: (text, label, dismiss, open) => showDraftToast(text, label, dismiss, open),
   prefillColleague: (role, text) => openChat(role, text),
   prdSharedWith: () => false,
+  showBoard: () => {
+    if (ui.route !== 'work') go('work');
+  },
+  openProduct: (id) => {
+    const a = current(),
+      x = a?.artifacts.find((y) => y.id === id && !y.removedAt);
+    if (!x) return;
+    Aipm.host.openWorkbench();
+    if (x.taskId) openTask(x.taskId, { type: 'work', id });
+    else previewWork(a, id);
+  },
+  newFreeSheet: () => sheetNewArtifact(),
+  materialHtml: (id) => {
+    const a = current();
+    return a ? docBody(a, id, true) : '';
+  },
 });
 const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
+// A seven-step practice opens a sheet or a review in the main screen instead of the board.
+const aipmScreen = (a) => ui.route === 'work' && aipmHere(a) && Aipm.screenOf(a) !== 'workbench';
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every
-// product manager's screen of the practice.
+// product manager's screen of the practice. A seven-step practice (v2) has the compass there
+// instead, the sheet pile in the lower-left corner and, when open, a sheet in the main screen.
 // The seven steps start loading while Grace's brief is still open, so the walk-through finds them.
 const progressSlot = (a, sevenSteps = aipmHere(a)) =>
   ['work', 'engineer'].includes(ui.route) && Board.entryPending(a)
     ? ''
     : sevenSteps
-      ? `<div class="rc-prog-wrap">${islandSlot('aipm-guide')}<div class="aipm-feature" data-aipm-feature></div></div>`
+      ? `<div class="rc-prog-wrap aipm-v2">${islandSlot('aipm-compass')}</div>${
+          aipmScreen(a) ? '<div class="aipm-main" data-aipm-main></div>' : ''
+        }${islandSlot('aipm-stack', 'aipm-stack-slot')}`
       : (hatHere(a) === 'pm'
           ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
           : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
@@ -1699,10 +1721,12 @@ function nextStep(a) {
   return `<p class="rc-entry-next" data-entry-next><b>${label ? esc(T(label[0], label[1])) : T('复现', 'Reproduce')}</b><span>${T('下一步：', 'Next: ')}${next ? esc(T(next[0], next[1])) : T('先复现委托里的问题。', 'Reproduce the issue in the ticket.')}</span></p>`;
 }
 function mountProgress(a) {
-  const guide = a && document.querySelector('[data-island="aipm-guide"]') && Aipm.props(a);
-  if (guide) {
-    keepIsland('aipm-guide', SevenStepGuide, guide);
-    Aipm.mountFeature(a, document.querySelector('[data-aipm-feature]'));
+  const compass = a && document.querySelector('[data-island="aipm-compass"]') && Aipm.compassProps(a);
+  if (compass) {
+    keepIsland('aipm-compass', Compass, compass);
+    const pile = Aipm.stackProps(a);
+    if (pile) keepIsland('aipm-stack', WorkStack, pile);
+    Aipm.mountMain(a, document.querySelector('[data-aipm-main]'));
     return;
   }
   if (!document.querySelector('[data-island="shell-progress"]')) return;
@@ -4981,7 +5005,7 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     // shorter and the scroll position clamped. Hold the old height until the cards are back.
     const held = document.getElementById('ws-stage')?.offsetHeight || 0;
     document.getElementById('ws-stage').outerHTML =
-      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div>`;
+      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${aipmScreen(a) ? '' : wsStage(a)}</div>`;
     const next = document.getElementById('ws-stage');
     if (next && held) {
       next.style.minHeight = `${held}px`;

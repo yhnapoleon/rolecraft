@@ -1,0 +1,8 @@
+.rc-connection-toast .aipm-draft-toast__go {
+  width: auto;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 550;
+  white-space: nowrap;
+}

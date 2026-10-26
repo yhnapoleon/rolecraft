@@ -5,8 +5,9 @@ import type { AipmColleague, AipmFeatureId, AipmHost, AipmScreen } from '../../a
 import { createAipmRegistry, installAipmFeatures } from '../../aipm/registry';
 import type { ObjectRef, ProductCreate, ProductEdit, ReviewInput } from '../../contracts-v2';
 import type { V4HostAdapter } from '../../v4-host';
+import type { StackProps } from '../../shell/work-stack/stack';
+import type { CompassProps } from './compass';
 import { publishedContent } from './content';
-import type { GuideProps } from './guide';
 import {
   IDS,
   guideView,
@@ -17,6 +18,14 @@ import {
   type ProgressView,
   type StepId,
 } from './model';
+import {
+  sheetRows,
+  sheetWords,
+  stackItems,
+  stackSummary,
+  suggestionLine,
+  orderGlyph,
+} from './sheets';
 import { guideSource, type GuideClient, type GuideTransport } from './source';
 
 type Attempt = { id: string };
@@ -41,6 +50,14 @@ export type PracticeDeps = {
   prefillColleague(colleague: AipmColleague, prefill: string, attachPrd: boolean): void;
   /** Whether that colleague has been shared this exact PRD version already. */
   prdSharedWith(colleague: AipmColleague, prd: { id: string; version: number }): boolean;
+  /** The main screen lives on the board: go there first when elsewhere. */
+  showBoard(): void;
+  /** Opens a work product in the existing editor (the whole PRD). */
+  openProduct(productId: string): void;
+  /** A material's page, for the column beside a worksheet. */
+  materialHtml(materialId: string): string;
+  /** Starts a new free work product (a free sheet). */
+  newFreeSheet(): void;
 };
 type State = {
   phase: 'loading' | 'off' | 'ready';
@@ -65,23 +82,17 @@ type State = {
   again?: boolean;
 };
 
-const OPEN = 'rolecraft.aipm.open.v1';
-const folded = (id: string) => {
+const HINT = 'rolecraft.aipm.stack-hint.v1';
+const hintSeen = () => {
   try {
-    return JSON.parse(localStorage.getItem(OPEN) || '{}')[id] === false;
+    return !!localStorage.getItem(HINT);
   } catch {
-    return false;
+    return true;
   }
 };
-const keepFold = (id: string, open: boolean) => {
+const keepHint = () => {
   try {
-    localStorage.setItem(
-      OPEN,
-      JSON.stringify({
-        ...JSON.parse(localStorage.getItem(OPEN) || '{}'),
-        [id]: open,
-      }),
-    );
+    localStorage.setItem(HINT, '1');
   } catch {
     /* this page only */
   }
@@ -121,12 +132,11 @@ const absent = (e: unknown) =>
 
 export function createAipmPractice(deps: PracticeDeps) {
   const states = new Map<string, State>();
-  const open = new Map<string, boolean>();
   const registry = createAipmRegistry();
   let missing: AipmFeatureId[] | null = null;
   let live: { key: string; el: HTMLElement } | null = null;
   let reveal = false;
-  let target: string | null = null;
+  let draftTarget: string | null = null;
 
   function announceDrafts(a: Attempt, s: State) {
     const guide = s.guide;
@@ -157,12 +167,8 @@ export function createAipmPractice(deps: PracticeDeps) {
     const s = stateOf(a);
     if (!s || deps.current()?.id !== a.id) return;
     const step = d.steps[0];
-    if (step && s.progress?.focus !== step) await choose(a, step);
-    s.feature = 'design';
-    reveal = true;
-    target = d.id;
-    open.set(a.id, true);
-    deps.redraw();
+    draftTarget = d.id;
+    host.openWorksheet(step ?? s.progress?.focus ?? 'business');
   }
 
   const stateOf = (a: Attempt) => states.get(a.id);
@@ -419,13 +425,14 @@ export function createAipmPractice(deps: PracticeDeps) {
       const attach = attachPrd ?? (!!prd && !deps.prdSharedWith(colleague, prd));
       deps.prefillColleague(colleague, prefill, attach);
     },
+    // Phase-1 callers: the design panel is a worksheet now, the evaluation desk is sheet ⑥.
     openFeature(id) {
       const a = deps.current(),
         s = a && stateOf(a);
       if (!a || !s) return;
-      s.feature = s.feature === id ? null : id;
-      reveal = s.feature !== null;
-      deps.redraw();
+      if (id === 'evaluation') host.openWorksheet('assurance');
+      else if (id === 'review') host.openReview(s.progress?.focus ?? 'business');
+      else host.openWorksheet(s.progress?.focus ?? 'business');
     },
   };
 
@@ -435,6 +442,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     if (!s) return;
     s.screen = screen;
     reveal = screen.kind !== 'workbench';
+    if (screen.kind !== 'workbench') deps.showBoard();
     deps.redraw();
   }
 
@@ -455,82 +463,204 @@ export function createAipmPractice(deps: PracticeDeps) {
     }
   }
 
-  /** Island props for the guide once the practice is ready. */
-  function props(a: Attempt): GuideProps | null {
+  function openPrd(a: Attempt) {
+    const s = stateOf(a);
+    if (s?.progress?.prd) deps.openProduct(s.progress.prd.id);
+    else host.openWorksheet(s?.progress?.suggested ?? 'business');
+  }
+  const sheetOpen = (s: State) =>
+    s.screen.kind === 'worksheet'
+      ? s.screen.sheet
+      : s.screen.kind === 'review'
+        ? s.screen.step
+        : undefined;
+
+  /** The compass under the toolbar, once the practice is ready. */
+  function compassProps(a: Attempt): CompassProps | null {
     const s = stateOf(a);
     if (!s?.guide || !s.progress) return null;
-    const isOpen = open.get(a.id) ?? !folded(a.id);
+    const rows = sheetRows(s.guide, s.progress);
     return {
-      guide: s.guide,
-      progress: s.progress,
-      open: isOpen,
+      language: s.guide.language,
+      rows,
+      suggestion: suggestionLine(rows, s.progress, s.guide.language),
+      ...(sheetOpen(s) ? { current: sheetOpen(s) } : {}),
       fixture: s.fixture,
       stale: s.stale,
-      updatedAt: s.readAt,
-      busy: s.busy,
-      error: s.error,
-      onToggle: () => {
-        open.set(a.id, !isOpen);
-        keepFold(a.id, !isOpen);
-        deps.redraw();
-      },
-      onChoose: (id) => void choose(a, id),
-      onQuestion: (role, text) => deps.ask(role, text),
-      onMaterial: (id) => deps.openMaterial(id),
-      onPrimary: (step) => {
-        if (step.primary.id === 'open_design') host.openFeature('design');
-        else if (step.primary.id === 'open_evaluation') host.openFeature('evaluation');
-        else deps.submit();
-      },
+      ...(s.readAt ? { updatedAt: s.readAt } : {}),
+      onOpen: (id) => host.openWorksheet(id as StepId),
+      onPrd: () => openPrd(a),
       onRefresh: () => void load(a),
     };
   }
 
-  /** The opened design / evaluation feature, or a plain note that it is not in this build. */
-  function mountFeature(a: Attempt, root: HTMLElement | null) {
+  /** The pile of sheets in the stage's lower-left corner. */
+  function stackProps(a: Attempt): StackProps | null {
     const s = stateOf(a);
-    if (!root || !s) return;
-    const id = s.feature;
-    const feature = id ? registry.get(id) : undefined;
-    if (root.dataset.feature === (id ?? '') && root.firstChild) return;
-    root.dataset.feature = id ?? '';
-    if (!id) {
-      root.innerHTML = '';
+    if (!s?.guide || !s.progress) return null;
+    const lang = s.guide.language;
+    const w = sheetWords(lang);
+    const rows = sheetRows(s.guide, s.progress);
+    const sum = stackSummary(rows, lang);
+    const first = !hintSeen();
+    return {
+      title: w.title,
+      status: sum.status,
+      ariaLabel: sum.aria,
+      capsule: sum.capsule,
+      items: stackItems(rows, lang),
+      segments: w.segment,
+      header: {
+        title: w.sheets(rows.length),
+        actions: [
+          { label: w.openPrd, run: () => openPrd(a) },
+          { label: w.newFree, plus: true, run: () => deps.newFreeSheet() },
+        ],
+      },
+      words: { suggested: w.suggested, close: w.close },
+      ...(first ? { hint: w.hint, onHint: keepHint } : {}),
+      onOpen: (id) => host.openWorksheet(id as StepId),
+    };
+  }
+
+  /** What the main screen shows instead of the workbench, or null for the workbench. */
+  function screenOf(a: Attempt | null): AipmScreen['kind'] {
+    const s = a && stateOf(a);
+    return s?.phase === 'ready' ? s.screen.kind : 'workbench';
+  }
+
+  /** The main screen when it is not the workbench: breadcrumbs, then the worksheet (L2) or the
+   * review (L3), and a material beside a worksheet. Until a line delivers, the phase-1 design
+   * panel stands in for a worksheet (the evaluation desk for ⑥); a review says it is missing. */
+  function mountMain(a: Attempt, root: HTMLElement | null) {
+    const s = stateOf(a);
+    if (!root || !s?.guide) return;
+    const screen = s.screen;
+    if (screen.kind === 'workbench') {
+      root.replaceChildren();
       return;
     }
-    if (!feature) {
-      const en = s.guide?.language === 'en';
-      root.innerHTML = `<p class="aipm-feature__missing">${
-        en
-          ? 'This part is not in this build yet (incomplete candidate).'
-          : '这一部分还没接入当前版本（候选不完整）。'
-      }</p>`;
-      return;
-    }
-    // The feature keeps one element for this practice; a redraw of the stage moves it into the
-    // new container instead of mounting it again, so what the person typed stays.
-    // A new focus is a new section: the panel opens on it afresh.
-    const key = `${a.id}:${id}:${s.progress?.focus ?? ''}`;
+    const en = s.guide.language === 'en';
+    let id: AipmFeatureId | null;
+    if (screen.kind === 'review') id = registry.get('review') ? 'review' : null;
+    else if (registry.get('worksheet')) id = 'worksheet';
+    else if (screen.sheet === 'assurance' && registry.get('evaluation')) id = 'evaluation';
+    else id = registry.get('design') ? 'design' : null;
+    const target =
+      screen.kind === 'review'
+        ? `review:${screen.step}:${screen.reviewRef?.version ?? ''}`
+        : `sheet:${screen.sheet}`;
+    // The stand-in design panel opens on the focused section, so it follows the focus too.
+    const key = `${a.id}:${id}:${target}:${id === 'design' ? (s.progress?.focus ?? '') : ''}`;
     if (live?.key !== key) {
       const el = document.createElement('div');
-      el.className = 'aipm-feature__root';
-      el.innerHTML = feature.render();
-      registry.mount(id, el);
+      el.className = 'aipm-main__body';
+      const feature = id && registry.get(id);
+      if (feature) {
+        el.innerHTML = feature.render();
+        registry.mount(id as AipmFeatureId, el);
+      } else {
+        el.innerHTML = `<p class="aipm-main__missing">${
+          en
+            ? 'This part is not in this build yet (incomplete candidate).'
+            : '这一部分还没接入当前版本（候选不完整）。'
+        }</p>`;
+      }
       live = { key, el };
     }
-    root.replaceChildren(live.el);
+    const material = screen.kind === 'worksheet' ? screen.material : undefined;
+    const parts: HTMLElement[] = [crumbs(a, s), live.el];
+    root.dataset.split = material ? 'true' : 'false';
+    if (material) {
+      const aside = document.createElement('aside');
+      aside.className = 'aipm-main__aside';
+      aside.innerHTML = `<div class="aipm-main__aside-head"><button type="button" class="aipm-main__aside-close" data-aipm-close-split aria-label="${
+        en ? 'Close the side material' : '关闭并排资料'
+      }">✕</button></div>${deps.materialHtml(material)}`;
+      aside.querySelector('[data-aipm-close-split]')?.addEventListener('click', () => {
+        if (s.screen.kind === 'worksheet') show({ kind: 'worksheet', sheet: s.screen.sheet });
+      });
+      parts.push(aside);
+    }
+    root.replaceChildren(...parts);
     // Just opened: bring it to the top of the view, where the person is about to work.
     if (reveal) {
       reveal = false;
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
       root.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
     }
-    if (target) {
-      const id = target;
-      target = null;
-      locate(live.el, id);
-    }
+    locateDraft(live.el);
+  }
+  function locateDraft(el: HTMLElement) {
+    if (!draftTarget) return;
+    const id = draftTarget;
+    draftTarget = null;
+    locate(el, id);
   }
 
-  return { ready, props, mountFeature, host, missing: () => missing };
+  /** Workbench › Pilot PRD › ③ Validate the need (› Review). Each crumb but the last opens. */
+  function crumbs(a: Attempt, s: State) {
+    const g = s.guide;
+    const en = g?.language === 'en';
+    const nav = document.createElement('nav');
+    nav.className = 'aipm-main__crumbs';
+    nav.setAttribute('aria-label', en ? 'Where you are' : '当前位置');
+    const add = (text: string, run?: () => void) => {
+      if (nav.childElementCount) {
+        const sep = document.createElement('span');
+        sep.className = 'aipm-main__sep';
+        sep.setAttribute('aria-hidden', 'true');
+        sep.textContent = '›';
+        nav.append(sep);
+      }
+      const el = document.createElement(run ? 'button' : 'span');
+      el.textContent = text;
+      if (run) {
+        (el as HTMLButtonElement).type = 'button';
+        el.addEventListener('click', run);
+      } else el.setAttribute('aria-current', 'page');
+      nav.append(el);
+    };
+    add(en ? 'Workbench' : '工作台', () => host.openWorkbench());
+    add(en ? 'Pilot PRD' : '试点 PRD', () => openPrd(a));
+    const screen = s.screen;
+    const step =
+      screen.kind === 'review' ? screen.step : screen.kind === 'worksheet' ? screen.sheet : null;
+    const row = g?.steps.find((x) => x.id === step);
+    const name = row ? `${orderGlyph(row.order)} ${row.label}` : en ? 'Free sheet' : '自由纸';
+    if (screen.kind === 'review') {
+      add(name, () => host.openWorksheet(screen.step));
+      add(en ? 'Review' : '批改单');
+    } else add(name);
+    return nav;
+  }
+
+  // Esc closes the open sheet or review back to the workbench, unless something else used it
+  // (a dialog, the stack, a field being typed in).
+  if (typeof document !== 'undefined')
+    document.addEventListener('keydown', (e) => {
+      const a = deps.current(),
+        s = a && stateOf(a);
+      const t = e.target as HTMLElement | null;
+      if (
+        e.key !== 'Escape' ||
+        e.defaultPrevented ||
+        !s ||
+        s.screen.kind === 'workbench' ||
+        document.querySelector('dialog[open]') ||
+        t?.closest('input, textarea, select, [contenteditable="true"]')
+      )
+        return;
+      host.openWorkbench();
+    });
+
+  return {
+    ready,
+    compassProps,
+    stackProps,
+    screenOf,
+    mountMain,
+    host,
+    missing: () => missing,
+  };
 }

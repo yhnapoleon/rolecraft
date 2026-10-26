@@ -87,15 +87,15 @@ const steps = (): Step[] => {
   const engineer = !!a && host?.job(a) === 'engineer';
   const find = (selector: string) => visible(document.querySelector(selector));
   // A practice in the seven steps has one numbering: its guide bar, not the six-layer ruler.
-  const sevenSteps = !engineer && !!document.querySelector('.aipm-guide');
+  const sevenSteps = !engineer && !!document.querySelector('.aipm-compass');
   return [
     sevenSteps
       ? {
-          target: () => find('.aipm-guide__bar'),
-          title: T('七步走到哪', 'Where you are in seven steps'),
+          target: () => find('.aipm-compass'),
+          title: T('七个能力点', 'Seven points'),
           body: T(
-            '这里显示你正在处理哪一步。工作地图可以随时换步；已有记录不代表已经掌握。',
-            'This shows the step you are working on. The work map lets you switch at any time; recorded work does not mean mastery.',
+            '按你实际写下、批改过的内容亮起，不规定顺序。点任何一点就打开那张工作纸；建议下一步只是建议。',
+            'They light up from what you actually write and review, in any order. Any point opens its sheet; the suggested next step is only a suggestion.',
           ),
         }
       : {

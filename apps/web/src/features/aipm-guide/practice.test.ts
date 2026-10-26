@@ -17,6 +17,10 @@ const deps = (transport = vi.fn(async () => ({}))): PracticeDeps => ({
   notifyDraft: () => {},
   prefillColleague: () => {},
   prdSharedWith: () => false,
+  showBoard: () => {},
+  openProduct: () => {},
+  newFreeSheet: () => {},
+  materialHtml: () => '',
 });
 
 describe('AIPM practice host', () => {
