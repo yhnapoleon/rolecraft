@@ -286,7 +286,7 @@ def test_mcp_http_reports_version_method_and_metadata_errors_with_http_status(en
         "supported": [MODERN, LEGACY],
         "requested": "2099-01-01",
     }
-    unknown = modern(mcp, sid, token, "resources/list")
+    unknown = modern(mcp, sid, token, "unknown/method")
     assert rpc_code(unknown, 404) == -32601 and unknown.json()["id"] == 1
     bare = modern_body("tools/list")
     del bare["params"]["_meta"][CAPABILITIES]
@@ -367,7 +367,7 @@ def test_mcp_http_logs_safe_codes_and_never_the_token(env, mcp, caplog, monkeypa
         call(mcp, sid, token, "work_items.list"),
         modern(mcp, sid, wrong, "tools/list"),
         modern(mcp, sid, token, "tools/list", headers={"Origin": "https://evil.example"}),
-        modern(mcp, sid, token, "resources/list"),
+        modern(mcp, sid, token, "unknown/method"),
     ]
     monkeypatch.setattr(HttpAgentClient, "tools", failing_tools(RuntimeError("detail " + token)))
     replies.append(modern(mcp, sid, token, "tools/list"))

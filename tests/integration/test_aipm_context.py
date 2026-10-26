@@ -123,3 +123,57 @@ def test_mount_is_idempotent_and_outside_openapi(context):
     install_aipm(app)
     assert len(app.routes) == count
     assert not any("/aipm/" in p for p in app.openapi()["paths"])
+
+
+def test_mcp_feedback_resource_and_tool_use_real_http_projection(context):
+    from fastapi.testclient import TestClient
+
+    from career_lab.mcp.protocol import CAPABILITIES, MODERN, VERSION
+    from career_lab.mcp.streamable_http import mount_mcp_http
+
+    mount_mcp_http(context["app"])
+    ref = submit(context)
+    feedback(context, ref)
+    actor, _ = fixture.grant(context, allowed_actions=("submissions.list", "feedback.records.read"))
+    client = TestClient(context["app"], base_url="http://127.0.0.1")
+    uri = f"rolecraft://sessions/{context['sid']}/submissions/{ref.object_id}/v/1/feedback"
+
+    def call(method, params, name):
+        return client.post(
+            f"/sessions/{context['sid']}/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": {**params, "_meta": {VERSION: MODERN, CAPABILITIES: {}}},
+            },
+            headers={
+                "Authorization": "Bearer " + actor["token"],
+                "Accept": "application/json, text/event-stream",
+                "MCP-Protocol-Version": MODERN,
+                "Mcp-Method": method,
+                "Mcp-Name": name,
+            },
+        )
+
+    resource = call("resources/read", {"uri": uri}, uri)
+    assert resource.status_code == 200, resource.text
+    import json
+
+    value = json.loads(resource.json()["result"]["contents"][0]["text"])
+    assert value == read(context, ref, actor["token"]).json()["result"]["result"]
+    tool = call(
+        "tools/call",
+        {
+            "name": "aipm.context.read",
+            "arguments": {
+                "kind": "submission_feedback",
+                "submission_id": ref.object_id,
+                "version": 1,
+            },
+        },
+        "aipm.context.read",
+    )
+    assert tool.json()["result"]["structuredContent"] == value
+    assert tool.json()["result"]["isError"] is False
+    client.close()

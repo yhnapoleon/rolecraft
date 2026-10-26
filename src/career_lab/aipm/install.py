@@ -5,7 +5,7 @@ from career_lab.api.modules import Operation, V2Response
 from career_lab.contracts import v2 as C
 
 from .feedback_discovery import discover
-from .types import FeedbackRead
+from .types import EmptyRead, FeedbackRead
 
 
 def install_aipm(app):
@@ -31,6 +31,21 @@ def install_aipm(app):
             mutates=False,
             response_model=V2Response,
             action_name="submissions.list",
+        )
+    )
+
+    def disabled(view, query, auth):
+        raise C.ProtocolError("aipm_not_enabled", status=409)
+
+    registry.register(
+        Operation(
+            "aipm.guide.read",
+            "read",
+            EmptyRead,
+            disabled,
+            mutates=False,
+            response_model=V2Response,
+            action_name="observation",
         )
     )
     mount_aipm_routes(app)
