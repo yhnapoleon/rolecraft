@@ -124,6 +124,9 @@ export type GuideStep = {
   expected_outputs?: (string)[];
   suggested_questions?: (string)[];
   help?: (Record<string, unknown>)[];
+  segment?: Segment | null;
+  /** lucide icon name from the authored guide */
+  icon?: string | null;
 };
 
 export type AipmGuide = {
@@ -150,6 +153,22 @@ export type ProgressStep = {
   quality_status?: "unverified" | "has_findings" | "checked_for_declared_scope";
   open_feedback?: (FeedbackSummary)[];
   next_actions?: (PublicAction)[];
+  sheet?: SheetState;
+};
+
+export type Segment = "clarify" | "design" | "verify";
+export type Decision = "launch" | "launch_narrow" | "defer_with_conditions" | "no_go";
+export type SheetStatus = "not_started" | "draft" | "based" | "solid" | "recheck";
+export type Colleague = "manager" | "business" | "tech";
+/** The worksheet view of one step: latest section review against the current PRD. */
+export type SheetState = {
+  status: SheetStatus;
+  recheck_reason?: "edited" | "source_changed" | "policy_changed" | null;
+  review_ref?: ObjectRef | null;
+  prd_version?: number | null;
+  edited_since_review: boolean;
+  gap_hint?: string | null;
+  agent_draft_pending: boolean;
 };
 
 export type AipmProgress = {
@@ -167,6 +186,8 @@ export type AipmProgress = {
   unresolved_business_items?: (PublicGap)[];
   /** Agent drafts never count as step records until the owner adopts them. */
   pending_agent_drafts?: (DraftSummary)[];
+  /** The pilot PRD's latest visible version. */
+  prd_ref?: ObjectRef | null;
   next_cursor?: string | null;
 };
 
@@ -316,6 +337,9 @@ export type AipmDesign = {
   needs?: (NeedDeclaration)[];
   rows?: (TriageRow)[];
   solution?: SolutionIntent | null;
+  /** Exact evidence copied from authorized reads, per PRD section; never rebased. */
+  section_refs?: Partial<Record<StepId, EvidenceRefV2[]>>;
+  intended_decision?: Decision | null;
 };
 
 export type MonitoringPlan = {
@@ -388,6 +412,7 @@ export type AipmDesignDraft = {
   rows?: (TriageRow)[];
   solution?: SolutionIntent | null;
   prd_sections?: Partial<Record<StepId, string>>;
+  section_refs?: Partial<Record<StepId, EvidenceRefV2[]>>;
   note?: string | null;
   resolved_by?: string | null;
   adopted_design_ref?: ObjectRef | null;
@@ -404,3 +429,53 @@ export type DraftResolve = {
 /** Rule output on the draft only, recomputed on read; not formal process feedback. */
 export type DraftPrecheck = { label: typeof DRAFT_PRECHECK; findings: ProcessFeedback[] };
 export type DraftPage = { items: { ref: ObjectRef; draft: AipmDesignDraft; precheck: DraftPrecheck }[] };
+
+// --- v2 section review (192-AIPM体验层v2 §6, §9.2) ---
+export type CheckKind = "choice" | "citation" | "rule" | "rubric_rule" | "sentence" | "model" | "self";
+/** Where to look again: a topic and its sources, never the correct statement. */
+export type Pointer = { text: string; refs?: EvidenceRefV2[] };
+export type CoverageMark = {
+  id: string;
+  label: string;
+  check: CheckKind;
+  severity: "high" | "medium" | "low";
+  mark: "wrong" | "missing" | "to_check" | "covered";
+  pointer?: Pointer | null;
+  owner: Colleague;
+  source: "rule" | "choice" | "citation" | "rubric_rule" | "model_suggestion" | "learner_assessment";
+};
+export type RubricLine = {
+  criterion: string;
+  label: string;
+  source: "verified_rule" | "pending";
+  explanation: string;
+  citations?: EvidenceRefV2[];
+};
+export type MentorPrompt = { colleague: Colleague; question: string; pointer?: Pointer | null; trigger_id: string };
+/** One learner-requested process review of one PRD section. Never a formal score. */
+export type SectionReview = {
+  schema_version?: 2;
+  id: string;
+  session_id: string;
+  revision?: 1;
+  step_id: StepId;
+  prd_ref: ObjectRef;
+  design_ref?: ObjectRef | null;
+  as_of: VersionPoint;
+  created_at: string;
+  status: "draft" | "based" | "solid";
+  stale?: { reason: "edited" | "source_changed" | "policy_changed"; detail: string } | null;
+  previous_review_ref?: ObjectRef | null;
+  delta?: { citations: [number, number]; gaps: [number, number]; wrong: [number, number] } | null;
+  misconceptions?: ProcessFeedback[];
+  coverage?: CoverageMark[];
+  rubric?: RubricLine[];
+  mentor_prompts?: MentorPrompt[];
+  /** The intended decision the rubric rule checks ran with, if any. */
+  decision_used?: Decision | null;
+  basis?: Record<string, string>;
+  sentence_labels?: null;
+  affects_formal_score?: false;
+};
+export type SectionReviewInput = { schema_version?: 2; step_id: StepId; prd_ref: ObjectRef; design_ref?: ObjectRef | null };
+export type SectionReviewPage = { items: { ref: ObjectRef; review: SectionReview }[]; next_cursor: number | null };
