@@ -18,6 +18,8 @@ export type GuideClient = {
   createBatch: Writer;
   updateBatch(id: string, command: Record<string, unknown>): Promise<unknown>;
   recordAssessment: Writer;
+  /** Adopt or dismiss an agent's design draft (L4); absent until that client is built in. */
+  resolveDraft?(id: string, command: Record<string, unknown>): Promise<unknown>;
 };
 export type GuideSource = { client: GuideClient; fixture: boolean };
 
