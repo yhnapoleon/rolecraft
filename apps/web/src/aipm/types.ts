@@ -416,6 +416,8 @@ export type AipmDesignDraft = {
   note?: string | null;
   resolved_by?: string | null;
   adopted_design_ref?: ObjectRef | null;
+  /** The PRD version the owner saved from this draft; that version's author stays the owner. */
+  adopted_prd_ref?: ObjectRef | null;
 };
 
 export type DraftResolve = {
@@ -424,6 +426,7 @@ export type DraftResolve = {
   expected_revision: number;
   status: "adopted" | "dismissed";
   adopted_design_ref?: ObjectRef | null;
+  adopted_prd_ref?: ObjectRef | null;
 };
 
 /** Rule output on the draft only, recomputed on read; not formal process feedback. */

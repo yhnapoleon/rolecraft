@@ -100,11 +100,15 @@ def material_ref(view, auth, material):
 
 
 def _field(design, path):
+    """Follow a dotted path; inside a list, a segment selects the element with that id."""
     value = design
     for key in path.split("."):
-        if not isinstance(value, dict):
+        if isinstance(value, list | tuple):
+            value = next((x for x in value if isinstance(x, dict) and x.get("id") == key), None)
+        elif isinstance(value, dict):
+            value = value.get(key)
+        else:
             return None
-        value = value.get(key)
     return value
 
 

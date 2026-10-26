@@ -395,6 +395,8 @@ class DraftResolve(V2):
     expected_revision: int = Field(ge=1)
     status: Literal["adopted", "dismissed"]
     adopted_design_ref: ObjectRef | None = None
+    # The PRD version the owner saved from this draft (the version's author stays the owner).
+    adopted_prd_ref: ObjectRef | None = None
 
 
 class DraftList(V2):
@@ -410,6 +412,7 @@ class AipmDesignDraft(DraftContent):
     base_design_ref: ObjectRef | None = None
     resolved_by: str | None = None
     adopted_design_ref: ObjectRef | None = None
+    adopted_prd_ref: ObjectRef | None = None
 
 
 # --- v2 section review (192-AIPM体验层v2 §6, §9.2) ---------------------------------------
