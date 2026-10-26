@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-design-1",
+  "language": "en",
+  "title": "Needs and design",
+  "intro": "Start with one need. Separate the action from final authority. Saving a design does not run tools or apply settings.",
+  "routes": [
+    {
+      "id": "deterministic",
+      "label": "Deterministic rules",
+      "description": "Calculate or validate using confirmed inputs and rules."
+    },
+    {
+      "id": "retrieval_generation",
+      "label": "Retrieval and answers",
+      "description": "Find sources and explain processes, with citations and gaps."
+    },
+    {
+      "id": "agent_confirmation",
+      "label": "Agent with confirmation",
+      "description": "Organize multiple steps with human confirmation before consequential actions."
+    },
+    {
+      "id": "human",
+      "label": "Human responsibility",
+      "description": "Assign approvals, exceptions and unauthorized actions to the responsible person."
+    }
+  ],
+  "starter_needs": [
+    {
+      "id": "expenses",
+      "scope": "expense",
+      "request": "Explain the expense process"
+    },
+    {
+      "id": "access",
+      "scope": "access",
+      "request": "Prepare an access request draft"
+    }
+  ],
+  "source_requirements": {
+    "assistant_authority": "assistant_scope",
+    "elapsed_definition": "service_desk_sample",
+    "configuration_dependencies": "technical_brief"
+  },
+  "solution_prompts": [
+    "Rationale",
+    "Meaningful alternative",
+    "Dependencies and resources"
+  ]
+}
