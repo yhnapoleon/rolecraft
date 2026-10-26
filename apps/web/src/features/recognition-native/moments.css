@@ -1,7 +1,8 @@
 /* Normal working moments: quiet, readable signatures; the lens keeps its existing details. */
 .rc-signature-wrap { min-width: 0; }
 .rc-signature {
-  display: inline-flex; gap: 5px; align-items: baseline; text-align: start;
+  display: inline-flex; gap: 5px; align-items: center; text-align: start;
+  min-height: 44px; box-sizing: border-box;
   background: none; border: 0; padding: 5px 0; max-width: 100%;
   font: inherit; font-size: 12px; line-height: 1.5; color: var(--ink-3);
   cursor: pointer; overflow-wrap: anywhere;
@@ -16,7 +17,7 @@
 .rc-moment-change strong { color: var(--warn); font-size: 23px; font-weight: 600; }
 .rc-test-age { color: var(--warn); font-size: 12px; line-height: 1.5; margin: 10px 0; }
 .rc-moment-hit mark { background: var(--warn-tint); color: var(--ink); }
-@media (max-width: 720px) { .rc-moment-hit { padding: 10px 12px; } .rc-signature { min-height: 32px; } }
+@media (max-width: 720px) { .rc-moment-hit { padding: 10px 12px; } .rc-signature { min-height: 44px; } }
 
 .rc-business-reading { color: var(--ink); padding-block: 12px; min-width: 0; }
 .rc-business-reading h3 { font-size: 16px; margin: 0 0 6px; }

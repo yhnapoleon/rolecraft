@@ -84,36 +84,60 @@
   color: var(--ink-2);
   font-weight: 550;
 }
-/* Side by side, the sheet needs the room on its left: the sheets pile shrinks to a 48px paper
- * (its words come back on hover), the materials pile steps away, the columns start right of it. */
-.aipm-main[data-split="true"] {
-  padding-left: 48px;
+/* A pile belongs outside the reading column. Only the wide workbench has enough
+ * spare canvas for both full piles; every other desktop screen uses the same 48px
+ * sheet and 84px reserved gutter. The compass still spans the whole stage. */
+@media (min-width: 768px) {
+  #ws-stage:has(> .aipm-v2) {
+    --aipm-pile-gutter: 84px;
+    --aipm-pile-width: 48px;
+    --aipm-pile-padding: 0;
+    --aipm-paper-size: 48px;
+    --aipm-paper-scale: 0.72;
+    --aipm-pile-caption: none;
+    --aipm-materials-display: none;
+    padding-left: var(--aipm-pile-gutter);
+  }
+  #ws-stage:has(> .aipm-v2) .aipm-compass {
+    margin-left: calc(-1 * var(--aipm-pile-gutter));
+  }
+  .aipm-stack-slot .ws-stack[data-kind="materials"] {
+    display: var(--aipm-materials-display);
+  }
+  .aipm-stack-slot .ws-stack,
+  .aipm-stack-slot .ws-stack__pile {
+    width: var(--aipm-pile-width);
+  }
+  .aipm-stack-slot .ws-stack__pile {
+    padding: var(--aipm-pile-padding);
+  }
+  .aipm-stack-slot .ws-stack__papers {
+    width: var(--aipm-paper-size);
+    height: var(--aipm-paper-size);
+    scale: var(--aipm-paper-scale);
+    transform-origin: left bottom;
+  }
+  .aipm-stack-slot .ws-stack__caption {
+    display: var(--aipm-pile-caption);
+  }
 }
-#ws-stage:has(.aipm-main[data-split="true"]) .ws-stack[data-kind="materials"] {
-  display: none;
+@media (min-width: 1440px) {
+  #ws-stage:has(> .aipm-v2):has(> .board) {
+    --aipm-pile-gutter: 0px;
+    --aipm-pile-width: 96px;
+    --aipm-pile-padding: 6px 0 4px;
+    --aipm-paper-size: 64px;
+    --aipm-paper-scale: 1;
+    --aipm-pile-caption: grid;
+    --aipm-materials-display: block;
+  }
 }
-#ws-stage:has(.aipm-main[data-split="true"])
-  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"]) {
-  width: 48px;
-}
-#ws-stage:has(.aipm-main[data-split="true"])
-  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"])
-  .ws-stack__pile {
-  width: 48px;
-  padding: 0;
-}
-#ws-stage:has(.aipm-main[data-split="true"])
-  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"])
-  .ws-stack__papers {
-  width: 48px;
-  height: 48px;
-  transform: scale(0.72);
-  transform-origin: left bottom;
-}
-#ws-stage:has(.aipm-main[data-split="true"])
-  .ws-stack[data-kind="sheets"]:not([data-layout="sheet"])
-  .ws-stack__caption {
-  display: none;
+/* On a phone, reserve a shelf below the scrolling stage. Padding at the end of
+ * a long document alone would still let the fixed capsule cover its middle. */
+@media (max-width: 767px) {
+  .stage:has(> #ws-stage > .aipm-v2) {
+    margin-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
 }
 .aipm-main[data-split="true"] .aipm-main__body {
   grid-area: body;

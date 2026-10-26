@@ -40,7 +40,7 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
 /** A probability as a bar with a word for screen readers. */
 export function sureMeter(p: number, language: Language): Meter {
-  return { value: clamp(p), label: t(language, p >= 0.8 ? 'sure_high' : p >= 0.6 ? 'sure_mid' : 'sure_low') };
+  return { value: clamp(p), label: language === 'zh' ? `记录分数 ${Math.round(p * 100)}%，未经置信度校准` : `Recorded score ${Math.round(p * 100)}%; not calibrated confidence` };
 }
 /** A distance against its threshold: the bar spans 1.5 × threshold and the tick marks it. */
 function thresholdMeter(score: unknown, threshold: unknown, label: string): Meter | null {

@@ -74,7 +74,8 @@ import type { RecognitionRecord } from '../recognition-native/badge';
 import { lensOn, onLensChange } from '../recognition-native/lens';
 import { splitRecognitionPrefix } from '../recognition-native/prefix';
 import type { FeedbackActivityCount, FeedbackReferenceCheck } from '../../contracts-v2';
-import { renderSentenceLens } from '../recognition-native/sentences';
+import { renderBusinessSentences } from '../recognition-native/business-sentences';
+import { recordedSentencePreview } from '../recognition-native/judgment-chain';
 import { renderExplanationTag, renderSignals } from '../recognition-native/signals';
 
 export type SelectedProduct = Pick<
@@ -342,8 +343,6 @@ export function mountNativeFeedback(
   const draftResponses = new Map<string, { text: string; evidence: EvidenceRefV2[] }>();
   // Presentation only: the purpose choice survives re-renders, not reloads.
   // Open recognition chains per report, kept across redraws (lens toggles, refreshes).
-  const lensChains = new Map<string, Set<number>>();
-  let playReading = false;
   const purposeChoices = new Map<string, PurposeChoice>();
   let savedDrafts: Promise<void> = Promise.resolve();
   let draftError: unknown;
@@ -913,6 +912,9 @@ export function mountNativeFeedback(
     const subject = readOnly ? null : (chips([report.subject]).firstElementChild as HTMLElement | null);
     const lens = lensOn() && !readOnly;
     const after: Node[] = [];
+    const sentencePreview = recordedSentencePreview(report.recognition ?? []);
+    if (!readOnly && sentencePreview?.units?.length)
+      after.push(renderBusinessSentences(doc, sentencePreview, language, `${report.id}:${report.version}`));
     if (lens) {
       // With the recognition lens open: this feedback's recognizer signals and the work sentence
       // by sentence, from the records stored with it. Closed: nothing.
@@ -928,18 +930,6 @@ export function mountNativeFeedback(
         { context: 'feedback', lens: true, cards: {} },
       );
       if (lensChips) box.append(lensChips);
-      if (general.some((record) => record.task === 'relation' && Array.isArray(record.outputs?.units))) {
-        const chainKey = `${report.id}:${report.version}`;
-        if (!lensChains.has(chainKey)) lensChains.set(chainKey, new Set());
-        box.append(
-          renderSentenceLens(doc, {
-            records: report.recognition ?? [],
-            language,
-            open: lensChains.get(chainKey),
-            play: playReading,
-          }),
-        );
-      }
       if (box.childElementCount) after.push(box);
     }
     const legacy = semantic.advice;
@@ -1763,10 +1753,8 @@ export function mountNativeFeedback(
   }
   const unsubscribe = adapter.subscribe(render);
   // Opening the lens plays the reading once; later redraws (reads, polls) show it at rest.
-  const unlens = onLensChange((on) => {
-    playReading = on;
+  const unlens = onLensChange(() => {
     render();
-    playReading = false;
   });
   // The topbar's "Revise" on the result page opens the revision note here.
   const onRevise = () => {

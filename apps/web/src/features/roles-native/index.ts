@@ -1,3 +1,5 @@
+import { inspectorEntryHtml, methodsHtml, escapeCheck } from '../recognition-native/record-inspector';
+import { actualMethod } from '../recognition-native/actual-method';
 import {
   currentModeNotice,
   presentReply,
@@ -9,6 +11,7 @@ import { T, locale, onLocaleChange } from '../../app/i18n';
 import { markdownNodes } from '../../app/markdown';
 import { PERSON_OF_ROLE } from '../../app/people.js';
 import { OPENER } from '../../app/vocab.js';
+import { intentAction } from './intent-action';
 import type { RecognitionRecord } from '../recognition-native/badge';
 import { lensOn, onLensChange } from '../recognition-native/lens';
 import { renderSignals } from '../recognition-native/signals';
@@ -107,6 +110,7 @@ export interface RolesNativeAdapter {
   retry?(turnId: string): Promise<void>;
   refreshContext?(turnId: string): Promise<void>;
   openMaterial?(material: MaterialReference): void | Promise<void>;
+  openRequests?(): void | Promise<void>;
   /** Map a visibly painted reply to the existing idempotent display command.
    * Supply only when authorized; journal/recovery remain with the shared client.
    */
@@ -514,7 +518,10 @@ export function mount(
     mine.append(asked);
     for (const version of turn.prdVersions ?? []) {
       const note = el('p', 'aipm-bubble-note');
-      note.textContent = T(`附上：试点 PRD · 第 ${version} 版`, `Attached: pilot PRD · version ${version}`);
+      note.textContent = T(
+        `附上：试点 PRD · 第 ${version} 版`,
+        `Attached: pilot PRD · version ${version}`,
+      );
       mine.append(note);
     }
     item.append(mine);
@@ -546,7 +553,14 @@ export function mount(
                 () => adapter.refreshContext?.(turn.id) ?? Promise.resolve(),
               )
             : undefined;
-      item.append(noticeRow(doc, kind, turn.explanation || noticeText(kind, selected, turn.errorCode), action));
+      item.append(
+        noticeRow(
+          doc,
+          kind,
+          turn.explanation || noticeText(kind, selected, turn.errorCode),
+          action,
+        ),
+      );
       return { item, kind };
     }
     const reply = turn.reply ?? '';
@@ -721,6 +735,57 @@ export function mount(
       const line = el('p', 'rc-roles__limitation');
       line.textContent = note;
       extra.append(line);
+    }
+    const readOnly = !!view?.restriction;
+    const related = intentAction(turn.recognition, turn.materials, locale(), readOnly);
+    if (
+      turn.status === 'completed' &&
+      turn.reply &&
+      related &&
+      ((related.kind === 'request' && adapter.openRequests) ||
+        (related.kind === 'material' && adapter.openMaterial))
+    ) {
+      const action = button('rc-intent-action');
+      const requestSource = turn.materials?.find(m => m.id === 'approvals');
+      const actionLabel = readOnly && related.kind === 'request' ? T('查看申请要求', 'Read the request requirements') : related.label;
+      action.textContent = `${actionLabel} →`;
+      action.title = related.reason;
+      action.setAttribute('aria-label', `${actionLabel}. ${related.reason}`);
+      action.addEventListener('click', async () => {
+        action.disabled = true;
+        try {
+          if (related.kind === 'request' && readOnly) {
+            if (requestSource) await adapter.openMaterial?.(requestSource);
+          } else if (related.kind === 'request') await adapter.openRequests?.();
+          else await adapter.openMaterial?.(related.material);
+        } catch {
+          action.title = T(
+            '暂时打不开，请稍后重试。',
+            'Could not open this yet. Please try again.',
+          );
+        } finally {
+          action.disabled = false;
+        }
+      });
+      const relatedBox = el('div', 'rc-intent-related');
+      const why = el('details', 'rc-intent-why');
+      const whyLabel = el('summary');
+      whyLabel.textContent = T('为什么推荐这个入口', 'Why this action?');
+      const reason = el('p');
+      reason.textContent = related.reason;
+      why.append(whyLabel, reason);
+      const record = [...(turn.recognition ?? [])].reverse().find(r => r.task === 'intent');
+      if (record) {
+        const technical = el('div');
+        const method = actualMethod(record, locale());
+        technical.innerHTML = inspectorEntryHtml(T('为什么推荐这个入口', 'Why this action was suggested'), `<dl class="ec-checks"><div><dt>${T('本次意图', 'Recorded intent')}</dt><dd>${record.label === 'seek_approval' ? T('询问批准', 'Asking for approval') : record.label === 'ask_resource' ? T('询问资源', 'Asking about resources') : T('询问流程', 'Asking about the process')}</dd></div><div><dt>${T('实际方法', 'Actual method')}</dt><dd>${escapeCheck(method.method)}</dd></div><div><dt>${T('记录分数', 'Recorded score')}</dt><dd>${record.score}</dd></div><div><dt>${T('入口展示门槛', 'Display threshold')}</dt><dd>0.70 · ${T('前端展示策略，未经置信度校准', 'A display threshold, not a calibrated confidence level')}</dd></div></dl>`, methodsHtml(locale(), 'intent'), locale());
+        why.append(technical);
+      }
+      const note = el('p', 'rc-roles__limitation');
+      note.textContent = readOnly ? T('若要填写并发送申请，请先开始修订。', 'Start a revision to complete and send a request.') : T('填写并发送后，才算提出申请。', 'A request is made only when you complete and send the form.');
+      if (!readOnly || related.kind !== 'request' || requestSource) relatedBox.append(action);
+      relatedBox.append(note, why);
+      extra.append(relatedBox);
     }
     const signals = renderSignals(doc, turn.recognition, locale(), {
       context: 'reply',

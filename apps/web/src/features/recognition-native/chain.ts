@@ -11,6 +11,15 @@ export type ChainUnit = {
   label: string;
   confidence: number;
   probabilities?: Record<string, number>;
+  branches?: {
+    encoder?: Record<string, number> | null;
+    stack?: Record<string, number> | null;
+    pairs?: Record<string, number>;
+    rule?: Record<string, number> | null;
+    rule_window?: number;
+    alpha?: number;
+  };
+  retrieval_method?: string;
   evidence_ids?: string[];
   reason?: string;
   /** decide, or defer when the cost decision sends it to a person */
@@ -62,6 +71,8 @@ export type RecognitionChain = {
 };
 /** The pre-submission preview body (recognition/judge.py `preview`). */
 export type PreviewRecognition = {
+  /** Frontend provenance for a projection made from one saved feedback. */
+  origin?: 'delivery' | 'current';
   recognizer?: string;
   fallback?: boolean;
   duration_ms?: number;

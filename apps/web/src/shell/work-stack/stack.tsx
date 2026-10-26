@@ -386,6 +386,7 @@ export function WorkStack(p: StackProps) {
         aria-expanded={isOpen}
         aria-controls={panelId}
         aria-label={p.ariaLabel}
+        title={p.ariaLabel}
         data-hint={hinting || undefined}
         onClick={() => {
           // A click inside the hover delay must not be turned back into a preview by the timer.

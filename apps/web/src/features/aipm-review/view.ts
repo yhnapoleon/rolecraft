@@ -2,6 +2,8 @@
  * recognition layer is on) beside the review. The look follows the v2 wireframe (5-批改结果);
  * the structure is the result page's: its sentence tones, rule lines, item rows and colleague
  * colours, called here without changing how the result page uses them. */
+import { renderEvidenceCheck } from '../recognition-native/evidence-check';
+import { checkPresentation } from '../recognition-native/check-presentation';
 import type { ChainUnit, PreviewRecognition } from '../recognition-native/chain';
 import { toneOf } from '../recognition-native/sentence-view';
 import { renderItemRow, type ItemRow } from '../feedback-native/feedback-items';
@@ -118,58 +120,74 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   const blocks = writtenBlocks(written);
   // One line per sentence: underline and numbered mark by the recognizer's relation, the
   // matched source sentence opened in place (the lens's tones, drawn as the wireframe does).
-  const toneName = {
-    supported: t('与资料一致', 'Matches the sources'),
-    contradicted: t('与资料矛盾', 'Contradicts the sources'),
-    insufficient: t('依据不足 / 还不知道', 'Not enough evidence / not known yet'),
-    deferred: t('暂缓判定，留给人核对', 'Deferred to a person'),
-  } as const;
   const sentenceList = (units: readonly ChainUnit[], start = 0) => {
     const list = el('ol', '', 'aipm-review__sentences');
     units.forEach((unit, at) => {
       const index = start + at;
-      const tone = toneOf(unit);
+      const presentation = checkPresentation(unit, input.sentences.kind === 'ready' ? input.sentences.preview : {}, language);
+      const tone = presentation.state === 'unknown' ? 'insufficient' : toneOf(unit);
       const row = el('li', '', 'aipm-review__sent');
       row.dataset.tone = tone;
       const words = button('', 'aipm-review__s');
       words.append(
-        el('span', `${index + 1}. ${toneName[tone]}: `, 'sr-only'),
+        el('span', `${index + 1}. ${presentation.status}: `, 'sr-only'),
         el('span', unit.quote, 'aipm-review__u'),
       );
       const mark = el('span', String(index + 1), 'aipm-review__n');
       mark.setAttribute('aria-hidden', 'true');
-      const source = el('div', '', 'aipm-review__src');
-      source.hidden = true;
-      const where = [
-        unit.source?.title,
-        typeof unit.source?.version === 'number' ? `v${unit.source.version}` : '',
-      ]
-        .filter(Boolean)
-        .join(' · ');
-      if (where) source.append(el('p', where, 'aipm-review__src-where'));
-      source.append(
-        unit.evidence
-          ? el('p', unit.evidence, 'aipm-review__src-quote')
-          : el(
-              'p',
-              t('这次没有返回可展示的原文。', 'No source passage was returned for this sentence.'),
-              'aipm-review__muted',
-            ),
-        el('p', toneName[tone], 'aipm-review__src-tone'),
+      const inspector = el('dialog', '', 'aipm-inspector');
+      const heading = el('header', '', 'aipm-inspector__head');
+      const meta = el('div', '', 'aipm-inspector__meta');
+      const title = el('h3', unit.quote, 'aipm-inspector__quote');
+      title.id = `inspect-${review.id}-${unit.index}-${index}`;
+      inspector.setAttribute('aria-labelledby', title.id);
+      const close = button(
+        t('关闭', 'Close'),
+        'aipm-inspector__close',
+        () => inspector.close(),
       );
-      const material = unit.source?.kind === 'material' ? unit.source.object_id : null;
-      if (material && input.onOpenMaterial)
-        source.append(
-          button(t('打开这份资料', 'Open this source'), 'aipm-review__link', () =>
-            input.onOpenMaterial?.(material),
-          ),
-        );
-      words.setAttribute('aria-expanded', 'false');
-      words.addEventListener('click', () => {
-        source.hidden = !source.hidden;
-        words.setAttribute('aria-expanded', String(!source.hidden));
+      meta.append(
+        el('span', t(`第 ${review.prd_ref.version} 版`, `Version ${review.prd_ref.version}`)),
+        el('span', presentation.status),
+        close,
+      );
+      heading.append(meta, title);
+      const body = el('div', '', 'aipm-inspector__body');
+      if (input.sentences.kind === 'ready')
+        body.append(renderEvidenceCheck(doc, unit, input.sentences.preview, language, unit.source?.kind === 'material' && !!unit.source.object_id && !!input.onOpenMaterial));
+      body.addEventListener('click', event => {
+        const sourceLink = (event.target as Element)?.closest?.('.ec-source');
+        if (!sourceLink) return;
+        const material = unit.source?.kind === 'material' ? unit.source.object_id : null;
+        inspector.close();
+        if (material && input.onOpenMaterial) {event.preventDefault();input.onOpenMaterial(material);}
       });
-      row.append(words, mark, source);
+      inspector.append(heading, body);
+      inspector.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') event.stopPropagation();
+      });
+      words.setAttribute('aria-haspopup', 'dialog');
+      words.setAttribute('aria-expanded', 'false');
+      let scroll: { node: Element; top: number; left: number }[] = [];
+      inspector.addEventListener('close', () => {
+        words.setAttribute('aria-expanded', 'false');
+        words.focus({ preventScroll: true });
+        for (const { node, top, left } of scroll) {
+          node.scrollTop = top;
+          node.scrollLeft = left;
+        }
+      });
+      words.addEventListener('click', () => {
+        scroll = [];
+        for (let node = words.parentElement; node; node = node.parentElement) {
+          scroll.push({ node, top: node.scrollTop, left: node.scrollLeft });
+        }
+        inspector.showModal();
+        words.setAttribute('aria-expanded', 'true');
+        title.tabIndex = -1;
+        title.focus({ preventScroll: true });
+      });
+      row.append(words, mark, inspector);
       list.append(row);
     });
     return list;
@@ -183,7 +201,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     ]) {
       const key = el('span', '', 'aipm-review__key');
       key.dataset.tone = tone;
-      key.append(el('i'), toneName[tone]);
+      key.append(el('i'), checkPresentation({label:tone,decision:tone==='deferred'?'defer':'decide'} as ChainUnit,{},language).status);
       box.append(key);
     }
     return box;
@@ -242,8 +260,8 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   }
   const sentenceNote: Record<Sentences['kind'], string> = {
     ready: t(
-      '逐句标注来自识别层（句子与资料对照，本地模型，不是语言模型）。',
-      'Sentence marks come from the recognition layer (sentences against sources; a local model, not a language model).',
+      '点一句话，看看本次选中的原文，再决定怎么改。',
+      'Select a claim to compare its saved source, then decide what to change.',
     ),
     off: t(
       '逐句标注未开启：识别层没有打开，这里不画线，只显示右侧的规则核对。',
@@ -281,6 +299,32 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     ),
   );
   sheet.append(head);
+  if (input.sentences.kind === 'ready') {
+    const targeted = sectionPreview(input.sentences.preview, groupSentences(input.sentences.preview.units ?? [], input.sections).bySection[review.step_id] ?? []).units ?? [];
+    const summary = el('section', '', 'aipm-evidence-summary');
+    summary.append(el('h4', t('依据核对', 'Evidence check')));
+    const found = ownSentences(targeted.length ? targeted : (input.sentences.preview.units ?? []).filter(u => written.includes(u.quote)), blocks);
+    const rank = (unit: ChainUnit) => unit.decision === 'defer' ? 0 : unit.label === 'contradicted' ? 1 : unit.label === 'insufficient' ? 2 : 3;
+    const ordered = [...found].sort((a,b) => rank(a)-rank(b));
+    for (const [at,unit] of ordered.entries()) {
+      const p = checkPresentation(unit, input.sentences.preview, language);
+      const open = () => {
+        const triggers = [...paper.querySelectorAll<HTMLButtonElement>('.aipm-review__s')];
+        triggers.find(key => key.textContent?.includes(unit.quote))?.click();
+      };
+      if (at) {
+        const compact = button('', 'aipm-evidence-summary__compact', open);
+        compact.append(el('span', unit.quote),el('small',p.status));
+        summary.append(compact);
+      } else {
+        const item = el('div', '', 'aipm-evidence-summary__item');
+        item.append(el('p', p.status, 'ec-caption'), el('h4', t('先核对这句话的依据', 'Review the source for this claim')), el('blockquote', unit.quote), el('p', p.hint));
+        item.append(button(t('展开原句与依据 →', 'Compare claim and source →'), 'ec-source', open));
+        summary.append(item);
+      }
+    }
+    if(found.length) sheet.append(summary);
+  }
 
   const stale = staleNote(review, language, input.currentPrdVersion, input.edited);
   if (stale) {

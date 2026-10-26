@@ -1,0 +1,177 @@
+/* Recorded values never animate or carry a verdict colour. */
+.judgment-chain {
+  font: 400 14px / 1.65 var(--sans);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.jc-explanation {
+  margin: 0 0 20px;
+}
+.jc-routes {
+  display: grid;
+  grid-template-columns: 1fr 48px 1fr;
+  align-items: center;
+  padding: 20px;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  margin: 0 0 24px;
+}
+.jc-route-inputs {
+  display: grid;
+  gap: 20px;
+}
+.jc-route {
+  display: grid;
+  gap: 4px;
+}
+.jc-route small,
+.jc-route-final small {
+  display: block;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.jc-merge {
+  height: 70%;
+  min-height: 40px;
+  position: relative;
+  border-block: 1px solid var(--ink-3);
+  border-right: 1px solid var(--ink-3);
+  margin-right: 20px;
+}
+.jc-merge:after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  top: 50%;
+  right: -20px;
+  border-top: 1px solid var(--ink-3);
+}
+.jc-routes[data-paths="1"] .jc-merge {
+  min-height: 0;
+  height: 0;
+  border-bottom: 0;
+  border-right: 0;
+}
+.jc-route-final {
+  padding: 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-key);
+}
+.jc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  margin: 20px 0;
+}
+.jc-table caption {
+  text-align: left;
+  font-size: 12px;
+  color: var(--ink-2);
+  padding-bottom: 8px;
+}
+.jc-table th,
+.jc-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  color: var(--ink);
+}
+.jc-table th:first-child {
+  text-align: left;
+}
+.jc-table thead th {
+  font-size: 12px;
+  font-weight: 500;
+}
+.jc-table tbody tr:last-child {
+  font-weight: 600;
+}
+.jc-number {
+  font-variant-numeric: tabular-nums;
+}
+.jc-hits {
+  border-block: 1px solid var(--line);
+  margin: 24px 0;
+}
+.jc-hits summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+}
+.jc-hits blockquote {
+  margin: 12px 0;
+  padding: 16px;
+  background: var(--surface);
+  font: 400 16px / 1.7 var(--serif);
+  white-space: pre-wrap;
+}
+.jc-hits p {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.jc-decision {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 20px;
+}
+.jc-cost-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+}
+.jc-cost-row small {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.jc-cost-row strong {
+  font-size: 30px;
+  font-weight: 500;
+}
+.jc-note {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 16px;
+}
+@media (max-width: 600px) {
+  .jc-routes {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 16px;
+  }
+  .jc-merge {
+    display: none;
+  }
+  .jc-route-final {
+    border-left: 2px solid var(--ink-3);
+  }
+  .jc-table thead {
+    display: none;
+  }
+  .jc-table tr {
+    display: block;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .jc-table th,
+  .jc-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border: 0;
+  }
+  .jc-table td:before {
+    content: attr(data-label);
+    color: var(--ink-2);
+  }
+  .jc-cost-row {
+    gap: 12px;
+  }
+  .jc-cost-row strong {
+    font-size: 24px;
+  }
+}

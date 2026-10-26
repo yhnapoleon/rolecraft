@@ -108,7 +108,7 @@ const known = (key: string): key is LensKey => key in LENS_COPY.zh;
 export const toneOf = (unit: Pick<ChainUnit, 'decision' | 'label'>): SentenceTone =>
   unit.decision === 'defer'
     ? 'deferred'
-    : unit.label === 'supported' || unit.label === 'contradicted'
+    : unit.decision === 'decide' && (unit.label === 'supported' || unit.label === 'contradicted')
       ? unit.label
       : 'insufficient';
 const TONE_KEY: Record<SentenceTone, LensKey> = {

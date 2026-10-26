@@ -3,6 +3,7 @@ import type { Language } from '../results-native/localization';
 import { actualMethod } from './actual-method';
 import { cardHtml, type CardOptions } from './profile-card';
 import './moments.css';
+import { layersIcon } from './record-inspector';
 
 export const escapeMoment = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
 const words = (language: Language, zh: string, en: string) => language === 'zh' ? zh : en;
@@ -41,5 +42,5 @@ function recordKey(record: RecognitionRecord, identity: string) {
 export function signatureHtml(record: RecognitionRecord, language: Language, options: CardOptions = {}, identity = '') {
   const id = `rc-moment-card-${recordKey(record, identity)}`;
   const actual = actualMethod(record, language);
-  return `<div class="rc-signature-wrap"><button type="button" class="rc-signature" data-rc-card="${id}" aria-controls="${id}" aria-expanded="false" title="${escapeMoment(actual.method)}" data-recognition-method="${actual.mode}">${escapeMoment(signatureText(record, language))}<span aria-hidden="true"> ›</span></button><div id="${id}" class="rc-card-slot" hidden>${cardHtml(record, language, options)}</div></div>`;
+  return `<div class="rc-signature-wrap"><button type="button" class="rc-signature" data-rc-card="${id}" aria-controls="${id}" aria-expanded="false" title="${escapeMoment(actual.method)}" data-recognition-method="${actual.mode}">${layersIcon}${language === 'zh' ? '系统如何判断' : 'How this was assessed'}<span aria-hidden="true"> ›</span></button><div id="${id}" class="rc-card-slot" hidden>${cardHtml(record, language, options)}</div></div>`;
 }

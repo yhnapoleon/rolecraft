@@ -145,3 +145,6 @@ details.rc-tag-box > summary:focus-visible {
 .run-col [data-rc-run] .rc-sigs {
   margin-top: 8px;
 }
+
+/* Existing technical tags enter the shared inspector with the same touch target. */
+button.rc-sig--key { min-height: 44px; box-sizing: border-box; }

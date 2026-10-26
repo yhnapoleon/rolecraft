@@ -1,3 +1,4 @@
+import { runAction } from '../../shell/registry';
 /** W04's original v4 colleague slot. The host supplies thread/composer and canonical role ID. */
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
 import type { ObjectRef } from '../../contracts-v2';
@@ -456,6 +457,10 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     },
     async refreshContext(turnId) {
       return adapter.retry!(turnId);
+    },
+    async openRequests() {
+      session(host, sid);
+      await runAction('resources');
     },
     openMaterial(material) {
       return host.openReference(

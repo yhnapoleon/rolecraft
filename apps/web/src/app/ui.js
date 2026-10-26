@@ -75,6 +75,8 @@ import { modelPartsHtml, modelPopoverHtml, modelStatus, modelWaitHtml } from './
 import { awaitingRoles, isLocalReply, previewLine } from '../features/roles-native/chat-model';
 import { requestRefs } from '../features/roles-native/v4-data';
 import { aboutFacts } from './about-facts';
+import { modalOwnsEscape } from './modal-keyboard';
+import { loadModelIdentities } from '../features/recognition-native/model-identities';
 import { canonicalPurpose } from '../features/workspace/native-v4/form-values';
 import { workspaceActionMessage } from '../features/workspace/native-v4/messages';
 import { pendingTurnRole, serverText } from '../store';
@@ -2168,11 +2170,11 @@ function moreMenu(a) {
   ];
   return `<div class="menu right" role="menu">${rows.join('')}</div>`;
 }
-/* Recognition lens: a per-viewer switch in "⋯", plus the way into the system profile
+/* Show recognition details: a per-viewer switch in "⋯", plus the way into the system profile
  * (#/lab). Both items live here so the menu takes them in one line. */
 function lensMenuItems() {
   const on = lensOn();
-  return `<button type="button" role="menuitemcheckbox" aria-checked="${on}" data-action="lens-toggle">${icon('eye', 'i-sm')}<span class="grow">${T('识别透镜', 'Recognition lens')}</span>${on ? icon('check', 'i-sm') : ''}</button><button type="button" role="menuitem" data-action="open-lab">${icon('layers', 'i-sm')}<span class="grow">${T('系统剖面', 'System profile')}</span></button>`;
+  return `<button type="button" role="menuitemcheckbox" aria-checked="${on}" data-action="lens-toggle">${icon('eye', 'i-sm')}<span class="grow">${T('技术透视', 'Show recognition details')}</span>${on ? icon('check', 'i-sm') : ''}</button><button type="button" role="menuitem" data-action="open-lab">${icon('layers', 'i-sm')}<span class="grow">${T('系统剖面', 'System profile')}</span></button>`;
 }
 /** The review page has no workbench toolbar; its "⋯" carries the lens items and "About". It
  * opens and closes in place: redrawing the review page would remount the feedback. */
@@ -2205,14 +2207,13 @@ document.addEventListener('keydown', (e) => {
   toggleReviewMenu(false);
   wrap.querySelector('[data-action="review-menu"]')?.focus();
 });
-/** The lens switch in the submission dialog's header, before its close button, and beside it
- * "Replay" while the lens is open (icon only on a phone, named for screen readers). */
+/** An explicit technical-view switch in the submission header. Records do not replay. */
 function mountLensSwitch(head) {
   const close = head?.querySelector('[data-action="close"]');
   if (!close || head.querySelector('[data-lens-switch]')) return;
   close.insertAdjacentHTML(
     'beforebegin',
-    `<button type="button" class="rc-switch" role="switch" aria-checked="${lensOn()}" data-action="lens-switch" data-lens-switch><span class="rc-switch__track" aria-hidden="true"></span><span class="rc-switch__long">${T('识别透镜', 'Recognition lens')}</span><span class="rc-switch__short">${T('透镜', 'Lens')}</span></button><button type="button" class="rc-replay rc-replay--head" data-action="lens-replay" data-lens-replay aria-label="${esc(T('重放', 'Replay'))}"${lensOn() ? '' : ' hidden'}><span class="rc-replay__icon" aria-hidden="true"></span><span class="rc-replay__label">${T('重放', 'Replay')}</span></button>`,
+    `<button type="button" class="rc-switch" role="switch" aria-checked="${lensOn()}" data-action="lens-switch" data-lens-switch><span class="rc-switch__track" aria-hidden="true"></span><span class="rc-switch__long">${T('技术透视', 'Show recognition details')}</span><span class="rc-switch__short">${T('技术透视', 'Details')}</span></button>`,
   );
 }
 /** Close an open menu without redrawing the page (inputs and scroll stay as they are). */
@@ -4482,7 +4483,7 @@ function previewWork(a, id) {
   openSheet(
     `${esc(w.title || T('未命名', 'Untitled'))} · ${workVersion(w.revision)}`,
     `<p class="meta">${esc(purposeLabel(w.purpose))} · ${w.adopted ? T('此版本已采用', 'This version is adopted') : T('此版本待你检查', 'This version awaits your check')}${w.source === 'external-agent' ? T(' · 来自我的 Agent', ' · from my Agent') : ''}</p>${body}${L.nativeWorkspace(a) ? nativeEvidenceRow(a, w, T('依据', 'Evidence')) : ''}`,
-    `${btn(T('关闭', 'Close'), 'close', 'quiet')}${canAdopt ? btn(T('检查后采用这版', 'Adopt this version after checking'), 'adopt', 'primary', `data-id="${esc(w.id)}"`) : ''}`,
+    `${btn(T('关闭', 'Close'), 'close', 'quiet')}${L.nativeWorkspace(a) && statusOf(a) === 'active' && savedWorkBasis(a, w) ? btn(T('核对本版', 'Check this version'), 'check-work', 'small', `data-id="${esc(w.id)}"`) : ''}${canAdopt ? btn(T('检查后采用这版', 'Adopt this version after checking'), 'adopt', 'primary', `data-id="${esc(w.id)}"`) : ''}`,
     'narrow',
   );
 }
@@ -6414,6 +6415,16 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     case 'about':
       sheetAbout();
+      if (el.hasAttribute('data-ri-about')) {
+        const model = sheet.querySelector('[data-about="model"]');
+        const identities = document.createElement('section');
+        identities.dataset.modelIdentities = '';
+        identities.tabIndex = -1;
+        model?.prepend(identities);
+        identities.focus();
+        identities.scrollIntoView({ block: 'start' });
+        loadModelIdentities(identities, () => L.recognition(a), locale());
+      }
       break;
     case 'review-menu':
       toggleReviewMenu();
@@ -8231,7 +8242,7 @@ document.addEventListener('keydown', (e) => {
     dismissToasts();
     notify(T('已撤销', 'Undone'));
   }
-  if (e.key === 'Escape' && !sheet.open) {
+  if (e.key === 'Escape' && !modalOwnsEscape(e, document)) {
     if (ui.menu) {
       ui.menu = null;
       if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
