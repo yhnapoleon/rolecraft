@@ -1008,6 +1008,92 @@
   gap: 8px;
 }
 
+/* g · the root fix in code: the box, the run key and one row per public case */
+.ed-code {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.ed-code__task {
+  max-width: 72ch;
+  color: var(--ink-2);
+  font: 400 14px / 1.6 var(--serif);
+}
+.ed-code__box {
+  width: 100%;
+  min-height: 280px;
+  padding: 12px;
+  resize: vertical;
+  border: 0;
+  border-radius: var(--r-key);
+  background: var(--surface-3);
+  color: var(--ink);
+  font: 13px / 1.55 var(--mono);
+  tab-size: 4;
+  white-space: pre;
+  overflow: auto;
+}
+.ed-code__box:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.ed-code__list {
+  display: grid;
+}
+.ed-code__row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.ed-code__row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.ed-code__what {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.ed-code__point {
+  font: 500 14px / 1.4 var(--serif);
+}
+.ed-code__q {
+  color: var(--ink-2);
+  font: 400 13px / 1.4 var(--serif);
+}
+.ed-code__io {
+  display: grid;
+  gap: 2px;
+  color: var(--ink-3);
+  font: 12px / 1.5 var(--mono);
+  overflow-wrap: anywhere;
+}
+.ed-code__got {
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.ed-code__printed {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-key);
+  background: var(--surface-3);
+  font: 12px / 1.5 var(--mono);
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow: auto;
+}
+.ed-sheet__code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--ink-2);
+}
+
 /* f · the trial log: a tape in the recess, newest on top */
 .ed-log {
   display: grid;

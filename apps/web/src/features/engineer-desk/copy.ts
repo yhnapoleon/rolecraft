@@ -49,6 +49,13 @@ const ERRORS: Readonly<Record<string, () => string>> = {
     ),
   engineer_claim_probe_unknown: () =>
     T('自报里有不是公开探针的编号。', 'The self-report names a probe that isn’t public.'),
+  engineer_code_empty: () => T('代码框是空的。', 'The code box is empty.'),
+  engineer_code_too_long: () =>
+    T('代码超过 20000 个字符，删短一点再运行。', 'The code is over 20,000 characters; shorten it.'),
+  engineer_code_run_limit_reached: () =>
+    T('这张委托的代码运行次数用完了。', 'This ticket has used all its code runs.'),
+  engineer_code_exercise_unavailable: () =>
+    T('这个场景没有代码练习。', 'This scenario has no coding exercise.'),
   engineer_trial_limit_reached: () =>
     T('这份委托的试跑次数已经用完。', 'This ticket has no trial runs left.'),
   engineer_draft_limit_reached: () =>

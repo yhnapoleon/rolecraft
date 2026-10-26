@@ -1,0 +1,131 @@
+{
+  "title": "Root fix: return the limit in force, in code",
+  "task": "When the assistant states a reimbursement limit, the amount must be extracted by deterministic code from the clause in force, not left to the generating model. Implement current_limit: in the retrieved chunks, find the item the question asks about (hotel, taxi or meal), choose the version the source registry says is current and extract its amount; when only a superseded version was retrieved, return the old value with a warning that it is out of date; when no reliable amount is found, hand over to a person instead of guessing. The platform runs your code in an isolated process: public cases come back row by row, hidden cases only as a count.",
+  "cases": [
+    {
+      "id": "P1",
+      "public": true,
+      "point": "Read the limit in force",
+      "question": "What is the hotel reimbursement limit per night?",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.71, "text": "Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P2",
+      "public": true,
+      "point": "Index lags: only the old version, so warn",
+      "question": "What is the hotel reimbursement limit per night?",
+      "chunks": [
+        {"source": "policy", "version": 1, "score": 0.69, "text": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered_with_warning", "value": 500, "source": "policy", "version": 1}
+    },
+    {
+      "id": "P3",
+      "public": true,
+      "point": "Don't take the CNY 200 taxi limit for the hotel limit",
+      "question": "How much can I claim for a hotel night on a business trip?",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.74, "text": "The taxi reimbursement limit remains CNY 200 per single trip. Over-limit claims and unusual routes require exception review."},
+        {"source": "policy", "version": 2, "score": 0.62, "text": "Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P4",
+      "public": true,
+      "point": "Both versions retrieved: the registry decides",
+      "question": "Hotel limit?",
+      "chunks": [
+        {"source": "policy", "version": 1, "score": 0.70, "text": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts."},
+        {"source": "policy", "version": 2, "score": 0.66, "text": "Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P5",
+      "public": true,
+      "point": "Chinese source text too",
+      "question": "住宿报销上限是多少？",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.68, "text": "费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P6",
+      "public": true,
+      "point": "No amount in the chunk: hand over, don't guess",
+      "question": "What is the hotel reimbursement limit per night?",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.41, "text": "Published by: Expense Management. This notice replaces the previous hotel-limit clause. The business lead coordinates supporting information for individual cases."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "fallback"}
+    },
+    {
+      "id": "H1",
+      "public": false,
+      "point": "Another item: meals",
+      "question": "What is the meal reimbursement limit?",
+      "chunks": [
+        {"source": "meal", "version": 1, "score": 0.66, "text": "The meal reimbursement limit is CNY 100 per person per day. Keep valid receipts. Expense Management reviews duplicate claims and individual cases."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 100, "source": "meal", "version": 1}
+    },
+    {
+      "id": "H2",
+      "public": false,
+      "point": "Asked the other way round: taxi",
+      "question": "How much can I claim for a taxi trip?",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.72, "text": "Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts."},
+        {"source": "policy", "version": 2, "score": 0.65, "text": "The taxi reimbursement limit remains CNY 200 per single trip. Over-limit claims and unusual routes require exception review."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 200, "source": "policy", "version": 2}
+    },
+    {
+      "id": "H3",
+      "public": false,
+      "point": "Another way of writing the number",
+      "question": "Hotel cap per night?",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.64, "text": "Expense notice (2026): the domestic hotel cap is now RMB 400.00 per person per night; anything above it needs prior approval."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "H4",
+      "public": false,
+      "point": "The retrieved chunk is a different rule",
+      "question": "What is the hotel reimbursement limit per night?",
+      "chunks": [
+        {"source": "meal", "version": 1, "score": 0.38, "text": "The meal reimbursement limit is CNY 100 per person per day. Keep valid receipts. Expense Management reviews duplicate claims and individual cases."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "fallback"}
+    },
+    {
+      "id": "H5",
+      "public": false,
+      "point": "Index lags and the taxi chunk ranks first",
+      "question": "What is the hotel reimbursement limit per night?",
+      "chunks": [
+        {"source": "policy", "version": 1, "score": 0.73, "text": "The taxi reimbursement limit is CNY 200 per single trip. Over-limit claims and unusual routes require exception review."},
+        {"source": "policy", "version": 1, "score": 0.69, "text": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered_with_warning", "value": 500, "source": "policy", "version": 1}
+    }
+  ]
+}
