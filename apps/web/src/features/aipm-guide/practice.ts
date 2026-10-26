@@ -1,7 +1,7 @@
 /** One product manager practice's seven steps: whether the practice has them, the latest server
  * snapshot, and the host the design and evaluation features are installed against. A practice
  * the server does not enrol (every old one) stays on its original page; nothing is migrated. */
-import type { AipmFeatureId, AipmHost } from '../../aipm/host';
+import type { AipmColleague, AipmFeatureId, AipmHost, AipmScreen } from '../../aipm/host';
 import { createAipmRegistry, installAipmFeatures } from '../../aipm/registry';
 import type { ObjectRef, ProductCreate, ProductEdit, ReviewInput } from '../../contracts-v2';
 import type { V4HostAdapter } from '../../v4-host';
@@ -36,6 +36,11 @@ export type PracticeDeps = {
   submit(): void;
   /** One notice per newly arrived agent draft, with an action that opens it. */
   notifyDraft(text: string, label: string, dismiss: string, open: () => void): void;
+  /** Opens the colleague's conversation with this message in the composer (not sent), and the
+   * PRD attachment chip set as given. */
+  prefillColleague(colleague: AipmColleague, prefill: string, attachPrd: boolean): void;
+  /** Whether that colleague has been shared this exact PRD version already. */
+  prdSharedWith(colleague: AipmColleague, prd: { id: string; version: number }): boolean;
 };
 type State = {
   phase: 'loading' | 'off' | 'ready';
@@ -51,6 +56,8 @@ type State = {
   busy: boolean;
   error?: string;
   feature: AipmFeatureId | null;
+  /** v2: what the main screen shows; the workbench unless a sheet or review is open. */
+  screen: AipmScreen;
   /** Enrollment was asked for once; a refusal leaves the practice on its original page. */
   enrolled?: boolean;
   /** A read is under way; changes meanwhile are picked up by one more read after it. */
@@ -105,7 +112,7 @@ function locate(root: HTMLElement, id: string, tries = 15) {
   } else if (tries > 0) setTimeout(() => locate(root, id, tries - 1), 200);
 }
 const signature = (s: State) =>
-  JSON.stringify([s.phase, s.raw ?? null, s.stale, s.error ?? null, s.busy, s.feature]);
+  JSON.stringify([s.phase, s.raw ?? null, s.stale, s.error ?? null, s.busy, s.feature, s.screen]);
 const reason = (e: unknown) => (e instanceof Error ? e.message : String(e));
 // Not enrolled, no such route yet, or not mounted: the practice simply has no seven steps.
 const absent = (e: unknown) =>
@@ -173,6 +180,7 @@ export function createAipmPractice(deps: PracticeDeps) {
       stale: false,
       busy: false,
       feature: null,
+      screen: { kind: 'workbench' },
     };
     states.set(a.id, s);
     s.reading = true;
@@ -380,6 +388,37 @@ export function createAipmPractice(deps: PracticeDeps) {
       if (a) await load(a);
     },
     registerFeature: (id, feature) => registry.register(id, feature),
+    currentScreen() {
+      const a = deps.current();
+      return (a && stateOf(a)?.screen) || { kind: 'workbench' };
+    },
+    openWorksheet(sheet) {
+      show({ kind: 'worksheet', sheet });
+      // Opening a step's sheet is the person's explicit choice of what they are working on.
+      const a = deps.current(),
+        s = a && stateOf(a);
+      if (a && s && !sheet.startsWith('free:') && s.progress?.focus !== sheet)
+        void choose(a, sheet as StepId);
+    },
+    openMaterialSplit(materialId) {
+      const a = deps.current(),
+        s = a && stateOf(a);
+      if (s?.screen.kind === 'worksheet' && innerWidth >= 1200)
+        show({ ...s.screen, material: materialId });
+      else deps.openMaterial(materialId);
+    },
+    openReview(step, reviewRef) {
+      show({ kind: 'review', step, ...(reviewRef ? { reviewRef } : {}) });
+    },
+    openWorkbench() {
+      show({ kind: 'workbench' });
+    },
+    async askColleague({ colleague, prefill, attachPrd }) {
+      const a = deps.current(),
+        prd = a && stateOf(a)?.progress?.prd;
+      const attach = attachPrd ?? (!!prd && !deps.prdSharedWith(colleague, prd));
+      deps.prefillColleague(colleague, prefill, attach);
+    },
     openFeature(id) {
       const a = deps.current(),
         s = a && stateOf(a);
@@ -389,6 +428,15 @@ export function createAipmPractice(deps: PracticeDeps) {
       deps.redraw();
     },
   };
+
+  function show(screen: AipmScreen) {
+    const a = deps.current(),
+      s = a && stateOf(a);
+    if (!s) return;
+    s.screen = screen;
+    reveal = screen.kind !== 'workbench';
+    deps.redraw();
+  }
 
   async function choose(a: Attempt, step: StepId) {
     const s = stateOf(a);

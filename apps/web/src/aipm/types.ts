@@ -1,7 +1,22 @@
 /** G0 extension DTOs. Source: career_lab/aipm/types.py; frozen v2 types are unchanged. */
-export type StepId = "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
-export const STEP_IDS: readonly StepId[] = ["business", "stakeholders", "need", "boundary", "solution", "assurance", "decision"];
-export const EXPERIENCE_REVISION = "aipm-phase1-v1" as const;
+export type StepId =
+  | 'business'
+  | 'stakeholders'
+  | 'need'
+  | 'boundary'
+  | 'solution'
+  | 'assurance'
+  | 'decision';
+export const STEP_IDS: readonly StepId[] = [
+  'business',
+  'stakeholders',
+  'need',
+  'boundary',
+  'solution',
+  'assurance',
+  'decision',
+];
+export const EXPERIENCE_REVISION = 'aipm-phase1-v1' as const;
 export type DTO = Record<string, unknown>;
 
 export type Projection = {
@@ -19,10 +34,26 @@ export type ObjectRef = {
 };
 
 export type PublicAction = {
-  action: "open_step" | "open_work" | "open_material" | "ask_colleague" | "request_review" | "open_settings" | "open_feedback" | "review_agent_draft";
+  action:
+    | 'open_step'
+    | 'open_work'
+    | 'open_material'
+    | 'ask_colleague'
+    | 'request_review'
+    | 'open_settings'
+    | 'open_feedback'
+    | 'review_agent_draft';
   label: string;
   target?: ObjectRef | null;
-  step_id?: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision" | null;
+  step_id?:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision'
+    | null;
 };
 
 export type PublicGap = {
@@ -48,14 +79,26 @@ export type EvidenceRefV2 = {
 export type ProcessFeedback = {
   id: string;
   input_ref: ObjectRef;
-  step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  step_id:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
   section_or_row_id?: string | null;
   rule_revision?: string | null;
   content_revision?: string | null;
-  source: "rule" | "authored_guidance" | "colleague_opinion" | "model_suggestion" | "learner_assessment";
-  finding: "violation" | "improve" | "supported_for_scope" | "unknown";
+  source:
+    | 'rule'
+    | 'authored_guidance'
+    | 'colleague_opinion'
+    | 'model_suggestion'
+    | 'learner_assessment';
+  finding: 'violation' | 'improve' | 'supported_for_scope' | 'unknown';
   message: string;
-  basis_refs?: (EvidenceRefV2)[];
+  basis_refs?: EvidenceRefV2[];
   checked_scope: string;
   next_action?: PublicAction | null;
   stale?: boolean;
@@ -66,14 +109,26 @@ export type ProcessFeedbackRecord = {
   schema_version?: 2;
   id: string;
   input_ref: ObjectRef;
-  step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  step_id:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
   section_or_row_id?: string | null;
   rule_revision?: string | null;
   content_revision?: string | null;
-  source: "rule" | "authored_guidance" | "colleague_opinion" | "model_suggestion" | "learner_assessment";
-  finding: "violation" | "improve" | "supported_for_scope" | "unknown";
+  source:
+    | 'rule'
+    | 'authored_guidance'
+    | 'colleague_opinion'
+    | 'model_suggestion'
+    | 'learner_assessment';
+  finding: 'violation' | 'improve' | 'supported_for_scope' | 'unknown';
   message: string;
-  basis_refs?: (EvidenceRefV2)[];
+  basis_refs?: EvidenceRefV2[];
   checked_scope: string;
   next_action?: PublicAction | null;
   stale?: boolean;
@@ -84,15 +139,20 @@ export type ProcessFeedbackRecord = {
 
 export type FeedbackSummary = {
   id: string;
-  source: "rule" | "authored_guidance" | "colleague_opinion" | "model_suggestion" | "learner_assessment";
-  finding: "violation" | "improve" | "supported_for_scope" | "unknown";
+  source:
+    | 'rule'
+    | 'authored_guidance'
+    | 'colleague_opinion'
+    | 'model_suggestion'
+    | 'learner_assessment';
+  finding: 'violation' | 'improve' | 'supported_for_scope' | 'unknown';
   message: string;
   input_ref: ObjectRef;
   stale?: boolean;
 };
 
 export type ReadShortcut = {
-  tool: "feedback.records.read" | "objects.read";
+  tool: 'feedback.records.read' | 'objects.read';
   arguments: Record<string, unknown>;
 };
 
@@ -106,50 +166,50 @@ export type VersionPoint = {
 export type FeedbackDiscovery = {
   schema_version?: 1;
   subject: ObjectRef;
-  status: "ready" | "not_ready";
+  status: 'ready' | 'not_ready';
   feedback_ref?: ObjectRef | null;
   read?: ReadShortcut | null;
   exact_read?: ReadShortcut | null;
   reason?: string | null;
   as_of: VersionPoint;
-  work_language: "zh" | "en";
+  work_language: 'zh' | 'en';
   record_ready_is_not_quality_verified?: true;
 };
 
 export type GuideStep = {
-  id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  id: 'business' | 'stakeholders' | 'need' | 'boundary' | 'solution' | 'assurance' | 'decision';
   order: number;
   label: string;
   goal: string;
-  expected_outputs?: (string)[];
-  suggested_questions?: (string)[];
-  help?: (Record<string, unknown>)[];
+  expected_outputs?: string[];
+  suggested_questions?: string[];
+  help?: Record<string, unknown>[];
 };
 
 export type AipmGuide = {
   schema_version?: 1;
-  experience_revision?: "aipm-phase1-v1";
+  experience_revision?: 'aipm-phase1-v1';
   content_revision: string;
-  work_language: "zh" | "en";
-  steps: (GuideStep)[];
+  work_language: 'zh' | 'en';
+  steps: GuideStep[];
 };
 
 export type ProgressStep = {
-  id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  id: 'business' | 'stakeholders' | 'need' | 'boundary' | 'solution' | 'assurance' | 'decision';
   order: number;
   label: string;
   goal: string;
-  expected_outputs?: (string)[];
-  suggested_questions?: (string)[];
-  help?: (Record<string, unknown>)[];
-  work_status: "not_started" | "working" | "recorded" | "recheck" | "uncovered";
+  expected_outputs?: string[];
+  suggested_questions?: string[];
+  help?: Record<string, unknown>[];
+  work_status: 'not_started' | 'working' | 'recorded' | 'recheck' | 'uncovered';
   completed: boolean;
-  completion_meaning?: "work_recorded_not_mastery";
-  evidence_refs?: (ObjectRef)[];
-  missing?: (PublicGap)[];
-  quality_status?: "unverified" | "has_findings" | "checked_for_declared_scope";
-  open_feedback?: (FeedbackSummary)[];
-  next_actions?: (PublicAction)[];
+  completion_meaning?: 'work_recorded_not_mastery';
+  evidence_refs?: ObjectRef[];
+  missing?: PublicGap[];
+  quality_status?: 'unverified' | 'has_findings' | 'checked_for_declared_scope';
+  open_feedback?: FeedbackSummary[];
+  next_actions?: PublicAction[];
 };
 
 export type AipmProgress = {
@@ -157,43 +217,64 @@ export type AipmProgress = {
   session_id: string;
   experience_revision?: string;
   content_revision: string;
-  work_language: "zh" | "en";
+  work_language: 'zh' | 'en';
   as_of: VersionPoint;
-  focus_step: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
-  suggested_step: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  focus_step:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
+  suggested_step:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
   projection?: Projection;
-  steps: (ProgressStep)[];
-  submission_feedback?: (FeedbackDiscovery)[];
-  unresolved_business_items?: (PublicGap)[];
+  steps: ProgressStep[];
+  submission_feedback?: FeedbackDiscovery[];
+  unresolved_business_items?: PublicGap[];
   /** Agent drafts never count as step records until the owner adopts them. */
-  pending_agent_drafts?: (DraftSummary)[];
+  pending_agent_drafts?: DraftSummary[];
   next_cursor?: string | null;
 };
 
 export type DraftSummary = {
   ref: ObjectRef;
-  author_kind: "human" | "external_agent" | "reference_agent" | "system";
+  author_kind: 'human' | 'external_agent' | 'reference_agent' | 'system';
   steps: StepId[];
-  status?: "pending_owner_review";
+  status?: 'pending_owner_review';
 };
 
 export type AipmProfile = {
   schema_version?: 2;
-  id?: "aipm-profile";
+  id?: 'aipm-profile';
   session_id: string;
   revision?: 1;
-  experience_revision?: "aipm-phase1-v1";
+  experience_revision?: 'aipm-phase1-v1';
   content_revision: string;
   scenario_hash: string;
-  work_language: "zh" | "en";
+  work_language: 'zh' | 'en';
   enrolled_at: string;
 };
 
 export type AipmFocus = {
   schema_version?: 2;
-  id?: "aipm-focus";
+  id?: 'aipm-focus';
   session_id: string;
-  step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  step_id:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
   revision: number;
   changed_by: string;
   changed_at: string;
@@ -203,11 +284,18 @@ export type AipmStepLink = {
   schema_version?: 2;
   id: string;
   session_id: string;
-  step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  step_id:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
   product_ref: ObjectRef;
   section_key?: string | null;
   linked_by: string;
-  source_kind?: "learner_link" | "structured_record";
+  source_kind?: 'learner_link' | 'structured_record';
   revision: number;
 };
 
@@ -219,7 +307,15 @@ export type PageRead = {
   schema_version?: 2;
   cursor?: number;
   limit?: number;
-  step_id?: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision" | null;
+  step_id?:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision'
+    | null;
 };
 
 export type FeedbackRead = {
@@ -234,34 +330,48 @@ export type EnrollInput = {
 
 export type FocusInput = {
   schema_version?: 2;
-  step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  step_id:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
 };
 
 export type StepLinkInput = {
   schema_version?: 2;
-  step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
+  step_id:
+    | 'business'
+    | 'stakeholders'
+    | 'need'
+    | 'boundary'
+    | 'solution'
+    | 'assurance'
+    | 'decision';
   product_ref: ObjectRef;
   section_key?: string | null;
 };
 
 export type BusinessDeclaration = {
-  audience: "internal" | "external" | "both" | "unknown";
+  audience: 'internal' | 'external' | 'both' | 'unknown';
   offering_explanation: string;
   task_goal: string;
-  source_refs?: (EvidenceRefV2)[];
+  source_refs?: EvidenceRefV2[];
 };
 
 export type StakeholderDeclaration = {
   id: string;
   name_or_role: string;
-  relationships: ("user" | "buyer" | "approver" | "operator" | "affected")[];
+  relationships: ('user' | 'buyer' | 'approver' | 'operator' | 'affected')[];
   responsibility: string;
-  fact_or_hypothesis: "fact" | "hypothesis" | "unknown";
-  source_refs?: (EvidenceRefV2)[];
+  fact_or_hypothesis: 'fact' | 'hypothesis' | 'unknown';
+  source_refs?: EvidenceRefV2[];
 };
 
 export type MetricDeclaration = {
-  kind: "elapsed_time" | "labor_time" | "case_count" | "other";
+  kind: 'elapsed_time' | 'labor_time' | 'case_count' | 'other';
   source_field: string;
   unit: string;
   population: string;
@@ -272,10 +382,10 @@ export type MetricDeclaration = {
 
 export type NeedDeclaration = {
   id: string;
-  stakeholder_ids?: (string)[];
+  stakeholder_ids?: string[];
   problem: string;
-  claim_status: "hypothesis" | "supported" | "unresolved";
-  source_refs?: (EvidenceRefV2)[];
+  claim_status: 'hypothesis' | 'supported' | 'unresolved';
+  source_refs?: EvidenceRefV2[];
   counterevidence_or_unknown: string;
   next_validation: string;
   metric?: MetricDeclaration | null;
@@ -285,24 +395,30 @@ export type TriageRow = {
   id: string;
   revision?: number;
   need_ref: string;
-  source_refs?: (EvidenceRefV2)[];
+  source_refs?: EvidenceRefV2[];
   user_request: string;
-  target_action: "explain" | "calculate" | "prepare_draft" | "execute_change" | "approve" | "unknown";
-  route: "deterministic" | "retrieval_generation" | "agent_confirmation" | "human";
+  target_action:
+    | 'explain'
+    | 'calculate'
+    | 'prepare_draft'
+    | 'execute_change'
+    | 'approve'
+    | 'unknown';
+  route: 'deterministic' | 'retrieval_generation' | 'agent_confirmation' | 'human';
   rationale: string;
-  final_authority: "learner" | "named_human_role" | "ai" | "unknown";
+  final_authority: 'learner' | 'named_human_role' | 'ai' | 'unknown';
   confirmation_point?: string | null;
-  tool_assumptions?: (string)[];
-  unresolved?: (string)[];
-  execution_support?: "supported" | "plan_only" | "unknown";
+  tool_assumptions?: string[];
+  unresolved?: string[];
+  execution_support?: 'supported' | 'plan_only' | 'unknown';
 };
 
 export type SolutionIntent = {
   selected_approach: string;
   rationale: string;
-  dependencies?: (string)[];
+  dependencies?: string[];
   alternative: string;
-  source_refs?: (EvidenceRefV2)[];
+  source_refs?: EvidenceRefV2[];
 };
 
 export type AipmDesign = {
@@ -312,9 +428,9 @@ export type AipmDesign = {
   revision: number;
   prd_ref?: ObjectRef | null;
   business?: BusinessDeclaration | null;
-  stakeholders?: (StakeholderDeclaration)[];
-  needs?: (NeedDeclaration)[];
-  rows?: (TriageRow)[];
+  stakeholders?: StakeholderDeclaration[];
+  needs?: NeedDeclaration[];
+  rows?: TriageRow[];
   solution?: SolutionIntent | null;
 };
 
@@ -339,7 +455,7 @@ export type BatchCase = {
   expected_ref: ObjectRef;
   original_command?: Record<string, unknown> | null;
   run_ref?: ObjectRef | null;
-  status?: "completed" | "execution_failed" | "unsupported" | "cancelled" | "pending";
+  status?: 'completed' | 'execution_failed' | 'unsupported' | 'cancelled' | 'pending';
 };
 
 export type AipmBatch = {
@@ -350,11 +466,11 @@ export type AipmBatch = {
   design_ref: ObjectRef;
   plan_ref: ObjectRef;
   config_ref: ObjectRef;
-  material_refs?: (ObjectRef)[];
-  cases: (BatchCase)[];
+  material_refs?: ObjectRef[];
+  cases: BatchCase[];
   execution_mode: string;
   pause_reason?: string | null;
-  monitoring?: (MonitoringPlan)[];
+  monitoring?: MonitoringPlan[];
 };
 
 export type AipmAssessment = {
@@ -365,13 +481,13 @@ export type AipmAssessment = {
   test_case_ref: ObjectRef;
   expected_ref: ObjectRef;
   run_ref?: ObjectRef | null;
-  source: "rule" | "learner_assessment" | "model_suggestion";
-  result: "satisfied" | "not_satisfied" | "unknown" | "unsupported";
+  source: 'rule' | 'learner_assessment' | 'model_suggestion';
+  result: 'satisfied' | 'not_satisfied' | 'unknown' | 'unsupported';
   reason: string;
-  evidence_refs?: (EvidenceRefV2)[];
+  evidence_refs?: EvidenceRefV2[];
 };
 
-export const DRAFT_PRECHECK = "draft_precheck_pending_owner" as const;
+export const DRAFT_PRECHECK = 'draft_precheck_pending_owner' as const;
 
 /** What an Agent proposed; shown to the owner as "from your Agent · awaiting you". */
 export type AipmDesignDraft = {
@@ -379,13 +495,17 @@ export type AipmDesignDraft = {
   id: string;
   session_id: string;
   revision: number;
-  author: { id: string; kind: "human" | "external_agent" | "reference_agent" | "system"; delegation_id?: string | null };
-  status: "pending_owner_review" | "adopted" | "dismissed";
+  author: {
+    id: string;
+    kind: 'human' | 'external_agent' | 'reference_agent' | 'system';
+    delegation_id?: string | null;
+  };
+  status: 'pending_owner_review' | 'adopted' | 'dismissed';
   base_design_ref?: ObjectRef | null;
   business?: BusinessDeclaration | null;
-  stakeholders?: (StakeholderDeclaration)[];
-  needs?: (NeedDeclaration)[];
-  rows?: (TriageRow)[];
+  stakeholders?: StakeholderDeclaration[];
+  needs?: NeedDeclaration[];
+  rows?: TriageRow[];
   solution?: SolutionIntent | null;
   prd_sections?: Partial<Record<StepId, string>>;
   note?: string | null;
@@ -397,10 +517,12 @@ export type DraftResolve = {
   schema_version?: 2;
   draft_id: string;
   expected_revision: number;
-  status: "adopted" | "dismissed";
+  status: 'adopted' | 'dismissed';
   adopted_design_ref?: ObjectRef | null;
 };
 
 /** Rule output on the draft only, recomputed on read; not formal process feedback. */
 export type DraftPrecheck = { label: typeof DRAFT_PRECHECK; findings: ProcessFeedback[] };
-export type DraftPage = { items: { ref: ObjectRef; draft: AipmDesignDraft; precheck: DraftPrecheck }[] };
+export type DraftPage = {
+  items: { ref: ObjectRef; draft: AipmDesignDraft; precheck: DraftPrecheck }[];
+};

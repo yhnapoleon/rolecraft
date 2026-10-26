@@ -1663,6 +1663,8 @@ const Aipm = createAipmPractice({
     sheetDeliver();
   },
   notifyDraft: (text, label, dismiss, open) => showDraftToast(text, label, dismiss, open),
+  prefillColleague: (role, text) => openChat(role, text),
+  prdSharedWith: () => false,
 });
 const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every

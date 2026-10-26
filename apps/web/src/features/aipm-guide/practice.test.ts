@@ -15,6 +15,8 @@ const deps = (transport = vi.fn(async () => ({}))): PracticeDeps => ({
   openSettings: () => {},
   submit: () => {},
   notifyDraft: () => {},
+  prefillColleague: () => {},
+  prdSharedWith: () => false,
 });
 
 describe('AIPM practice host', () => {
@@ -35,7 +37,9 @@ describe('AIPM practice host', () => {
   it('reports features whose owning line has not installed them', async () => {
     const { host } = createAipmPractice(deps());
     const missing = await installAipmFeatures(host);
-    expect(missing.every((id) => ['design', 'evaluation'].includes(id))).toBe(true);
+    expect(
+      missing.every((id) => ['design', 'evaluation', 'worksheet', 'review'].includes(id)),
+    ).toBe(true);
   });
   it('an old practice without the client stays on its original page', () => {
     const p = createAipmPractice(deps());
