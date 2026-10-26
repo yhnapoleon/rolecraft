@@ -117,10 +117,9 @@ class EvaluationService:
         if plan.content.get("kind") != "test_plan" or plan.content.get("removed"):
             raise ProtocolError("aipm_test_plan_required")
         tests = TestPlanPayload.model_validate(plan.content["structured_payload"])
-        design_content = dict(_saved(view, payload.design_ref, "aipm_design", latest=True).content)
-        if "schema_version" not in AipmDesign.model_fields:
-            design_content.pop("schema_version", None)
-        design = AipmDesign.model_validate(design_content)
+        design = AipmDesign.model_validate(
+            _saved(view, payload.design_ref, "aipm_design", latest=True).content
+        )
         if len(tests.cases) > 20 or len({s.case_id for s in payload.selections}) != len(
             payload.selections
         ):
