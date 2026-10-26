@@ -1127,6 +1127,32 @@ def assemble_context(catalog, frame, *, question="", new_shares=(), head_depende
     )
 
 
+def shared_work(product):
+    """What a colleague sees of a shared work. A plan whose text lives in its sections is shown
+    as those sections in written order, not as an empty ``content`` beside a nested payload
+    (a colleague read that as "nothing written yet"). Other works keep their original shape."""
+    payload = (
+        product.structured_payload.model_dump(mode="json") if product.structured_payload else None
+    )
+    if payload and payload.get("type") == "plan" and not product.content.strip():
+        return {
+            "title": product.title,
+            "purpose": product.purpose,
+            "kind": "plan",
+            "sections": [
+                {"section": key, "text": text}
+                for key, text in payload["sections"].items()
+                if str(text).strip()
+            ],
+        }
+    return {
+        "title": product.title,
+        "content": product.content,
+        "purpose": product.purpose,
+        "structured_payload": payload,
+    }
+
+
 class ContextPort:
     def __init__(
         self,
@@ -1187,16 +1213,7 @@ class ContextPort:
                 raise ProtocolError("product_unavailable", status=409)
             if not point_at_or_before(share.shared_at, expected):
                 raise ProtocolError("share_not_yet_received", status=409)
-            text = canonical(
-                {
-                    "title": product.title,
-                    "content": product.content,
-                    "purpose": product.purpose,
-                    "structured_payload": product.structured_payload.model_dump(mode="json")
-                    if product.structured_payload
-                    else None,
-                }
-            )
+            text = canonical(shared_work(product))
             fragment = DisclosedFragment(
                 ref=EvidenceRefV2(
                     **share.product.model_dump(), observed_at_seq=expected.business_seq

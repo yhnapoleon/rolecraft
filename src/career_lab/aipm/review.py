@@ -65,6 +65,8 @@ STEP_CRITERIA = {
     "decision": ALL,
 }
 SEVERITY = {"high": 0, "medium": 1, "low": 2}
+# Points the Judge may decide: semantic ones, and rule points the rules could not decide.
+MODEL_CHECKS = frozenset({"model", "rule"})
 MARK = {"wrong": 0, "missing": 1, "to_check": 2, "covered": 3}
 POLICY_MATERIALS = frozenset({"policy"})
 
@@ -111,6 +113,20 @@ def _field(design, path):
         else:
             return None
     return value
+
+
+EMPTY = (None, "", [], (), {}, "unknown")
+
+
+def _present(design, path):
+    """Whether a structured input exists; a ``*`` segment means any element of a list."""
+    head, _, rest = path.partition(".*.")
+    if not rest:
+        return _field(design, path) not in EMPTY
+    items = _field(design, head)
+    return isinstance(items, list | tuple) and any(
+        isinstance(x, dict) and _field(x, rest) not in EMPTY for x in items
+    )
 
 
 def _rule_id(finding, input_ref):
@@ -165,7 +181,15 @@ def _coverage(view, auth, content, design, step, fired, unknown, rubric_items):
         elif rule.check == "rule":
             source = "rule"
             name = predicate.get("rule")
-            mark = "wrong" if name in fired else "to_check" if name in unknown else "covered"
+            inputs = predicate.get("requires", ())
+            if name in fired:
+                mark = "wrong"
+            elif name in unknown or not all(_present(design or {}, p) for p in inputs):
+                # The rule reads structured fields only. Without them it cannot tell, and
+                # free text alone is never judged by keywords: still to check, never covered.
+                mark = "to_check"
+            else:
+                mark = "covered"
         elif rule.check == "rubric_rule":
             source = "rubric_rule"
             item = rubric_items.get(predicate.get("criterion"))
@@ -338,7 +362,7 @@ def with_model(view, auth, content, stored, items, status, reason, revision=None
     coverage = []
     for mark in stored.get("coverage") or ():
         item = judged.get(mark["id"])
-        if item is not None and mark["check"] == "model":
+        if item is not None and mark["check"] in MODEL_CHECKS and mark["mark"] != "wrong":
             pointer = {
                 "text": item.note,
                 "refs": [r.model_dump(mode="json") for r in item.citations],
@@ -347,10 +371,28 @@ def with_model(view, auth, content, stored, items, status, reason, revision=None
         coverage.append(CoverageMark.model_validate(mark))
     coverage.sort(key=lambda m: (MARK[m.mark], SEVERITY[m.severity], m.id))
     out["coverage"] = [m.model_dump(mode="json") for m in coverage]
-    feedback = tuple(ProcessFeedback.model_validate(f) for f in stored.get("misconceptions") or ())
+    rules_found = [f for f in stored.get("misconceptions") or () if f["source"] == "rule"]
+    # A model-judged error is listed with the rule findings, labelled as a model suggestion.
+    model_found = [
+        ProcessFeedback(
+            id=f"model-{stored['id']}-{i.id}",
+            input_ref=C.ObjectRef.model_validate(stored["prd_ref"]),
+            step_id=stored["step_id"],
+            section_or_row_id=i.id,
+            source="model_suggestion",
+            finding="violation",
+            message=i.note,
+            basis_refs=i.citations,
+            checked_scope=i.label,
+        )
+        for i in items
+        if i.mark == "wrong"
+    ]
+    out["misconceptions"] = [*rules_found, *(f.model_dump(mode="json") for f in model_found)]
+    feedback = tuple(ProcessFeedback.model_validate(f) for f in out["misconceptions"])
     rubric_marks = {i.id: i.mark for i in items if i.target == "rubric"}
     out["status"] = _status(coverage, feedback, "wrong" in rubric_marks.values())
-    fired = {_rule_id(f, f["input_ref"]) for f in stored.get("misconceptions") or ()}
+    fired = {_rule_id(f, f["input_ref"]) for f in rules_found}
     prompts = _mentor(view, auth, content, stored["step_id"], fired, coverage, rubric_marks)
     out["mentor_prompts"] = [p.model_dump(mode="json") for p in prompts]
     return SectionReview.model_validate(out).model_dump(mode="json")

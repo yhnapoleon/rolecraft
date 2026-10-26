@@ -537,7 +537,8 @@ class CoverageRule(DTO):
     """One item of private/grading/coverage.json {"schema_version":1,"revision","items":[...]}.
 
     predicate by check: choice {"field": "business.audience", "conflicts_with": [values]};
-    citation {"materials": [material ids]}; rule {"rule": design rule id};
+    citation {"materials": [material ids]}; rule {"rule": design rule id, "requires": [field
+    paths the rule reads, "*" = any list element]} (missing input -> to_check, never covered);
     rubric_rule {"criterion": "R3.capacity"}; sentence/model/self: {} (shown as to_check).
     """
 

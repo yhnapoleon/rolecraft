@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "aipm-coverage-1",
+  "revision": "aipm-coverage-2",
   "note": "Server-only. Labels and look_again name topics and sources, never the expected conclusion.",
   "items": [
     {
@@ -54,7 +54,10 @@
       ],
       "false_positive_examples": [],
       "predicate": {
-        "rule": "audience_scope"
+        "rule": "audience_scope",
+        "requires": [
+          "business.audience"
+        ]
       }
     },
     {
@@ -168,7 +171,10 @@
         }
       ],
       "predicate": {
-        "rule": "approval_authority"
+        "rule": "approval_authority",
+        "requires": [
+          "stakeholders.approver-choice.name_or_role"
+        ]
       }
     },
     {
@@ -309,7 +315,10 @@
       ],
       "false_positive_examples": [],
       "predicate": {
-        "rule": "metric_scope"
+        "rule": "metric_scope",
+        "requires": [
+          "needs.*.metric"
+        ]
       }
     },
     {
@@ -388,7 +397,10 @@
       ],
       "false_positive_examples": [],
       "predicate": {
-        "rule": "authority"
+        "rule": "authority",
+        "requires": [
+          "rows"
+        ]
       }
     },
     {
@@ -410,7 +422,10 @@
       ],
       "false_positive_examples": [],
       "predicate": {
-        "rule": "tool_capability"
+        "rule": "tool_capability",
+        "requires": [
+          "rows"
+        ]
       }
     },
     {
@@ -565,7 +580,10 @@
       ],
       "false_positive_examples": [],
       "predicate": {
-        "rule": "dependency"
+        "rule": "dependency",
+        "requires": [
+          "solution"
+        ]
       }
     },
     {
