@@ -455,3 +455,18 @@
 .aipm-guide__bar button .aipm-draft-mark {
   margin-left: 8px;
 }
+/* The draft count never gives way to the step name: the name shortens first. */
+.aipm-guide__location strong {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.aipm-guide__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aipm-guide__location strong .aipm-draft-mark {
+  flex: none;
+}

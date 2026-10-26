@@ -107,7 +107,7 @@ export function SevenStepGuide(p: GuideProps) {
         <div className="aipm-guide__location">
           <span>{t('正在处理', 'Working on')}</span>
           <strong>
-            {current.label}
+            <span className="aipm-guide__label">{current.label}</span>
             {waiting(current.id)}
           </strong>
         </div>
