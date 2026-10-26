@@ -54,8 +54,7 @@
           );
         const pre = document.createElement('pre');
         pre.id = 'probe';
-        pre.textContent =
-          `vw=${w} sw=${document.documentElement.scrollWidth} ` + wide.slice(0, 25).join(' | ');
+        pre.textContent = `vw=${w} sw=${document.documentElement.scrollWidth} ${wide.slice(0, 25).join(' | ')}`;
         document.body.prepend(pre);
       }, 1500);
     }
