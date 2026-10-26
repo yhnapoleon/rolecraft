@@ -40,6 +40,8 @@ type State = {
   fixture: boolean;
   guide?: GuideView;
   progress?: ProgressView;
+  /** The server's AipmProgress as read, for features that consume L4's own DTO. */
+  raw?: unknown;
   asOf?: string;
   readAt?: string;
   stale: boolean;
@@ -71,6 +73,8 @@ const keepFold = (id: string, open: boolean) => {
     /* this page only */
   }
 };
+const signature = (s: State) =>
+  JSON.stringify([s.phase, s.raw ?? null, s.stale, s.error ?? null, s.busy, s.feature]);
 const reason = (e: unknown) => (e instanceof Error ? e.message : String(e));
 // Not enrolled, no such route yet, or not mounted: the practice simply has no seven steps.
 const absent = (e: unknown) =>
@@ -82,6 +86,7 @@ export function createAipmPractice(deps: PracticeDeps) {
   const open = new Map<string, boolean>();
   const registry = createAipmRegistry();
   let missing: AipmFeatureId[] | null = null;
+  let live: { key: string; el: HTMLElement } | null = null;
 
   const stateOf = (a: Attempt) => states.get(a.id);
   const asOfKey = (a: Attempt) => JSON.stringify(deps.dataHost(a)?.snapshot().asOf ?? null);
@@ -95,6 +100,7 @@ export function createAipmPractice(deps: PracticeDeps) {
       feature: null,
     };
     states.set(a.id, s);
+    const seen = signature(s);
     try {
       if (!s.client) {
         const source = await guideSource(a.id, deps.transport(a), deps.language(a));
@@ -115,6 +121,7 @@ export function createAipmPractice(deps: PracticeDeps) {
         phase: 'ready',
         guide,
         progress,
+        raw: p,
         stale: false,
         error: undefined,
         readAt: new Date().toLocaleTimeString(lang === 'en' ? 'en-GB' : 'zh-CN', {
@@ -141,7 +148,9 @@ export function createAipmPractice(deps: PracticeDeps) {
       else s.phase = 'off';
       if (!absent(e)) s.error = reason(e);
     } finally {
-      if (deps.current()?.id === a.id) deps.redraw();
+      // Redraw only for a real change: a read that returns the same snapshot leaves the page
+      // (and any feature mounted in it) alone.
+      if (deps.current()?.id === a.id && signature(s) !== seen) deps.redraw();
     }
   }
 
@@ -205,7 +214,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     }
   }
 
-  const host: AipmHost<ProgressView, GuideClient> = {
+  const host: AipmHost<unknown, GuideClient> = {
     getSessionContext() {
       const a = deps.current();
       const snap = a ? deps.dataHost(a)?.snapshot() : null;
@@ -229,8 +238,10 @@ export function createAipmPractice(deps: PracticeDeps) {
     async readProgress() {
       const a = deps.current();
       if (!a) throw new Error('No practice');
-      await load(a);
-      const p = stateOf(a)?.progress;
+      const s = stateOf(a);
+      const fresh = s?.phase === 'ready' && !s.stale && s.asOf === asOfKey(a);
+      if (!fresh) await load(a);
+      const p = stateOf(a)?.raw;
       if (!p) throw new Error('AIPM progress unavailable');
       return p;
     },
@@ -345,7 +356,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     if (!root || !s) return;
     const id = s.feature;
     const feature = id ? registry.get(id) : undefined;
-    if (root.dataset.feature === (id ?? '')) return;
+    if (root.dataset.feature === (id ?? '') && root.firstChild) return;
     root.dataset.feature = id ?? '';
     if (!id) {
       root.innerHTML = '';
@@ -360,8 +371,17 @@ export function createAipmPractice(deps: PracticeDeps) {
       }</p>`;
       return;
     }
-    root.innerHTML = feature.render();
-    registry.mount(id, root);
+    // The feature keeps one element for this practice; a redraw of the stage moves it into the
+    // new container instead of mounting it again, so what the person typed stays.
+    const key = `${a.id}:${id}`;
+    if (live?.key !== key) {
+      const el = document.createElement('div');
+      el.className = 'aipm-feature__root';
+      el.innerHTML = feature.render();
+      registry.mount(id, el);
+      live = { key, el };
+    }
+    root.replaceChildren(live.el);
   }
 
   return { ready, props, mountFeature, host, missing: () => missing };
