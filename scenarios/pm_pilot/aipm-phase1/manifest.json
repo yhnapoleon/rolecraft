@@ -5,7 +5,7 @@
   "company_approval": "pending_user_confirmation",
   "files": {
     "private/grading/coverage.json": "992b317fe744e2bdc3381a2d3373f8f0bae734438df08b1b56fa3fbade3139dd",
-    "private/grading/design.json": "5ebd761da0b253e9eb7e7365243b660ba8f9620c6aad8890c4c9c7055e599d18",
+    "private/grading/design.json": "ddb86ba7f45071578aa319f39a4a8229ab6b7fa2992cf54f4a14ac0a6557f5e9",
     "private/grading/evaluation.json": "0ed824a0d2299e88af3f1fa474ec129c6e3c93f32005e447e4881a7a475792df",
     "private/grading/mentor.json": "94001f3f659b14854066540629ef6edd6c34371c1b818673258eb18bc0bf421c",
     "public/company.en.json": "92753f037267326868667cec0f8b010f1879d7c88f8c40a5ed623ecf71a65a92",
