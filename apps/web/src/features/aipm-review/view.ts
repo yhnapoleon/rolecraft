@@ -1,19 +1,20 @@
 /** The section review screen: what was written (read-only, sentence by sentence when the
- * recognition layer is on) beside the review. It is the result page made small: the sentence
- * lens, rule lines, item rows and the three colleague columns are the result page's own
- * renderers and classes, called here without changing how the result page uses them. */
-import type { PreviewRecognition } from '../recognition-native/chain';
-import { renderSentenceLens } from '../recognition-native/sentences';
+ * recognition layer is on) beside the review. The look follows the v2 wireframe (5-批改结果);
+ * the structure is the result page's: its sentence tones, rule lines, item rows and colleague
+ * colours, called here without changing how the result page uses them. */
+import type { ChainUnit, PreviewRecognition } from '../recognition-native/chain';
+import { toneOf } from '../recognition-native/sentence-view';
 import { renderItemRow, type ItemRow } from '../feedback-native/feedback-items';
 import { criterionLabels } from '../feedback-native/criteria';
 import { renderRuleLines, ruleLines } from '../feedback-native/rule-lines';
 import type { Report } from '../feedback-native/index';
-import { COLLEAGUE_NAMES, colleagueRemit, type Colleague } from '../../screens/result/colleagues';
+import { COLLEAGUE_NAMES, type Colleague } from '../../screens/result/colleagues';
 import {
   colleagueKey,
   coverageRow,
   deltaLine,
   groupSentences,
+  coverageMarkName,
   materialOf,
   type Language,
   nextStatusHint,
@@ -110,20 +111,82 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     for (const line of paragraphs) box.append(el('p', line));
     return box;
   };
+  // One line per sentence: underline and numbered mark by the recognizer's relation, the
+  // matched source sentence opened in place (the lens's tones, drawn as the wireframe does).
+  const toneName = {
+    supported: t('与资料一致', 'Matches the sources'),
+    contradicted: t('与资料矛盾', 'Contradicts the sources'),
+    insufficient: t('依据不足 / 还不知道', 'Not enough evidence / not known yet'),
+    deferred: t('暂缓判定，留给人核对', 'Deferred to a person'),
+  } as const;
+  const sentenceList = (units: readonly ChainUnit[]) => {
+    const list = el('ol', '', 'aipm-review__sentences');
+    units.forEach((unit, index) => {
+      const tone = toneOf(unit);
+      const row = el('li', '', 'aipm-review__sent');
+      row.dataset.tone = tone;
+      const words = button('', 'aipm-review__s');
+      words.append(
+        el('span', `${index + 1}. ${toneName[tone]}: `, 'sr-only'),
+        el('span', unit.quote, 'aipm-review__u'),
+      );
+      const mark = el('span', String(index + 1), 'aipm-review__n');
+      mark.setAttribute('aria-hidden', 'true');
+      const source = el('div', '', 'aipm-review__src');
+      source.hidden = true;
+      const where = [
+        unit.source?.title,
+        typeof unit.source?.version === 'number' ? `v${unit.source.version}` : '',
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      if (where) source.append(el('p', where, 'aipm-review__src-where'));
+      source.append(
+        unit.evidence
+          ? el('p', unit.evidence, 'aipm-review__src-quote')
+          : el(
+              'p',
+              t('这次没有返回可展示的原文。', 'No source passage was returned for this sentence.'),
+              'aipm-review__muted',
+            ),
+        el('p', toneName[tone], 'aipm-review__src-tone'),
+      );
+      const material = unit.source?.kind === 'material' ? unit.source.object_id : null;
+      if (material && input.onOpenMaterial)
+        source.append(
+          button(t('打开这份资料', 'Open this source'), 'aipm-review__link', () =>
+            input.onOpenMaterial?.(material),
+          ),
+        );
+      words.setAttribute('aria-expanded', 'false');
+      words.addEventListener('click', () => {
+        source.hidden = !source.hidden;
+        words.setAttribute('aria-expanded', String(!source.hidden));
+      });
+      row.append(words, mark, source);
+      list.append(row);
+    });
+    return list;
+  };
+  const legend = (units: readonly ChainUnit[]) => {
+    const box = el('p', '', 'aipm-review__legend');
+    const tones = ['supported', 'contradicted', 'insufficient'] as const;
+    for (const tone of [
+      ...tones,
+      ...(units.some((u) => toneOf(u) === 'deferred') ? (['deferred'] as const) : []),
+    ]) {
+      const key = el('span', '', 'aipm-review__key');
+      key.dataset.tone = tone;
+      key.append(el('i'), toneName[tone]);
+      box.append(key);
+    }
+    return box;
+  };
   const pass = input.sentences;
   if (pass.kind === 'ready') {
     const groups = groupSentences(pass.preview.units ?? [], input.sections);
-    const own = groups.bySection[review.step_id] ?? [];
-    paper.append(
-      own.length
-        ? renderSentenceLens(doc, {
-            language,
-            preview: sectionPreview(pass.preview, own),
-            frame: 'flat',
-            replay: false,
-          })
-        : plain(),
-    );
+    const own = sectionPreview(pass.preview, groups.bySection[review.step_id] ?? []).units ?? [];
+    paper.append(...(own.length ? [sentenceList(own), legend(own)] : [plain()]));
     if (groups.unassigned.length) {
       const rest = el('details', '', 'aipm-review__unassigned');
       rest.append(
@@ -134,12 +197,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
             `${groups.unassigned.length} sentence${groups.unassigned.length > 1 ? 's' : ''} not placed in a section`,
           ),
         ),
-        renderSentenceLens(doc, {
-          language,
-          preview: sectionPreview(pass.preview, groups.unassigned),
-          frame: 'flat',
-          replay: false,
-        }),
+        sentenceList(sectionPreview(pass.preview, groups.unassigned).units ?? []),
       );
       paper.append(rest);
     }
@@ -219,7 +277,13 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   steps.append(el('span', nextStatusHint(review, language), 'aipm-review__hint'));
   sheet.append(steps);
   const delta = deltaLine(review, language, input.previousVersion);
-  if (delta) sheet.append(el('p', delta, 'aipm-review__delta'));
+  if (delta) {
+    const line = el('p', '', 'aipm-review__delta');
+    // The before → after counts carry the weight of the line.
+    for (const part of delta.split(/(\d+ → \d+)/))
+      line.append(/→/.test(part) ? el('b', part) : part);
+    sheet.append(line);
+  }
 
   const section = (title: string, ...nodes: Node[]) => {
     const box = el('section', '', 'aipm-review__part');
@@ -278,25 +342,32 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     for (const item of orderCoverage(review.coverage ?? [])) {
       const row = coverageRow(item, language);
       const asked = row.mark === 'unknown' ? colleagueKey(item.owner) : null;
-      list.append(
-        renderItemRow(doc, row, language, {
-          ...hooks,
-          action: () => {
-            if (asked)
-              return button(
-                t(`问 ${COLLEAGUE_NAMES[asked]}`, `Ask ${COLLEAGUE_NAMES[asked]}`),
-                'btn quiet small',
-                () => ask(asked),
-              );
-            const material = materialOf(item.pointer?.refs);
-            return material && input.onOpenMaterial
-              ? button(t('看资料', 'Open source'), 'btn quiet small', () =>
-                  input.onOpenMaterial?.(material),
-                )
-              : null;
-          },
-        }),
-      );
+      const shown = row.mark === 'unknown' ? 'to_check' : item.mark;
+      const li = renderItemRow(doc, row, language, {
+        ...hooks,
+        action: () => {
+          if (asked)
+            return button(
+              t(`问 ${COLLEAGUE_NAMES[asked]}`, `Ask ${COLLEAGUE_NAMES[asked]}`),
+              'btn quiet small',
+              () => ask(asked),
+            );
+          const material = materialOf(item.pointer?.refs);
+          return material && input.onOpenMaterial
+            ? button(t('看资料', 'Open source'), 'btn quiet small', () =>
+                input.onOpenMaterial?.(material),
+              )
+            : null;
+        },
+      });
+      // The row's round mark becomes the wireframe's word pill: 有误 / 缺了 / 待核对 / 覆盖了.
+      li.dataset.coverage = shown;
+      const mark = findClass(li, 'fb-mark');
+      if (mark) {
+        mark.textContent = coverageMarkName(shown, language);
+        mark.className = 'fb-mark aipm-review__pill';
+      }
+      list.append(li);
     }
     section(
       t('要点覆盖（按严重程度，不给答案）', 'Coverage (most serious first; no answers given)'),
@@ -354,27 +425,20 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
 
   // What each colleague would ask: a preset question per person, then a way to really ask.
   if ((review.mentor_prompts ?? []).length) {
-    const columns = el('div', '', 'result-colleagues aipm-review__mentors');
+    const columns = el('div', '', 'aipm-review__mentors');
     for (const who of ['manager', 'business', 'technical'] as Colleague[]) {
       const prompt = (review.mentor_prompts ?? []).find((p) => colleagueKey(p.colleague) === who);
       if (!prompt) continue;
+      // The result page's person colours (data-person) on the wireframe's compact card.
       const box = el('section', '', 'result-colleague aipm-review__mentor');
       box.dataset.person = who;
-      const top = el('header', '', 'result-colleague__head');
+      const top = el('p', '', 'aipm-review__who');
       const avatar = el('span', COLLEAGUE_NAMES[who][0], 'result-colleague__avatar');
       avatar.setAttribute('aria-hidden', 'true');
-      const id = el('div', '', 'result-colleague__who');
-      id.append(
-        el('h3', COLLEAGUE_NAMES[who], 'result-colleague__name'),
-        el('p', colleagueRemit(who, language), 'result-colleague__remit'),
-      );
-      top.append(avatar, id);
-      const quote = el('blockquote', prompt.question, 'aipm-review__question');
+      top.append(avatar, el('b', COLLEAGUE_NAMES[who]));
+      const quote = el('blockquote', `“${prompt.question}”`, 'aipm-review__question');
       const go = button(
-        t(
-          `问 ${COLLEAGUE_NAMES[who]}（附上第 ${review.prd_ref.version} 版）`,
-          `Ask ${COLLEAGUE_NAMES[who]} (with version ${review.prd_ref.version})`,
-        ),
+        t(`问 ${COLLEAGUE_NAMES[who]}`, `Ask ${COLLEAGUE_NAMES[who]}`),
         'aipm-review__ask',
         () => ask(who),
       );
@@ -430,6 +494,21 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   grid.append(paper, sheet);
   root.append(grid);
   return root;
+}
+
+/** The first descendant with this class, in the page's DOM or the tests' text DOM. */
+function findClass(node: Element, name: string): Element | null {
+  for (const child of Array.from((node as { children?: ArrayLike<Element> }).children ?? [])) {
+    if (
+      String(child.className ?? '')
+        .split(' ')
+        .includes(name)
+    )
+      return child;
+    const found = findClass(child, name);
+    if (found) return found;
+  }
+  return null;
 }
 
 export type { ItemRow };

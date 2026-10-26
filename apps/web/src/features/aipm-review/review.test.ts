@@ -41,7 +41,7 @@ describe('review content (L4 shared fixture)', () => {
     const [counter] = coverage('zh').filter((c) => c.id === 'need.counterfact');
     const row = coverageRow({ ...counter, mark: 'missing' }, 'zh');
     expect(row.mark).toBe('unknown');
-    expect(row.line).toBe('待核对 · 再看看：需求访谈 · 反对意见');
+    expect(row.line).toBe('再看看：需求访谈 · 反对意见');
   });
 
   it('says when the review is out of date, and why', () => {
@@ -130,10 +130,7 @@ describe('review screen', () => {
     root.byClass('aipm-review__link')[0].click();
     expect(onOpenMaterial).toHaveBeenCalledWith('service_desk_sample');
     const asks = root.byClass('aipm-review__ask');
-    expect(asks.map((b) => b.textContent)).toEqual([
-      '问 Grace（附上第 4 版）',
-      '问 Chen（附上第 4 版）',
-    ]);
+    expect(asks.map((b) => b.textContent)).toEqual(['问 Grace', '问 Chen']);
     asks[1].click();
     expect(onAsk).toHaveBeenCalledWith('business');
     expect(root.textContent).toContain('和第 3 版比');

@@ -231,7 +231,8 @@ export function coverageRow(item: CoverageItem, language: Language): ItemRow {
     name: item.label,
     mark: mark === 'covered' ? 'met' : mark === 'to_check' ? 'unknown' : 'unmet',
     tone: mark === 'wrong' ? 'bad' : mark === 'missing' ? 'warn' : undefined,
-    line: `${coverageMarkName(mark, language)} · ${line}`.replace(/ · $/, ''),
+    // The mark is shown as its own word pill, so the line says only where to look.
+    line,
     found: (item.pointer?.refs ?? []).map((ref) => ref.quote).filter((q): q is string => !!q) ?? [],
     // The view shows these rows only; the formal item is not consulted.
     item: { criterion: item.id, label: '', explanation: '' } as unknown as ItemRow['item'],
