@@ -35,8 +35,23 @@
         ...review,
         model_status: status,
         model_error: status === 'failed' ? (zh ? '模型超时' : 'The model timed out') : null,
-        model_coverage: status === 'done' && counter ? [{ ...counter, mark: 'missing', source: 'model_suggestion' }] : [],
-        model_rubric: status === 'done' ? [{ criterion: 'R2.support', label: 'PARTIAL', source: 'pending', explanation: zh ? '证据支持\n只引用了一次访谈，还没有反证。' : 'Evidence\nOne interview cited; no counter-evidence yet.' }] : [],
+        model_coverage:
+          status === 'done' && counter
+            ? [{ ...counter, mark: 'missing', source: 'model_suggestion' }]
+            : [],
+        model_rubric:
+          status === 'done'
+            ? [
+                {
+                  criterion: 'R2.support',
+                  label: 'PARTIAL',
+                  source: 'pending',
+                  explanation: zh
+                    ? '证据支持\n只引用了一次访谈，还没有反证。'
+                    : 'Evidence\nOne interview cited; no counter-evidence yet.',
+                },
+              ]
+            : [],
       };
     }
     // Headless Chrome has no viewport under 500px; ?w=390 narrows the page itself.
