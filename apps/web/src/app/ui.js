@@ -3721,7 +3721,6 @@ document.addEventListener(
     if (!a || !prd || !role || !prdAttached(a, role, prd) || prdShared(a, role, prd) !== false) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    const submitter = e.submitter;
     try {
       const result = await L.v4Host(a).command('work_products.shares.create', {
         product_id: prd.id,
@@ -3739,8 +3738,25 @@ document.addEventListener(
       );
       return;
     }
-    form.dataset.prdReady = '1';
-    form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
+    // Hand it to the bound composer as a typed message would go, and, once it is accepted, clear
+    // the draft the way a suggested question does (the composer kept it while the share was made).
+    const live = document.querySelector('form.composer[data-form="chat"]') || form;
+    const question = live.querySelector('#chat-input')?.value ?? '';
+    const token = crypto.randomUUID();
+    live.addEventListener('rolecraft:greeting-result', async function done(event) {
+      if (event.detail?.token !== token) return;
+      live.removeEventListener('rolecraft:greeting-result', done);
+      if (!event.detail.accepted) return;
+      const key = `question:${ROLE_ID[role]}`;
+      const host = L.v4Host(a);
+      if (host?.draft('roles', key) === question) await host.keepDraft('roles', key, '');
+      const input = document.getElementById('chat-input');
+      if (input && input.value === question) input.value = '';
+    });
+    live.dataset.greetingRequest = token;
+    live.dataset.prdReady = '1';
+    const send = live.querySelector('button[type="submit"]');
+    live.requestSubmit(send || undefined);
   },
   true,
 );
