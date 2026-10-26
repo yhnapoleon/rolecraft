@@ -1672,6 +1672,12 @@ const Aipm = createAipmPractice({
     openChat(role, text);
   },
   prdSharedWith: (role, prd) => prdShared(current(), role, prd) === true,
+  rememberPrompts: (role, prompts) => {
+    const a = current();
+    if (!a) return;
+    mentorPrompts.set(`${a.id}:${role}`, prompts);
+    if (ui.rail === 'chat' && ui.chatRole === role) refreshWS(['rail']);
+  },
   showBoard: () => {
     if (ui.route !== 'work') go('work');
   },
@@ -3567,6 +3573,26 @@ function replyingRoles(a) {
 const prdShares = new Map(); // `${session}:${role}` → Set of `${product}@${version}`
 const prdSharesAt = new Map(); // session → version point the shares were read at
 const prdChoice = new Map(); // `${session}:${role}:${version}` → attach (true/false) chosen
+const mentorPrompts = new Map(); // `${session}:${role}` → preset prompts from the review asked from
+// Without a conversation model a colleague answers with excerpts; the review's rule-triggered
+// question for them follows as a dashed card that says it is preset, not their reply.
+function mentorCard(a, role) {
+  const prompts = mentorPrompts.get(`${a.id}:${role}`) || [];
+  if (!prompts.length || L.v4Host(a)?.snapshot().semantic?.roles === 'model') return '';
+  const name = PEOPLE[role].name;
+  return `<aside class="aipm-mentor">${prompts
+    .map(
+      (m) =>
+        `<p class="aipm-mentor__label">${T(`预设提示 · 按批改规则触发，不是 ${name} 的实时回复`, `Preset prompt · triggered by review rules, not ${PEOPLE[role].ref}’s live reply`)}</p><p class="aipm-mentor__q">${T('“', '“')}${esc(m.question)}${T('”', '”')}</p>${
+          m.materialId
+            ? `<button type="button" class="aipm-mentor__link" data-action="open-material" data-id="${esc(m.materialId)}">${esc(m.pointer || T('打开相关资料', 'Open the material'))} ›</button>`
+            : m.pointer
+              ? `<p class="aipm-mentor__pointer">${esc(m.pointer)}</p>`
+              : ''
+        }`,
+    )
+    .join('')}</aside>`;
+}
 function prdShared(a, role, prd) {
   if (!a || !prd) return undefined;
   const set = prdShares.get(`${a.id}:${ROLE_ID[role]}`);
@@ -3691,6 +3717,7 @@ function railChat(a, role) {
     ${prdSees(a, role)}
     <div data-chat-greeting>${Greetings.hasArrived(a.id, role) ? Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a)) : ''}</div>
     <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? messageRows(msgs).map(({ message, key }) => msgHtml(a, message, key)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
+    ${mentorCard(a, role)}
     ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
     <form class="composer" data-form="chat">${attached}<div class="composer-line">${tools ? `<span class="composer-tools">${tools}</span>` : ''}<label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="1" maxlength="4000" required enterkeyhint="send" aria-describedby="chat-hint" placeholder="${esc(quote ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></div></form>
     <p class="composer-hint" id="chat-hint">${T('回车发送 · Shift+回车换行', 'Enter to send · Shift+Enter for a new line')}</p>

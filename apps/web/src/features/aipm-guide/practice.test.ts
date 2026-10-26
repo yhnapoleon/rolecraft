@@ -17,6 +17,7 @@ const deps = (transport = vi.fn(async () => ({}))): PracticeDeps => ({
   notifyDraft: () => {},
   prefillColleague: () => {},
   prdSharedWith: () => false,
+  rememberPrompts: () => {},
   showBoard: () => {},
   openProduct: () => {},
   newFreeSheet: () => {},

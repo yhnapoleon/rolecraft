@@ -29,6 +29,7 @@ import {
 import { guideSource, type GuideClient, type GuideTransport } from './source';
 
 type Attempt = { id: string };
+export type MentorCard = { question: string; pointer?: string; materialId?: string };
 type Role = 'manager' | 'business' | 'technical';
 export type PracticeDeps = {
   current(): Attempt | null;
@@ -48,6 +49,9 @@ export type PracticeDeps = {
   /** Opens the colleague's conversation with this message in the composer (not sent), and the
    * PRD attachment chip set as given. */
   prefillColleague(colleague: AipmColleague, prefill: string, attachPrd: boolean): void;
+  /** A question asked from a review: its rule-triggered prompts for that colleague, shown under
+   * a local reply as preset prompts (never as the colleague's words). */
+  rememberPrompts(colleague: AipmColleague, prompts: MentorCard[]): void;
   /** Whether that colleague has been shared this exact PRD version already. */
   prdSharedWith(colleague: AipmColleague, prd: { id: string; version: number }): boolean;
   /** The main screen lives on the board: go there first when elsewhere. */
@@ -428,6 +432,8 @@ export function createAipmPractice(deps: PracticeDeps) {
     async askColleague({ colleague, prefill, attachPrd }) {
       const a = deps.current(),
         prd = a && stateOf(a)?.progress?.prd;
+      const s = a && stateOf(a);
+      if (s?.screen.kind === 'review') void reviewPrompts(s, s.screen, colleague);
       const attach = attachPrd ?? (!!prd && !deps.prdSharedWith(colleague, prd));
       deps.prefillColleague(colleague, prefill, attach);
     },
@@ -441,6 +447,50 @@ export function createAipmPractice(deps: PracticeDeps) {
       else host.openWorksheet(s.progress?.focus ?? 'business');
     },
   };
+
+  /** The review being looked at: its prompts for this colleague (the server's mentor prompts). */
+  async function reviewPrompts(
+    s: State,
+    screen: Extract<AipmScreen, { kind: 'review' }>,
+    colleague: AipmColleague,
+  ) {
+    try {
+      const page = (await s.client?.sectionReviews?.(screen.step)) as
+        | {
+            items?: {
+              ref: { object_id: string; version: number };
+              review: Record<string, unknown>;
+            }[];
+          }
+        | undefined;
+      const items = page?.items ?? [];
+      const hit = screen.reviewRef
+        ? items.find(
+            (i) =>
+              i.ref.object_id === screen.reviewRef?.object_id &&
+              i.ref.version === screen.reviewRef?.version,
+          )
+        : items[0];
+      const wire = colleague === 'technical' ? 'tech' : colleague;
+      const prompts = ((hit?.review.mentor_prompts as Record<string, unknown>[]) ?? [])
+        .filter((m) => m.colleague === wire && typeof m.question === 'string')
+        .map((m) => {
+          const pointer = m.pointer as {
+            text?: string;
+            refs?: { kind: string; object_id: string }[];
+          } | null;
+          const material = pointer?.refs?.find((r) => r.kind === 'material');
+          return {
+            question: m.question as string,
+            ...(pointer?.text ? { pointer: pointer.text } : {}),
+            ...(material ? { materialId: material.object_id } : {}),
+          };
+        });
+      deps.rememberPrompts(colleague, prompts);
+    } catch {
+      deps.rememberPrompts(colleague, []);
+    }
+  }
 
   function show(screen: AipmScreen) {
     const a = deps.current(),

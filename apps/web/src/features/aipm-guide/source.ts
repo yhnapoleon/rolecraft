@@ -22,6 +22,7 @@ export type GuideClient = {
   resolveDraft?(id: string, command: Record<string, unknown>): Promise<unknown>;
   /** A section review of one PRD version (L4, v2). */
   createSectionReview?(command: Record<string, unknown>): Promise<unknown>;
+  sectionReviews?(stepId?: StepId): Promise<unknown>;
 };
 export type GuideSource = { client: GuideClient; fixture: boolean };
 

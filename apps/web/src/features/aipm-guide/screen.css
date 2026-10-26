@@ -207,3 +207,36 @@
     transition: none;
   }
 }
+/* A preset prompt under a local reply: dashed, labelled, never in the colleague's voice. */
+.aipm-mentor {
+  margin: 4px 12px 10px;
+  padding: 10px 14px 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: 14px;
+  color: var(--ink);
+}
+.aipm-mentor__label {
+  margin: 0 0 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.aipm-mentor__q {
+  margin: 0 0 6px;
+  font: 400 14.5px / 1.6 var(--serif);
+}
+.aipm-mentor__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: 13px var(--sans);
+  cursor: pointer;
+}
+.aipm-mentor__link:hover {
+  color: var(--ink);
+}
+.aipm-mentor__pointer {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
