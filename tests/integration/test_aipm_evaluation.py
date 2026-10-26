@@ -32,7 +32,9 @@ def test_real_store_preserves_original_request_results_and_assessment_history(tm
             "aipm_profile": AipmProfile,
             "aipm_design": AipmDesign,
         }.items():
-            store.register_object(kind, model)
+            # L4's runtime mount may already register these; install only what is missing.
+            if kind not in store.object_models:
+                store.register_object(kind, model)
 
         def make(operation, payload, request_id):
             state = store.view(auth).state
