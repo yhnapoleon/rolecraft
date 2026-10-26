@@ -72,10 +72,16 @@ def mount_aipm_routes(app):
             command = body.model_dump(mode="json")
             # Read-only preparation outside the write transaction (e.g. rule checks).
             prepare = getattr(app.state, "aipm_prepare", {}).get(operation)
+            after = getattr(app.state, "aipm_after", {}).get(operation)
             if prepare is None:
-                return gateway.dispatch(auth, operation, command, params)
-            with prepare(auth, command):
-                return gateway.dispatch(auth, operation, command, params)
+                result = gateway.dispatch(auth, operation, command, params)
+            else:
+                with prepare(auth, command):
+                    result = gateway.dispatch(auth, operation, command, params)
+            if after is not None:
+                # Work that must not hold the request, started once the write committed.
+                after(auth, result)
+            return result
 
         return endpoint
 
