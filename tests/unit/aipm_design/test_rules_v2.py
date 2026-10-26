@@ -137,6 +137,12 @@ def test_coverage_items_use_reviewed_checks_and_known_references():
             # A rule point must name the structured fields its rule reads; without them it is
             # never "covered" just because the rule had nothing to judge.
             assert predicate["requires"], item["id"]
+        if item["check"] in {"rule", "model"}:
+            # The Judge needs the exact question and how wrong/covered/missing are decided.
+            check = item["model_check"]
+            assert check["zh"] and check["en"], item["id"]
+            for mark in ("wrong", "covered", "missing"):
+                assert mark in check["zh"] and mark in check["en"], (item["id"], mark)
         if item["check"] == "choice":
             assert predicate["field"] and predicate["conflicts_with"] == []
         if item["check"] == "rubric_rule":
