@@ -62,6 +62,7 @@ class Operation:
 
 # Public API/tool installation whitelist. Internal snapshot/restore is deliberately absent.
 PUBLIC_OPERATIONS = {
+    "aipm.submission_feedback.read",
     "configuration.apply",
     "workbench.read",
     "objects.read",
