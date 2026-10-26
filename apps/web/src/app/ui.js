@@ -3626,12 +3626,15 @@ const prdSharesAt = new Map(); // session → version point the shares were read
 const prdChoice = new Map(); // `${session}:${role}:${version}` → attach (true/false) chosen
 const mentorPrompts = new Map(); // `${session}:${role}` → preset prompts from the review asked from
 // Without a conversation model a colleague answers with excerpts; the review's rule-triggered
-// question for them follows as a dashed card that says it is preset, not their reply.
+// question for them follows as a dashed card that says it is preset, not their reply. With a
+// model the card waits, and shows only when their latest reply was held back by the checks, so
+// the person is never left with nothing.
 function mentorCard(a, role) {
   const prompts = mentorPrompts.get(`${a.id}:${role}`) || [];
-  if (!prompts.length || L.v4Host(a)?.snapshot().semantic?.roles === 'model') return '';
+  if (!prompts.length) return '';
+  const model = L.v4Host(a)?.snapshot().semantic?.roles === 'model';
   const name = PEOPLE[role].name;
-  return `<aside class="aipm-mentor">${prompts
+  return `<aside class="aipm-mentor"${model ? ' data-when="held"' : ''}>${prompts
     .map(
       (m) =>
         `<p class="aipm-mentor__label">${T(`预设提示 · 按批改规则触发，不是 ${name} 的实时回复`, `Preset prompt · triggered by review rules, not ${PEOPLE[role].ref}’s live reply`)}</p><p class="aipm-mentor__q">${T('“', '“')}${esc(m.question)}${T('”', '”')}</p>${
