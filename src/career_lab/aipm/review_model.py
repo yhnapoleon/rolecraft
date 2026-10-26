@@ -263,7 +263,16 @@ class ModelReviewer:
 
     def _coverage(self, auth, stored, view, content, judge):
         step = stored["step_id"]
-        points = [r for r in content.coverage_rules if r.step_id == step and r.check == "model"]
+        undecided = {
+            m["id"]
+            for m in stored.get("coverage") or ()
+            if m["check"] == "rule" and m["mark"] == "to_check"
+        }
+        points = [
+            r
+            for r in content.coverage_rules
+            if r.step_id == step and (r.check == "model" or r.id in undecided)
+        ]
         if not points:
             return ()
         language = content.work_language

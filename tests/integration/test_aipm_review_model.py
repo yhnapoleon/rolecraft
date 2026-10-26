@@ -313,3 +313,54 @@ def test_learner_writes_around_the_background_model_write(base):
     # A plain write after the model step, e.g. saving the next PRD version: succeeds.
     prd(base, "Tickets take 429 minutes; handling unknown.", head=first)
     assert judge.calls == 1
+
+
+def authored_coverage():
+    from career_lab.aipm.progress import authored
+    from career_lab.aipm.types import CoverageRule
+
+    path = Path(__file__).resolve().parents[2] / (
+        "scenarios/pm_pilot/aipm-phase1/private/grading/coverage.json"
+    )
+    return authored(path.read_bytes(), "items", CoverageRule)
+
+
+@pytest.mark.parametrize("with_judge", [False, True])
+def test_free_text_metric_is_never_marked_covered(base, with_judge):
+    revision, rules = authored_coverage()
+    judge = FakeJudge(
+        {
+            "items": [
+                {
+                    "id": "need.metric_scope",
+                    "mark": "wrong",
+                    "note": "Sentence 1 treats elapsed time as labour time; see the field notes.",
+                    "citation_ids": [],
+                }
+            ]
+        }
+    )
+    content = replace(progress.content_for(base), coverage_rules=rules, coverage_revision=revision)
+    install_aipm(base["app"], [content])
+    base["app"].state.aipm_reviewer.sync = True
+    if with_judge:
+        base["app"].state.model_slots = SimpleNamespace(
+            judge=judge, support=None, judge_input_bytes=64000, support_input_bytes=64000
+        )
+    post(base, "enrollment", "aipm.enroll")
+    text = "Ticket time totals 429 minutes, which can be treated as staff time."
+    first = prd(base, text)
+    review(base, first, design(base, first))  # needs without a metric block
+    done = latest(base)
+    marks = {m["id"]: m["mark"] for m in done["coverage"]}
+    if not with_judge:
+        assert marks["need.metric_scope"] == "to_check"
+        assert done["model_status"] == "not_configured"
+        return
+    assert done["model_status"] == "done"
+    assert marks["need.metric_scope"] == "wrong"
+    first_fix = done["misconceptions"][0]
+    assert first_fix["source"] == "model_suggestion" and first_fix["finding"] == "violation"
+    assert first_fix["section_or_row_id"] == "need.metric_scope"
+    assert done["status"] == "draft"
+    assert text in json.dumps(judge.messages[0])
