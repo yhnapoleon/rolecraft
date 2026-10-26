@@ -431,3 +431,27 @@
     transition: none;
   }
 }
+/* An agent's draft waiting for the person: neutral, never alarm red. */
+.aipm-draft-mark {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--fill, var(--surface-2));
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.rc-connection-toast .aipm-draft-toast__go {
+  width: auto;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.aipm-guide__location strong .aipm-draft-mark,
+.aipm-guide__map small .aipm-draft-mark,
+.aipm-guide__bar button .aipm-draft-mark {
+  margin-left: 8px;
+}

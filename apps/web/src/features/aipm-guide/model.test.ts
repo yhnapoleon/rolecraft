@@ -76,3 +76,19 @@ describe('AIPM presentation preserves authoritative meaning', () => {
     expect(r.get('design')).toBeUndefined();
   });
 });
+describe('agent drafts waiting for the person', () => {
+  it('reads pending drafts with their steps, ignoring unknown ones', () => {
+    const p = progressView({
+      ...fixture(),
+      pending_agent_drafts: [
+        {
+          ref: { object_id: 'd1', version: 2 },
+          author_kind: 'external_agent',
+          steps: ['business', 'nope'],
+        },
+      ],
+    });
+    expect(p.drafts).toEqual([{ id: 'd1', key: 'd1@2', steps: ['business'] }]);
+    expect(progressView(fixture()).drafts).toEqual([]);
+  });
+});

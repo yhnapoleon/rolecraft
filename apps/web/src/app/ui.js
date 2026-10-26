@@ -179,6 +179,7 @@ import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
 import { SevenStepGuide } from '../features/aipm-guide/guide';
 import { createAipmPractice } from '../features/aipm-guide/practice';
+import { showDraftToast } from '../features/aipm-guide/draft-toast';
 import '../shell/progress.css';
 import '../shell/unread-light.css';
 import { agentLine } from '../screens/board/agent-line';
@@ -1661,6 +1662,7 @@ const Aipm = createAipmPractice({
     commit();
     sheetDeliver();
   },
+  notifyDraft: (text, label, dismiss, open) => showDraftToast(text, label, dismiss, open),
 });
 const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every

@@ -8,6 +8,7 @@ import type { V4HostAdapter } from '../../v4-host';
 import { publishedContent } from './content';
 import type { GuideProps } from './guide';
 import {
+  IDS,
   guideView,
   matchingSnapshot,
   progressView,
@@ -33,6 +34,8 @@ export type PracticeDeps = {
   openWork(ref?: ObjectRef): void;
   openSettings(): void;
   submit(): void;
+  /** One notice per newly arrived agent draft, with an action that opens it. */
+  notifyDraft(text: string, label: string, dismiss: string, open: () => void): void;
 };
 type State = {
   phase: 'loading' | 'off' | 'ready';
@@ -73,6 +76,31 @@ const keepFold = (id: string, open: boolean) => {
     /* this page only */
   }
 };
+const SEEN = 'rolecraft.aipm.drafts-seen.v1';
+const readSeen = (): Record<string, string[]> => {
+  try {
+    return JSON.parse(localStorage.getItem(SEEN) || '{}');
+  } catch {
+    return {};
+  }
+};
+const writeSeen = (v: Record<string, string[]>) => {
+  try {
+    localStorage.setItem(SEEN, JSON.stringify(v));
+  } catch {
+    /* this page only */
+  }
+};
+// The panel lists drafts once its own read returns: look for the draft for a few seconds.
+function locate(root: HTMLElement, id: string, tries = 15) {
+  const card =
+    root.querySelector<HTMLElement>(`[data-draft-id="${CSS.escape(id)}"]`) ??
+    root.querySelector<HTMLElement>('.aipm-design__draft');
+  if (card) {
+    card.scrollIntoView({ block: 'center' });
+    card.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
+  } else if (tries > 0) setTimeout(() => locate(root, id, tries - 1), 200);
+}
 const signature = (s: State) =>
   JSON.stringify([s.phase, s.raw ?? null, s.stale, s.error ?? null, s.busy, s.feature]);
 const reason = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -88,6 +116,44 @@ export function createAipmPractice(deps: PracticeDeps) {
   let missing: AipmFeatureId[] | null = null;
   let live: { key: string; el: HTMLElement } | null = null;
   let reveal = false;
+  let target: string | null = null;
+
+  function announceDrafts(a: Attempt, s: State) {
+    const guide = s.guide;
+    const drafts = s.progress?.drafts ?? [];
+    if (!guide || !drafts.length) return;
+    const seen = readSeen();
+    const known = new Set(seen[a.id] ?? []);
+    const fresh = drafts.filter((d) => !known.has(d.key));
+    if (!fresh.length) return;
+    for (const d of fresh) known.add(d.key);
+    writeSeen({ ...seen, [a.id]: [...known].slice(-50) });
+    const en = guide.language === 'en';
+    for (const d of fresh) {
+      const where = d.steps.map((id) => guide.steps[IDS.indexOf(id)].label).join(en ? ', ' : '、');
+      deps.notifyDraft(
+        en
+          ? `Your agent sent 1 draft${where ? `: ${where}` : ''}`
+          : `你的 Agent 交来 1 份草稿${where ? `：${where}` : ''}`,
+        en ? 'Review' : '去确认',
+        en ? 'Dismiss' : '关闭提示',
+        () => void openDraft(a, d),
+      );
+    }
+  }
+
+  /** Go to the draft's step, open the design panel there and bring that draft into view. */
+  async function openDraft(a: Attempt, d: { id: string; steps: StepId[] }) {
+    const s = stateOf(a);
+    if (!s || deps.current()?.id !== a.id) return;
+    const step = d.steps[0];
+    if (step && s.progress?.focus !== step) await choose(a, step);
+    s.feature = 'design';
+    reveal = true;
+    target = d.id;
+    open.set(a.id, true);
+    deps.redraw();
+  }
 
   const stateOf = (a: Attempt) => states.get(a.id);
   const asOfKey = (a: Attempt) => JSON.stringify(deps.dataHost(a)?.snapshot().asOf ?? null);
@@ -131,6 +197,7 @@ export function createAipmPractice(deps: PracticeDeps) {
         }),
       });
       if (missing === null) missing = await installAipmFeatures(host);
+      announceDrafts(a, s);
     } catch (failure) {
       let e = failure;
       // A new practice bound to the seven-step package: the person started it as a product
@@ -375,7 +442,8 @@ export function createAipmPractice(deps: PracticeDeps) {
     }
     // The feature keeps one element for this practice; a redraw of the stage moves it into the
     // new container instead of mounting it again, so what the person typed stays.
-    const key = `${a.id}:${id}`;
+    // A new focus is a new section: the panel opens on it afresh.
+    const key = `${a.id}:${id}:${s.progress?.focus ?? ''}`;
     if (live?.key !== key) {
       const el = document.createElement('div');
       el.className = 'aipm-feature__root';
@@ -389,6 +457,11 @@ export function createAipmPractice(deps: PracticeDeps) {
       reveal = false;
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
       root.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
+    }
+    if (target) {
+      const id = target;
+      target = null;
+      locate(live.el, id);
     }
   }
 
