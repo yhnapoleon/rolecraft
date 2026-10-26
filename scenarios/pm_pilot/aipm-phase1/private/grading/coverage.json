@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "aipm-coverage-3",
+  "revision": "aipm-coverage-4",
   "note": "Server-only. Labels and look_again name topics and sources, never the expected conclusion.",
   "items": [
     {
@@ -108,7 +108,11 @@
         "brief"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否把两件事分开写：公司对外靠什么业务服务客户（向企业客户提供企业应用实施与持续运维服务），以及这次内部知识助手直接帮谁（内部新员工、运营和行政支持人员）？把两者混为一谈，例如写成助手服务外部企业客户，判 wrong；两件事都写了且分开判 covered；只写了其中一件或都没写判 missing。",
+        "en": "Does this section keep two things apart: how the company serves its customers (enterprise application implementation and ongoing operations for business clients) and whom this internal knowledge assistant directly helps (new internal staff, operations and administrative support)? Merging them, for example saying the assistant serves external business clients, is wrong; both stated and kept apart is covered; only one or neither stated is missing."
+      }
     },
     {
       "id": "business.unknowns",
@@ -126,7 +130,11 @@
       },
       "look_again_materials": [],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否把资料没有提供的背景（公司规模、收入、投资回报等）标成未知或待确认，而不是自己假定？把这类数字或结论当作事实写出判 wrong；明确标为未知或待确认判 covered；完全没提判 missing。",
+        "en": "Does this section mark background the materials do not supply (company size, revenue, return on investment) as unknown or to be confirmed, rather than assuming it? Stating such figures or conclusions as fact is wrong; explicitly marking them unknown or to be confirmed is covered; not mentioning them is missing."
+      }
     },
     {
       "id": "stakeholders.approver",
@@ -232,7 +240,11 @@
         "interviews"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写出试点会让谁多干活、多干什么（例如行政支持台、技术负责人或项目助理的配合）？写出至少一类具体的人及其额外工作判 covered；断言没有人需要额外配合，或把额外工作安到与资料矛盾的人身上判 wrong；没写判 missing。",
+        "en": "Does this section say who gets extra work from the pilot and what it is (for example the administrative support desk, the technical lead or the project assistant)? Naming at least one concrete group and its extra work is covered; claiming nobody needs to pitch in, or assigning the work to someone the materials contradict, is wrong; saying nothing is missing."
+      }
     },
     {
       "id": "stakeholders.opinion_vs_approval",
@@ -252,7 +264,11 @@
         "approvals"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否把同事的意见和正式批准分开？资料中 Grace 负责试点决定与资源批准，Chen、Daniel 和许青的意见或支持不等于批准。把某位同事的支持写成已经批准判 wrong；明确区分意见与批准判 covered；完全没涉及批准判 missing。",
+        "en": "Does this section keep a colleague's view apart from formal approval? In the materials Grace decides the pilot and approves resources; views or support from Chen, Daniel or Xu Qing are not approvals. Treating a colleague's support as an approval is wrong; clearly separating views from approval is covered; not touching approval at all is missing."
+      }
     },
     {
       "id": "need.claim",
@@ -370,7 +386,11 @@
         "coordination"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了一个具体、可核对的事实或条件，一旦成立就说明不值得做或应缩小范围？泛泛的「可能有风险」不算。写了具体可核对的反证条件判 covered；只有空泛风险或没写判 missing；把本该推翻需求的事实当作支持证据（逻辑颠倒）判 wrong。",
+        "en": "Does this section name a concrete, checkable fact or condition that, if true, would make the pilot not worth doing or call for a narrower scope? A vague 'there may be risks' does not count. A concrete, checkable disconfirming condition is covered; only vague risk or nothing is missing; treating a disconfirming fact as supporting evidence (reversed logic) is wrong."
+      }
     },
     {
       "id": "need.next_check",
@@ -388,7 +408,11 @@
       },
       "look_again_materials": [],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了下一步可执行的最小核对：看哪份数据、问谁、抽查多少？写出可执行的具体核对判 covered；只说「进一步调研」之类判 missing；下一步依赖资料里明确不存在的数据，例如 SD-120 导出没有的「坐席实际操作分钟」字段，却当作现成数据，判 wrong。",
+        "en": "Does this section give a small, doable next check: which data, whom to ask, how many cases to sample? A concrete, doable check is covered; only 'research further' or similar is missing; relying on data the materials say does not exist, such as a 'minutes of active staff work' field the SD-120 export lacks, as if it were available, is wrong."
+      }
     },
     {
       "id": "boundary.authority",
@@ -492,7 +516,11 @@
         "interviews"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写明助手答错或答不了时由哪个具体角色接手、怎样转交？写到具体角色和转交方式判 covered；只说「转人工」而没写谁判 missing；声称助手会自动创建人工工单或自动转交（资料说转交提示不会自动创建工单）判 wrong。",
+        "en": "Does this section say which specific role picks up when the assistant is wrong or cannot answer, and how it is handed over? A named role and hand-off is covered; only 'escalate to a human' without who is missing; claiming the assistant automatically creates a human ticket or hands off by itself (the materials say the hand-off prompt creates no ticket) is wrong."
+      }
     },
     {
       "id": "solution.selected",
@@ -692,7 +720,11 @@
         "technical"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了出问题时回退到什么（哪项配置或哪个版本）以及由谁决定回退？写出回退对象和负责人判 covered；只说「有问题就回滚」判 missing；把回退写成助手自动完成、没有人负责判 wrong。",
+        "en": "Does this section say what to roll back to when something goes wrong (which setting or version) and who decides? A rollback target and an owner is covered; only 'roll back if there is a problem' is missing; describing rollback as something the assistant does on its own with nobody responsible is wrong."
+      }
     },
     {
       "id": "assurance.signal",
@@ -712,7 +744,11 @@
         "demand"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了上线后要观察的具体信号以及观察窗口？写出具体信号和窗口判 covered；只说「持续观察」判 missing；把结单历时（duration_minutes，包含等待和排队）当作人工节省的信号判 wrong。",
+        "en": "Does this section name the specific signals to watch after launch and the observation window? Concrete signals with a window is covered; only 'keep monitoring' is missing; treating elapsed case time (duration_minutes, which includes waiting and queueing) as a signal of labour saved is wrong."
+      }
     },
     {
       "id": "decision.intended",
@@ -753,7 +789,11 @@
         "approvals"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写清决定附带的条件和仍未解决的事？涉及资源时是否在审批上限内（容量 60 人、开发资源 6 人日、期限第 10 天）。条件和未决事项写得具体判 covered；只写结论、没有条件判 missing；承诺超出审批上限，或把尚未批准的资源写成已批准判 wrong。",
+        "en": "Does this section state the conditions attached to the decision and what is still unresolved? Where resources are involved, are they within the approval limits (capacity 60 people, 6 development days, deadline day 10)? Concrete conditions and open items is covered; a conclusion without conditions is missing; committing beyond the approval limits, or treating unapproved resources as approved, is wrong."
+      }
     },
     {
       "id": "decision.self_changes",
