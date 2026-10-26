@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-phase1-draft-1",
+  "company_approval": "pending_user_confirmation",
+  "files": {
+    "public/company.en.json": "92753f037267326868667cec0f8b010f1879d7c88f8c40a5ed623ecf71a65a92",
+    "public/company.zh.json": "c7e15631bd0159d63e59113a6de1cb67ddc84d0b5aaf43574cb93a3f51f1b218",
+    "public/guide.en.json": "8e4aa3321ee4366f0d3f74e37acc5c14df4b3734506ebd15794557f73644d3b7",
+    "public/guide.zh.json": "3069c1ee9aaad0d575c40460a5a2bc1fe5413c0e96cf1e1f0aa01119971e0adb",
+    "public/patterns.en.json": "5d4631638da4b1e6aa20ddb5135272dcc92e17485d736ae5ef1c5b5372062d00",
+    "public/patterns.zh.json": "e494b682084279e0653d5e83ac09670c0dbde4a14636803c982cd7435197af12"
+  },
+  "public_prefix": "public/",
+  "private_prefix": "private/grading/",
+  "base_installation": "scenarios/pm_pilot/v2/installed/current.json",
+  "completion": "g0_l1_only",
+  "missing_owners": [
+    "L2",
+    "L3"
+  ]
+}

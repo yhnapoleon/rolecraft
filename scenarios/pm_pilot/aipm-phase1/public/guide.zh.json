@@ -3,241 +3,330 @@
   "experience_revision": "aipm-phase1-v1",
   "content_revision": "aipm-phase1-draft-1",
   "work_language": "zh",
-  "completion_meaning": "work_recorded_not_mastery",
   "steps": [
     {
       "id": "business",
       "order": 1,
       "label": "看懂业务",
       "goal": "分清公司经营业务和本次内部工具任务。",
-      "summary": "先看公司一页纸，再核对 Grace 的委托。这次直接服务内部人员；公司对外经营什么，和助手负责什么，要分别说清。",
-      "source": "authored_guidance",
       "expected_outputs": [
         "业务说明与来源"
       ],
-      "questions": [
+      "help": [
         {
-          "role": "manager",
-          "text": "公司靠什么业务服务客户？"
+          "level": "direction",
+          "text": "分清公司经营业务和本次内部工具任务。",
+          "summary": "先看公司一页纸，再核对 Grace 的委托。这次直接服务内部人员；公司对外经营什么，和助手负责什么，要分别说清。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "公司靠什么业务服务客户？"
+            },
+            {
+              "role": "business",
+              "text": "这次试点直接帮谁？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "写下业务理解"
+          }
         },
         {
-          "role": "business",
-          "text": "这次试点直接帮谁？"
+          "level": "explanation",
+          "text": "试着用两句话分别说明公司的服务和本次助手的用户；不确定的背景标为待确认。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief"
+          ]
         }
       ],
-      "help": {
-        "direction": "分清公司经营业务和本次内部工具任务。",
-        "explanation": "试着用两句话分别说明公司的服务和本次助手的用户；不确定的背景标为待确认。",
-        "material_ids": [
-          "company",
-          "brief"
-        ]
-      },
-      "primary_action": {
-        "id": "open_design",
-        "label": "写下业务理解"
-      }
+      "suggested_questions": [
+        "公司靠什么业务服务客户？",
+        "这次试点直接帮谁？"
+      ]
     },
     {
       "id": "stakeholders",
       "order": 2,
       "label": "用户与相关方",
       "goal": "区分使用者、批准者和承担后果的人。",
-      "summary": "候选用户不等于已邀请用户。问清谁使用、谁批准、谁接手异常；同事的意见要和正式批准分开。",
-      "source": "authored_guidance",
       "expected_outputs": [
         "用户与责任记录"
       ],
-      "questions": [
+      "help": [
         {
-          "role": "business",
-          "text": "谁有这个问题，谁会承担额外工作？"
+          "level": "direction",
+          "text": "区分使用者、批准者和承担后果的人。",
+          "summary": "候选用户不等于已邀请用户。问清谁使用、谁批准、谁接手异常；同事的意见要和正式批准分开。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "谁有这个问题，谁会承担额外工作？"
+            },
+            {
+              "role": "manager",
+              "text": "谁批准范围与资源？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "记录用户与责任"
+          }
         },
         {
-          "role": "manager",
-          "text": "谁批准范围与资源？"
+          "level": "explanation",
+          "text": "一个人可能兼任多个角色；先记下一项需要核实的责任，再找相应来源。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "user_groups",
+            "interviews",
+            "approvals"
+          ]
         }
       ],
-      "help": {
-        "direction": "区分使用者、批准者和承担后果的人。",
-        "explanation": "一个人可能兼任多个角色；先记下一项需要核实的责任，再找相应来源。",
-        "material_ids": [
-          "user_groups",
-          "interviews",
-          "approvals"
-        ]
-      },
-      "primary_action": {
-        "id": "open_design",
-        "label": "记录用户与责任"
-      }
+      "suggested_questions": [
+        "谁有这个问题，谁会承担额外工作？",
+        "谁批准范围与资源？"
+      ]
     },
     {
       "id": "need",
       "order": 3,
       "label": "验证真需求",
       "goal": "让需求假设可以被证据推翻。",
-      "summary": "从一个具体问题开始，找支持证据，也留一个反证或未知。时间字段要看口径，结单时长不能直接当作节省的人工工时。",
-      "source": "authored_guidance",
       "expected_outputs": [
         "需求假设、反证与验证办法"
       ],
-      "questions": [
+      "help": [
         {
-          "role": "business",
-          "text": "这份收益测算的时间怎么统计？"
+          "level": "direction",
+          "text": "让需求假设可以被证据推翻。",
+          "summary": "从一个具体问题开始，找支持证据，也留一个反证或未知。时间字段要看口径，结单时长不能直接当作节省的人工工时。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "这份收益测算的时间怎么统计？"
+            },
+            {
+              "role": "business",
+              "text": "什么事实会让我们不做？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "写下假设与验证办法"
+          }
         },
         {
-          "role": "business",
-          "text": "什么事实会让我们不做？"
+          "level": "explanation",
+          "text": "问这项指标的单位、样本范围和观察窗口；没有证据的收益保留为假设。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "demand",
+            "business_case",
+            "interviews"
+          ]
         }
       ],
-      "help": {
-        "direction": "让需求假设可以被证据推翻。",
-        "explanation": "问这项指标的单位、样本范围和观察窗口；没有证据的收益保留为假设。",
-        "material_ids": [
-          "demand",
-          "business_case",
-          "interviews"
-        ]
-      },
-      "primary_action": {
-        "id": "open_design",
-        "label": "写下假设与验证办法"
-      }
+      "suggested_questions": [
+        "这份收益测算的时间怎么统计？",
+        "什么事实会让我们不做？"
+      ]
     },
     {
       "id": "boundary",
       "order": 4,
       "label": "划定 AI 边界",
       "goal": "明确要回答什么、要做什么，以及谁能批准。",
-      "summary": "把咨询拆成回答、计算、拟稿或实际动作。先弄清人类权限和工具是否存在，再选择处理办法。",
-      "source": "authored_guidance",
       "expected_outputs": [
         "有版本的需求分拣"
       ],
-      "questions": [
+      "help": [
         {
-          "role": "technical",
-          "text": "哪些动作算规则，哪些要检索？"
+          "level": "direction",
+          "text": "明确要回答什么、要做什么，以及谁能批准。",
+          "summary": "把咨询拆成回答、计算、拟稿或实际动作。先弄清人类权限和工具是否存在，再选择处理办法。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "哪些动作算规则，哪些要检索？"
+            },
+            {
+              "role": "manager",
+              "text": "谁有最终批准权？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "拆分并分拣请求"
+          }
         },
         {
-          "role": "manager",
-          "text": "谁有最终批准权？"
+          "level": "explanation",
+          "text": "同一请求可以拆开：检索流程、准备草稿和最终批准可能由不同主体完成。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "policy",
+            "approvals",
+            "faq"
+          ]
         }
       ],
-      "help": {
-        "direction": "明确要回答什么、要做什么，以及谁能批准。",
-        "explanation": "同一请求可以拆开：检索流程、准备草稿和最终批准可能由不同主体完成。",
-        "material_ids": [
-          "policy",
-          "approvals",
-          "faq"
-        ]
-      },
-      "primary_action": {
-        "id": "open_design",
-        "label": "拆分并分拣请求"
-      }
+      "suggested_questions": [
+        "哪些动作算规则，哪些要检索？",
+        "谁有最终批准权？"
+      ]
     },
     {
       "id": "solution",
       "order": 5,
       "label": "系统方案与市场做法",
       "goal": "比较可行办法，分清方案和实际配置。",
-      "summary": "从分拣结果比较至少两个实质办法。市场卡只是公开方法参考；保存方案不会替你应用设置或申请资源。",
-      "source": "authored_guidance",
       "expected_outputs": [
         "方案比较与依赖"
       ],
-      "questions": [
+      "help": [
         {
-          "role": "technical",
-          "text": "这个方案依赖哪些开发项？"
+          "level": "direction",
+          "text": "比较可行办法，分清方案和实际配置。",
+          "summary": "从分拣结果比较至少两个实质办法。市场卡只是公开方法参考；保存方案不会替你应用设置或申请资源。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "这个方案依赖哪些开发项？"
+            },
+            {
+              "role": "manager",
+              "text": "资源不足时可以怎样取舍？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "比较并保存方案"
+          }
         },
         {
-          "role": "manager",
-          "text": "资源不足时可以怎样取舍？"
+          "level": "explanation",
+          "text": "比较代价、资料更新与人工责任。尚不存在的工具只能进入拟议方案。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "technical",
+            "approvals"
+          ]
         }
       ],
-      "help": {
-        "direction": "比较可行办法，分清方案和实际配置。",
-        "explanation": "比较代价、资料更新与人工责任。尚不存在的工具只能进入拟议方案。",
-        "material_ids": [
-          "technical",
-          "approvals"
-        ]
-      },
-      "primary_action": {
-        "id": "open_design",
-        "label": "比较并保存方案"
-      }
+      "suggested_questions": [
+        "这个方案依赖哪些开发项？",
+        "资源不足时可以怎样取舍？"
+      ]
     },
     {
       "id": "assurance",
       "order": 6,
       "label": "评测、监控与回退",
       "goal": "用明确预期验证风险，留下观察和退路。",
-      "summary": "先保存每题的预期和依据，再运行支持的题目。运行完成、质量判定和未支持分开看；监控与回退先写清负责人和触发条件。",
-      "source": "authored_guidance",
       "expected_outputs": [
         "预期、测试与观察／回退计划"
       ],
-      "questions": [
+      "help": [
         {
-          "role": "technical",
-          "text": "哪一题最可能推翻这个方案？"
+          "level": "direction",
+          "text": "用明确预期验证风险，留下观察和退路。",
+          "summary": "先保存每题的预期和依据，再运行支持的题目。运行完成、质量判定和未支持分开看；监控与回退先写清负责人和触发条件。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "哪一题最可能推翻这个方案？"
+            },
+            {
+              "role": "business",
+              "text": "出错后业务上由谁接手？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_evaluation",
+            "label": "打开评测计划"
+          }
         },
         {
-          "role": "business",
-          "text": "出错后业务上由谁接手？"
+          "level": "explanation",
+          "text": "给每题保留预期来源，给异常指定负责人。计划中的告警不等于已经部署。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "failures",
+            "technical"
+          ]
         }
       ],
-      "help": {
-        "direction": "用明确预期验证风险，留下观察和退路。",
-        "explanation": "给每题保留预期来源，给异常指定负责人。计划中的告警不等于已经部署。",
-        "material_ids": [
-          "failures",
-          "technical"
-        ]
-      },
-      "primary_action": {
-        "id": "open_evaluation",
-        "label": "打开评测计划"
-      }
+      "suggested_questions": [
+        "哪一题最可能推翻这个方案？",
+        "出错后业务上由谁接手？"
+      ]
     },
     {
       "id": "decision",
       "order": 7,
       "label": "上线决策",
       "goal": "对确切版本和承诺条件作出决定。",
-      "summary": "核对将交付的作品版本、依据和未决条件。你可以推进、缩范围或暂停；正式反馈准备好后，再关联修订。",
-      "source": "authored_guidance",
       "expected_outputs": [
         "精确版本交付与关联修订"
       ],
-      "questions": [
+      "help": [
         {
-          "role": "manager",
-          "text": "在这些条件下，我能承诺什么？"
+          "level": "direction",
+          "text": "对确切版本和承诺条件作出决定。",
+          "summary": "核对将交付的作品版本、依据和未决条件。你可以推进、缩范围或暂停；正式反馈准备好后，再关联修订。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "在这些条件下，我能承诺什么？"
+            },
+            {
+              "role": "technical",
+              "text": "相较上次，哪些变化需要重新核对？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_submission",
+            "label": "核对并交付"
+          }
         },
         {
-          "role": "technical",
-          "text": "相较上次，哪些变化需要重新核对？"
+          "level": "explanation",
+          "text": "没有覆盖的工作如实保留；交付记录存在不代表语义判断都已核实。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief",
+            "approvals"
+          ]
         }
       ],
-      "help": {
-        "direction": "对确切版本和承诺条件作出决定。",
-        "explanation": "没有覆盖的工作如实保留；交付记录存在不代表语义判断都已核实。",
-        "material_ids": [
-          "brief",
-          "approvals"
-        ]
-      },
-      "primary_action": {
-        "id": "open_submission",
-        "label": "核对并交付"
-      }
+      "suggested_questions": [
+        "在这些条件下，我能承诺什么？",
+        "相较上次，哪些变化需要重新核对？"
+      ]
     }
   ]
 }

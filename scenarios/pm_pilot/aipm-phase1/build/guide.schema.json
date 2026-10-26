@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rolecraft:aipm:guide:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experience_revision",
+    "content_revision",
+    "work_language",
+    "steps"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "experience_revision": {
+      "const": "aipm-phase1-v1"
+    },
+    "content_revision": {
+      "type": "string"
+    },
+    "work_language": {
+      "enum": [
+        "zh",
+        "en"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "order",
+          "label",
+          "goal",
+          "expected_outputs",
+          "suggested_questions",
+          "help"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "business",
+              "stakeholders",
+              "need",
+              "boundary",
+              "solution",
+              "assurance",
+              "decision"
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "label": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "expected_outputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggested_questions": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "string"
+            }
+          },
+          "help": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}
