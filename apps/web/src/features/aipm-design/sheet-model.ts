@@ -1,6 +1,12 @@
 /** One worksheet = one PRD section. The big box is a list of blocks so that headings and
  * quotes keep their structure, and the PRD text stays plain for evaluation and colleagues. */
-import type { AipmDesign, Decision, EvidenceRefV2, StepId } from '../../aipm/types';
+import type {
+  AipmDesign,
+  Decision,
+  EvidenceRefV2,
+  MetricDeclaration,
+  StepId,
+} from '../../aipm/types';
 
 export type Block =
   | { id: string; type: 'p'; text: string }
@@ -30,7 +36,7 @@ export type SheetContent = {
   goal: string;
   angles: Angle[];
   choice?: SheetChoice;
-  structure?: 'triage' | 'diagram' | 'evaluation';
+  structure?: 'triage' | 'diagram' | 'evaluation' | 'metric';
   colleagues: ('manager' | 'business' | 'tech')[];
 };
 export type DesignContent = { sheets: Record<StepId, SheetContent>; placeholder: string };
@@ -206,3 +212,34 @@ export const headings = (blocks: Block[]) =>
 export type SheetDraft = { blocks: Block[]; choice: string };
 export const sheetKey = (s: SheetDraft) =>
   JSON.stringify([toText(s.blocks), s.choice, quoteRefs(s.blocks)]);
+
+/** ③'s optional metric block: structured input of the metric_scope rule, on the main need. */
+export const readMetric = (design: SheetDesign) =>
+  design.needs?.find((n) => n.id === MAIN_NEED)?.metric ?? null;
+export function writeMetric(
+  design: SheetDesign,
+  claim: string,
+  patch: Partial<MetricDeclaration>,
+): SheetDesign {
+  // The need's status is the learner's own choice; without it nothing is written.
+  if (!claim) return design;
+  const main = writeChoice('need', design, claim).needs?.find((n) => n.id === MAIN_NEED);
+  if (!main) return design;
+  const metric: MetricDeclaration = {
+    kind: 'other',
+    source_field: '',
+    unit: '',
+    population: '',
+    window: '',
+    formula_description: '',
+    claimed_interpretation: '',
+    ...main.metric,
+    ...patch,
+  };
+  return {
+    ...design,
+    needs: [{ ...main, metric }, ...(design.needs ?? []).filter((n) => n.id !== MAIN_NEED)],
+  };
+}
+export const metricKey = (design: SheetDesign | null | undefined) =>
+  JSON.stringify(design ? readMetric(design) : null);

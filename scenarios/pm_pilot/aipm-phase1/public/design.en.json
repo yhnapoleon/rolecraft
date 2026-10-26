@@ -249,7 +249,8 @@
             "label": "Hard to say yet"
           }
         ]
-      }
+      },
+      "structure": "metric"
     },
     "boundary": {
       "order": 4,
