@@ -4,19 +4,24 @@ L4 owns HTTP registration. This test installs only the L3 models into an isolate
 store and executes their Mutation handlers; no production whitelist is bypassed.
 """
 
+from contextlib import contextmanager
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 
 from career_lab.aipm.evaluation.models import BatchRead
 from career_lab.aipm.evaluation.service import OBJECT_MODELS, EvaluationService
 from career_lab.aipm.types import AipmDesign, AipmProfile, TriageRow
 from career_lab.api.vertical_runtime import create_runtime_app
-from career_lab.contracts.v2 import Command, ObjectRef
+from career_lab.contracts.v2 import Command, ObjectRef, ProtocolError
 from career_lab.storage.v2_store import Mutation, ObjectWrite
 
 
-def test_real_store_preserves_original_request_results_and_assessment_history(tmp_path):
+@contextmanager
+def seeded_batch(tmp_path):
+    """Real store and Gateway with a synthetic enrollment, design, plan and one created batch."""
     app = create_runtime_app("sqlite:///" + str(tmp_path / "evaluation.db"))
     store = app.state.v2_store
     gateway = app.state.gateway
@@ -121,7 +126,33 @@ def test_real_store_preserves_original_request_results_and_assessment_history(tm
         )
         created_batch = store.execute(auth, create_cmd, service.create)
         batch = created_batch.result["batch"]
-        assert store.execute(auth, create_cmd, service.create).replayed
+        yield SimpleNamespace(
+            store=store,
+            gateway=gateway,
+            auth=auth,
+            sid=sid,
+            service=service,
+            make=make,
+            case_id=case_id,
+            batch=batch,
+            create=create_cmd,
+        )
+    store.db.engine.dispose()
+
+
+def test_real_store_preserves_original_request_results_and_assessment_history(tmp_path):
+    with seeded_batch(tmp_path) as s:
+        store, gateway, auth, sid, service, make, case_id, batch = (
+            s.store,
+            s.gateway,
+            s.auth,
+            s.sid,
+            s.service,
+            s.make,
+            s.case_id,
+            s.batch,
+        )
+        assert store.execute(auth, s.create, service.create).replayed
         prepare = make(
             "aipm.batch.update",
             {
@@ -177,4 +208,59 @@ def test_real_store_preserves_original_request_results_and_assessment_history(tm
         assert len(read["assessments"]) == 2
         assert read["summary"]["all"]["satisfaction_rate"] is None
         assert read["summary"]["all"]["unknown"] == 1
-    store.db.engine.dispose()
+
+
+def _update(s, action, revision, key):
+    payload = {
+        "batch_id": s.batch["id"],
+        "expected_revision": revision,
+        "action": action,
+        "case_id": s.case_id,
+    }
+    return s.store.execute(s.auth, s.make("aipm.batch.update", payload, key), s.service.update)
+
+
+def _read(s):
+    return s.store.query(
+        s.auth, lambda view: s.service.read(view, BatchRead(batch_id=s.batch["id"]), s.auth)
+    ).result
+
+
+def test_unreceived_original_is_sent_again_only_while_its_bindings_hold(tmp_path):
+    with seeded_batch(tmp_path) as s:
+        original = _update(s, "prepare", 1, "prepare").result["command"]
+        # The send never reached the server. Reading it back writes nothing.
+        before = s.store.view(s.auth).state.workspace_revision
+        lost = _update(s, "reconcile", 2, "lost")
+        assert lost.result["batch"]["revision"] == 2
+        assert s.store.view(s.auth).state.workspace_revision == before
+        assert _read(s)["recovery"] == {s.case_id: "send_again"}
+        # The person presses Send again: the same original, same request_id.
+        s.gateway.dispatch(s.auth, "tests.create", original)
+        assert _read(s)["recovery"] == {s.case_id: "in_progress"}
+        with pytest.raises(ProtocolError, match="request exists"):
+            _update(s, "reprepare", 2, "too-late")
+        done = _update(s, "reconcile", 2, "found").result["batch"]["cases"][0]
+        assert done["status"] == "completed"
+        assert done["request_id"] == original["request_id"]
+        assert len([o for o in s.store.view(s.auth).objects if o.ref.kind == "test"]) == 1
+
+
+def test_moved_bindings_require_a_new_request_and_keep_the_old_one_out_of_counts(tmp_path):
+    with seeded_batch(tmp_path) as s:
+        original = _update(s, "prepare", 1, "prepare").result["command"]
+        # Any later write moves the workspace revision the original was bound to.
+        _update(s, "monitoring", 2, "unrelated-write")
+        assert _read(s)["recovery"] == {s.case_id: "reprepare"}
+        fresh = _update(s, "reprepare", 3, "reprepare").result["batch"]["cases"][0]
+        assert fresh["original_command"] is None
+        assert fresh["request_id"] != original["request_id"]
+        assert [a["request_id"] for a in fresh["abandoned"]] == [original["request_id"]]
+        command = _update(s, "prepare", 4, "prepare-again").result["command"]
+        s.gateway.dispatch(s.auth, "tests.create", command)
+        _update(s, "reconcile", 5, "found")
+        summary = _read(s)["summary"]["all"]
+        assert (summary["total"], summary["runnable"], summary["completed"]) == (1, 1, 1)
+        # The abandoned original was never received and is never sent.
+        with pytest.raises(ProtocolError, match="request not found"):
+            s.service.request_reader(s.auth, original["request_id"])

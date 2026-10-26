@@ -21,6 +21,7 @@ from career_lab.storage.reference_graph import references
 from career_lab.storage.v2_store import Mutation, ObjectWrite
 
 from .models import (
+    AbandonedAttempt,
     AssessmentRecord,
     BatchCreate,
     BatchRead,
@@ -84,6 +85,16 @@ def _changed(view, batch):
         _baseline(view) != batch.baseline_hash
         or _latest(view, "product", batch.plan_ref.object_id).ref != batch.plan_ref
         or _latest(view, "aipm_design", batch.design_ref.object_id).ref != batch.design_ref
+    )
+
+
+def _resendable(view, batch, row):
+    """The saved original may go out again only if nothing it was bound to has moved."""
+    original = Command.model_validate(row.original_command)
+    return (
+        not _changed(view, batch)
+        and original.expected_version == view.state.business_seq
+        and original.expected_workspace_revision == view.state.workspace_revision
     )
 
 
@@ -233,25 +244,68 @@ class EvaluationService:
                     return _mutation(
                         updated, batch.revision, command=original.model_dump(mode="json")
                     )
+            elif payload.action == "reprepare":
+                replacement = self._reprepare(view, auth, batch, row)
+                updates["cases"] = tuple(replacement if c.id == row.id else c for c in batch.cases)
             else:
                 replacement = self._reconcile(view, auth, row)
+                pause = "conditions_changed" if changed else batch.pause_reason
+                if replacement == row and pause == batch.pause_reason:
+                    # Nothing learned: writing would move the workspace revision and make the
+                    # saved original unsendable, so the reading leaves no trace.
+                    return Mutation(result={"batch": batch.model_dump(mode="json")})
                 updates["cases"] = tuple(replacement if c.id == row.id else c for c in batch.cases)
         if changed:
             updates["pause_reason"] = "conditions_changed"
         return _mutation(batch.model_copy(update=updates), batch.revision)
 
-    def _reconcile(self, view, auth, row):
-        if row.status != "pending" or row.original_command is None:
-            return row
+    def _lookup(self, auth, row):
         if self.request_reader is None:
             raise ProtocolError("aipm_request_lookup_unavailable", status=503)
         try:
             result = self.request_reader(auth, row.request_id)
         except ProtocolError as exc:
             if exc.code == "request_not_found":
-                return row  # Never resubmit an uncertain original, even on another device.
+                return None
             raise
-        result = RequestResult.model_validate(result)
+        return RequestResult.model_validate(result)
+
+    def _recovery(self, view, auth, batch, row):
+        """Derived on every read, never stored: found, send the same original, or reprepare."""
+        if self._lookup(auth, row) is not None:
+            return "in_progress"
+        return "send_again" if _resendable(view, batch, row) else "reprepare"
+
+    def _reprepare(self, view, auth, batch, row):
+        if row.status != "pending" or row.original_command is None:
+            raise ProtocolError("aipm_case_not_prepared", status=409)
+        if self._lookup(auth, row) is not None:
+            # The server has it; abandoning it could run the same case twice.
+            raise ProtocolError("aipm_request_exists", status=409)
+        if _resendable(view, batch, row):
+            raise ProtocolError("aipm_resend_available", status=409)
+        abandoned = (
+            *row.abandoned,
+            AbandonedAttempt(
+                request_id=row.request_id,
+                original_command=row.original_command,
+                batch_revision=batch.revision,
+            ),
+        )
+        return row.model_copy(
+            update={
+                "abandoned": abandoned,
+                "request_id": "aipm-test-" + digest([batch.id, row.id, len(abandoned)])[:24],
+                "original_command": None,
+            }
+        )
+
+    def _reconcile(self, view, auth, row):
+        if row.status != "pending" or row.original_command is None:
+            return row
+        result = self._lookup(auth, row)
+        if result is None:
+            return row  # Never resubmit automatically; the learner decides on a read.
         if (
             result.session_id != auth.session_id
             or result.request_id != row.request_id
@@ -333,9 +387,15 @@ class EvaluationService:
                 continue
             assessments.append(item.model_dump(mode="json"))
             latest[item.case_id] = item.result
+        recovery = {
+            c.id: self._recovery(view, auth, batch, c)
+            for c in batch.cases
+            if c.status == "pending" and c.original_command is not None and self.request_reader
+        }
         return V2Response(
             result={
                 "batch": batch.model_dump(mode="json"),
+                "recovery": recovery,
                 "assessments": assessments,
                 "summary": summarize([c.model_dump(mode="json") for c in batch.cases], latest),
             }
