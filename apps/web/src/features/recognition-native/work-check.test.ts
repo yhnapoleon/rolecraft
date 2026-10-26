@@ -13,7 +13,7 @@ describe('saved-version evidence checks', () => {
     const html = businessSentencesHtml(preview, 'en');
     expect(html).toContain('wrong match');
     expect(html).toContain('Policy · v1');
-    expect(html).toContain('Contradicted');
+    expect(html).toContain('Conflicts with the source');
     expect(html).not.toContain('Deferred judgement</span>');
     expect(html).not.toMatch(/[\u4e00-\u9fff]/);
   });
@@ -21,8 +21,8 @@ describe('saved-version evidence checks', () => {
     const unit = preview.units?.[0];
     if (!unit) throw Error('fixture');
     const html = businessSentencesHtml({ ...preview, units: [{ ...unit, decision: 'defer' }] }, 'zh');
-    expect(html).toContain('自动判定的预期代价较高');
-    expect(html).toContain('暂缓判定');
+    expect(html).toContain('这次核对把判断留给你');
+    expect(html).toContain('待你核验');
     expect(html).not.toContain('>矛盾</span>');
   });
   it('invalidates an in-flight response immediately when the text changes', async () => {
@@ -57,7 +57,8 @@ describe('saved-version evidence checks', () => {
     const c = createWorkChecks();
     await c.run('work', 'v1', async () => ({ enabled: true, recognition: preview }), () => true);
     expect(workCheckHtml(c.get('work'), 'en', 'v2')).toContain('out of date');
-    expect(workCheckHtml(c.get('work'), 'en', 'v1', true)).not.toContain('data-sentence-state');
+    expect(workCheckHtml(c.get('work'), 'en', 'v1', true)).toContain('data-work-check-state="stale"');
+    expect(workCheckHtml(c.get('work'), 'en', 'v1', true)).toContain('wrong match');
   });
   it('escapes both the work and source text', () => {
     const unit = preview.units?.[0]; if (!unit) throw Error('fixture');

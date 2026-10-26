@@ -1,10 +1,10 @@
 import type { CopyTable } from '../results-native/localization';
 
-/** Recognition lens and the quiet default view. Pages pass records; every word lives here.
+/** Show recognition details and the quiet default view. Pages pass records; every word lives here.
  * Course categories follow the 190 common table (recognizer → method → course category). */
 const zh = {
   // Menu and page entry
-  lens: '识别透镜',
+  lens: '技术透视',
   lab: '系统剖面',
   labLink: '系统剖面：看每一步识别的中间结果 →',
   // Course categories
@@ -175,7 +175,7 @@ const zh = {
 } as const;
 
 const en: Record<keyof typeof zh, string> = {
-  lens: 'Recognition lens',
+  lens: 'Show recognition details',
   lab: 'System profile',
   labLink: 'System profile: see every recognition step →',
   cat_supervised_deep: 'Supervised · Deep learning',

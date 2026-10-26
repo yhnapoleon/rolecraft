@@ -14,6 +14,7 @@ import { REGISTER, rowMetricsHtml } from '../recognition-lab/register';
 import type { Language } from '../results-native/localization';
 import { arbiterOutcome, type RecognitionRecord } from './badge';
 import './profile-card.css';
+import { openRecordInspector } from './record-inspector';
 import { comparisonFor, singleAnswerAmount, type TestRecord } from './test-comparison';
 import { actualMethod } from './actual-method';
 
@@ -404,17 +405,10 @@ export function installCardToggles(language: () => Language) {
     const card = document.getElementById(key.dataset.rcCard ?? '');
     if (!card) return;
     event.preventDefault();
-    const open = card.hidden;
-    // One card open per row: opening another closes the first.
-    const row = key.closest('.rc-sigs-wrap');
-    for (const other of row?.querySelectorAll<HTMLElement>('[data-rc-card][aria-expanded="true"]') ?? []) {
-      if (other === key) continue;
-      other.setAttribute('aria-expanded', 'false');
-      const c = document.getElementById(other.dataset.rcCard ?? '');
-      if (c) c.hidden = true;
-    }
-    card.hidden = !open;
-    key.setAttribute('aria-expanded', String(open));
-    if (open) void fillCardMetrics(card, language());
+    const title = card.querySelector('.rc-card__name')?.textContent ?? (language() === 'zh' ? '系统如何判断' : 'How this was assessed');
+    const record = card.querySelector('.rc-card__now')?.innerHTML ?? '';
+    const methods = card.querySelector('.rc-card__how')?.innerHTML ?? '';
+    const inspector = openRecordInspector(key, title, record, methods, language());
+    void fillCardMetrics(inspector, language());
   });
 }

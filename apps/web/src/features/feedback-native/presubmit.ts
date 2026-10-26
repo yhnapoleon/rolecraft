@@ -12,8 +12,7 @@ import { PRESUBMIT_COPY, type PresubmitKey } from './presubmit-copy';
 import { type Counted, feedbackClass, feedbackCounts } from './short-summary';
 import type { PreviewRecognition } from '../recognition-native/chain';
 import { LENS_COPY } from '../recognition-native/lens-copy';
-import { lensOn, onLensChange } from '../recognition-native/lens';
-import { renderSentenceLens } from '../recognition-native/sentences';
+import { onLensChange } from '../recognition-native/lens';
 
 import { renderBusinessSentences } from '../recognition-native/business-sentences';
 
@@ -535,11 +534,9 @@ export function mountPresubmitCard(
   rec.dataset.presubmitRecognition = '';
   const lens = (key: keyof typeof LENS_COPY.zh, values?: Values) =>
     copyText(LENS_COPY, language, key, values);
-  const chains = new Set<number>();
   let sentences: SentencePass = { kind: 'idle' };
   let ticker: ReturnType<typeof setInterval> | undefined;
-  // The reading plays when the sentences arrive with the lens open, or when the lens opens.
-  let playNext = false;
+  // Product checks stay visible; changing technical view only redraws presentation.
   function drawSentences() {
     clearInterval(ticker);
     ticker = undefined;
@@ -559,18 +556,8 @@ export function mountPresubmitCard(
       rec.replaceChildren(stage, el('p', lens('stage_keepWriting'), 'presubmit__muted'));
     } else if (pass.kind === 'ready') {
       rec.replaceChildren(
-        lensOn()
-          ? renderSentenceLens(doc, {
-              preview: pass.preview,
-              language,
-              open: chains,
-              play: playNext,
-              // The submission dialog shows Replay in its header, beside the lens switch.
-              replay: false,
-            })
-          : renderBusinessSentences(doc, pass.preview, language),
+        renderBusinessSentences(doc, pass.preview, language),
       );
-      playNext = false;
     } else if (pass.kind === 'failed') rec.replaceChildren(el('p', lens('stage_failed'), 'presubmit__muted'));
     else if (pass.kind === 'disabled' || pass.kind === 'empty') rec.replaceChildren(el('p', language === 'zh' ? (pass.kind === 'disabled' ? '未启用识别，未生成逐句结论。' : '本次没有返回逐句结论，不能视为通过。') : (pass.kind === 'disabled' ? 'Recognition is not enabled; no sentence judgements were generated.' : 'No sentence judgements were returned; this is not a pass.'), 'presubmit__muted'));
     else rec.replaceChildren();
@@ -579,14 +566,11 @@ export function mountPresubmitCard(
   const pass = createSentencePass({
     recognize: options.recognize,
     show: (next) => {
-      if (next.kind === 'ready' && sentences.kind !== 'ready') playNext = true;
       sentences = next;
-      if (next.kind !== 'ready') chains.clear();
       drawSentences();
     },
   });
-  const unlens = onLensChange((on) => {
-    playNext = on;
+  const unlens = onLensChange(() => {
     drawSentences();
   });
   // Which choice produced each check, so the sentence step asks about the same one.

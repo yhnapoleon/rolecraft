@@ -1,3 +1,5 @@
+import { inspectorEntryHtml, methodsHtml, escapeCheck } from '../recognition-native/record-inspector';
+import { actualMethod } from '../recognition-native/actual-method';
 import {
   currentModeNotice,
   presentReply,
@@ -743,13 +745,18 @@ export function mount(
         (related.kind === 'material' && adapter.openMaterial))
     ) {
       const action = button('rc-intent-action');
-      action.textContent = `${related.label} →`;
+      const readOnly = !!view?.restriction;
+      const requestSource = turn.materials?.find(m => m.id === 'approvals');
+      const actionLabel = readOnly && related.kind === 'request' ? T('查看申请要求', 'Read the request requirements') : related.label;
+      action.textContent = `${actionLabel} →`;
       action.title = related.reason;
-      action.setAttribute('aria-label', `${related.label}. ${related.reason}`);
+      action.setAttribute('aria-label', `${actionLabel}. ${related.reason}`);
       action.addEventListener('click', async () => {
         action.disabled = true;
         try {
-          if (related.kind === 'request') await adapter.openRequests?.();
+          if (related.kind === 'request' && readOnly) {
+            if (requestSource) await adapter.openMaterial?.(requestSource);
+          } else if (related.kind === 'request') await adapter.openRequests?.();
           else await adapter.openMaterial?.(related.material);
         } catch {
           action.title = T(
@@ -763,11 +770,21 @@ export function mount(
       const relatedBox = el('div', 'rc-intent-related');
       const why = el('details', 'rc-intent-why');
       const whyLabel = el('summary');
-      whyLabel.textContent = T('为什么显示这个动作', 'Why this action?');
+      whyLabel.textContent = T('为什么推荐这个入口', 'Why this action?');
       const reason = el('p');
       reason.textContent = related.reason;
       why.append(whyLabel, reason);
-      relatedBox.append(action, why);
+      const record = [...(turn.recognition ?? [])].reverse().find(r => r.task === 'intent');
+      if (record) {
+        const technical = el('div');
+        const method = actualMethod(record, locale());
+        technical.innerHTML = inspectorEntryHtml(T('为什么推荐这个入口', 'Why this action was suggested'), `<dl class="ec-checks"><div><dt>${T('本次意图', 'Recorded intent')}</dt><dd>${record.label === 'seek_approval' ? T('询问批准', 'Asking for approval') : record.label === 'ask_resource' ? T('询问资源', 'Asking about resources') : T('询问流程', 'Asking about the process')}</dd></div><div><dt>${T('实际方法', 'Actual method')}</dt><dd>${escapeCheck(method.method)}</dd></div><div><dt>${T('记录分数', 'Recorded score')}</dt><dd>${record.score}</dd></div><div><dt>${T('入口展示门槛', 'Display threshold')}</dt><dd>0.70 · ${T('前端展示策略，未经置信度校准', 'A display threshold, not a calibrated confidence level')}</dd></div></dl>`, methodsHtml(locale(), 'intent'), locale());
+        why.append(technical);
+      }
+      const note = el('p', 'rc-roles__limitation');
+      note.textContent = readOnly ? T('若要填写并发送申请，请先开始修订。', 'Start a revision to complete and send a request.') : T('填写并发送后，才算提出申请。', 'A request is made only when you complete and send the form.');
+      if (!readOnly || related.kind !== 'request' || requestSource) relatedBox.append(action);
+      relatedBox.append(note, why);
       extra.append(relatedBox);
     }
     const signals = renderSignals(doc, turn.recognition, locale(), {

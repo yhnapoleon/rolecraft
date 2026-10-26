@@ -31,7 +31,7 @@ describe('recorded judgment chain', () => {
       'Retrieval method not recorded',
     ])
       expect(h).toContain(v);
-    expect(h).toContain('The stacked model finds a contradiction');
+    expect(h).toContain('The checks disagree');
     expect(h).not.toContain('RRF');
     expect(h).not.toMatch(/[\u4e00-\u9fff]/);
   });
@@ -39,8 +39,8 @@ describe('recorded judgment chain', () => {
     const h = judgmentChainHtml({ ...unit, branches: { rule: null } }, {}, 'zh');
     expect(h).not.toContain('data-step="encoder"');
     expect(h).not.toContain('data-step="stack"');
-    expect(h).toContain('本句未经堆叠复核');
-    expect(h).toContain('规则未介入');
+    expect(h).toContain('未记录堆叠结果');
+    expect(h).toContain('这次没有可比较的数字');
     expect(h).toContain('代价记录不完整');
   });
   it('keeps the recorded defer action even at rounded cost ties', () => {
@@ -49,7 +49,7 @@ describe('recorded judgment chain', () => {
       { defer_cost: 0.2 },
       'zh',
     );
-    expect(h).toContain('先暂缓');
+    expect(h).toContain('记录决定：暂缓');
     expect(h).toContain('=');
   });
   it('escapes exact original passages', () => {
@@ -58,7 +58,7 @@ describe('recorded judgment chain', () => {
     expect(h).not.toContain('<script>');
   });
   it('does not invent a winning label for tied or invalid probabilities', () => {
-    expect(leadingProbability({ supported: 0.5, contradicted: 0.5 })?.labels).toEqual([
+    expect(leadingProbability({ supported: 0.5, contradicted: 0.5, insufficient: 0 })?.labels).toEqual([
       'supported',
       'contradicted',
     ]);
@@ -98,12 +98,12 @@ it('states the recorded outcome and only uses real alpha for branch weights', ()
     { defer_cost: 0.5 },
     'en',
   );
-  expect(h).toContain('Model path');
-  expect(h).toContain('Rule path');
-  expect(h).toContain('Fusion');
+  expect(h).toContain('Meaning check');
+  expect(h).toContain('Numbers and limits');
+  expect(h).toContain('Result after fusion');
   expect(h).toContain('40%');
   expect(h).toContain('60%');
-  expect(h).toContain('Automatic judgement costs more. Deferred for a human check.');
+  expect(h).toContain('Recorded decision: defer');
   expect(h).not.toContain('number-flow');
   for (const alpha of [undefined, NaN, -1, 2]) {
     const missing = judgmentChainHtml({ ...unit, branches: { ...unit.branches, alpha } }, {}, 'en');

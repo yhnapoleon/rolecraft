@@ -1,8 +1,10 @@
-/** "Look back at your work" on the review page: GET /sessions/{id}/behavior as HTML. It states
+/** "Work review" on the review page: GET /sessions/{id}/behavior as HTML. It states
  * what the learner did and which reference way of working it is closest to; it never scores.
  * Placement is decided by BEHAVIOR_PLACEMENT; with the recognition layer off it never shows. */
 import { copyText, type CopyTable, type Language } from '../results-native/localization';
 import './behavior.css';
+import { behaviorInsights } from './insights';
+import { inspectorEntryHtml, methodsHtml } from '../recognition-native/record-inspector';
 import { personName } from '../../app/people.js';
 
 /** 262: a normal result-page entry; course categories remain in the lens. */
@@ -34,7 +36,7 @@ export interface Behavior {
 }
 
 const zh = {
-  title: '回看工作过程',
+  title: '工作回放',
   lead: '沿着你做过的事，看看调查、测试和判断怎样衔接。',
   category: '机器学习 · 无监督 · 智能感知',
   method: 'DTW 对齐 / HMM 分阶段',
@@ -42,7 +44,7 @@ const zh = {
   runnersUp: '其次接近：{names}',
   empty: '还没有可识别的步骤。',
   phases: '阶段',
-  nearest: '最接近的工作方式：{name}',
+  nearest: '选中的参考做法：{name}',
   noStrategy: '这一局按规则划分阶段，行为模型未加载，还认不出你接近哪种工作方式。',
   missing: '参考轨迹中更多的动作',
   extra: '本次记录中更多的动作',
@@ -61,15 +63,15 @@ const zh = {
   s_thorough: '先读后问再测',
   s_request_first: '先申请后配置',
   s_test_heavy: '测试密集',
-  s_rush: '赶工直交',
+  s_rush: '较少动作后提交',
   s_ask_heavy: '多问同事',
-  s_unread_request: '未读先申请',
-  s_policy_untested: '变化后未复测',
+  s_unread_request: '先申请再补资料',
+  s_policy_untested: '变化后直接提交',
   s_revise_loop: '提交后修订',
   sym_read: '读 {x}',
   sym_read_title: '读《{x}》',
   sym_ask: '问 {x}',
-  sym_test: '测 {x}',
+  sym_test: '测试{x}',
   sym_request: '申请 {x}',
   sym_approved: '获批',
   sym_denied: '被拒',
@@ -91,7 +93,7 @@ const zh = {
   i_other: '其他',
 } as const;
 const en: Record<keyof typeof zh, string> = {
-  title: 'Look back at your work',
+  title: 'Work review',
   lead: 'Follow the work you did: how investigation, testing and decisions fit together.',
   category: 'Machine learning · Unsupervised · Intelligent sensing',
   method: 'DTW alignment / HMM phases',
@@ -99,7 +101,7 @@ const en: Record<keyof typeof zh, string> = {
   runnersUp: 'Next closest: {names}',
   empty: 'No recognisable steps yet.',
   phases: 'Phases',
-  nearest: 'Closest way of working: {name}',
+  nearest: 'Selected reference approach: {name}',
   noStrategy:
     'Phases are set by rules this time. The behaviour model isn’t loaded, so your way of working isn’t matched yet.',
   missing: 'More frequent in the reference',
@@ -121,22 +123,22 @@ const en: Record<keyof typeof zh, string> = {
   s_thorough: 'Read, ask, then test',
   s_request_first: 'Request, then configure',
   s_test_heavy: 'Test-heavy',
-  s_rush: 'Rushed submission',
+  s_rush: 'Fewer actions before submitting',
   s_ask_heavy: 'Asks colleagues a lot',
-  s_unread_request: 'Requests before reading',
-  s_policy_untested: 'No retest after a change',
+  s_unread_request: 'Request, then read sources',
+  s_policy_untested: 'Submit after a change',
   s_revise_loop: 'Revises after submitting',
   sym_read: 'read {x}',
-  sym_read_title: 'read “{x}”',
+  sym_read_title: 'Read “{x}”',
   sym_ask: 'ask {x}',
-  sym_test: 'test {x}',
+  sym_test: 'Tested {x}',
   sym_request: 'request {x}',
   sym_approved: 'approved',
   sym_denied: 'denied',
   sym_counter: 'counter-offer',
   sym_configure: 'configure',
   sym_refresh_index: 'refresh index',
-  sym_submit: 'submit',
+  sym_submit: 'Submitted',
   sym_revise: 'revise',
   sym_event: 'notice',
   t_normal: 'a regular question',
@@ -178,10 +180,13 @@ const ROLE = {
 export function symbolLabel(symbol: string, l: Language, materialName?: (id: string) => string) {
   const [head, a, b] = symbol.split(':');
   if (head === 'ask') {
-    const role = (ROLE[l] as Record<string, string>)[a] ?? a;
-    const intent =
-      b && has(`i_${b}`) ? t(l, `i_${b}` as Key) : b?.replace('ask_', '').replace('seek_', '');
-    return t(l, 'sym_ask', { x: role }) + (intent ? ` · ${intent}` : '');
+    const role = (ROLE[l] as Record<string, string>)[a] ?? (l === 'zh' ? '同事' : 'a colleague');
+    const subjects: Record<string, [string, string]> = {
+      ask_limit: ['限制', 'limits'], ask_resource: ['资源', 'resources'],
+      ask_process: ['流程', 'the process'], seek_approval: ['批准', 'approval'],
+    };
+    const subject = subjects[b];
+    return l === 'zh' ? subject ? `向 ${role} 询问${subject[0]}` : `向 ${role} 提问` : subject ? `Asked ${role} about ${subject[1]}` : `Asked ${role} a question`;
   }
   if (head === 'read') {
     const name = a && materialName ? materialName(a) : '';
@@ -189,7 +194,9 @@ export function symbolLabel(symbol: string, l: Language, materialName?: (id: str
     const short = name.split(/[：:]/)[0].trim() || name;
     return name && name !== a
       ? t(l, 'sym_read_title', { x: short })
-      : t(l, 'sym_read', { x: a ?? '' });
+      : l === 'zh'
+        ? '读了一份资料'
+        : 'Read a source';
   }
   if (head === 'test')
     return t(l, 'sym_test', { x: a && has(`t_${a}`) ? t(l, `t_${a}` as Key) : (a ?? '') });
@@ -197,7 +204,7 @@ export function symbolLabel(symbol: string, l: Language, materialName?: (id: str
     return t(l, 'sym_request', { x: a && has(`r_${a}`) ? t(l, `r_${a}` as Key) : (a ?? '') });
   if (['approved', 'denied', 'counter', 'event'].includes(head)) return t(l, `sym_${head}` as Key);
   const key = `sym_${head}`;
-  return has(key) ? t(l, key) : symbol;
+  return has(key) ? t(l, key) : l === 'zh' ? '一条未命名动作' : 'An unnamed action';
 }
 
 export const strategyName = (s: string, l: Language) => (has(`s_${s}`) ? t(l, `s_${s}` as Key) : s);
@@ -260,17 +267,19 @@ function phaseRuns(data: Behavior, l: Language) {
     if (!seen.includes(name)) seen.push(name);
     return seen.indexOf(name) % 4;
   };
-  const phases = data.phases.map((p) => {
-    const steps =
-      data.sequence.filter((r) => r.seq >= p.from_seq && r.seq <= p.to_seq && r.phase === p.name)
-        .length || 1;
-    return {
-      name: phaseName(p.name, l),
-      steps,
-      style: styleOf(p.name),
-      from: p.from_seq,
-      to: p.to_seq,
-    };
+  const phases: BehaviorView['phases'] = [];
+  data.sequence.forEach((row, index) => {
+    if (
+      !row.phase ||
+      !data.phases.some((p) => p.name === row.phase && row.seq >= p.from_seq && row.seq <= p.to_seq)
+    )
+      return;
+    const name = phaseName(row.phase, l),
+      previous = phases.at(-1);
+    if (previous && previous.name === name && previous.to === index - 1) {
+      previous.steps++;
+      previous.to = index;
+    } else phases.push({ name, steps: 1, style: styleOf(row.phase), from: index, to: index });
   });
   const legend = [
     ...new Map(phases.map((p) => [p.name, { name: p.name, style: p.style }])).values(),
@@ -306,7 +315,8 @@ export function behaviorView(
     stepsLabel: t(l, 'steps'),
     steps: data.sequence.map((r) => label(r.symbol)),
     nearest: strategy
-      ? strategy.top3.some(
+      ? strategy.top3.filter((s) => s.distance === strategy.distance).length > 1 ||
+        strategy.top3.some(
           (s) => s.strategy !== strategy.nearest && s.distance === strategy.distance,
         )
         ? (l === 'zh' ? '同样接近：' : 'Equally close: ') +
@@ -362,86 +372,80 @@ export function behaviorHtml(
   l: Language,
   options: { lens?: boolean; materialName?: (id: string) => string; stepsOpen?: boolean } = {},
 ) {
+  const say = (zh: string, en: string) => (l === 'zh' ? zh : en);
+  if (data?.enabled === false)
+    return `<details><summary>${say('这次未生成工作回放', 'No work review was generated this time')}</summary><p>${say('本次未启用过程识别。', 'Work-process recognition was not enabled.')}</p></details>`;
   const view = behaviorView(data, l, options);
   if (!view || !data || !('sequence' in data)) return '';
-  const say = (zh: string, en: string) => (l === 'zh' ? zh : en);
-  const fallback = data.recognizer.endsWith('@rule-fallback');
-  const label = (symbol: string) => symbolLabel(symbol, l, options.materialName);
-  const cats = view.categories
-    .map(
-      (c) => `<span class="rc-cat"${c.fallback ? ' data-fallback=""' : ''}>${esc(c.text)}</span>`,
+  const fallback = data.recognizer.endsWith('@rule-fallback'),
+    label = (s: string) => symbolLabel(s, l, options.materialName);
+  const { valid, suggestions } = behaviorInsights(data, l);
+  const symbols = data.sequence.map((r) => r.symbol),
+    reference = data.strategy?.reference;
+  const groups: { symbols: string[]; start: number }[] = [];
+  symbols.forEach((s, i) => {
+    const last = groups.at(-1);
+    if (last && s.startsWith('read:') && last.symbols.every((x) => x.startsWith('read:')))
+      last.symbols.push(s);
+    else groups.push({ symbols: [s], start: i });
+  });
+  const headline = groups
+    .slice(0, 6)
+    .map((g) =>
+      g.symbols.length > 1
+        ? say(`读了 ${g.symbols.length} 份资料`, `Read ${g.symbols.length} sources`)
+        : label(g.symbols[0]),
     )
-    .join('');
-  const head = `<header class="br-head"><div><p class="br-kicker">${say('这次工作的记录', 'THE WORK BEHIND THE DELIVERY')}</p><h2>${esc(view.title)}</h2><p>${esc(view.lead)}</p></div><span class="br-total">${data.sequence.length}<small>${say('个可见动作', 'visible actions')}</small></span></header>`;
-  if (view.empty) return `${head}<p>${esc(view.empty)}</p>`;
-  const phaseDescription = (style: number) =>
-    [
-      say('查资料、问同事，理解问题。', 'Read sources and ask colleagues.'),
-      say('通过测试和配置验证想法。', 'Check ideas through tests and configuration.'),
-      say('权衡限制，申请或交付决定。', 'Weigh constraints and make a decision.'),
-      say('回到已有工作，修订和验证。', 'Revisit, revise and verify earlier work.'),
-    ][style];
+    .join(say('，', ' → '));
+  const head = `<header class="br-head"><div><p class="br-kicker">${say('回看这次工作 · 当前可见记录', 'REVIEW THIS WORK · CURRENT VISIBLE RECORD')}</p><h2>${say('工作回放', 'Work review')}</h2><p>${esc(headline || say('本次读取还没有动作。', 'No actions were returned.'))}${groups.length > 6 ? ' …' : ''}</p></div><span class="br-total">${symbols.length}<small>${say('个可见动作', 'recorded actions')}</small></span></header>`;
+  if (!symbols.length) return head;
   const bar = `<rc-phase-timeline><div class="rc-phasebar" aria-hidden="true">${view.phases.map((p) => `<span class="rc-phase" data-style="${p.style}" style="flex:${p.steps}"></span>`).join('')}</div><div class="rc-phase-labels">${view.phases.map((p, i) => `<button type="button" class="rc-phase-label" style="--phase-steps:${p.steps}" data-from="${p.from}" data-to="${p.to}" data-style="${p.style}" aria-pressed="false" aria-label="${i + 1}. ${esc(p.name)}"><span class="rc-phase-name">${esc(p.name)}</span><span class="rc-phase-number" aria-hidden="true">${i + 1}</span></button>`).join('')}</div></rc-phase-timeline>`;
-  const legend = `<div class="rc-phase-legend">${view.legend
-    .map(
-      (p) =>
-        `<p><i data-style="${p.style}" aria-hidden="true"></i><b><span class="rc-legend-numbers">${view.phases
-          .map((run, i) => (run.name === p.name ? i + 1 : null))
-          .filter(Boolean)
-          .join(' / ')} · </span>${esc(p.name)}</b><span>${phaseDescription(p.style)}</span></p>`,
-    )
-    .join('')}</div>`;
-  const steps = (symbols: string[], reference = false) =>
-    `<ol class="br-track">${symbols
-      .map((symbol, i) => {
-        const row = data.sequence[i];
-        const phase = !reference && row.phase ? phaseName(row.phase, l) : '';
-        return `<li><details class="br-action"${reference ? '' : ` data-seq="${row.seq}" data-phase="${PHASE_ORDER[row.phase ?? ''] ?? ''}"`}><summary><span class="br-step-no">${String(i + 1).padStart(2, '0')}</span><span>${esc(label(symbol))}</span><span class="br-action-plus" aria-hidden="true">+</span></summary><p>${reference ? say('参考轨迹里的动作', 'Action in the reference trajectory') : `${esc(phase || say('阶段未记录', 'Phase not recorded'))} · ${say(`记录序号 ${row.seq}`, `Record sequence ${row.seq}`)}`}</p>${!reference && row.question ? `<blockquote>${esc(row.question)}</blockquote>` : ''}</details></li>`;
+  const legend = `<div class="rc-phase-legend">${view.phases.map((p, i) => `<span><i data-style="${p.style}" aria-hidden="true"></i>${i + 1} · ${esc(p.name)}</span>`).join('')}</div>`;
+  const steps = (items: string[], ref = false, start = 0) =>
+    `<ol class="br-track">${items
+      .map((s, i) => {
+        const pos = i + start,
+          row = data.sequence[pos];
+        return `<li><details class="br-action"${ref ? '' : ` data-seq="${pos}" data-phase="${PHASE_ORDER[row.phase ?? ''] ?? ''}"`}><summary><span class="br-step-no">${String(pos + 1).padStart(2, '0')}</span><span>${esc(label(s))}</span><span class="br-action-plus" aria-hidden="true">+</span></summary><p>${ref ? say('参考做法里的动作', 'Action in the reference approach') : say(`记录序号 ${row.seq} · ${row.phase ? phaseName(row.phase, l) : '阶段未记录'}`, `Record sequence ${row.seq} · ${row.phase ? phaseName(row.phase, l) : 'Phase not recorded'}`)}</p>${!ref && row.question ? `<blockquote>${esc(row.question)}</blockquote>` : ''}</details></li>`;
       })
       .join('')}</ol>`;
-  const reference = data.strategy?.reference;
-  const delta = (symbols: string[], referenceMore: boolean) =>
-    counts(symbols)
-      .sort((a, b) => b[1] - a[1])
-      .map(([symbol, n]) => {
-        const action =
-          symbol === 'test:normal' ? say('普通问题测试', 'Regular-question tests') : label(symbol);
-        return say(
-          `${action}：${referenceMore ? '参考' : '你'}多 ${n} 次`,
-          `${action}: ${n} more in ${referenceMore ? 'the reference' : 'your record'}`,
-        );
-      });
+  const own = groups
+    .map((g) =>
+      g.symbols.length > 1
+        ? `<details class="br-read-group"><summary>${say(`读了 ${g.symbols.length} 份资料`, `Read ${g.symbols.length} sources`)} <span>${say('展开资料记录', 'See which sources')} +</span></summary>${steps(g.symbols, false, g.start)}</details>`
+        : steps(g.symbols, false, g.start),
+    )
+    .join('');
+  const delta = (items: string[], more: boolean) =>
+    counts(items).map(([s, n]) =>
+      say(
+        `${label(s)}：${more ? '参考' : '本次'}多 ${n} 次`,
+        `${label(s)}: ${n} more in ${more ? 'the reference' : 'this record'}`,
+      ),
+    );
   const differences = [
     ...delta(data.alignment.missing, true),
     ...delta(data.alignment.extra, false),
     ...data.alignment.swapped.map(([a, b]) =>
       say(
-        `${label(a)}与${label(b)}的首次顺序相反`,
-        `First-occurrence order differs: ${label(a)} / ${label(b)}`,
+        `这两类动作的首次出现顺序不同：${label(a)}／${label(b)}`,
+        `These actions first appeared in a different order: ${label(a)} / ${label(b)}`,
       ),
     ),
   ];
-  const differenceList = (items: string[]) =>
-    `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
-  const summary = `<section class="br-overview"><p class="rc-behavior__nearest">${esc(view.nearest ?? view.noStrategy ?? '')}</p>${data.strategy ? `<div class="br-differences">${differences.length ? differenceList(differences.slice(0, 3)) : `<p>${say('没有记录动作数量或首次顺序的差异。', 'No differences in counts or first-occurrence order were recorded.')}</p>`}</div>` : ''}</section>`;
-  const refTrack = `<details class="br-reference"><summary>${say('展开完整参考与差异', 'Explore the full reference and differences')}</summary>${reference?.sequence?.length ? `<section class="br-band br-band--reference"><h3>${say('最近参考轨迹', 'Nearest reference trajectory')} · ${esc(strategyName(reference.strategy, l))}</h3>${steps(reference.sequence, true)}</section>` : `<p class="br-unavailable">${say('这次没有可展示的参考轨迹。', 'No reference trajectory was returned for this session.')}</p>`}${view.runnersUp ? `<p>${esc(view.runnersUp)}</p>` : ''}${differences.length > 3 ? differenceList(differences.slice(3)) : ''}${data.strategy?.top3.length ? `<details><summary>${say('查看各参考的匹配记录', 'View individual reference matches')}</summary><ol>${data.strategy.top3.map((s) => `<li>${esc(strategyName(s.strategy, l))} · ${say('匹配距离', 'Match distance')} ${s.distance}</li>`).join('')}</ol></details>` : ''}</details>`;
+  const referenceHtml = `<details class="br-reference"><summary>${say('查看参考做法与全部差异', 'Explore the reference and all differences')}</summary><p>${esc(view.nearest ?? say('这次没有可对照的参考做法。', 'No reference approach is available for this record.'))}</p>${reference ? steps(reference.sequence, true) : `<p>${say('这次没有可对照的参考做法。', 'No reference approach is available for this record.')}</p>`}${!valid && reference ? `<p>${say('差异记录待核对', 'Difference records need checking')}</p>` : ''}<ul>${differences.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>`;
+  const ideas = `<section class="br-ideas"><h3>${say('换个做法看看', 'Something to try next time')}</h3><p class="br-method">${say('参考做法来自预设脚本，供你挑选，不代表最佳路线。', 'These scripted examples offer ideas to try. They are not a best-practice benchmark.')}</p>${suggestions.map((s) => `<article class="br-idea"><h4>${esc(s.title)}</h4><p>${esc(s.observation)}</p><p class="br-basis">${esc(s.basis)}</p><p>${esc(s.practice)}</p>${s.action === 'test' ? `<a class="ec-tech" href="#/bench">${esc(s.label ?? '')} →</a>` : s.action ? `<button type="button" class="ec-tech" data-action="chat" data-role="${s.action}">${esc(s.label ?? '')} →</button>` : ''}</article>`).join('')}${!suggestions.length ? `<p>${say(!data.window ? '本次未记录起止范围，先保留动作事实。' : !valid && reference ? '差异记录待核对，先保留两份动作记录。' : !reference ? '这次没有可对照的参考做法。' : '当前没有可展示的重点练法。', !data.window ? 'No read window was recorded; the actions remain available.' : !valid && reference ? 'Difference records need checking; both action lists remain available.' : !reference ? 'No reference approach is available for this record.' : 'There are no highlighted suggestions for this record.')}</p>` : ''}${referenceHtml}</section>`;
   const window = data.window
     ? say(
-        `读取范围：记录 ${data.window.from_seq}–${data.window.to_seq}。`,
-        `Read window: records ${data.window.from_seq}–${data.window.to_seq}.`,
+        `读取范围：记录 ${data.window.from_seq}–${data.window.to_seq}${typeof data.window.events === 'number' ? `，${data.window.events} 条事件` : ''}${typeof data.window.turns === 'number' ? `，${data.window.turns} 次提问` : ''}。`,
+        `Read window: records ${data.window.from_seq}–${data.window.to_seq}${typeof data.window.events === 'number' ? `, ${data.window.events} events` : ''}${typeof data.window.turns === 'number' ? `, ${data.window.turns} questions` : ''}.`,
       )
-    : say('本次响应没有记录起止范围。', 'This response did not record its window.');
-  return `${head}<details class="rc-behavior__steps"${options.stepsOpen ? ' open' : ''}><summary>${say('展开过程与参考对照', 'Explore the process and reference')}</summary><div class="br-content">
-    ${summary}
-    <h3>${say('识别出的工作阶段', 'Recognised work phases')}<small> · ${fallback ? say('按规则划分', 'Rule-based') : 'HMM'}</small></h3>
-    ${bar}${legend}
-    <p class="br-method">${say('动作顺序，不表示耗时。点阶段查看对应动作。', 'Action order, not elapsed time. Select a phase to highlight its actions.')}</p>
-    <div class="br-bands"><section class="br-band"><h3>${esc(view.stepsLabel)}</h3>${steps(data.sequence.map((r) => r.symbol))}</section>${refTrack}</div>
-    <p class="br-method">${fallback ? esc(view.noStrategy ?? '') : say('DTW 按动作序列寻找最近参考；接口没有提供逐点对齐路径。参考来自预设脚本，不代表最佳路线。', 'DTW finds the nearest reference by action sequence; no point-by-point alignment path was returned. References are scripted examples, not a best route.')}</p>
-    <p class="rc-behavior__origin">${window} ${esc(view.executor)}</p>
-    ${view.order.length ? `<details class="br-order"><summary>${esc(view.orderLabel)}</summary><ul>${view.order.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
-    ${options.lens ? `<p class="rc-behavior__cats">${cats}</p>` : ''}
-    </div></details>`;
+    : say(
+        '本次读取的动作；起止范围未记录。',
+        'Actions in this response; the read window was not recorded.',
+      );
+  const record = `<p>${fallback ? say('阶段按动作类型整理；本次为规则回退。', 'Phases were grouped by action type using a rule fallback.') : data.recognizer ? say('本次用 HMM 解码工作阶段，用 DTW 匹配参考做法。', 'HMM decoded work phases; DTW matched reference approaches.') : say('实际方法未记录。', 'The actual method was not recorded.')}</p><p>${say('阶段是模型对上下文的划分，动作名称保持原样。', 'Phases interpret the action context; action names stay unchanged.')}</p><table class="jc-table"><caption>${say('返回的参考记录', 'Returned reference records')}</caption><tbody>${(data.strategy?.top3 ?? []).map((s) => `<tr><th>${esc(strategyName(s.strategy, l))}</th><td>${esc(String(s.distance))}</td></tr>`).join('')}</tbody></table><p>${say('距离越小，动作序列越接近；距离不是概率。', 'A smaller distance means a closer action sequence; it is not a probability.')}</p><p>${say('只记录了动作数量和首次顺序差异，没有逐步对应记录。', 'Only action counts and first-occurrence differences were recorded, not a step-by-step alignment.')}</p><p>${window}</p><p>${say('执行来源声明', 'Declared execution source')}：${esc(({human:say('本人','the learner'),own_agent:say('本人 Agent','own Agent'),reference_agent:say('参考 Agent','reference Agent')} as Record<string,string>)[data.executor.declared] ?? say('未说明','not recorded'))}</p><details><summary>${say('查看原始动作记录','View recorded action symbols')}</summary><ol>${data.sequence.map(row=>`<li>${row.seq} · ${esc(row.symbol)}${row.question?`<blockquote>${esc(row.question)}</blockquote>`:''}</li>`).join('')}</ol></details>${data.anomalies.length ? `<details><summary>${say('查看规则记录', 'View rule records')}</summary><ul>${data.anomalies.map((a) => `<li>${esc(a.rule)} · ${a.at_seq} · ${a.score}</li>`).join('')}</ul></details>` : ''}`;
+  return `${head}<details class="rc-behavior__steps"${options.stepsOpen ? ' open' : ''}><summary>${say('展开工作回放', 'Explore the work review')}</summary><div class="br-content"><section class="br-phases"><h3>${fallback ? say('按动作类型整理的阶段', 'Phases grouped by action type') : say('识别出的工作阶段', 'Recognised work phases')}</h3><p class="br-method">${say('按动作顺序，不表示耗时。点阶段查看对应动作。', 'Action order, not time spent. Select a phase to see its actions.')}</p>${bar}${legend}</section><div class="br-layout">${ideas}<section class="br-own"><h3>${say('这次做过的事', 'Your recorded actions')}</h3>${own}</section></div><footer><p class="rc-behavior__origin">${window} ${say('范围之外做过什么，单凭这份记录无法判断。', 'This record cannot tell us what happened outside this window.')}</p>${inspectorEntryHtml(say('阶段来自识别，练法来自参考对照', 'Recognised phases, suggestions from reference comparisons'), record, methodsHtml(l, 'behavior'), l)}</footer></div></details>`;
 }
 
 if (typeof customElements !== 'undefined' && !customElements.get('rc-phase-timeline')) {
@@ -482,6 +486,10 @@ if (typeof customElements !== 'undefined' && !customElements.get('rc-phase-timel
                     seq <= Number(button.dataset.to) &&
                     action.dataset.phase === button.dataset.style,
                 );
+                if (action.dataset.selected === 'true') {
+                  const group = action.closest<HTMLDetailsElement>('.br-read-group');
+                  if (group) group.open = true;
+                }
               });
             };
           measureLayout();

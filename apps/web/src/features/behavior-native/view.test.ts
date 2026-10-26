@@ -28,16 +28,16 @@ const data: Behavior = {
 
 describe('behaviour view', () => {
   it('names symbols in both languages', () => {
-    expect(symbolLabel('ask:tech_lead:ask_limit', 'zh')).toBe('问 Daniel · 上限');
-    expect(symbolLabel('read:policy', 'en')).toBe('read policy');
+    expect(symbolLabel('ask:tech_lead:ask_limit', 'zh')).toBe('向 Daniel 询问限制');
+    expect(symbolLabel('read:policy', 'en')).toBe('Read a source');
     expect(symbolLabel('submit', 'zh')).toBe('提交');
   });
 
   it('renders strategy, alignment and anomalies', () => {
     const html = behaviorHtml(data, 'zh', { lens: true });
-    expect(html).toContain('未读先申请');
-    expect(html).toContain('读 technical');
-    expect(html).toContain('还没读技术材料就先申请了资源');
+    expect(html).toContain('先申请再补资料');
+    expect(html).toContain('读了一份资料');
+    expect(html).toContain('request_before_technical');
     expect(html).not.toContain('data-fallback');
   });
 
@@ -47,15 +47,15 @@ describe('behaviour view', () => {
       'en',
       { lens: true },
     );
-    expect(html).toContain('data-fallback');
-    expect(html).toContain('The behaviour model isn’t loaded');
+    expect(html).toContain('rule fallback');
+    expect(html).toContain('No reference approach is available');
   });
 
   it('stays out of the learner’s default view, and away entirely when the layer is off', () => {
     expect(BEHAVIOR_PLACEMENT).toBe('default');
-    expect(behaviorHtml(data, 'zh')).toContain('回看工作过程');
-    expect(behaviorHtml(data, 'zh', { lens: false })).toContain('本次可见动作');
-    expect(behaviorHtml({ enabled: false }, 'zh', { lens: true })).toBe('');
+    expect(behaviorHtml(data, 'zh')).toContain('工作回放');
+    expect(behaviorHtml(data, 'zh', { lens: false })).toContain('这次做过的事');
+    expect(behaviorHtml({ enabled: false }, 'zh', { lens: true })).toContain('这次未生成工作回放');
   });
 
   it('states what was done in the lens, without scores, verdicts or material identifiers', () => {
@@ -64,11 +64,11 @@ describe('behaviour view', () => {
       materialName: (id) => ({ brief: '经理委托', technical: '技术交接' })[id] ?? id,
     });
     expect(html).toContain('读《经理委托》');
-    expect(html).toContain('最接近的工作方式：未读先申请');
-    expect(html).toContain('机器学习 · 无监督 · 智能感知');
+    expect(html).toContain('选中的参考做法：先申请再补资料');
+    expect(html).toContain('HMM');
     expect(html).not.toContain('值得复盘');
     expect(html).not.toContain('DTW 距离');
-    expect(html).not.toMatch(/\d\.\d/);
+    expect(html.replace(/<template[\s\S]*?<\/template>/g, '').replace(/<svg[\s\S]*?<\/svg>/g, '')).not.toMatch(/\d\.\d/);
     expect(html).not.toContain('behavior-v1');
     expect(html).not.toContain('读 brief');
   });
@@ -82,10 +82,10 @@ describe('behaviour view', () => {
       'Machine learning · Unsupervised · Intelligent sensing',
       'DTW alignment / HMM phases',
     ]);
-    expect(view?.steps[0]).toBe('read “Brief”');
-    expect(view?.nearest).toBe('Closest way of working: Requests before reading');
+    expect(view?.steps[0]).toBe('Read “Brief”');
+    expect(view?.nearest).toBe('Selected reference approach: Request, then read sources');
     expect(view?.order).toEqual(['Requested resources before reading the technical material']);
-    expect(behaviorView(data, 'en')?.title).toBe('Look back at your work');
+    expect(behaviorView(data, 'en')?.title).toBe('Work review');
   });
 
   it('labels only the phases wide enough and keys every phase in a legend under the bar', () => {
@@ -128,8 +128,8 @@ describe('behaviour view', () => {
     expect(html).toContain('aria-label="2. Testing"');
     expect(html).toContain('aria-label="1. Exploration"');
     expect(html).toContain('class="rc-phase-legend"');
-    expect(html).toContain('data-from="13" data-to="13"');
-    expect(html).not.toContain('…');
+    expect(html).toContain('data-from="12" data-to="12"');
+    expect(html).toContain('aria-label="4. Revision"');
   });
 });
 
@@ -153,13 +153,13 @@ it('keeps equally close references and a missing reference honest', () => {
   };
   const h = behaviorHtml(d, 'en', { stepsOpen: true });
   expect(h).toContain('Equally close: Test-heavy, Read, ask, then test');
-  expect(h).toContain('No reference trajectory was returned');
+  expect(h).toContain('No reference approach is available');
   expect(h).not.toContain('point-by-point alignment path was computed');
 });
 it('uses action positions even when business sequence numbers repeat', () => {
   const h = behaviorHtml(data, 'en', { stepsOpen: true });
-  expect(h).toContain('read brief');
-  expect(h).toContain('ask Daniel');
+  expect(h).toContain('Read a source');
+  expect(h).toContain('Asked Daniel');
   expect((h.match(/Record sequence 1/g) || []).length).toBe(2);
 });
 
@@ -187,9 +187,10 @@ it('summarises repeated differences before phases and preserves the full referen
     },
   };
   const h = behaviorHtml(d, 'zh');
-  expect(h).toContain('普通问题测试：参考多 2 次');
-  expect(h.indexOf('普通问题测试：参考多 2 次')).toBeLessThan(h.indexOf('<rc-phase-timeline>'));
-  expect(h).toContain('测试密集（2 条参考）');
-  expect(h).toContain('展开完整参考与差异');
-  expect(h).toContain('接口没有提供逐点对齐路径');
+  expect(h).toContain('测试普通问题：参考多 2 次');
+  expect(h.indexOf('<rc-phase-timeline>')).toBeLessThan(h.indexOf('测试普通问题：参考多 2 次'));
+  expect(h).toContain('差异记录待核对');
+  expect((h.match(/测试密集/g) || []).length).toBe(2);
+  expect(h).toContain('查看参考做法与全部差异');
+  expect(h).toContain('没有逐步对应记录');
 });

@@ -655,7 +655,7 @@
   padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--r-dialog);
-  background: var(--surface);
+  background: var(--paper);
   color: var(--ink);
   box-shadow: var(--shadow-float);
   overflow: auto;
@@ -669,7 +669,7 @@
   top: 0;
   z-index: 2;
   padding: 20px 24px 16px;
-  background: var(--surface);
+  background: var(--paper);
   border-bottom: 1px solid var(--line);
 }
 .aipm-inspector__meta {

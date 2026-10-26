@@ -23,16 +23,16 @@ export function intentAction(
   if (record.label === 'seek_approval' || record.label === 'ask_resource')
     return {
       kind: 'request' as const,
-      label: t('查看申请入口', 'Open the request form'),
+      label: t('打开申请表', 'Open the request form'),
       reason:
         record.label === 'seek_approval'
           ? t(
-              '因为你在问批准。打开你自己的申请表，由你填写和发送。',
-              'You asked about approval. Open your request form; you decide what to write and send.',
+              '这次提问看起来在询问批准。你可以从申请表继续，内容由你决定。',
+              'It looks like you’re asking for approval. Use the form to make a request in your own words.',
             )
           : t(
-              '因为你在问资源。打开你自己的申请表，由你填写和发送。',
-              'You asked about resources. Open your request form; you decide what to write and send.',
+              '这次提问看起来在询问资源。你可以从申请表继续。',
+              'It looks like you’re asking about resources. The request form is a possible next step.',
             ),
     };
   // Only the exact process source cited in this reply is offered; never guess a destination.
@@ -43,7 +43,7 @@ export function intentAction(
       material: process,
       label: t('查看申请流程', 'Read the request process'),
       reason: t(
-        '因为你在问流程。打开这条回复引用的申请说明。',
+        '这条回复引用了申请说明，可以继续查看。',
         'You asked about the process. Open the request instructions cited in this reply.',
       ),
     };
