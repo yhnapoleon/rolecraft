@@ -6,17 +6,20 @@ import re
 from career_lab.delegations.http_client import RemoteFailure
 
 LIMIT = 20_000
+STEPS = ("business", "stakeholders", "need", "boundary", "solution", "assurance", "decision")
 TOOL_NAME = "aipm.context.read"
 TOOL = {
     "name": TOOL_NAME,
     "description": (
-        "Read AIPM guide, progress or exact submission feedback discovery. No writes. "
+        "Read AIPM guide, progress, the latest review of one PRD section (step_id) or exact "
+        "submission feedback discovery. No writes. "
         "This MCP-only tool is separate from the frozen business tools catalogue."
     ),
     "inputSchema": {
         "type": "object",
         "properties": {
-            "kind": {"enum": ["guide", "progress", "submission_feedback"]},
+            "kind": {"enum": ["guide", "progress", "section_review", "submission_feedback"]},
+            "step_id": {"enum": list(STEPS)},
             "submission_id": {"type": "string"},
             "version": {"type": "integer", "minimum": 1},
         },
@@ -37,7 +40,8 @@ DRAFT_TOOL = {
         "feedback. Pass a full command: operation aipm.design.draft, a new request_id, "
         "expected_version/expected_workspace_revision from observation, and payload "
         "{draft_id, expected_revision (0 for a new draft), business?, stakeholders?, needs?, "
-        "rows?, solution?, prd_sections?, note?}. After an unknown result keep the same "
+        "rows?, solution?, prd_sections? {step_id: text}, section_refs? {step_id: exact "
+        "evidence refs copied from reads}, note?}. After an unknown result keep the same "
         "request_id and read requests.read. The result includes a draft precheck, a progress "
         "summary and next actions."
     ),
@@ -116,11 +120,24 @@ def uri(backend, kind):
 
 
 def read_tool(backend, arguments):
-    if not isinstance(arguments, dict) or set(arguments) - {"kind", "submission_id", "version"}:
+    if not isinstance(arguments, dict) or set(arguments) - {
+        "kind",
+        "submission_id",
+        "version",
+        "step_id",
+    }:
         raise ValueError("Invalid context arguments")
     kind = arguments.get("kind")
-    if kind not in ("guide", "progress", "submission_feedback"):
+    if kind not in ("guide", "progress", "section_review", "submission_feedback"):
         raise ValueError("Invalid context kind")
+    if kind == "section_review":
+        if set(arguments) != {"kind", "step_id"} or arguments["step_id"] not in STEPS:
+            raise ValueError("A seven-step step_id is required")
+        page = backend.aipm_read("section_review", step_id=arguments["step_id"])
+        items = page.get("items") or []
+        result = {"step_id": arguments["step_id"], "latest": items[0] if items else None}
+        text(result)
+        return result
     if kind == "submission_feedback":
         if (
             not isinstance(arguments.get("submission_id"), str)
@@ -141,19 +158,24 @@ def read_resource(backend, resource_uri):
     if not isinstance(resource_uri, str):
         raise ValueError("Invalid resource URI")
     match = re.fullmatch(
-        r"rolecraft://sessions/([A-Za-z0-9_-]+)/(?:(aipm)/(guide|progress)|submissions/([A-Za-z0-9_-]+)/v/([1-9][0-9]*)/feedback)",
+        r"rolecraft://sessions/([A-Za-z0-9_-]+)/(?:(aipm)/(guide|progress)|submissions/([A-Za-z0-9_-]+)/v/([1-9][0-9]*)/feedback|aipm/sections/([a-z]+)/review)",
         resource_uri,
     )
     if not match:
         raise ValueError("Unknown resource URI")
     if match[1] != backend.session_id:
         raise RemoteFailure("object_not_found", 404)
-    value = read_tool(
-        backend,
-        {"kind": match[3]}
-        if match[2]
-        else {"kind": "submission_feedback", "submission_id": match[4], "version": int(match[5])},
-    )
+    if match[6]:
+        arguments = {"kind": "section_review", "step_id": match[6]}
+    elif match[2]:
+        arguments = {"kind": match[3]}
+    else:
+        arguments = {
+            "kind": "submission_feedback",
+            "submission_id": match[4],
+            "version": int(match[5]),
+        }
+    value = read_tool(backend, arguments)
     return {
         "contents": [{"uri": resource_uri, "mimeType": "application/json", "text": text(value)}]
     }
@@ -186,9 +208,20 @@ def list_resources(backend):
 
 def list_templates(backend):
     # Reauthenticate even for discovery; a template is not proof of a visible record.
-    enabled_guide(backend)
+    sections = (
+        [
+            {
+                "uriTemplate": f"rolecraft://sessions/{backend.session_id}/aipm/sections/{{step_id}}/review",
+                "name": "aipm-section-review",
+                "mimeType": "application/json",
+            }
+        ]
+        if enabled_guide(backend) is not None
+        else []
+    )
     return {
-        "resourceTemplates": [
+        "resourceTemplates": sections
+        + [
             {
                 "uriTemplate": f"rolecraft://sessions/{backend.session_id}/submissions/{{submission_id}}/v/{{version}}/feedback",
                 "name": "submission-feedback",
@@ -231,16 +264,23 @@ def get_prompt(backend, name, arguments):
         data = read_tool(backend, {"kind": "progress"})
         zh = data["work_language"] == "zh"
         focus = next(step for step in data["steps"] if step["id"] == data["focus_step"])
+        sheet = focus.get("sheet") or {}
+        status = sheet.get("status", "not_started")
+        gap = sheet.get("gap_hint")
         intro = (
             (
                 f"正在处理第 {focus['order']} 步：{focus['label']}。"
                 "这是本人明确选择的焦点。已有记录不代表掌握。"
+                f"这张纸的状态：{status}" + (f"；最近批改最严重的一条：{gap}" if gap else "") + "。"
             )
             if zh
             else (
                 f"Working on step {focus['order']}: {focus['label']}. "
                 "This is the learner's explicitly selected focus. "
-                "Recorded work does not mean mastery."
+                "Recorded work does not mean mastery. "
+                f"Sheet status: {status}"
+                + (f"; most severe item in the latest review: {gap}" if gap else "")
+                + "."
             )
         )
         instruction = (

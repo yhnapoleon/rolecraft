@@ -296,6 +296,9 @@ export type FeedbackMountOptions = {
   surface?: 'all' | 'submission' | 'feedback';
   /** The result page (206): the stamped result sheet first, the detail by status or colleague. */
   layout?: 'result';
+  /** AIPM practices: a "back to sheet" button under each criterion's basis (v2 spec §10 L3).
+   * Without it the rows are unchanged. */
+  backToSheet?: (criterion: string) => Node | null;
 };
 
 /** How the result page's detail is arranged; a per-viewer convenience kept in this browser. */
@@ -975,6 +978,8 @@ export function mountNativeFeedback(
           sources.append(el('p', T('依据', 'Sources'), 'fb-basis__label'), chips(row.item.citations));
           nodes.push(sources);
         }
+        const sheet = options.backToSheet?.(row.criterion);
+        if (sheet) nodes.push(sheet);
         if (row.weight) {
           const weight = el('p', row.weight, 'fb-weight');
           weight.dataset.criterionWeight = row.criterion;

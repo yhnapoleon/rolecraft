@@ -230,6 +230,14 @@ def project(view, auth, content, registry, *, focus_default="business"):
         feedback[item["step_id"]].append(item)
 
     guide = {step.id: step for step in content.guide.steps}
+    from .review import sheets
+
+    drafts = pending(objects)
+    pending_steps = {step for draft in drafts for step in draft.steps}
+    latest_design = newest("aipm_design")
+    sheet_states, prd = sheets(
+        view, objects, latest_design.content if latest_design else None, pending_steps
+    )
     steps = []
     for step_id in STEP_IDS:
         items = feedback[step_id]
@@ -262,6 +270,7 @@ def project(view, auth, content, registry, *, focus_default="business"):
                 )
             )
         unique = {C.canonical(ref): ref for ref in refs[step_id]}
+        sheet = sheet_states.get(step_id)
         steps.append(
             ProgressStep(
                 id=step_id,
@@ -269,6 +278,8 @@ def project(view, auth, content, registry, *, focus_default="business"):
                 label=base.label,
                 goal=base.goal,
                 expected_outputs=base.expected_outputs,
+                segment=base.segment,
+                icon=base.icon,
                 work_status=work,
                 completed=work == "recorded",
                 evidence_refs=tuple(
@@ -290,6 +301,7 @@ def project(view, auth, content, registry, *, focus_default="business"):
                     for item in open_items[-3:]
                 ),
                 next_actions=tuple(actions),
+                **({"sheet": sheet} if sheet is not None else {}),
             )
         )
 
@@ -327,7 +339,8 @@ def project(view, auth, content, registry, *, focus_default="business"):
         steps=tuple(steps),
         submission_feedback=tuple(discoveries),
         unresolved_business_items=tuple(unresolved[:5]),
-        pending_agent_drafts=tuple(pending(objects)[-5:]),
+        pending_agent_drafts=tuple(drafts[-5:]),
+        prd_ref=prd,
     )
 
 

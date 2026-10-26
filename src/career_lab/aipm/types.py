@@ -395,6 +395,8 @@ class DraftResolve(V2):
     expected_revision: int = Field(ge=1)
     status: Literal["adopted", "dismissed"]
     adopted_design_ref: ObjectRef | None = None
+    # The PRD version the owner saved from this draft (the version's author stays the owner).
+    adopted_prd_ref: ObjectRef | None = None
 
 
 class DraftList(V2):
@@ -410,6 +412,7 @@ class AipmDesignDraft(DraftContent):
     base_design_ref: ObjectRef | None = None
     resolved_by: str | None = None
     adopted_design_ref: ObjectRef | None = None
+    adopted_prd_ref: ObjectRef | None = None
 
 
 # --- v2 section review (192-AIPM体验层v2 §6, §9.2) ---------------------------------------
@@ -464,12 +467,34 @@ class MentorPrompt(DTO):
     trigger_id: str
 
 
+class ModelJudgement(DTO):
+    """One model-judged item: a pending semantic rubric criterion or a check=model point.
+
+    note says where the problem is and which source to look at again; never the answer.
+    """
+
+    target: Literal["rubric", "coverage"]
+    id: str  # criterion id or coverage item id
+    label: str
+    mark: Literal["covered", "missing", "wrong", "to_check"]
+    note: str
+    citations: tuple[EvidenceRefV2, ...] = ()
+    source: Literal["model_suggestion"] = "model_suggestion"
+
+
+ModelStatus = Literal["not_configured", "running", "done", "failed"]
+
+
 class SectionReview(V2):
-    """One learner-requested process review of one PRD section. Never a formal score."""
+    """One learner-requested process review of one PRD section. Never a formal score.
+
+    Revision 1 holds the immediate rule results; when a Judge model is configured, revision 2
+    adds the model items (or the failure reason) for the same inputs and is never recomputed.
+    """
 
     id: str
     session_id: str
-    revision: Literal[1] = 1
+    revision: int = Field(default=1, ge=1, le=2)
     step_id: StepId
     prd_ref: ObjectRef
     design_ref: ObjectRef | None = None
@@ -487,6 +512,9 @@ class SectionReview(V2):
     # Inputs bound at review time (material versions, rule/content revisions) for staleness.
     basis: dict[str, str] = Field(default_factory=dict)
     sentence_labels: None = None  # first version: sentence marks are page-only (spec 7.4)
+    model_status: ModelStatus = "not_configured"
+    model_items: tuple[ModelJudgement, ...] = ()
+    model_reason: str | None = None  # why model items are missing (failure, timeout)
     affects_formal_score: Literal[False] = False
 
 

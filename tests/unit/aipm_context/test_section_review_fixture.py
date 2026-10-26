@@ -19,3 +19,17 @@ def test_section_review_fixture_matches_server_types():
     T.SheetState.model_validate(data["progress_step_sheet_recheck"])
     T.CoverageRule.model_validate(data["coverage_rule_example"])
     T.MentorRule.model_validate(data["mentor_rule_example"])
+
+
+def test_coverage_choice_paths_select_list_elements_by_id():
+    from career_lab.aipm.review import _field
+
+    design = {
+        "stakeholders": [{"id": "other"}, {"id": "approver-choice", "name_or_role": "Grace"}],
+        "needs": [{"id": "need-main", "claim_status": "hypothesis"}],
+        "business": {"audience": "internal"},
+    }
+    assert _field(design, "stakeholders.approver-choice.name_or_role") == "Grace"
+    assert _field(design, "needs.need-main.claim_status") == "hypothesis"
+    assert _field(design, "business.audience") == "internal"
+    assert _field(design, "needs.missing.claim_status") is None

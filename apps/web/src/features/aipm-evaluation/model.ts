@@ -307,3 +307,15 @@ export function modeLabel(language: Language, mode: string) {
     return text(language, '摘录模式（不调用模型）', 'Extractive mode (no model call)');
   return text(language, `生成模式：${mode}`, `Generation mode: ${mode}`);
 }
+
+/** The folded block's one line: how many cases, what ran, what is judged, how many plans. */
+export function blockSummary(view: BatchView | null, language: Language) {
+  if (!view) return text(language, '还没有评测批次', 'No evaluation batch yet');
+  const all = view.summary.all;
+  const plans = view.batch.monitoring?.length ?? 0;
+  return text(
+    language,
+    `${all.total} 题 · 运行 ${all.completed}/${all.runnable} · 已判定 ${all.assessed} · 观察计划 ${plans} 条`,
+    `${all.total} cases · ran ${all.completed}/${all.runnable} · judged ${all.assessed} · ${plans} observation plan${plans === 1 ? '' : 's'}`,
+  );
+}
