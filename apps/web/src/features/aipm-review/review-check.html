@@ -26,6 +26,19 @@
         ? { kind: 'off' }
         : { kind: 'ready', preview: fixturePreview(language) };
     document.documentElement.lang = language;
+    // ?model=running|done|failed: the model look's states, on the same fake review.
+    function withModel(review, status) {
+      if (!status) return review;
+      const zh = language === 'zh';
+      const counter = (review.coverage ?? []).find((c) => c.id === 'need.counterfact');
+      return {
+        ...review,
+        model_status: status,
+        model_error: status === 'failed' ? (zh ? '模型超时' : 'The model timed out') : null,
+        model_coverage: status === 'done' && counter ? [{ ...counter, mark: 'missing', source: 'model_suggestion' }] : [],
+        model_rubric: status === 'done' ? [{ criterion: 'R2.support', label: 'PARTIAL', source: 'pending', explanation: zh ? '证据支持\n只引用了一次访谈，还没有反证。' : 'Evidence\nOne interview cited; no counter-evidence yet.' }] : [],
+      };
+    }
     // Headless Chrome has no viewport under 500px; ?w=390 narrows the page itself.
     if (params.get('w'))
       Object.assign(document.querySelector('main').style, {
@@ -35,7 +48,7 @@
       });
     document.getElementById('fixture').append(
       renderReview(document, {
-        review: fixtureReview(language),
+        review: withModel(fixtureReview(language), params.get('model')),
         language,
         sections: FIXTURE_PRD[language],
         sentences,

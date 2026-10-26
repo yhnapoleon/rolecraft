@@ -16,6 +16,8 @@ import {
   groupSentences,
   coverageMarkName,
   materialOf,
+  mergedCoverage,
+  modelPart,
   type Language,
   nextStatusHint,
   orderCoverage,
@@ -331,11 +333,28 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     );
   }
 
-  // Coverage, worst first, as the result page's rows.
-  if ((review.coverage ?? []).length) {
+  // Coverage, worst first, as the result page's rows. Rule results show at once; the model's
+  // look fills in the points only it can judge, marked as advice, without holding the rest.
+  const model = modelPart(review);
+  const tag = () =>
+    el('span', t('模型判断 · 建议', 'Model judgement · advice'), 'aipm-review__model-tag');
+  const coverage = mergedCoverage(review);
+  const modelLine =
+    model.status === 'running'
+      ? t(
+          '模型细看中…规则判定已先列出，模型的判断稍后补进来。',
+          'The model is looking… Rule results are listed first; the model’s judgement follows.',
+        )
+      : model.status === 'failed'
+        ? t(
+            `模型细看没有完成：${model.error ?? '原因未返回'}。下面只有规则判定。`,
+            `The model look did not finish: ${model.error ?? 'no reason returned'}. Only rule results are below.`,
+          )
+        : null;
+  if (coverage.length || modelLine) {
     const list = el('ul', '', 'fb-list aipm-review__coverage');
-    for (const item of orderCoverage(review.coverage ?? [])) {
-      const row = coverageRow(item, language);
+    for (const item of orderCoverage(coverage)) {
+      const row = coverageRow(item, language, model.status);
       const asked = row.mark === 'unknown' ? colleagueKey(item.owner) : null;
       const shown = row.mark === 'unknown' ? 'to_check' : item.mark;
       const li = renderItemRow(doc, row, language, {
@@ -362,11 +381,21 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
         mark.textContent = coverageMarkName(shown, language);
         mark.className = 'fb-mark aipm-review__pill';
       }
+      if (item.byModel) {
+        li.dataset.source = 'model';
+        findClass(li, 'fb-item__name')?.append(tag());
+      }
       list.append(li);
+    }
+    const status = modelLine ? el('p', modelLine, 'aipm-review__model-status') : null;
+    if (status) {
+      status.dataset.model = model.status;
+      status.setAttribute('role', 'status');
     }
     section(
       t('要点覆盖（按严重程度，不给答案）', 'Coverage (most serious first; no answers given)'),
-      list,
+      ...(status ? [status] : []),
+      ...(coverage.length ? [list] : []),
     );
   }
 
@@ -388,8 +417,35 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     ruleLines(verified, criterionLabels(language), language),
     language,
   );
-  const pending = (review.rubric ?? []).filter((line) => line.source !== 'verified_rule');
+  // The model's reading of criteria the rules leave to delivery, kept apart from rule findings.
+  const advised = model.status === 'done' ? model.rubric : [];
+  const advisedLines = renderRuleLines(
+    doc,
+    ruleLines(
+      advised.map(
+        (line) =>
+          ({
+            ...line,
+            source: 'verified_rule',
+            applicability: 'applicable',
+          }) as unknown as Report['items'][number],
+      ),
+      criterionLabels(language),
+      language,
+    ),
+    language,
+  );
+  const pending = (review.rubric ?? []).filter(
+    (line) =>
+      line.source !== 'verified_rule' && !advised.some((a) => a.criterion === line.criterion),
+  );
   const rubricNodes: Node[] = lines ? [lines] : [];
+  if (advisedLines) {
+    const box = el('div', '', 'aipm-review__advised');
+    box.dataset.source = 'model';
+    box.append(tag(), advisedLines);
+    rubricNodes.push(box);
+  }
   if (pending.length)
     rubricNodes.push(
       el(
@@ -465,15 +521,20 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   foot.append(
     el(
       'p',
-      t(
-        '规则核对与识别标注，没有调用语言模型 · 不计入正式评分',
-        'Rule checks and recognition marks; no language model was called · not part of the formal score',
-      ),
+      model.status === 'done' && (model.coverage.length || model.rubric.length)
+        ? t(
+            '规则核对、识别标注与模型建议 · 模型的判断只是建议 · 不计入正式评分',
+            'Rule checks, recognition marks and model advice · the model’s judgements are advice · not part of the formal score',
+          )
+        : t(
+            '规则核对与识别标注，没有调用语言模型 · 不计入正式评分',
+            'Rule checks and recognition marks; no language model was called · not part of the formal score',
+          ),
       'aipm-review__muted',
     ),
   );
   const actions = el('div', '', 'aipm-review__actions');
-  const top = orderCoverage(review.coverage ?? []).find((c) => c.mark !== 'covered');
+  const top = orderCoverage(coverage).find((c) => c.mark !== 'covered');
   const first: Colleague = top ? colleagueKey(top.owner) : 'manager';
   actions.append(
     button(

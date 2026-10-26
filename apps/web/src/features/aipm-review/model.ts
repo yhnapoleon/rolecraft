@@ -3,7 +3,14 @@
 import type { ChainUnit, PreviewRecognition } from '../recognition-native/chain';
 import type { ItemRow } from '../feedback-native/feedback-items';
 import type { Colleague } from '../../screens/result/colleagues';
-import type { CoverageItem, ReviewColleague, ReviewStatus, SectionReview, StepId } from './types';
+import type {
+  CoverageItem,
+  ReviewColleague,
+  ReviewStatus,
+  RubricLine,
+  SectionReview,
+  StepId,
+} from './types';
 
 export type Language = 'zh' | 'en';
 export const text = (language: Language, zh: string, en: string) => (language === 'zh' ? zh : en);
@@ -109,7 +116,7 @@ export function statusName(status: ReviewStatus, language: Language) {
 /** What would move the review one step up, from its own marks (spec §6.3). */
 export function nextStatusHint(review: SectionReview, language: Language) {
   const wrong =
-    (review.coverage ?? []).some((c) => c.mark === 'wrong') ||
+    mergedCoverage(review).some((c) => c.mark === 'wrong') ||
     (review.misconceptions ?? []).some((m) => m.finding === 'violation');
   if (review.status === 'draft' && wrong)
     return text(language, '改掉「有误」后可到「有依据」', 'Fix what is wrong to reach Grounded');
@@ -195,7 +202,7 @@ const MARK_ORDER: Record<CoverageItem['mark'], number> = {
 };
 const SEVERITY_ORDER: Record<CoverageItem['severity'], number> = { high: 0, medium: 1, low: 2 };
 /** Wrong, missing, to check, covered; within each, high severity first. */
-export const orderCoverage = (items: readonly CoverageItem[]) =>
+export const orderCoverage = <T extends CoverageItem>(items: readonly T[]): T[] =>
   [...items].sort(
     (a, b) =>
       MARK_ORDER[a.mark] - MARK_ORDER[b.mark] ||
@@ -213,12 +220,69 @@ export function coverageMarkName(mark: CoverageItem['mark'], language: Language)
 
 /** A coverage point as the result page's row: the same marks, tones and disclosure. A `model`
  * point is always "to check" in this release (no model look), with a way to ask a colleague. */
-export function coverageRow(item: CoverageItem, language: Language): ItemRow {
-  const mark = item.check === 'model' && item.mark !== 'covered' ? 'to_check' : item.mark;
+// ---- The model's look (user 10-26: on whenever a model is connected) --------------------
+
+export type ModelStatus = 'not_configured' | 'running' | 'done' | 'failed';
+export type ModelPart = {
+  status: ModelStatus;
+  error: string | null;
+  coverage: CoverageItem[];
+  rubric: RubricLine[];
+};
+type WithModel = SectionReview & {
+  model_status?: ModelStatus | null;
+  model_error?: string | null;
+  model_coverage?: CoverageItem[] | null;
+  model_rubric?: RubricLine[] | null;
+};
+/** The model part of a review. The field names are provisional until L4's type lands; this is
+ * the only place that reads them. */
+export function modelPart(review: SectionReview): ModelPart {
+  const r = review as WithModel;
+  return {
+    status: r.model_status ?? 'not_configured',
+    error: r.model_error ?? null,
+    coverage: r.model_coverage ?? [],
+    rubric: r.model_rubric ?? [],
+  };
+}
+export type ShownCoverage = CoverageItem & { byModel?: boolean };
+/** Rule coverage, with the model's finished verdicts in place of the points only it can judge. */
+export function mergedCoverage(review: SectionReview): ShownCoverage[] {
+  const part = modelPart(review);
+  const judged = new Map(part.status === 'done' ? part.coverage.map((c) => [c.id, c]) : []);
+  const base = review.coverage ?? [];
+  const shown: ShownCoverage[] = base.map((c) => {
+    const verdict = judged.get(c.id);
+    return verdict ? { ...verdict, byModel: true } : c;
+  });
+  for (const verdict of judged.values())
+    if (!base.some((c) => c.id === verdict.id)) shown.push({ ...verdict, byModel: true });
+  return shown;
+}
+
+/** What a point only a model can judge says while it has no verdict. */
+function waitingLine(status: ModelStatus, language: Language) {
+  return {
+    not_configured: text(language, '未接入模型', 'No model connected'),
+    running: text(language, '模型细看中…', 'The model is looking…'),
+    failed: text(language, '模型细看没有完成', 'The model look did not finish'),
+    done: text(language, '需要同事判断', 'Needs a colleague’s judgement'),
+  }[status];
+}
+
+export function coverageRow(
+  item: ShownCoverage,
+  language: Language,
+  model: ModelStatus = 'not_configured',
+): ItemRow {
+  const waits = !item.byModel && item.check === 'model' && item.mark !== 'covered';
+  const mark = waits ? 'to_check' : item.mark;
+  const pointer = item.pointer?.text
+    ? text(language, `再看看：${item.pointer.text}`, `Look again: ${item.pointer.text}`)
+    : null;
   const line =
-    (item.pointer?.text
-      ? text(language, `再看看：${item.pointer.text}`, `Look again: ${item.pointer.text}`)
-      : null) ??
+    (waits ? [waitingLine(model, language), pointer].filter(Boolean).join(' · ') : pointer) ??
     (mark === 'to_check'
       ? text(
           language,
@@ -255,7 +319,7 @@ export function reviewSummaryForColleague(
   const points: string[] = (review.misconceptions ?? [])
     .slice(0, 1)
     .map((m) => m.message.replace(/[。.！!]+$/, ''));
-  const ordered = orderCoverage(review.coverage ?? []).filter((c) => c.mark !== 'covered');
+  const ordered = orderCoverage(mergedCoverage(review)).filter((c) => c.mark !== 'covered');
   // This colleague's own points first, then the rest; at most two lines in all.
   for (const item of [
     ...ordered.filter((c) => c.owner === who),

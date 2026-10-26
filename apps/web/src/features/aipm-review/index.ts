@@ -5,7 +5,13 @@
 import type { ObjectRef } from '../../aipm/types';
 import type { Colleague } from '../../screens/result/colleagues';
 import type { PreviewRecognition } from '../recognition-native/chain';
-import { type Language, reviewSummaryForColleague, sheetName, sheetOfCriterion } from './model';
+import {
+  type Language,
+  modelPart,
+  reviewSummaryForColleague,
+  sheetName,
+  sheetOfCriterion,
+} from './model';
 import type { Decision, SectionReview, SectionReviewPage, StepId } from './types';
 import { renderReview, type Sentences } from './view';
 
@@ -49,6 +55,9 @@ export type ReviewOptions = {
 /** Sentence marks are the same under all four decisions (L4's test, spec §6.6), so the sentence
  * check is asked with this fixed placeholder and never waits for a choice on ⑦. */
 const SENTENCE_DECISION: Decision = 'defer_with_conditions';
+/** How often, and for how long (2 minutes), a running model look is reread. */
+const FOLLOW_MS = 3000;
+const FOLLOW_TRIES = 40;
 
 function dig<T>(value: unknown, pick: (v: Loose) => T | undefined, depth = 5): T | undefined {
   if (!value || typeof value !== 'object' || depth < 0) return undefined;
@@ -223,8 +232,30 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
       if (mine === token) {
         state.loading = false;
         paint();
+        follow(mine);
       }
     }
+  }
+
+  /** While the model is still looking, reread the same saved review now and then, and fill in its
+   * verdicts when they arrive. Reading never starts a model call; leaving the screen stops it. */
+  function follow(mine: number, tries = 0) {
+    const review = state.review;
+    if (!review || !state.step || modelPart(review).status !== 'running' || tries >= FOLLOW_TRIES)
+      return;
+    const step = state.step;
+    setTimeout(async () => {
+      if (mine !== token) return;
+      const client = host.getClient() as ReviewClient | null;
+      const page = await client?.sectionReviews(step).catch(() => null);
+      if (mine !== token) return;
+      const same = page?.items.find((item) => item.review.id === review.id)?.review;
+      if (same) {
+        state.review = same;
+        paint();
+      }
+      follow(mine, tries + 1);
+    }, FOLLOW_MS);
   }
 
   async function ask(who: Colleague) {

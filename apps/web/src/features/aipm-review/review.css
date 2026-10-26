@@ -469,3 +469,61 @@
     padding: 18px 16px;
   }
 }
+
+/* The model's look: a quiet status line while it runs, and its verdicts marked as advice. */
+.aipm-review__model-status {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.aipm-review__model-status[data-model="running"]::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 1px;
+  animation: aipm-review-pulse 1.2s var(--ease) infinite alternate;
+}
+.aipm-review__model-status[data-model="failed"] {
+  color: var(--bad);
+}
+@keyframes aipm-review-pulse {
+  from {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-review__model-status[data-model="running"]::before {
+    animation: none;
+  }
+}
+.aipm-review__model-tag {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.6;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+.aipm-review__coverage [data-source="model"] .aipm-review__pill {
+  box-shadow: inset 0 0 0 1px currentColor;
+  background: none;
+}
+.aipm-review__advised {
+  display: grid;
+  gap: 4px;
+  padding: 6px 0 0 10px;
+  border-left: 2px dashed var(--line-2);
+}
+.aipm-review__advised .aipm-review__model-tag {
+  justify-self: start;
+  margin-left: 0;
+}
