@@ -27,6 +27,68 @@ TOOL = {
 }
 
 
+DRAFT_TOOL_NAME = "aipm.design.draft"
+DRAFT_TOOL = {
+    "name": DRAFT_TOOL_NAME,
+    "description": (
+        "Propose business notes, stakeholders, need hypotheses, triage rows, a solution "
+        "intent or PRD section text for the owner to review. The draft is pending until the "
+        "owner adopts it on the web page; it never marks a step complete or creates formal "
+        "feedback. Pass a full command: operation aipm.design.draft, a new request_id, "
+        "expected_version/expected_workspace_revision from observation, and payload "
+        "{draft_id, expected_revision (0 for a new draft), business?, stakeholders?, needs?, "
+        "rows?, solution?, prd_sections?, note?}. After an unknown result keep the same "
+        "request_id and read requests.read. The result includes a draft precheck, a progress "
+        "summary and next actions."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "command": {
+                "type": "object",
+                "properties": {
+                    "schema_version": {"const": 2},
+                    "request_id": {"type": "string"},
+                    "expected_version": {"type": "integer", "minimum": 0},
+                    "expected_workspace_revision": {"type": "integer", "minimum": 0},
+                    "operation": {"const": DRAFT_TOOL_NAME},
+                    "payload": {"type": "object"},
+                },
+                "required": [
+                    "schema_version",
+                    "request_id",
+                    "expected_version",
+                    "expected_workspace_revision",
+                    "operation",
+                    "payload",
+                ],
+            },
+        },
+        "required": ["command"],
+        "additionalProperties": False,
+    },
+    "annotations": {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
+}
+
+
+def tools(backend):
+    """Extension tools for this connection; empty outside enrolled new-experience sessions."""
+    if not tool_enabled(backend):
+        return []
+    found = [TOOL]
+    if callable(getattr(backend, "aipm_draft", None)):
+        found.append(DRAFT_TOOL)
+    return found
+
+
+def call_tool(backend, name, arguments):
+    if name == TOOL_NAME:
+        return read_tool(backend, arguments)
+    result = backend.aipm_draft(arguments)
+    text(result)
+    return result
+
+
 def available(backend):
     return callable(getattr(backend, "aipm_read", None))
 

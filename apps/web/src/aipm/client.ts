@@ -1,5 +1,5 @@
 /** One transport, one server projection. The host owns credentials and pending commands. */
-import type { AipmGuide, AipmProgress, FeedbackDiscovery, ProcessFeedback, VersionPoint } from './types';
+import type { AipmGuide, AipmProgress, DraftPage, FeedbackDiscovery, ProcessFeedback, VersionPoint } from './types';
 import type { Command } from '../features/workspace/contract-types';
 
 export type AipmTransport = (path: string, body?: unknown, method?: string) => Promise<unknown>;
@@ -29,5 +29,8 @@ export class AipmClient {
   updateBatch = (id: string, command: Command) => this.write(`batches/${encodeURIComponent(id)}/state`, 'aipm.batch.update', command);
   readBatch = <T>(id: string) => this.read<T>(`batches/${encodeURIComponent(id)}`);
   recordAssessment = (command: Command) => this.write('assessments', 'aipm.assessment.record', command);
+  /** Agent drafts awaiting the owner; adopt = save the design yourself, then resolve. */
+  drafts = (status: 'pending_owner_review' | 'all' = 'pending_owner_review') => this.read<DraftPage>(`drafts?status=${status}`);
+  resolveDraft = (id: string, command: Command) => this.write(`drafts/${encodeURIComponent(id)}/state`, 'aipm.design_drafts.resolve', command);
 }
 export const createAipmClient = (sessionId: string, transport: AipmTransport) => new AipmClient(sessionId, transport);

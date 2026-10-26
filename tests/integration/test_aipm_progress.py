@@ -231,3 +231,153 @@ def test_mcp_progress_resource_matches_http_and_hides_private_rules(enabled):
     assert "private/grading" not in dumped
     assert all(r["predicate"] not in dumped for r in rules["rules"])
     client.close()
+
+
+def agent_post(env, token, payload, key=None):
+    body = fixture.command(env, "aipm.design.draft", payload, key=key)
+    return env["client"].post(
+        f"/sessions/{env['sid']}/aipm/drafts",
+        json=body,
+        headers={"Authorization": "Bearer " + token},
+    )
+
+
+ROW = TriageRow(
+    id="row1",
+    need_ref="expenses",
+    user_request="Final expense approval",
+    target_action="approve",
+    route="agent_confirmation",
+    rationale="",
+    final_authority="ai",
+).model_dump(mode="json")
+
+
+def test_agent_draft_waits_for_owner_and_only_adoption_counts(enabled):
+    post(enabled, "enrollment", "aipm.enroll")
+    agent, _ = fixture.grant(
+        enabled, ("read", "act"), allowed_actions=("observation", "aipm.design.draft")
+    )
+    draft = {
+        "draft_id": "agent-1",
+        "expected_revision": 0,
+        "rows": [ROW],
+        "prd_sections": {"boundary": "Approval stays with the manager."},
+    }
+    sent = agent_post(enabled, agent["token"], draft)
+    assert sent.status_code == 200, sent.text
+    out = sent.json()["result"]
+    assert out["status"] == "pending_owner_review" and out["counts_toward_progress"] is False
+    assert out["precheck"]["label"] == "draft_precheck_pending_owner"
+    assert out["progress"]["pending_agent_drafts"][0]["ref"]["object_id"] == "agent-1"
+    assert out["next_actions"][0]["action"] == "review_agent_draft"
+
+    progress = result(get(enabled, "progress"))
+    assert steps(progress)["boundary"]["work_status"] == "not_started"
+    assert [d["author_kind"] for d in progress["pending_agent_drafts"]] == ["external_agent"]
+    listed = result(get(enabled, "drafts"))["items"]
+    assert listed[0]["draft"]["author"]["kind"] == "external_agent"
+    assert listed[0]["draft"]["prd_sections"]["boundary"]
+    assert listed[0]["precheck"]["label"] == "draft_precheck_pending_owner"
+
+    # The Agent cannot adopt, save the owner's design or write without the granted action.
+    body = fixture.command(enabled, "aipm.design.save", {})
+    denied = enabled["client"].post(
+        f"/sessions/{enabled['sid']}/aipm/designs",
+        json=body,
+        headers={"Authorization": "Bearer " + agent["token"]},
+    )
+    assert denied.status_code == 403
+    reader, _ = fixture.grant(enabled, ("read", "act"), allowed_actions=("observation",))
+    assert agent_post(enabled, reader["token"], {**draft, "draft_id": "x"}).status_code == 403
+    narrow, _ = fixture.grant(
+        enabled, ("read", "act"), allowed_actions=("aipm.design.draft",), allowed_objects=("a",)
+    )
+    assert agent_post(enabled, narrow["token"], {**draft, "draft_id": "y"}).status_code == 403
+
+    design = AipmDesign(
+        id="design", session_id=enabled["sid"], revision=1, rows=(TriageRow(**ROW),)
+    )
+    saved = post(
+        enabled,
+        "designs",
+        "aipm.design.save",
+        {"design": design.model_dump(mode="json"), "expected_revision": 0},
+    )
+    assert saved.status_code == 200, saved.text
+    adopted = saved.json()["result"]["ref"]
+    resolved = post(
+        enabled,
+        "drafts/agent-1/state",
+        "aipm.design_drafts.resolve",
+        {
+            "draft_id": "agent-1",
+            "expected_revision": 1,
+            "status": "adopted",
+            "adopted_design_ref": adopted,
+        },
+    )
+    assert resolved.status_code == 200, resolved.text
+    progress = result(get(enabled, "progress"))
+    assert steps(progress)["boundary"]["work_status"] == "recorded"
+    assert progress["pending_agent_drafts"] == []
+    again = agent_post(enabled, agent["token"], {**draft, "expected_revision": 2})
+    assert again.status_code == 409
+
+
+def test_mcp_lists_and_calls_draft_tool_only_when_enrolled(enabled):
+    from fastapi.testclient import TestClient
+
+    from career_lab.mcp.protocol import CAPABILITIES, MODERN, VERSION
+    from career_lab.mcp.streamable_http import mount_mcp_http
+
+    mount_mcp_http(enabled["app"])
+    agent, _ = fixture.grant(
+        enabled, ("read", "act"), allowed_actions=("observation", "aipm.design.draft")
+    )
+    client = TestClient(enabled["app"], base_url="http://127.0.0.1")
+
+    def call(method, params, name=""):
+        response = client.post(
+            f"/sessions/{enabled['sid']}/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": {**params, "_meta": {VERSION: MODERN, CAPABILITIES: {}}},
+            },
+            headers={
+                "Authorization": "Bearer " + agent["token"],
+                "Accept": "application/json, text/event-stream",
+                "MCP-Protocol-Version": MODERN,
+                "Mcp-Method": method,
+                "Mcp-Name": name,
+            },
+        )
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    names = lambda: {t["name"] for t in call("tools/list", {})["result"]["tools"]}  # noqa: E731
+    assert "aipm.design.draft" not in names()  # not enrolled yet
+    post(enabled, "enrollment", "aipm.enroll")
+    assert {"aipm.design.draft", "aipm.context.read"} <= names()
+    command = fixture.command(
+        enabled,
+        "aipm.design.draft",
+        {"draft_id": "mcp-1", "expected_revision": 0, "rows": [ROW]},
+    )
+    out = call(
+        "tools/call",
+        {"name": "aipm.design.draft", "arguments": {"command": command}},
+        "aipm.design.draft",
+    )["result"]
+    assert out["isError"] is False, out
+    value = out["structuredContent"]
+    assert value["request_id"] == command["request_id"]
+    assert value["precheck"]["label"] == "draft_precheck_pending_owner"
+    rules = json.loads((CONTENT / "private/grading/design.json").read_text())
+    assert all(r["predicate"] not in json.dumps(value) for r in rules["rules"])
+    assert (
+        result(get(enabled, "progress"))["pending_agent_drafts"][0]["ref"]["object_id"] == "mcp-1"
+    )
+    client.close()

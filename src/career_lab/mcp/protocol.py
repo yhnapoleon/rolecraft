@@ -29,7 +29,8 @@ INSTRUCTIONS = (
     "and defaults to the session this connection is authorized for; if given, it must match. "
     "Start with observation; tools shows which business tools are available now. "
     "AIPM resources and prompts provide read-only context; aipm.context.read is an MCP-only "
-    "compatibility tool, separate from the business tools catalogue. "
+    "compatibility tool, separate from the business tools catalogue. aipm.design.draft "
+    "proposes design content for the owner's review; it never completes a step by itself. "
     "The JSON-RPC id is not the business request_id: after an unknown "
     "result keep command.request_id unchanged and read requests.read; re-execution requires "
     "an explicit user decision. Engineer writes (engineer.reproduce, engineer.trial, "
@@ -204,7 +205,7 @@ class Protocol:
             if not isinstance(cursor, str) or not re.fullmatch(r"0|[1-9][0-9]{0,5}", cursor):
                 raise RpcFailure(-32602, "Invalid cursor")
             tools = sorted((t for t in self.backend.tools() if t.available), key=lambda t: t.name)
-            extra = [aipm_context.TOOL] if aipm_context.tool_enabled(self.backend) else []
+            extra = aipm_context.tools(self.backend)
             start = int(cursor)
             if start > len(tools) + len(extra):
                 raise RpcFailure(-32602, "Invalid cursor")
@@ -243,11 +244,12 @@ class Protocol:
             ):
                 raise RpcFailure(-32602, "Invalid tool-call params")
             name = params["name"]
+            extension = name in {aipm_context.TOOL_NAME, aipm_context.DRAFT_TOOL_NAME}
             known = (
-                set() if name == aipm_context.TOOL_NAME else {t.name for t in self.backend.tools()}
+                {t["name"] for t in aipm_context.tools(self.backend)}
+                if extension
+                else {t.name for t in self.backend.tools()}
             )
-            if name == aipm_context.TOOL_NAME and aipm_context.tool_enabled(self.backend):
-                known.add(aipm_context.TOOL_NAME)
             if name not in known:
                 raise RpcFailure(-32602, "Unknown tool")
             arguments = params.get("arguments", {})
@@ -260,9 +262,9 @@ class Protocol:
                 # An explicit session is passed through for the backend's own match check.
                 arguments = {**arguments, "session_id": bound}
             try:
-                if name == aipm_context.TOOL_NAME:
+                if extension:
                     try:
-                        result = aipm_context.read_tool(self.backend, arguments)
+                        result = aipm_context.call_tool(self.backend, name, arguments)
                     except ValueError:
                         raise RemoteFailure("tool_arguments_invalid", 422) from None
                 else:

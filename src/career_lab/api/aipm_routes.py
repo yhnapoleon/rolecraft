@@ -12,6 +12,7 @@ READS = (
     ("/submissions/{submission_id}/versions/{version}/feedback", "aipm.submission_feedback.read"),
     ("/designs/{design_id}", "aipm.design.read"),
     ("/batches/{batch_id}", "aipm.batch.read"),
+    ("/drafts", "aipm.design_drafts.list"),
 )
 WRITES = (
     ("/enrollment", "aipm.enroll"),
@@ -21,7 +22,11 @@ WRITES = (
     ("/batches", "aipm.batch.create"),
     ("/batches/{batch_id}/state", "aipm.batch.update"),
     ("/assessments", "aipm.assessment.record"),
+    ("/drafts", "aipm.design.draft"),
+    ("/drafts/{draft_id}/state", "aipm.design_drafts.resolve"),
 )
+# The only extension write a delegated Agent may make: a draft awaiting the owner.
+AGENT_WRITES = frozenset({"aipm.design.draft"})
 
 
 def mount_aipm_routes(app):
@@ -57,7 +62,9 @@ def mount_aipm_routes(app):
             credentials: HTTPAuthorizationCredentials | None = credential_dependency,
         ):
             auth = authenticate(session_id, credentials)
-            if auth.executor.kind != "human" or auth.actor_id != "learner":
+            human = auth.executor.kind == "human" and auth.actor_id == "learner"
+            agent = auth.executor.kind == "external_agent" and operation in AGENT_WRITES
+            if not (human or agent):
                 raise C.ProtocolError("human_required", status=403)
             params = {k: v for k, v in request.path_params.items() if k != "session_id"}
             return gateway.dispatch(auth, operation, body.model_dump(mode="json"), params)

@@ -13,6 +13,7 @@ from .feedback_discovery import discover, permits
 from .types import (
     STEP_IDS,
     AipmProgress,
+    DraftSummary,
     FeedbackSummary,
     ProgressStep,
     Projection,
@@ -24,6 +25,7 @@ OPEN_FINDINGS = {"violation", "improve", "unknown"}
 # Reads whose absence means some step evidence may be invisible to this caller.
 EVIDENCE_READS = ("objects.read", "submissions.list", "feedback.records.read")
 SUBMISSION_LIMIT = 3
+KIND = "aipm_design_draft"
 
 GAPS = {
     "business_sources": (
@@ -146,6 +148,37 @@ def _design_signals(design, language):
             missing["solution"].append(gap("solution_alternative", language))
         status["solution"] = "working" if missing["solution"] else "recorded"
     return status, refs, missing
+
+
+def draft_steps(draft):
+    steps = []
+    for step, present in (
+        ("business", draft.get("business")),
+        ("stakeholders", draft.get("stakeholders")),
+        ("need", draft.get("needs")),
+        ("boundary", draft.get("rows")),
+        ("solution", draft.get("solution")),
+    ):
+        if present:
+            steps.append(step)
+    for step in draft.get("prd_sections") or {}:
+        if step not in steps:
+            steps.append(step)
+    return tuple(steps)
+
+
+def pending(objects):
+    rows = [r for r in heads(objects).values() if r.ref.kind == KIND]
+    rows.sort(key=lambda r: (r.created_storage_revision, r.ref.object_id))
+    return [
+        DraftSummary(
+            ref=r.ref,
+            author_kind=r.content["author"]["kind"],
+            steps=draft_steps(r.content),
+        )
+        for r in rows
+        if r.content["status"] == "pending_owner_review"
+    ]
 
 
 def project(view, auth, content, registry, *, focus_default="business"):
@@ -294,6 +327,7 @@ def project(view, auth, content, registry, *, focus_default="business"):
         steps=tuple(steps),
         submission_feedback=tuple(discoveries),
         unresolved_business_items=tuple(unresolved[:5]),
+        pending_agent_drafts=tuple(pending(objects)[-5:]),
     )
 
 
