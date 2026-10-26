@@ -86,15 +86,26 @@ const steps = (): Step[] => {
   const a = host?.current();
   const engineer = !!a && host?.job(a) === 'engineer';
   const find = (selector: string) => visible(document.querySelector(selector));
+  // A practice in the seven steps has one numbering: its guide bar, not the six-layer ruler.
+  const sevenSteps = !engineer && !!document.querySelector('.aipm-guide');
   return [
-    {
-      target: () => find(engineer ? '.rc-scale' : '.rc-prog'),
-      title: T('当前在哪一层', 'Where you are'),
-      body: T(
-        '问题航段尺告诉你当前的问题、已有依据和还没解决的事。',
-        'The progress ruler shows the current question, the evidence you have and what remains unresolved.',
-      ),
-    },
+    sevenSteps
+      ? {
+          target: () => find('.aipm-guide__bar'),
+          title: T('七步走到哪', 'Where you are in seven steps'),
+          body: T(
+            '这里显示你正在处理哪一步。工作地图可以随时换步；已有记录不代表已经掌握。',
+            'This shows the step you are working on. The work map lets you switch at any time; recorded work does not mean mastery.',
+          ),
+        }
+      : {
+          target: () => find(engineer ? '.rc-scale' : '.rc-prog'),
+          title: T('当前在哪一层', 'Where you are'),
+          body: T(
+            '问题航段尺告诉你当前的问题、已有依据和还没解决的事。',
+            'The progress ruler shows the current question, the evidence you have and what remains unresolved.',
+          ),
+        },
     {
       target: () => visible(currentItem()),
       title: T('当前事项', 'Your current work'),

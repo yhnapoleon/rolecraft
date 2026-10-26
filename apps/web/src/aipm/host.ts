@@ -17,6 +17,7 @@ export type AipmSessionContext = {
   readOnly: boolean;
 };
 export type AipmFeatureId = 'design' | 'evaluation';
+export type AipmContentId = 'company' | 'guide' | 'patterns' | 'design' | 'evaluation';
 export type AipmFeature = {
   render(): string;
   mount?(root: HTMLElement): undefined | (() => void);
@@ -28,9 +29,15 @@ export interface AipmHost<TProgress = unknown, TClient = unknown> {
   getClient(): TClient | null;
   readProgress(): Promise<TProgress>;
   readGuide(): Promise<unknown>;
+  /** The bound content revision's published `public/<id>.<work language>.json`; rejects when this
+   * build does not carry it or its revision differs from the practice's guide. */
+  readContent(id: AipmContentId): Promise<unknown>;
   /** Explicit writes. The host journals the exact Command before calling the L4 client. */
   command(operation: string, payload: Record<string, unknown>): Promise<unknown>;
   recover(requestId: string): Promise<unknown>;
+  /** Sends a `tests.create` Command the caller already persisted, byte for byte: same request_id,
+   * no new journal entry, no retry. Used by L3's batches so a resumed case never runs twice. */
+  sendPreparedTest(command: Record<string, unknown>): Promise<unknown>;
   openMaterial(id: string): Promise<void>;
   openWork(ref?: ObjectRef): Promise<void>;
   /** Prefill only. Sending remains a separate user action. */
