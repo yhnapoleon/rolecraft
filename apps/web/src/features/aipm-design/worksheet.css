@@ -1,0 +1,336 @@
+.aipm-sheet {
+  --sheet-serif: "Iowan Old Style", "Songti SC", "Noto Serif SC", Georgia, serif;
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+  min-width: 0;
+  padding: 28px 36px 22px;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-paper);
+}
+.aipm-sheet--loading {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.aipm-sheet h1 {
+  margin: -8px 0 0;
+  font-size: clamp(24px, 2.6vw, 30px);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.aipm-sheet__eyebrow,
+.aipm-sheet__muted {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.aipm-sheet__tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--line-2);
+  color: var(--ink);
+  font-size: 11px;
+}
+.aipm-sheet__goal {
+  margin: -10px 0 0;
+  color: var(--ink-2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.aipm-sheet__angles {
+  display: grid;
+  gap: 8px;
+}
+.aipm-sheet__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.aipm-sheet__angle,
+.aipm-sheet__menu {
+  position: relative;
+}
+.aipm-sheet__angle > button {
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out, ease);
+}
+.aipm-sheet__angle > button:hover,
+.aipm-sheet__angle > button[aria-expanded="true"] {
+  border-color: var(--ink);
+}
+.aipm-sheet__pop {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 220px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow-float, var(--shadow-paper));
+}
+.aipm-sheet__pop--up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+.aipm-sheet__pop--wide {
+  width: min(420px, 80vw);
+}
+.aipm-sheet__pop small {
+  padding: 2px 8px 6px;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.aipm-sheet__pop pre {
+  margin: 0 0 6px;
+  padding: 8px;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: 8px;
+  background: var(--background, transparent);
+}
+.aipm-sheet__pop button[role="menuitem"] {
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.aipm-sheet__pop button[role="menuitem"]:hover {
+  background: var(--line-2);
+}
+.aipm-sheet__choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.aipm-sheet__choice legend {
+  float: left;
+  margin-right: 14px;
+  font-size: 14px;
+  line-height: 34px;
+}
+.aipm-sheet__segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--line-2);
+}
+.aipm-sheet__segmented label {
+  position: relative;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.aipm-sheet__segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.aipm-sheet__segmented label:has(input:checked) {
+  background: var(--paper);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+.aipm-sheet__segmented label:has(input:focus-visible) {
+  outline: 2px solid var(--ring, currentColor);
+  outline-offset: 1px;
+}
+.aipm-sheet__paper {
+  display: grid;
+  gap: 8px;
+  min-height: 260px;
+  padding: 20px 22px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+}
+.aipm-sheet__p,
+.aipm-sheet__h {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  outline: none;
+  resize: none;
+}
+.aipm-sheet__p {
+  font-family: var(--sheet-serif);
+  font-size: 17px;
+  line-height: 1.85;
+}
+.aipm-sheet__p::placeholder {
+  color: var(--ink-2);
+}
+.aipm-sheet__h {
+  margin-top: 6px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+}
+.aipm-sheet__quote {
+  position: relative;
+  margin: 2px 0;
+  padding: 10px 34px 10px 16px;
+  border-left: 3px solid var(--line-2);
+  border-radius: 0 10px 10px 0;
+  background: var(--background, transparent);
+}
+.aipm-sheet__quote p {
+  margin: 0 0 4px;
+  font-family: var(--sheet-serif);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.aipm-sheet__quote cite {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-style: normal;
+}
+.aipm-sheet__quote button {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border: 0;
+  color: var(--ink-2);
+  background: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+.aipm-sheet__paper-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.aipm-sheet__structure {
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+}
+.aipm-sheet__structure > button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.aipm-sheet__structure > button strong {
+  font-size: 14px;
+  font-weight: 550;
+}
+.aipm-sheet__structure > button small {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.aipm-sheet__structure-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+.aipm-sheet__draft {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: 12px;
+}
+.aipm-sheet__draft summary {
+  width: fit-content;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.aipm-sheet__diff {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.aipm-sheet__diff > div > small {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.aipm-sheet__diff pre {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  font-family: var(--sheet-serif);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.aipm-sheet__actions {
+  display: flex;
+  gap: 8px;
+}
+.aipm-sheet__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.aipm-sheet__note {
+  flex: 1;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.aipm-sheet__agent {
+  border: 0;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--ink);
+  background: none;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .aipm-sheet {
+    padding: 20px 16px;
+  }
+  .aipm-sheet__paper {
+    padding: 14px;
+  }
+  .aipm-sheet__diff {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

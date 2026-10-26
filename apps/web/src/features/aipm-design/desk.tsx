@@ -40,7 +40,6 @@ import {
   newRow,
   nextDesign,
   nextStep,
-  prdFromDesign,
   rowChanged,
   type SectionCheck,
   sectionCheck,
@@ -332,12 +331,11 @@ export function DesignDesk({
           )}
         </ol>
       )}
-      <WorkLink c={c} host={host} saved={saved} language={language} readOnly={readOnly} />
     </section>
   );
 }
 
-type SectionProps = {
+export type SectionProps = {
   id: DesignStep;
   c: Copy;
   host: Host;
@@ -622,7 +620,7 @@ const emptyMetric = {
   claimed_interpretation: '',
 };
 
-function Triage(p: SectionProps) {
+export function Triage(p: SectionProps) {
   const { c, draft, setDraft, saved, language } = p;
   const rows = draft.rows ?? [];
   const [openRow, setOpenRow] = useState<string | null>(
@@ -813,7 +811,6 @@ const support = (c: Copy, value?: TriageRow['execution_support']) =>
       : c.t('执行能力待核对', 'Execution support not yet checked');
 
 function Solution({ c, host, draft, setDraft, saved, language }: SectionProps) {
-  const lanes = useMemo(() => (saved ? diagram(saved.design, language) : []), [saved, language]);
   const s = draft.solution ?? {
     selected_approach: '',
     rationale: '',
@@ -823,55 +820,7 @@ function Solution({ c, host, draft, setDraft, saved, language }: SectionProps) {
   const set = (patch: Partial<typeof s>) => setDraft({ ...draft, solution: { ...s, ...patch } });
   return (
     <>
-      <div className="aipm-design__diagram">
-        <div>
-          <p className="aipm-design__eyebrow">
-            {c.t('拟议方案 · 按已保存的分拣生成', 'Proposed design · drawn from your saved triage')}
-          </p>
-          {lanes.length ? (
-            lanes.map((lane) => (
-              <div key={lane.rowId} className="aipm-design__lane">
-                <div className="aipm-design__lane-head">
-                  <strong>{lane.request}</strong>
-                  <small>
-                    {c.route(lane.route)} · {lane.status}
-                  </small>
-                </div>
-                <ol className="aipm-design__nodes">
-                  {lane.nodes.map((node) => (
-                    <li key={`${lane.rowId}:${node}`} className="aipm-design__node">
-                      {node}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))
-          ) : (
-            <p className="aipm-design__muted">
-              {c.t(
-                '先在「AI 边界」保存一行分拣，这里就会出现方案图。',
-                'Save a triage row under AI boundary to draw the design here.',
-              )}
-            </p>
-          )}
-        </div>
-        <aside className="aipm-design__actual">
-          <p className="aipm-design__eyebrow">{c.t('实际生效', 'In effect')}</p>
-          <p>
-            {c.t(
-              '知识助手仍按当前设置运行。上面的组件都是拟议，保存方案不会改变设置。',
-              'The assistant still runs on its current settings. Everything shown is proposed; saving never changes settings.',
-            )}
-          </p>
-          <button
-            type="button"
-            className="btn quiet small"
-            onClick={() => void host.openSettings()}
-          >
-            {c.t('打开实际设置', 'Open actual settings')}
-          </button>
-        </aside>
-      </div>
+      <DiagramBlock c={c} host={host} saved={saved} language={language} />
       <Field
         label={c.t('选定的做法', 'Chosen approach')}
         value={s.selected_approach}
@@ -1032,63 +981,6 @@ function Evidence({
   );
 }
 
-function WorkLink({
-  c,
-  host,
-  saved,
-  language,
-  readOnly,
-}: {
-  c: Copy;
-  host: Host;
-  saved: DesignRead | null;
-  language: Language;
-  readOnly: boolean;
-}) {
-  const [note, setNote] = useState('');
-  const [prd, setPrd] = useState<ObjectRef | null>(saved?.design.prd_ref ?? null);
-  if (!saved) return null;
-  const saveWork = async () => {
-    const content = prdFromDesign(saved.design, c.section, language);
-    const result = await host.createWorkVersion(
-      prd
-        ? { kind: 'text', content, product_id: prd.object_id, expected_head: prd.version }
-        : {
-            kind: 'text',
-            content,
-            title: c.t('知识助手 PRD', 'Knowledge assistant PRD'),
-            purpose: c.t('七节 PRD', 'Seven-section PRD'),
-          },
-    );
-    const ref = findRef(result, 'product');
-    if (!ref || failure(result))
-      return setNote(c.t('作品没有保存成功。', 'The work version was not saved.'));
-    setPrd(ref);
-    setNote(c.t(`已存为作品第 ${ref.version} 版。`, `Saved as work version ${ref.version}.`));
-  };
-  return (
-    <footer className="aipm-design__foot">
-      <span className="aipm-design__muted" role="status">
-        {note ||
-          c.t(
-            '写好的几节可以合成一份 PRD 作品，交给同事看。',
-            'Saved sections can become one PRD work item to share.',
-          )}
-      </span>
-      <button
-        type="button"
-        className="btn quiet small"
-        disabled={readOnly}
-        onClick={() => void saveWork()}
-      >
-        {prd
-          ? c.t('更新 PRD 作品', 'Update the PRD work')
-          : c.t('合成 PRD 作品', 'Make a PRD work item')}
-      </button>
-    </footer>
-  );
-}
-
 /** Any free work item the learner has open can be attached to a section. */
 function LinkWork({
   c,
@@ -1129,5 +1021,67 @@ function LinkWork({
       </button>
       {linked}
     </p>
+  );
+}
+
+/** The fixed-structure proposal drawn from the saved triage, beside what is actually in effect. */
+export function DiagramBlock({
+  c,
+  host,
+  saved,
+  language,
+}: {
+  c: Copy;
+  host: Host;
+  saved: DesignRead | null;
+  language: Language;
+}) {
+  const lanes = useMemo(() => (saved ? diagram(saved.design, language) : []), [saved, language]);
+  return (
+    <div className="aipm-design__diagram">
+      <div>
+        <p className="aipm-design__eyebrow">
+          {c.t('拟议方案 · 按已保存的分拣生成', 'Proposed design · drawn from your saved triage')}
+        </p>
+        {lanes.length ? (
+          lanes.map((lane) => (
+            <div key={lane.rowId} className="aipm-design__lane">
+              <div className="aipm-design__lane-head">
+                <strong>{lane.request}</strong>
+                <small>
+                  {c.route(lane.route)} · {lane.status}
+                </small>
+              </div>
+              <ol className="aipm-design__nodes">
+                {lane.nodes.map((node) => (
+                  <li key={`${lane.rowId}:${node}`} className="aipm-design__node">
+                    {node}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))
+        ) : (
+          <p className="aipm-design__muted">
+            {c.t(
+              '先在「AI 边界」保存一行分拣，这里就会出现方案图。',
+              'Save a triage row under AI boundary to draw the design here.',
+            )}
+          </p>
+        )}
+      </div>
+      <aside className="aipm-design__actual">
+        <p className="aipm-design__eyebrow">{c.t('实际生效', 'In effect')}</p>
+        <p>
+          {c.t(
+            '知识助手仍按当前设置运行。上面的组件都是拟议，保存方案不会改变设置。',
+            'The assistant still runs on its current settings. Everything shown is proposed; saving never changes settings.',
+          )}
+        </p>
+        <button type="button" className="btn quiet small" onClick={() => void host.openSettings()}>
+          {c.t('打开实际设置', 'Open actual settings')}
+        </button>
+      </aside>
+    </div>
   );
 }

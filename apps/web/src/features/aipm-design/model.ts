@@ -375,29 +375,3 @@ export function sectionCheck(
   }
   return out;
 }
-
-/** PRD text for a work version, built from what was actually saved. */
-export function prdFromDesign(
-  design: AipmDesign,
-  title: (id: StepId) => string,
-  language: Language,
-) {
-  const t = (zh: string, en: string) => text(language, zh, en);
-  const lines: Partial<Record<StepId, string[]>> = {
-    business: design.business
-      ? [design.business.offering_explanation, design.business.task_goal]
-      : [],
-    stakeholders: (design.stakeholders ?? []).map((s) => `${s.name_or_role}: ${s.responsibility}`),
-    need: (design.needs ?? []).flatMap((n) => [
-      n.problem,
-      n.counterevidence_or_unknown,
-      n.next_validation,
-    ]),
-    boundary: [designSummary(design, language).boundary],
-    solution: [designSummary(design, language).solution],
-  };
-  return STEP_IDS.map(
-    (id) =>
-      `## ${title(id)}\n\n${(lines[id] ?? []).filter(Boolean).join('\n') || t('（未填写）', '(Not written)')}`,
-  ).join('\n\n');
-}
