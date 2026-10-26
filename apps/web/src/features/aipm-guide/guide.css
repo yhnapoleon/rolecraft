@@ -320,7 +320,7 @@
     flex-wrap: wrap;
     row-gap: 4px;
   }
-  .aipm-guide__location span {
+  .aipm-guide__location > span {
     display: none;
   }
   .aipm-guide__location strong {
