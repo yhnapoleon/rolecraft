@@ -92,7 +92,11 @@ def evaluate_design(
                 "message": message or wording["message"],
                 "basis_refs": [ref.model_dump(mode="json") for ref in basis],
                 "checked_scope": wording["checked_scope"],
-                "next_action": wording["next_action"],
+                "next_action": {
+                    "action": "open_step",
+                    "label": wording["next_action"],
+                    "step_id": step,
+                },
                 "stale": False,
                 "affects_formal_score": False,
             }
@@ -153,7 +157,9 @@ def evaluate_design(
                     else (
                         "No verified authority conflict found; the design still needs review."
                         if known
-                        else "No verified basis matches this custom need. Add sources and authority."
+                        else (
+                            "No verified basis matches this custom need. Add sources and authority."
+                        )
                     ),
                     "basis_refs": [],
                     "checked_scope": "declared_fields_only",
