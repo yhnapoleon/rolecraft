@@ -120,6 +120,12 @@ export function nextStatusHint(review: SectionReview, language: Language) {
     mergedCoverage(review).some((c) => c.mark === 'wrong') ||
     (review.misconceptions ?? []).some((m) => m.finding === 'violation');
   const status = shownStatus(review);
+  if (modelPart(review).status === 'running')
+    return text(
+      language,
+      '模型细看中，结果回来后再定档',
+      'The model is looking; the status settles when it returns',
+    );
   if (status === 'draft' && wrong)
     return text(language, '改掉「有误」后可到「有依据」', 'Fix what is wrong to reach Grounded');
   if (status === 'draft')
@@ -293,17 +299,11 @@ export function mergedCoverage(review: SectionReview): ShownCoverage[] {
   return shown;
 }
 
-/** The review's status with the model's coverage verdicts counted, by the server's own rule
- * (`aipm/review.py::_status`); before a finished look it is the stored status. */
+/** The status to show. Revision 2 carries the server's status with the model's verdicts
+ * counted; while the model is still looking, "Holds up" is never shown early (it may drop). */
 export function shownStatus(review: SectionReview): ReviewStatus {
-  if (modelPart(review).status !== 'done') return review.status;
-  const coverage = mergedCoverage(review);
-  if ((review.misconceptions ?? []).length || coverage.some((m) => m.mark === 'wrong'))
-    return 'draft';
-  const cited = coverage.some((m) => m.check === 'citation' && m.mark === 'covered');
-  if (!cited || coverage.some((m) => m.mark === 'missing' && m.severity === 'high')) return 'draft';
-  if (coverage.some((m) => m.mark === 'missing' && m.severity === 'medium')) return 'based';
-  return 'solid';
+  if (modelPart(review).status === 'running' && review.status === 'solid') return 'based';
+  return review.status;
 }
 /** The comparison's "after" counts again with the model's verdicts (`review.py::counts`). */
 export function shownDelta(review: SectionReview): SectionReview['delta'] {
@@ -378,30 +378,52 @@ export function reviewSummaryForColleague(
   const who: ReviewColleague = colleague === 'technical' ? 'tech' : colleague;
   const sheet = stepName(review.step_id, language);
   const version = review.prd_ref.version;
-  const points: string[] = (review.misconceptions ?? [])
-    .slice(0, 1)
-    .map((m) => m.message.replace(/[。.！!]+$/, ''));
+  // Point names with their marks, this colleague's first; two at most so it fits the box.
+  // The model's own words go in the separate review summary the learner may attach.
   const ordered = orderCoverage(mergedCoverage(review)).filter((c) => c.mark !== 'covered');
-  // This colleague's own points first, then the rest; at most two lines in all.
-  for (const item of [
+  const points = [
     ...ordered.filter((c) => c.owner === who),
     ...ordered.filter((c) => c.owner !== who),
-  ]) {
-    if (points.length >= 2) break;
-    points.push(
-      `${coverageMarkName(item.mark, language)}${text(language, '：', ': ')}${item.label}`,
+  ]
+    .slice(0, 2)
+    .map((c) =>
+      text(
+        language,
+        `${c.label}（${coverageMarkName(c.mark, language)}）`,
+        `${c.label} (${coverageMarkName(c.mark, language).toLowerCase()})`,
+      ),
     );
-  }
   const status = statusName(shownStatus(review), language);
   const ask = ASK_DIRECTION[who][language === 'zh' ? 0 : 1];
   if (language === 'zh') {
-    const said = points.length ? `批改说：${points.join('；')}。` : `批改结果是「${status}」。`;
+    const said = points.length ? `批改标出：${points.join('、')}。` : `批改结果是「${status}」。`;
     return `我在写「${sheet}」第 ${version} 版。${said}${ask}`;
   }
   const said = points.length
-    ? `The review says: ${points.join('; ')}.`
+    ? `The review marks ${points.join(', ')}.`
     : `The review marks it “${status}”.`;
   return `I’m writing “${sheet}”, version ${version}. ${said} ${ask}`;
+}
+
+/** The longer text behind “Attach the review summary”: each finding in its own words, where to
+ * look again, and whether a rule or the model said it. The learner decides whether to insert it. */
+export function reviewDetailForColleague(
+  review: SectionReview,
+  options: { language?: Language } = {},
+) {
+  const language = options.language ?? 'zh';
+  const t = (zh: string, en: string) => text(language, zh, en);
+  const paren = (words: string) => t(`（${words}）`, ` (${words})`);
+  const sep = t('：', ': ');
+  const lines = (review.misconceptions ?? []).map((m) => {
+    const model = m.source === 'model_suggestion';
+    const name = model && m.checked_scope ? `${m.checked_scope}${sep}` : '';
+    return `· ${name}${m.message.trim()}${paren(model ? t('模型建议', 'model advice') : t('规则判定', 'rule check'))}`;
+  });
+  for (const c of orderCoverage(mergedCoverage(review)))
+    if (c.mark !== 'covered' && c.pointer?.text)
+      lines.push(`· ${c.label}${paren(coverageMarkName(c.mark, language))}${sep}${c.pointer.text}`);
+  return lines.join('\n');
 }
 
 /** The closing question asks each colleague, from their own remit, where to look first — never
@@ -446,3 +468,93 @@ export const sheetOfCriterion = (criterion: string): StepId | null =>
 /** The material a pointer or finding names, to open beside the sheet. */
 export const materialOf = (refs?: readonly { kind: string; object_id: string }[] | null) =>
   refs?.find((ref) => ref.kind === 'material')?.object_id ?? null;
+
+// ---- What each colleague looks at on a sheet, when no preset question fired -------------
+
+const DEFAULT_ANGLE: Record<StepId, Record<ReviewColleague, [string, string]>> = {
+  business: {
+    manager: ['这次试点要达成什么目标', 'What this pilot is meant to achieve'],
+    business: ['助手到底给谁用', 'Who the assistant is really for'],
+    tech: ['现有系统能接住什么', 'What the current systems can support'],
+  },
+  stakeholders: {
+    manager: ['谁拍板试点资源', 'Who approves the pilot resources'],
+    business: ['谁每天会用、谁会多干活', 'Who uses it daily, and who gets more work'],
+    tech: ['出了错谁来接', 'Who picks it up when it goes wrong'],
+  },
+  need: {
+    manager: ['这个收益值不值得做', 'Whether the benefit is worth it'],
+    business: ['数字的口径和来源', 'How the numbers are defined and sourced'],
+    tech: ['哪条证据能推翻这个假设', 'Which evidence could overturn the assumption'],
+  },
+  boundary: {
+    manager: ['谁有最后批准权', 'Who has the final approval'],
+    business: ['哪些请求必须人来处理', 'Which requests a person must handle'],
+    tech: ['助手现在做得到什么', 'What the assistant can do today'],
+  },
+  solution: {
+    manager: ['资源和取舍', 'Resources and trade-offs'],
+    business: ['首批用户能不能用起来', 'Whether the first users can adopt it'],
+    tech: ['方案和实际配置差在哪', 'Where the plan and the real settings differ'],
+  },
+  assurance: {
+    manager: ['上线后看什么信号', 'Which signals to watch after launch'],
+    business: ['出错后业务谁来接', 'Who in the business picks up a failure'],
+    tech: ['哪一题能推翻这个方案', 'Which case could overturn the plan'],
+  },
+  decision: {
+    manager: ['在什么条件下承诺', 'Under which conditions to commit'],
+    business: ['还没解决的业务问题', 'Business questions still open'],
+    tech: ['复测和回退是否到位', 'Whether retests and rollback are in place'],
+  },
+};
+/** The angle a colleague would take on this sheet, for the column with no preset question. */
+export const defaultAngle = (step: StepId, who: ReviewColleague | Colleague, language: Language) =>
+  DEFAULT_ANGLE[step][who === 'technical' ? 'tech' : who][language === 'zh' ? 0 : 1];
+
+// ---- What was written, as blocks ---------------------------------------------------------
+
+export type WrittenBlock =
+  | { type: 'h'; text: string }
+  | { type: 'quote'; text: string; source: string | null }
+  | { type: 'p'; text: string };
+/** The sheet's saved text read back as blocks: `### ` headings, `> ` quotes (with a closing
+ * `> — source` line) and the learner's own paragraphs, as L2's worksheet writes them. */
+export function writtenBlocks(written: string): WrittenBlock[] {
+  const blocks: WrittenBlock[] = [];
+  for (const chunk of written.split(/\n{2,}/)) {
+    const body = chunk.trim();
+    if (!body) continue;
+    const lines = body.split('\n');
+    if (body.startsWith('#')) blocks.push({ type: 'h', text: body.replace(/^#+\s*/, '') });
+    else if (lines.every((line) => line.startsWith('>'))) {
+      const clean = lines.map((line) => line.replace(/^>\s?/, ''));
+      const last = clean[clean.length - 1];
+      const cited = /^[—-]\s*/.test(last) && clean.length > 1;
+      blocks.push({
+        type: 'quote',
+        text: (cited ? clean.slice(0, -1) : clean).join('\n'),
+        source: cited ? last.replace(/^[—-]\s*/, '') : null,
+      });
+    } else blocks.push({ type: 'p', text: body });
+  }
+  return blocks;
+}
+/** Marks the recognizer added to a sentence taken from a heading or quote line. */
+const MARKUP = /^(?:#+\s*|>\s*(?:[—-]\s*)?)/;
+/** Only the learner's own sentences: sentences from headings and quotes are dropped. */
+export function ownSentences<T extends { quote: string }>(
+  units: readonly T[],
+  blocks: readonly WrittenBlock[],
+) {
+  const quoted = blocks
+    .filter((b) => b.type !== 'p')
+    .map((b) => squash(b.type === 'quote' ? `${b.text}${b.source ?? ''}` : b.text));
+  const own = blocks.filter((b) => b.type === 'p').map((b) => squash(b.text));
+  return units.filter((unit) => {
+    const q = squash(unit.quote.replace(MARKUP, ''));
+    if (!q) return false;
+    if (unit.quote.trim().match(/^(#|>)/)) return false;
+    return !quoted.some((t) => t.includes(q)) || own.some((t) => t.includes(q));
+  });
+}

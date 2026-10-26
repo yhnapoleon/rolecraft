@@ -8,6 +8,8 @@ import type { PreviewRecognition } from '../recognition-native/chain';
 import {
   type Language,
   modelPart,
+  shownDelta,
+  shownStatus,
   reviewSummaryForColleague,
   sheetName,
   sheetOfCriterion,
@@ -15,7 +17,7 @@ import {
 import type { Decision, SectionReview, SectionReviewPage, StepId } from './types';
 import { renderReview, type Sentences } from './view';
 
-export { reviewSummaryForColleague } from './model';
+export { reviewDetailForColleague, reviewSummaryForColleague } from './model';
 export { renderReview } from './view';
 export type { SectionReview } from './types';
 
@@ -119,11 +121,21 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
   };
   const decision = () => options.decision?.() ?? state.review?.decision_used ?? null;
 
+  // What the screen last showed for a review, so its status knob and counts move on change.
+  let shown: {
+    id: string;
+    status: SectionReview['status'];
+    delta?: SectionReview['delta'];
+  } | null = null;
   function paint() {
     if (!root) return;
     if (state.review) {
+      const review = state.review;
+      const previous = shown?.id === review.id ? shown : null;
+      shown = { id: review.id, status: shownStatus(review), delta: shownDelta(review) };
       root.replaceChildren(
         renderReview(root.ownerDocument, {
+          previous,
           review: state.review,
           language,
           sections: state.sections,
