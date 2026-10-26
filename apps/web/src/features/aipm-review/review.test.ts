@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asFake, fakeDocument } from '../results-native/fake-dom';
 import { FIXTURE_PRD, fixturePreview, fixtureReview } from './fixture';
-import { latestReview } from './index';
+import { backToSheet, latestReview } from './index';
 import {
   coverageRow,
   deltaLine,
@@ -75,6 +75,18 @@ describe('review content', () => {
     expect(sheetOfCriterion('R1.metrics')).toBe('need');
     expect(sheetOfCriterion('R3.capacity')).toBe('solution');
     expect(sheetOfCriterion('unknown')).toBeNull();
+  });
+
+  it('offers a way back to the sheet from a result-page criterion', () => {
+    const open = vi.fn();
+    const button = asFake(backToSheet(fakeDocument(), 'R1.metrics', 'zh', open));
+    expect(button.textContent).toBe('回到 ③ 验证真需求');
+    button.click();
+    expect(open).toHaveBeenCalledWith('need');
+    expect(asFake(backToSheet(fakeDocument(), 'R4.functional_tests', 'en', open)).textContent).toBe(
+      'Back to ⑥ Evaluation, monitoring and rollback',
+    );
+    expect(backToSheet(fakeDocument(), 'X.unknown', 'zh', open)).toBeNull();
   });
 
   it('reads the newest review from a page', () => {

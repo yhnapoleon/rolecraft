@@ -4,7 +4,7 @@
 import type { ObjectRef } from '../../aipm/types';
 import type { Colleague } from '../../screens/result/colleagues';
 import type { PreviewRecognition } from '../recognition-native/chain';
-import { type Language, reviewSummaryForColleague } from './model';
+import { type Language, reviewSummaryForColleague, sheetName, sheetOfCriterion } from './model';
 import type { Decision, SectionReview, StepId } from './types';
 import { renderReview, type Sentences } from './view';
 
@@ -240,4 +240,26 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
   };
   const unregister = host.registerFeature('review', feature);
   return { feature, state, open, ask, unregister };
+}
+
+/** For the result page's `backToSheet` option: "Back to ③ Validate the need" under a criterion,
+ * or nothing for one no sheet reviews. */
+export function backToSheet(
+  doc: Document,
+  criterion: string,
+  language: Language,
+  open: (step: StepId) => void,
+): HTMLElement | null {
+  const step = sheetOfCriterion(criterion);
+  if (!step) return null;
+  const button = doc.createElement('button');
+  button.type = 'button';
+  button.className = 'btn quiet small aipm-back-to-sheet';
+  button.dataset.aipmSheet = step;
+  button.textContent =
+    language === 'zh'
+      ? `回到 ${sheetName(step, language)}`
+      : `Back to ${sheetName(step, language)}`;
+  button.addEventListener('click', () => open(step));
+  return button;
 }
