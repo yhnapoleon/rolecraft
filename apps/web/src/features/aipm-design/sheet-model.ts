@@ -1,18 +1,14 @@
 /** One worksheet = one PRD section. The big box is a list of blocks so that headings and
  * quotes keep their structure, and the PRD text stays plain for evaluation and colleagues. */
-import type { AipmDesign, EvidenceRefV2, StepId } from '../../aipm/types';
+import type { AipmDesign, Decision, EvidenceRefV2, StepId } from '../../aipm/types';
 
 export type Block =
   | { id: string; type: 'p'; text: string }
   | { id: string; type: 'h'; text: string }
   | { id: string; type: 'quote'; text: string; label: string; ref: EvidenceRefV2 };
 
-export type Decision = 'launch' | 'launch_narrow' | 'defer_with_conditions' | 'no_go';
-/** v2 additions to AipmDesign (L4 types.py §9.2). Kept local until types.ts carries them. */
-export type SheetDesign = AipmDesign & {
-  section_refs?: Partial<Record<StepId, EvidenceRefV2[]>>;
-  intended_decision?: Decision | null;
-};
+/** The design with v2's section_refs and intended_decision (L4 types). */
+export type SheetDesign = AipmDesign;
 
 export type Angle = {
   id: string;
@@ -205,6 +201,6 @@ export const headings = (blocks: Block[]) =>
   blocks.flatMap((b) => (b.type === 'h' && b.text.trim() ? [b.text.trim()] : []));
 
 /** What a sheet saves: the section text, its quotes and its choice. */
-export type SheetState = { blocks: Block[]; choice: string };
-export const sheetKey = (s: SheetState) =>
+export type SheetDraft = { blocks: Block[]; choice: string };
+export const sheetKey = (s: SheetDraft) =>
   JSON.stringify([toText(s.blocks), s.choice, quoteRefs(s.blocks)]);

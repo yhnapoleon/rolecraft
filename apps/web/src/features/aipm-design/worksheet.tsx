@@ -18,7 +18,7 @@ import {
   quoteRefs,
   readChoice,
   type SheetDesign,
-  type SheetState,
+  type SheetDraft,
   sheetKey,
   toText,
   wordCount,
@@ -32,15 +32,13 @@ export type WorksheetHost = AipmHost<
   unknown,
   AipmClient & { listDrafts?: () => Promise<unknown> }
 > & {
-  openMaterialSplit?(materialId: string): unknown;
+  // L1 v2 host (claude/192-aipm-l1 8d4bf212, aipm/host.ts). Optional until that host.ts lands.
+  currentScreen?(): { kind: string; sheet?: string };
+  openWorksheet?(sheet: StepId | `free:${string}`): void;
+  openMaterialSplit?(materialId: string): void;
+  openReview?(step: StepId, reviewRef?: ObjectRef): void;
+  askColleague?(input: { colleague: Role; prefill: string; attachPrd?: boolean }): Promise<void>;
   openPatterns?(): unknown;
-  askColleague?(input: { colleague: Role; prefill: string; attachPrd: boolean }): unknown;
-  openReview?(input: {
-    step_id: StepId;
-    prd_ref: ObjectRef;
-    design_ref: ObjectRef | null;
-  }): unknown;
-  openWorksheet?(step: StepId): unknown;
 };
 export type Prd = { ref: ObjectRef; sections: Partial<Record<StepId, string>> };
 type Loaded = {
@@ -111,7 +109,7 @@ async function loadSheet(host: WorksheetHost): Promise<Loaded> {
   return { content, saved, prd, drafts, titles };
 }
 
-const savedSheet = (l: Loaded, step: StepId): SheetState => {
+const savedSheet = (l: Loaded, step: StepId): SheetDraft => {
   const d = (l.saved?.design ?? null) as SheetDesign | null;
   return {
     blocks: fromText(l.prd?.sections[step] ?? '', d?.section_refs?.[step] ?? []),
@@ -119,8 +117,8 @@ const savedSheet = (l: Loaded, step: StepId): SheetState => {
   };
 };
 /** An unsaved local draft wins over the saved version when the sheet opens. */
-const openingSheet = (l: Loaded, host: WorksheetHost, step: StepId): SheetState => {
-  const local = host.getDataHost()?.draft<SheetState>('workspace', draftKey(step));
+const openingSheet = (l: Loaded, host: WorksheetHost, step: StepId): SheetDraft => {
+  const local = host.getDataHost()?.draft<SheetDraft>('workspace', draftKey(step));
   return local?.blocks?.length ? local : savedSheet(l, step);
 };
 const baseDesign = (l: Loaded, host: WorksheetHost): SheetDesign =>
@@ -145,7 +143,7 @@ export function Worksheet({
   const c = copy(language);
   const readOnly = !!context?.readOnly;
   const [loaded, setLoaded] = useState<Loaded | null>(preload ?? null);
-  const [sheet, setSheet] = useState<SheetState>(() =>
+  const [sheet, setSheet] = useState<SheetDraft>(() =>
     preload ? openingSheet(preload, host, step) : { blocks: emptyBlocks(), choice: '' },
   );
   const [design, setDesign] = useState<SheetDesign | null>(() =>
@@ -179,7 +177,7 @@ export function Worksheet({
     else void reload();
   }, [preload, apply, reload]);
 
-  const edit = (next: SheetState) => {
+  const edit = (next: SheetDraft) => {
     setSheet(next);
     setNote('');
     void host.getDataHost()?.keepDraft('workspace', draftKey(step), next);
@@ -204,7 +202,7 @@ export function Worksheet({
   const version = prd?.ref.version;
 
   /** PRD version first, then the design that points at it (spec §5.3). */
-  const saveVersion = async (state: SheetState, base: SheetDesign) => {
+  const saveVersion = async (state: SheetDraft, base: SheetDesign) => {
     if (!loaded) return null;
     const sections = { ...(prd?.sections ?? {}), [step]: toText(state.blocks) };
     const section_refs = { ...(base.section_refs ?? {}), [step]: quoteRefs(state.blocks) };
@@ -247,12 +245,17 @@ export function Worksheet({
       await task();
     } catch (e) {
       setNote(
-        (e as Error).message === 'choice'
+        (e as Error).message === 'review'
           ? c.t(
-              '文字已存成新版本，选择没存上，请再保存一次。',
-              'The text is saved as a new version; the choice was not. Save again.',
+              '已存成新版本，批改没有生成，请再点一次。',
+              'Saved as a new version; the review was not created. Try again.',
             )
-          : c.t('没有保存成功，内容仍在这里。', 'Not saved. Your writing is still here.'),
+          : (e as Error).message === 'choice'
+            ? c.t(
+                '文字已存成新版本，选择没存上，请再保存一次。',
+                'The text is saved as a new version; the choice was not. Save again.',
+              )
+            : c.t('没有保存成功，内容仍在这里。', 'Not saved. Your writing is still here.'),
       );
     } finally {
       setBusy(false);
@@ -272,8 +275,15 @@ export function Worksheet({
         designRef = out?.designRef ?? designRef;
       }
       if (!prdRef) return;
+      // Only the learner requests a review, on the exact version just saved (spec §6.1).
+      const created = await host.command('aipm.section_review.create', {
+        step_id: step,
+        prd_ref: prdRef,
+        design_ref: designRef,
+      });
+      if (failure(created)) throw new Error('review');
       if (host.openReview)
-        await host.openReview({ step_id: step, prd_ref: prdRef, design_ref: designRef });
+        host.openReview(step, findRef(created, 'aipm_section_review') ?? undefined);
       else
         setNote(
           c.t(
@@ -293,7 +303,7 @@ export function Worksheet({
           `我在写「${sheetName}」，还没存版本，你怎么看？`,
           `I'm writing "${sheetName}" and have not saved a version yet. What do you think?`,
         );
-    if (host.askColleague) void host.askColleague({ colleague: who, prefill, attachPrd: !!prd });
+    if (host.askColleague) void host.askColleague({ colleague: who, prefill });
     else void host.openColleague(who, prefill);
   };
   const adopt = (item: DraftItem) =>

@@ -1,4 +1,11 @@
-import type { AipmDesign, ObjectRef, ProcessFeedback, StepId, TriageRow } from '../../aipm/types';
+import type {
+  AipmDesign,
+  AipmDesignDraft,
+  ObjectRef,
+  ProcessFeedback,
+  StepId,
+  TriageRow,
+} from '../../aipm/types';
 import { STEP_IDS } from '../../aipm/types';
 
 export type Language = 'zh' | 'en';
@@ -181,18 +188,9 @@ export const isDesignStep = (id: StepId): id is DesignStep =>
   (DESIGN_STEPS as readonly string[]).includes(id);
 export const nextStep = (id: StepId): StepId | null => STEP_IDS[STEP_IDS.indexOf(id) + 1] ?? null;
 
-/** Mirror of L4's AipmDesignDraft (types.py) until apps/web/src/aipm/types.ts carries it. */
-export type AgentDraft = Pick<
-  AipmDesign,
-  'business' | 'stakeholders' | 'needs' | 'rows' | 'solution'
-> & {
-  id: string;
-  revision: number;
-  status: 'pending_owner_review' | 'adopted' | 'dismissed';
-  author?: { kind: string; id?: string };
-  note?: string | null;
-  prd_sections?: Partial<Record<StepId, string>>;
-};
+/** L4's AipmDesignDraft; tests and fixtures may omit the server-set owner fields. */
+export type AgentDraft = Omit<AipmDesignDraft, 'session_id' | 'author'> &
+  Partial<Pick<AipmDesignDraft, 'session_id' | 'author'>>;
 export function draftSteps(
   draft: Pick<AipmDesign, 'business' | 'stakeholders' | 'needs' | 'rows' | 'solution'>,
 ): StepId[] {
