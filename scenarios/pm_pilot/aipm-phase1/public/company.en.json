@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-phase1-draft-1",
+  "work_language": "en",
+  "title": "Starbridge Digital · Company brief",
+  "status": "pending_user_confirmation",
+  "status_label": "Pending user confirmation",
+  "source_note": "New scenario draft; the company business awaits confirmation. Other boundaries follow existing material.",
+  "sentences": [
+    {
+      "fact_key": "company.offering",
+      "text": "Starbridge Digital provides enterprise application implementation and ongoing operations services.",
+      "source_status": "proposed_scenario_fact",
+      "source_material_ids": []
+    },
+    {
+      "fact_key": "company.customers",
+      "text": "Its external customers are companies purchasing these services.",
+      "source_status": "proposed_scenario_fact",
+      "source_material_ids": []
+    },
+    {
+      "fact_key": "pilot.users",
+      "text": "The assistant directly serves internal new hires, operations staff and administrative support.",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "pilot.goal",
+      "text": "Investigate whether the assistant is suitable for an internal pilot, stating scope, safeguards and stopping conditions.",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "roles.grace",
+      "text": "Grace owns the pilot decision and resource approval; a colleague’s opinion is not approval.",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "roles.chen",
+      "text": "Chen represents business needs; Daniel explains system and engineering boundaries.",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "assistant.authority",
+      "text": "The assistant handles supported internal enquiries; it cannot grant approvals or perform enterprise-system actions.",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "company.unknowns",
+      "text": "Company size, revenue and return on investment have not been supplied and must not be assumed.",
+      "source_status": "not_supplied",
+      "source_material_ids": []
+    }
+  ],
+  "questions": [
+    {
+      "role": "manager",
+      "text": "What services does the company sell?"
+    },
+    {
+      "role": "business",
+      "text": "Who does this pilot directly help?"
+    }
+  ]
+}

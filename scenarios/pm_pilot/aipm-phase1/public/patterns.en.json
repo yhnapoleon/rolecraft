@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "work_language": "en",
+  "status_label": "Public reference patterns, not market-share findings",
+  "application_note": "Scenario suitability and authority notes are exercise design guidance; they do not claim implemented capabilities.",
+  "cards": [
+    {
+      "id": "deterministic",
+      "title": "Deterministic workflow",
+      "when": "Use when inputs, conditions and the processing order can be specified.",
+      "cost_dimensions": "Cost of maintaining rules, exceptions and tests.",
+      "when_not": "A fixed flow may be insufficient when unknown conditions require judgement.",
+      "source": {
+        "title": "Building effective agents",
+        "url": "https://www.anthropic.com/research/building-effective-agents",
+        "accessed_at": "2026-10-26"
+      }
+    },
+    {
+      "id": "retrieval_generation",
+      "title": "Retrieval-grounded answers",
+      "when": "Use when answers depend on accessible, maintainable sources.",
+      "cost_dimensions": "Source preparation, chunking, retrieval, updates and evaluation at each stage.",
+      "when_not": "An answer alone is insufficient when sources are missing or an action is required.",
+      "source": {
+        "title": "Design and develop a RAG solution",
+        "url": "https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/rag/rag-solution-design-and-evaluation-guide",
+        "accessed_at": "2026-10-26"
+      }
+    },
+    {
+      "id": "agent_confirmation",
+      "title": "Agent with confirmation",
+      "when": "Consider when steps and tools must be selected dynamically; define human checkpoints.",
+      "cost_dimensions": "Tool definitions, checkpoints, latency, cost and compounding errors.",
+      "when_not": "Do not claim autonomous execution for simple predictable flows or unavailable tools.",
+      "source": {
+        "title": "Building effective agents",
+        "url": "https://www.anthropic.com/research/building-effective-agents",
+        "accessed_at": "2026-10-26"
+      }
+    },
+    {
+      "id": "human",
+      "title": "Human handling",
+      "when": "Keep human checkpoints for uncertain or authority-limited steps.",
+      "cost_dimensions": "Human time, handoff information and decision responsibility.",
+      "when_not": "Handoff is a process step; it does not prove completion.",
+      "source": {
+        "title": "Building effective agents",
+        "url": "https://www.anthropic.com/research/building-effective-agents",
+        "accessed_at": "2026-10-26"
+      }
+    }
+  ]
+}

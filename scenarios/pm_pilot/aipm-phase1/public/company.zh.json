@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-phase1-draft-1",
+  "work_language": "zh",
+  "title": "星桥数字 · 公司一页纸",
+  "status": "pending_user_confirmation",
+  "status_label": "待用户确认",
+  "source_note": "新增场景草案；公司经营业务待确认，其余边界沿既有材料。",
+  "sentences": [
+    {
+      "fact_key": "company.offering",
+      "text": "星桥数字向企业客户提供企业应用实施与持续运维服务。",
+      "source_status": "proposed_scenario_fact",
+      "source_material_ids": []
+    },
+    {
+      "fact_key": "company.customers",
+      "text": "外部客户是购买这些服务的企业。",
+      "source_status": "proposed_scenario_fact",
+      "source_material_ids": []
+    },
+    {
+      "fact_key": "pilot.users",
+      "text": "本次知识助手的直接用户是内部新员工、运营和行政支持人员。",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "pilot.goal",
+      "text": "你要调查助手是否适合内部试点，并说明范围、保障和暂停条件。",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "roles.grace",
+      "text": "Grace 负责试点决定与资源批准；同事意见不等于批准。",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "roles.chen",
+      "text": "Chen 代表业务需求，Daniel 解释系统和工程边界。",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "assistant.authority",
+      "text": "助手只承担受支持的内部咨询，不替人审批或实际执行企业系统动作。",
+      "source_status": "existing_scenario_fact",
+      "source_material_ids": [
+        "brief",
+        "user_groups",
+        "approvals"
+      ]
+    },
+    {
+      "fact_key": "company.unknowns",
+      "text": "公司规模、收入和投资回报尚未提供，不作假定。",
+      "source_status": "not_supplied",
+      "source_material_ids": []
+    }
+  ],
+  "questions": [
+    {
+      "role": "manager",
+      "text": "公司靠什么业务服务客户？"
+    },
+    {
+      "role": "business",
+      "text": "这次试点直接帮谁？"
+    }
+  ]
+}
