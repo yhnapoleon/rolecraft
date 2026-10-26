@@ -184,6 +184,7 @@ import { createAipmPractice } from '../features/aipm-guide/practice';
 import { showDraftToast } from '../features/aipm-guide/draft-toast';
 import '../shell/progress.css';
 import '../shell/unread-light.css';
+import '../shell/home-pill.css';
 import { agentLine } from '../screens/board/agent-line';
 import * as Board from '../screens/board';
 import { dossierHtml, installDossier } from '../screens/investigate';
@@ -1353,22 +1354,55 @@ function wsToolbar(a) {
   const deskBack =
     isRegisteredRoute(ui.route) && ui.route !== 'engineer' && hatHere(a) === 'engineer';
   const ticket = deskBack ? ticketOf(lastTicket(a.id)) : null;
+  const home = homePill(a);
   const back =
-    ui.route === 'work' || (ui.route === 'engineer' && isRegisteredRoute('engineer'))
+    ui.route === 'work' || (ui.route === 'engineer' && isRegisteredRoute('engineer')) || home
       ? ''
       : deskBack
         ? ticket
           ? `<a class="btn quiet back up" style="text-decoration: none" href="${esc(hashOf('engineer', ticket))}">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></a>`
           : `<button type="button" class="btn quiet back up" data-action="hat-switch" data-hat="engineer">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></button>`
         : `<button type="button" class="btn quiet back up" data-action="to-board">${icon('back')}<span>${T('工作板', 'Board')}</span></button>`;
-  const here = t
+  const here = home
+    ? ''
+    : t
     ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${esc(taskTitle(t))}</span>`
     : m
       ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${esc(materialTitle(m))}</span>`
       : ui.route === 'bench'
         ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${T('测试台', 'Test bench')}</span>`
         : '';
-  return shellBar(a, { back, here, id: 'ws-toolbar', cls: 'ws-toolbar', brief: true });
+  return shellBar(a, { back, here, home, id: 'ws-toolbar', cls: 'ws-toolbar', brief: true });
+}
+/* ---------- the way back to the workbench ---------- */
+// Wherever a product manager is in a practice other than the workbench, one pill at the top
+// centre takes them back: "Workbench › where you are". The workbench itself shows none.
+function awayFrom(a) {
+  if (!a || hatHere(a) !== 'pm') return null;
+  if (ui.route === 'work') return aipmHere(a) ? Aipm.screenName(a) : null;
+  const t = routeTask(a);
+  if (t) return taskTitle(t);
+  if (ui.route === 'doc') {
+    const m = E.getMaterials(a).find((x) => x.id === ui.routeId);
+    return m ? materialTitle(m) : T('资料', 'Material');
+  }
+  const named = {
+    bench: T('测试台', 'Test bench'),
+    agent: T('我的 Agent', 'My agent'),
+    review: T('交付结果', 'Delivery result'),
+    investigate: T('调查记录', 'Findings'),
+  };
+  return named[ui.route] ?? null;
+}
+function homePill(a) {
+  const where = awayFrom(a);
+  if (!where) return '';
+  return `<button type="button" class="ws-home" data-action="to-workbench" aria-label="${esc(T(`回到工作台，当前在：${where}`, `Back to the workbench, now in: ${where}`))}"><span class="ws-home__go">${icon('board', 'i-sm')}<span>${T('工作台', 'Workbench')}</span></span><span class="ws-home__sep" aria-hidden="true">›</span><span class="ws-home__here"${langOf(a)}>${esc(where)}</span></button>`;
+}
+function toWorkbench() {
+  const a = current();
+  if (a && aipmHere(a)) Aipm.host.openWorkbench();
+  if (ui.route !== 'work') go('work', { transition: true });
 }
 /* ---------- the shell bar (decision 1) ---------- */
 // The situation's own name, for a hat that has no title of its own yet (the engineer's, until
@@ -1390,7 +1424,10 @@ function hatHere(a) {
   if (WS.slice(0, 4).includes(ui.route) || ui.route === 'review') return 'pm';
   return hatOf(a.id);
 }
-function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief = false } = {}) {
+function shellBar(
+  a,
+  { back = '', here = '', home = '', more = '', id = '', cls = '', brief = false } = {},
+) {
   const st = statusOf(a);
   const n = snap();
   const s = sessionOf(a);
@@ -1414,7 +1451,8 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
       ? `<div class="menu-wrap title-wrap"><h1 class="ws-title"><button type="button" class="title-btn" data-action="menu" data-menu="brief" aria-expanded="${ui.menu === 'brief'}" aria-haspopup="dialog" title="${esc(T('委托与条件', 'Brief and conditions'))}">${titleText}</button></h1>${ui.menu === 'brief' ? briefPopover(a) : ''}</div>`
       : `<p class="ws-title"><span class="title-btn">${titleText}</span></p>`;
   // Phone width keeps a way out even where the wide bar has none.
-  const narrowBack = back
+  const narrowBack =
+    back || home
     ? ''
     : `<button type="button" class="btn quiet back narrow-only" data-action="to-entry" aria-label="${esc(T('离开练习', 'Leave the practice'))}">${icon('back')}</button>`;
   const c = agentConnection();
@@ -1433,13 +1471,14 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
   const moreWrap =
     more ||
     `<div class="menu-wrap">${btn(icon('more'), 'menu', 'icon quiet icon-key', `data-menu="more" aria-haspopup="menu" aria-expanded="${['more', 'lang', 'model'].includes(ui.menu)}" aria-label="${esc(T('更多', 'More'))}"`)}${ui.menu === 'more' ? moreMenu(a) : ui.menu === 'lang' ? langMenu() : ui.menu === 'model' && modelStatusOf(a) ? modelPopoverHtml(modelStatusOf(a)) : ''}</div>`;
-  return `<header class="topbar shell-bar ${cls} ${barFolds.join(' ')}" ${id ? `id="${id}"` : ''} data-hat="${hat}">
+  return `<header class="topbar shell-bar ${cls} ${barFolds.join(' ')}" ${id ? `id="${id}"` : ''} data-hat="${hat}"${home ? ` data-away${homeInline ? ' data-home-inline' : ''}` : ''}>
     ${back}${narrowBack}${wordmark()}<span class="sep before-title" aria-hidden="true"></span>
     <nav class="crumbbar" aria-label="${esc(T('位置', 'Location'))}">${title}${here}</nav>
     ${/* Delivered is the scale's to say; the chip stays only for states the scale does not show. */ ''}
     ${st !== 'active' && (st !== 'submitted' || s?.v2ReadOnly) ? `<span class="state-chip ${st}">${s?.v2ReadOnly ? T('旧版 · 只读', 'Earlier version · Read-only') : T('已暂停', 'Paused')}</span>` : ''}
     <span class="sep before-hat" aria-hidden="true"></span>
     ${islandSlot('shell-hatscale')}
+    ${home}
     <div class="spacer"></div>
     <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: true })).join('')}<span class="team-compact">${icon('team', 'i-sm')}${unreadBadge(ROLES.reduce((n, r) => n + unread(a, r), 0))}</span></button>
     <span class="shell-connection">${conn}</span>${lamp}${record}${moreWrap}
@@ -2017,6 +2056,8 @@ const keepBoardPlace = () => {
 const BAR_FOLDS = ['fold-words', 'fold-scale', 'fold-hat'];
 // A redrawn bar starts with the last folds, so it never paints one frame overlapped.
 let barFolds = [];
+/** Whether the way home last had to leave the centre; kept across renders so it never jumps. */
+let homeInline = false;
 const watchedBar = new WeakSet();
 const barResize = new ResizeObserver(() => requestAnimationFrame(fitShellBar));
 function fitShellBar() {
@@ -2028,6 +2069,22 @@ function fitShellBar() {
     if (bar.scrollWidth <= bar.clientWidth + 1) break;
     bar.classList.add(fold);
     barFolds.push(fold);
+  }
+  // The way home holds the centre only while nothing else in the bar reaches it.
+  const home = bar.querySelector('.ws-home');
+  if (home) {
+    bar.removeAttribute('data-home-inline');
+    const r = home.getBoundingClientRect();
+    const boxes = (el) =>
+      getComputedStyle(el).display === 'contents' ? [...el.children].flatMap(boxes) : [el];
+    homeInline = [...bar.children]
+      .filter((el) => el !== home && !el.classList.contains('spacer'))
+      .flatMap(boxes)
+      .some((el) => {
+        const o = el.getBoundingClientRect();
+        return o.width > 0 && o.left < r.right + 12 && o.right > r.left - 12;
+      });
+    if (homeInline) bar.setAttribute('data-home-inline', '');
   }
   // The islands draw after this render and change width with the stage: fit again then.
   for (const el of bar.querySelectorAll('.rc-hatscale, .rc-primary, .crumbbar'))
@@ -6792,6 +6849,9 @@ async function act(el, ev = new Event('rc-action')) {
     case 'to-entry':
       go('pm', { transition: true });
       break;
+    case 'to-workbench':
+      toWorkbench();
+      break;
     case 'to-board':
     case 'to-work':
       go('work', { transition: true });
@@ -8109,6 +8169,12 @@ document.addEventListener('keydown', (e) => {
     if (ui.route === 'doc') {
       e.preventDefault();
       go('work');
+      return;
+    }
+    const typing = e.target?.closest?.('input, textarea, select, [contenteditable="true"]');
+    if (!typing && ui.route !== 'work' && awayFrom(current())) {
+      e.preventDefault();
+      toWorkbench();
       return;
     }
   }

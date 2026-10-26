@@ -510,10 +510,13 @@ export function createAipmPractice(deps: PracticeDeps) {
     }
   }
 
-  function show(screen: AipmScreen) {
+  function show(screen: AipmScreen, fromHistory = false) {
     const a = deps.current(),
       s = a && stateOf(a);
     if (!s) return;
+    // Each main screen is a step in the browser's history, so Back returns to the one before.
+    if (!fromHistory && JSON.stringify(screen) !== JSON.stringify(s.screen))
+      history.pushState({ ...(history.state ?? {}), aipm: screen }, '', location.href);
     s.screen = screen;
     reveal = screen.kind !== 'workbench';
     if (screen.kind !== 'workbench') deps.showBoard();
@@ -595,6 +598,18 @@ export function createAipmPractice(deps: PracticeDeps) {
       ...(first ? { hint: w.hint, onHint: keepHint } : {}),
       onOpen: (id) => host.openWorksheet(id as StepId),
     };
+  }
+
+  /** Where the main screen is, for the way back to the workbench: "③ Validate the need",
+   * "③ Validate the need · Review", or null on the workbench. */
+  function screenName(a: Attempt | null): string | null {
+    const s = a && stateOf(a);
+    if (!s?.guide || s.phase !== 'ready' || s.screen.kind === 'workbench') return null;
+    const en = s.guide.language === 'en';
+    const step = s.screen.kind === 'review' ? s.screen.step : s.screen.sheet;
+    const row = s.guide.steps.find((x) => x.id === step);
+    const name = row ? `${orderGlyph(row.order)} ${row.label}` : en ? 'Free sheet' : '自由纸';
+    return s.screen.kind === 'review' ? `${name} · ${en ? 'Review' : '批改单'}` : name;
   }
 
   /** What the main screen shows instead of the workbench, or null for the workbench. */
@@ -700,7 +715,6 @@ export function createAipmPractice(deps: PracticeDeps) {
       } else el.setAttribute('aria-current', 'page');
       nav.append(el);
     };
-    add(en ? 'Workbench' : '工作台', () => host.openWorkbench());
     add(en ? 'Pilot PRD' : '试点 PRD', () => openPrd(a));
     const screen = s.screen;
     const step =
@@ -713,6 +727,15 @@ export function createAipmPractice(deps: PracticeDeps) {
     } else add(name);
     return nav;
   }
+
+  if (typeof window !== 'undefined')
+    window.addEventListener('popstate', (e) => {
+      const a = deps.current(),
+        s = a && stateOf(a);
+      if (s?.phase !== 'ready') return;
+      const screen = (e.state?.aipm as AipmScreen | undefined) ?? { kind: 'workbench' };
+      if (JSON.stringify(screen) !== JSON.stringify(s.screen)) show(screen, true);
+    });
 
   // Esc closes the open sheet or review back to the workbench, unless something else used it
   // (a dialog, the stack, a field being typed in).
@@ -742,6 +765,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     compassProps,
     stackProps,
     screenOf,
+    screenName,
     mountMain,
     host,
     missing: () => missing,
