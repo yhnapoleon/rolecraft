@@ -235,3 +235,32 @@ def test_saved_cache_never_keeps_failures_or_outlives_revocation(
     with pytest.raises(C.ProtocolError) as error:
         checks.saved(store, auth, submission_id)
     assert error.value.code == "credential_revoked_or_invalid"
+
+
+def test_saved_rule_check_does_not_project_feedback_created_after_the_submission(
+    published_session: PublishedSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Historical checks must not pay to project later derived feedback bodies."""
+    from career_lab.api.v4_extensions import _rule_checks
+
+    session = published_session
+    feedback = submit(session, as_the_submit_control_sends(session, "no_go"))
+    store = session.app.state.v2_store
+    auth = store.authenticate(session.session_id, session.headers["Authorization"][7:])
+    checks = _rule_checks(session.app.state.gateway.registry, store, auth)
+    original, projected_future = store._project_public_records, []
+
+    def counted(connection, caller, records):
+        projected_future.extend(
+            row.ref
+            for row in records
+            if row.ref.kind == "feedback"
+            and row.created_storage_revision > feedback["as_of"]["storage_revision"]
+        )
+        return original(connection, caller, records)
+
+    monkeypatch.setattr(store, "_project_public_records", counted)
+    result = checks.saved(store, auth, feedback["subject"]["object_id"])
+    assert result.as_of.model_dump(mode="json") == feedback["as_of"]
+    assert [item.model_dump(mode="json") for item in result.rule_items] == feedback["rule_items"]
+    assert projected_future == []

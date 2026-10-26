@@ -7,6 +7,7 @@ import { agentNode, button, el, workLang } from '../dom';
 import {
   diffShort,
   experimentRows,
+  experimentLimits,
   reproductionVerdict,
   settingsDiff,
   trialLine,
@@ -174,7 +175,7 @@ export function failedRow(
   return row;
 }
 
-function lineRows(
+export function lineRows(
   doc: Document,
   ticket: TicketDetail,
   summary: ExperimentSummary,
@@ -203,14 +204,14 @@ function lineRows(
         doc,
         'p',
         { class: 'ed-rows-note' },
-        summary.executor.kind === 'human'
+        summary.rows_omitted
           ? T(
-              '这次试验的逐行结果不在这个页面上，这里只有计数。',
-              'This run’s rows aren’t on this page; only its counts are.',
+              '这次较早试跑的明细因读取上限未载入，汇总保留。',
+              'Details of this earlier run were omitted to fit the read limit; its summary is retained.',
             )
           : T(
-              '逐行结果在你的 Agent 那里，这里只有计数。',
-              'Your agent has this run’s rows; only its counts are here.',
+              '这次试跑的逐条结果尚未载入。',
+              'This run’s individual results have not been loaded.',
             ),
       ),
     );
@@ -219,6 +220,15 @@ function lineRows(
     'div',
     {},
     settings,
+    ...experimentLimits(full).map((note) =>
+      el(
+        doc,
+        'p',
+        { class: 'ed-rows-note ed-run-limit' },
+        T('生效限制：', 'Effective limitation: '),
+        note,
+      ),
+    ),
     el(
       doc,
       'ol',
@@ -260,6 +270,7 @@ function lineRows(
               : row.verdict,
           ),
           row.answer ? el(doc, 'p', { class: 'ed-row__answer', lang }, row.answer) : null,
+          el(doc, 'p', { class: 'ed-row__io ed-row__citations' }, row.citations),
         );
       }),
     ),

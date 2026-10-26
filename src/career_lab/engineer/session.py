@@ -881,7 +881,9 @@ class EngineerService:
         role = self.learner_role(sid)
         if payload.ticket_id is not None:
             return {
-                "ticket": self.detail(module, sid, payload.ticket_id, view),
+                "ticket": self.detail(
+                    module, sid, payload.ticket_id, view, include_rows=auth.executor.kind == "human"
+                ),
                 "learner_role": role,
             }
         folder = self.files.tickets(sid)
@@ -929,6 +931,8 @@ class EngineerService:
         sid: str,
         ticket_id: str,
         view: TransactionView | None = None,
+        *,
+        include_rows: bool = True,
     ) -> dict[str, Any]:
         folder, ticket = self.ticket(sid, ticket_id)
         index, pack, tests, baseline, probes = self.pack(folder, ticket)
@@ -963,7 +967,10 @@ class EngineerService:
             "experiment_budget": {"used": len(trials), "limit": EXPERIMENT_LIMIT},
             "draft_budget": {"used": len(drafts), "limit": DRAFT_LIMIT},
             "retrieval": {"mode": "rule_based", "note": RETRIEVAL_NOTE[language]},
-            "trials": [self.trial_summary(row) for row in trials[-LISTED_TRIALS:]],
+            "trials": [
+                self.trial_summary(row, include_rows=include_rows)
+                for row in trials[-LISTED_TRIALS:]
+            ],
             "drafts": [self.draft_summary(row) for row in drafts[-LISTED_DRAFTS:]],
             # The person signs what they can read: the latest draft in full.
             "latest_draft": self.draft_view(drafts[-1]) if drafts else None,
@@ -975,6 +982,14 @@ class EngineerService:
     def fit(view: dict[str, Any]) -> dict[str, Any]:
         """Drop the oldest listed trial or draft summary until the detail fits its budget."""
         trials, drafts = view["trials"], view["drafts"]
+        # Preserve the run identities/settings before dropping any summary. Newest public
+        # rows take priority; a bounded response explicitly marks omitted older details.
+        for trial in trials:
+            if size(view) <= DETAIL_BUDGET:
+                break
+            if "rows" in trial:
+                trial.pop("rows")
+                trial["rows_omitted"] = True
         while size(view) > DETAIL_BUDGET and (trials or drafts):
             oldest = (
                 trials
@@ -1047,9 +1062,9 @@ class EngineerService:
         return {"used": len({row["review_id"] for row in signoffs}), "limit": REVIEW_LIMIT}
 
     @staticmethod
-    def trial_summary(row: dict[str, Any]) -> dict[str, Any]:
+    def trial_summary(row: dict[str, Any], *, include_rows: bool = True) -> dict[str, Any]:
         """A listed experiment: each changed setting with its ticket-baseline value and the
-        value tried; per-probe rows stay in the experiment's own result."""
+        value tried, with the same public rows returned to its executor."""
         return {
             **{
                 key: row[key]
@@ -1057,6 +1072,11 @@ class EngineerService:
             },
             "changed_fields": list(row["changes"]),
             "changes": row["changes"],
+            **(
+                {"rows": row["rows"], "effective_differences": row.get("effective_differences", {})}
+                if include_rows
+                else {}
+            ),
             **{key: row[key] for key in ("counts", "status")},
         }
 

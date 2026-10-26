@@ -26,6 +26,7 @@ import {
   assistantMark,
 } from './art.js';
 import * as Coach from './coach.js';
+import { workSourceLabel } from './work-source.js';
 import { summaryText } from '../features/recognition-native/badge';
 import { lensOn, onLensChange, setLens } from '../features/recognition-native/lens';
 import { openLensForDelivery } from '../screens/result/deliver-lens';
@@ -2904,7 +2905,7 @@ function workView(a, t, x) {
         <div class="editor-meta">
           <label class="purpose" title="${esc(INTENT_HINT(intent))}"><span class="sr-only">${T('用途', 'Purpose')}</span>${purposeGlyph(intent)}<select data-edit="purpose" ${editable ? '' : 'disabled'}>${E.PURPOSES.map((p) => `<option value="${p}" ${p === view.purpose ? 'selected' : ''}>${esc(purposeLabel(p))}</option>`).join('')}</select>${icon('down', 'i-xs')}</label>
           <span data-revision-label>${workVersion(x.revision)}</span>
-          <span>${x.source === 'user' ? T('你写的', 'By you') : x.requestId ? T('来自你的 Agent', 'From your agent') : T('导入的作品', 'Imported work')}</span>
+          <span>${esc(workSourceLabel(x, locale(), sessionOf(a)?.v2Workspace?.products.find((p) => p.product_id === x.id)?.author.kind))}</span>
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>
         ${L.nativeWorkspace(a) ? `<div class="rc-work-check-actions">${btn(T('核对本版', 'Check this version'), 'check-work', 'small', `data-id="${esc(x.id)}" ${canEditWork(a, x) ? '' : 'disabled'}`)}<span class="rc-moment-note">${T('先保存，再选择拟交付决定', 'Save first, then choose your intended decision')}</span></div>` : ''}
@@ -3264,7 +3265,7 @@ const evTitle = (ev) =>
     : materialTitle({ id: ev.id, title: ev.title });
 function agentStrip(a, x, prog) {
   if (!['test_set', 'investigation'].includes(x.kind) && !x.requestId)
-    return `<div class="import-work-status">${icon('doc', 'i-sm')}<div class="grow"><b>${x.adopted ? T('已采用', 'Adopted') : T('待检查', 'To check')}</b><span>${T('这是导入副本，修改不会影响原文件。', 'This is an imported copy. Edits leave the original file unchanged.')}</span></div>${!x.adopted && canEditWork(a, x) ? btn(T('采用为当前作品', 'Adopt this work'), 'adopt', 'small primary', `data-id="${x.id}"`) : ''}</div>`;
+    return `<div class="import-work-status">${icon('doc', 'i-sm')}<div class="grow"><b>${x.adopted ? T('已采用', 'Adopted') : T('待检查', 'To check')}</b><span>${sessionOf(a)?.v2Workspace?.products.find((p) => p.product_id === x.id)?.author.kind === 'external_agent' ? T('Agent 制作；采用后仍需本人检查结论。', 'Made by an Agent; check its claims after adoption.') : T('这是导入副本，修改不会影响原文件。', 'This is an imported copy. Edits leave the original file unchanged.')}</span></div>${!x.adopted && canEditWork(a, x) ? btn(T('采用为当前作品', 'Adopt this work'), 'adopt', 'small primary', `data-id="${x.id}"`) : ''}</div>`;
   const steps = [
     ['exported', T('已交出', 'Handed over')],
     ['returned', T('已带回', 'Returned')],
@@ -6689,8 +6690,12 @@ async function act(el, ev = new Event('rc-action')) {
     }
     case 'adopt': {
       if (L.nativeWorkspace(a)) {
+        // Adoption can finish after the person opens another sheet (for example a version
+        // check). Only dismiss the sheet that initiated this adoption.
+        const adoptionSheet = sheet.open ? sheet.firstElementChild : null;
         await L.adoptNative(a, id);
-        if (sheet.open) closeSheet(true);
+        if (adoptionSheet && sheet.open && sheet.firstElementChild === adoptionSheet)
+          closeSheet(true);
         refreshWS();
         notify(
           T(

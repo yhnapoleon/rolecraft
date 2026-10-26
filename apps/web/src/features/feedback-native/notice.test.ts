@@ -10,6 +10,7 @@ const earlier = { id: 'f-1', subject: { object_id: 'sub-1' } } as unknown as Rep
 const latest = { id: 'f-2', subject: { object_id: 'sub-2' } } as unknown as Report;
 const submitted = (extra: Partial<FeedbackNativeState> = {}): FeedbackNativeState => ({
   status: 'submitted',
+  feedbackPhase: 'running',
   busy: false,
   products: [],
   reports: [earlier],
@@ -48,7 +49,13 @@ describe('status line while the delivery is read again (164 N10)', () => {
       feedbackNotice({ status: 'active', busy: true, products: [], reports: [] }, 'zh'),
     ).toBe('正在等待服务端确认…');
     expect(feedbackNotice(submitted({ busy: true, reports: [earlier, latest] }), 'zh')).toBe(
-      '正在等待服务端确认…',
+      '正在读取反馈记录…',
     );
   });
+});
+
+it('does not invent a generation stage while reading stored feedback', () => {
+  expect(feedbackNotice(submitted({ feedbackPhase: undefined, busy: true }), 'zh')).toBe('本次提交已保存，正在读取反馈…');
+  expect(feedbackNotice(submitted({ feedbackPhase: undefined }), 'en')).toBe('Submission saved. Feedback is not ready yet.');
+  expect(feedbackNotice(submitted({ feedbackPhase: 'queued' }), 'en')).toBe('Submission saved. Waiting for the reviewer…');
 });

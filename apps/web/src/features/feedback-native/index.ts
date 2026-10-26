@@ -267,32 +267,30 @@ export { criterionLabels };
  * queued or running); a failed job says not ready, and its own note offers a new request. */
 export function feedbackNotice(state: FeedbackNativeState, language: FeedbackLanguage): string {
   const T = (zh: string, en: string) => feedbackText(language, zh, en);
-  // Once the delivery is saved, reading the records again is not a new confirmation: while its
-  // feedback is still being generated the line keeps saying so (164 N10).
-  const generating =
-    state.status === 'submitted' &&
-    !!state.submission &&
-    !state.pending &&
-    !state.failedFeedback &&
-    !state.reports.some((r) => r.subject.object_id === state.submission?.ref.object_id);
-  if (state.busy && !generating)
-    return T('正在等待服务端确认…', 'Waiting for server confirmation…');
   if (state.pending)
     return T(
       '上一请求结果尚未确认，请先恢复。',
       'The previous request is unresolved. Recover its result first.',
     );
+  if (state.busy && !state.submission)
+    return T('正在等待服务端确认…', 'Waiting for server confirmation…');
   if (state.status !== 'submitted')
     return T(
       '可以继续工作，选择准备交付的版本。',
       'Continue your work and select versions for submission.',
     );
-  // With its feedback in, the results cover says what was delivered (195): no status sentence.
-  if (state.reports.some((r) => r.subject.object_id === state.submission?.ref.object_id))
-    return '';
-  return state.failedFeedback
-    ? T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.')
-    : T('本次提交已保存，反馈正在生成…', 'Submission saved. Feedback is being generated…');
+  const hasFeedback = state.reports.some((r) => r.subject.object_id === state.submission?.ref.object_id);
+  if (hasFeedback)
+    return state.busy ? T('正在读取反馈记录…', 'Reading feedback records…') : '';
+  if (state.failedFeedback)
+    return T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.');
+  if (state.feedbackPhase === 'running')
+    return T('本次提交已保存，反馈正在生成…', 'Submission saved. Feedback is being generated…');
+  if (state.feedbackPhase === 'queued')
+    return T('本次提交已保存，正在等待评审…', 'Submission saved. Waiting for the reviewer…');
+  return state.busy
+    ? T('本次提交已保存，正在读取反馈…', 'Submission saved. Reading feedback…')
+    : T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.');
 }
 export type FeedbackMountOptions = {
   surface?: 'all' | 'submission' | 'feedback';
@@ -620,6 +618,7 @@ export function mountNativeFeedback(
   }
   /** Preview the current choice; remember it for this page while the panel is open. */
   function syncPreview() {
+    syncSubmit();
     if (!preview) return;
     const state = adapter.snapshot();
     const open = state.status === 'active' && adapter.canPreview !== false;
@@ -1338,7 +1337,14 @@ export function mountNativeFeedback(
       }),
     );
   }
+  function syncSubmit() {
+    const state = adapter.snapshot();
+    const locked = state.status !== 'active' || state.busy || !!state.pending || adapter.canSubmit === false;
+    choice.disabled = locked;
+    submit.disabled = locked || !isSubmitDecision(choice.value) || !selected.size;
+  }
   function renderSelected() {
+    syncSubmit();
     // The button says what it will do: which version, or how many.
     submit.textContent = submitLabel([...selected.values()], language);
     selectedSummary.replaceChildren(
@@ -1413,6 +1419,7 @@ export function mountNativeFeedback(
       !!actions?.revise,
       actions?.backToBoard,
       state.feedbackPhase,
+      state.busy,
       !!state.feedbackSince,
     ]);
     if (signature !== coverShown) {
@@ -1440,6 +1447,7 @@ export function mountNativeFeedback(
       }
       const wait = {
         phase: state.feedbackPhase,
+        reading: state.busy,
         seconds: waitSeconds(state),
         freshStamp: pressed !== undefined,
         pressElapsed: pressed,
@@ -1569,9 +1577,7 @@ export function mountNativeFeedback(
     // The attachment slips above already show and open each chosen version.
     selectedSummary.hidden = true;
     if (state.status === 'submitted' && state.submission) choice.value = state.submission.decision;
-    submit.disabled =
-      state.status !== 'active' || state.busy || !!state.pending || adapter.canSubmit === false;
-    choice.disabled = submit.disabled;
+    syncSubmit();
     // While feedback is written the cover reads its progress by itself; the manual check stays
     // for an unconfirmed request only (one refresh control is enough).
     recover.hidden =
@@ -1586,12 +1592,24 @@ export function mountNativeFeedback(
     if (state.submission) {
       // The delivery and each exact version it saved, by the names evidence buttons use.
       const catalog = state.references ?? readCatalog(null);
-      receipt.append(el('h3', snapshotHeading(state.submission.ref, catalog, language)));
-      refs(receipt, state.submission.products);
+      if (state.status === 'active') {
+        const previous = el('details', '', 'delivery-previous');
+        previous.append(el('summary', T('之前的交付 · ', 'Previous delivery · ') + snapshotHeading(state.submission.ref, catalog, language)));
+        refs(previous, state.submission.products);
+        receipt.append(previous);
+      } else {
+        receipt.append(el('h3', snapshotHeading(state.submission.ref, catalog, language)));
+        refs(receipt, state.submission.products);
+      }
     }
-    // Do not rebuild the response editor while it holds focus. Its content is
-    // retained in the per-report draft even when the shared client refreshes.
-    if (!reports.contains(doc.activeElement)) {
+    // Keep active text editing in place; a focused disclosure must not prevent a new
+    // report from arriving. Its stable control identity and openKeys survive the redraw.
+    const reportFocus = reports.contains(doc.activeElement) ? doc.activeElement as HTMLElement : null;
+    const editingResponse = reportFocus?.matches('textarea, input, select, [contenteditable="true"]');
+    const focusReportId = reportFocus?.closest<HTMLElement>('[data-report-id]')?.dataset.reportId;
+    const focusControls = reportFocus?.getAttribute('aria-controls');
+    const focusText = reportFocus?.textContent;
+    if (!editingResponse) {
       const expanded = new Set(
         [...reports.querySelectorAll<HTMLDetailsElement>('details[data-response-id][open]')].map(
           (n) => n.dataset.responseId,
@@ -1643,6 +1661,15 @@ export function mountNativeFeedback(
         detail.open = expanded.has(detail.dataset.responseId);
         const intent = intents.get(detail.dataset.responseId);
         if (intent) detail.dataset.intent = intent;
+      }
+      if (reportFocus) {
+        const panel = [...reports.querySelectorAll<HTMLElement>('[data-report-id]')]
+          .find((node) => node.dataset.reportId === focusReportId);
+        const replacement = [...(panel ?? reports).querySelectorAll<HTMLElement>('button, summary, a')]
+          .find((node) => focusControls
+            ? node.getAttribute('aria-controls') === focusControls
+            : node.tagName === reportFocus.tagName && node.textContent === focusText);
+        replacement?.focus({ preventScroll: true });
       }
     }
     // Model references must reflect current permissions even while this report holds focus.

@@ -1,0 +1,548 @@
+{
+  "en": {
+    "submission": {
+      "schema_version": 2,
+      "id": "657538e3057f456589978bc09eef9ccc",
+      "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+      "version": 1,
+      "cycle": {
+        "schema_version": 2,
+        "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+        "kind": "cycle",
+        "object_id": "6f5702f887914438a81a50bd6679e652",
+        "version": 2,
+        "config_version": null
+      },
+      "decision": "defer_with_conditions",
+      "products": [
+        {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "product",
+          "object_id": "0349d18ece7856efdcacf2515cb0ffbde0de9e36c916bd2d7792c2e51fa32335",
+          "version": 2,
+          "config_version": null
+        }
+      ],
+      "config": {
+        "schema_version": 2,
+        "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+        "kind": "config",
+        "object_id": "pilot",
+        "version": 2,
+        "config_version": 1
+      },
+      "evidence_refs": [],
+      "as_of": {
+        "schema_version": 2,
+        "business_seq": 14,
+        "workspace_revision": 27,
+        "storage_revision": 37
+      },
+      "scenario": {
+        "schema_version": 2,
+        "path": "manifest.json",
+        "sha256": "420afb709e140b148ab280f0211041a4e7b2f51834ef4bbce3621575962e5586",
+        "media_type": "application/json"
+      },
+      "evaluation": {
+        "schema_version": 2,
+        "path": "runtime/evaluation.json",
+        "sha256": "d6f9d728187618d993161f1f515e8947f7269ba594c90fe88ed5c94031b9f65c",
+        "media_type": "application/json"
+      },
+      "rules_revision": "rules-v4",
+      "executor": {
+        "schema_version": 2,
+        "id": "human:a0f3649f24644ec8a859c4f4907953ac",
+        "kind": "human",
+        "delegation_id": null
+      }
+    },
+    "product": {
+      "ref": {
+        "schema_version": 2,
+        "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+        "kind": "product",
+        "object_id": "0349d18ece7856efdcacf2515cb0ffbde0de9e36c916bd2d7792c2e51fa32335",
+        "version": 2,
+        "config_version": null,
+        "span_start": null,
+        "span_end": null,
+        "quote": null,
+        "observed_at_seq": 14,
+        "valid_from_seq": 0,
+        "valid_until_seq": null
+      },
+      "text": "## Decision\nDefer until conditions are met.\n\n## Verified evidence\nPolicy v2 sets CNY 400 per person per night; prior written manager approval and receipts remain required. The three cited hotel tests preserve 500 before refresh and 400 after refresh. The first delivery already corrected the cap; this draft separates those historical answers from current policy. Exact objects and versions are attached.\n\n## Proposed actions\nBefore opening a 10-user pilot, confirm who owns policy updates and human handoff, agree acceptance criteria, and retest after later policy or index changes. These are proposals, not approvals or completed work.\n\n## Open questions\nOwnership and acceptance criteria remain unconfirmed. Feedback could not be discovered from the available MCP results: the reader requires a feedback ID absent from the submission. I have not read it and cannot claim the requested feedback review is complete.",
+      "created_at": {
+        "schema_version": 2,
+        "business_seq": 14,
+        "workspace_revision": 27,
+        "storage_revision": 37
+      },
+      "declared_refs": [
+        {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 2,
+          "config_version": null,
+          "span_start": 122,
+          "span_end": 321,
+          "quote": "Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts.",
+          "observed_at_seq": 12,
+          "valid_from_seq": 6,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "test",
+          "object_id": "647cf7958e259ce86b2e8a28799f89e0bd70315e97dad9cbbf875ca48f8587bf",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "test",
+          "object_id": "70e33ad4ae3062eb51125024bc36d7519fa615c08f3c21bf74767fdc6c861d60",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "test",
+          "object_id": "1eb6ab61f5bfbaffe5ee509d6d4f81fc211211d122dfc57966eb08fcedf3e158",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "product",
+          "object_id": "010840c0259507e74bdfd489c621030bb4ddecb1120c2aca0a868a2123d45085",
+          "version": 4,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        }
+      ]
+    },
+    "sources": [
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 2,
+          "config_version": null,
+          "span_start": 122,
+          "span_end": 321,
+          "quote": "Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts.",
+          "observed_at_seq": 12,
+          "valid_from_seq": 6,
+          "valid_until_seq": null
+        },
+        "text": "# Expense-management notice: hotel allowance\n\nThis company and its business information are fictional training material.\n\nExpense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts.\n\nThe taxi reimbursement limit remains CNY 200 per single trip. Over-limit claims and unusual routes require exception review.\n\nPublished by: Expense Management. This notice replaces the previous hotel-limit clause. The business lead coordinates supporting information for individual cases.\n",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 6,
+          "workspace_revision": 14,
+          "storage_revision": 21
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "test",
+          "object_id": "647cf7958e259ce86b2e8a28799f89e0bd70315e97dad9cbbf875ca48f8587bf",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 2,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "What is the hotel reimbursement cap per person per night for domestic business travel?\nFor domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 2,
+          "workspace_revision": 11,
+          "storage_revision": 18
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "test",
+          "object_id": "70e33ad4ae3062eb51125024bc36d7519fa615c08f3c21bf74767fdc6c861d60",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 7,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "What is the hotel reimbursement cap per person per night for domestic business travel?\nFor domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 7,
+          "workspace_revision": 15,
+          "storage_revision": 22
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "test",
+          "object_id": "1eb6ab61f5bfbaffe5ee509d6d4f81fc211211d122dfc57966eb08fcedf3e158",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 9,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "What is the hotel reimbursement cap per person per night for domestic business travel?\nExpense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts.",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 9,
+          "workspace_revision": 17,
+          "storage_revision": 24
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a0f3649f24644ec8a859c4f4907953ac",
+          "kind": "product",
+          "object_id": "010840c0259507e74bdfd489c621030bb4ddecb1120c2aca0a868a2123d45085",
+          "version": 4,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 10,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "I recommend deferring the pilot until the launch conditions are verified.\nThe current policy states a hotel reimbursement cap of CNY 400 per person per night.\nEmployees must obtain written manager approval before travelling if the hotel cost exceeds the cap, and keep the receipts.\nI propose starting with 10 users and keeping human fallback for questions outside the supported scope.\nThe policy-update owner and the acceptance criteria still need confirmation.",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 10,
+          "workspace_revision": 22,
+          "storage_revision": 30
+        }
+      }
+    ]
+  },
+  "zh": {
+    "submission": {
+      "schema_version": 2,
+      "id": "f51eef62688a47d8bfb2829df9d446e4",
+      "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+      "version": 1,
+      "cycle": {
+        "schema_version": 2,
+        "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+        "kind": "cycle",
+        "object_id": "d9e657f00e9a4f48bb1b849ab8eb63c4",
+        "version": 2,
+        "config_version": null
+      },
+      "decision": "defer_with_conditions",
+      "products": [
+        {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "product",
+          "object_id": "9195a819cda60d06ef8f800db640df7bb945ad6be58efa0a54943d736b197499",
+          "version": 2,
+          "config_version": null
+        }
+      ],
+      "config": {
+        "schema_version": 2,
+        "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+        "kind": "config",
+        "object_id": "pilot",
+        "version": 2,
+        "config_version": 1
+      },
+      "evidence_refs": [],
+      "as_of": {
+        "schema_version": 2,
+        "business_seq": 14,
+        "workspace_revision": 27,
+        "storage_revision": 37
+      },
+      "scenario": {
+        "schema_version": 2,
+        "path": "manifest.json",
+        "sha256": "6b4cbd6aa534b0c16101b464e53bdb53ad15e396755f91e47a7ec88b58ed2057",
+        "media_type": "application/json"
+      },
+      "evaluation": {
+        "schema_version": 2,
+        "path": "runtime/evaluation.json",
+        "sha256": "946574476f8141efc23d76afb4ce423739f41b123153d65d361831a4690d511d",
+        "media_type": "application/json"
+      },
+      "rules_revision": "rules-v4",
+      "executor": {
+        "schema_version": 2,
+        "id": "human:0a1b62aa0dd84a6f94d80a37252d3c94",
+        "kind": "human",
+        "delegation_id": null
+      }
+    },
+    "product": {
+      "ref": {
+        "schema_version": 2,
+        "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+        "kind": "product",
+        "object_id": "9195a819cda60d06ef8f800db640df7bb945ad6be58efa0a54943d736b197499",
+        "version": 2,
+        "config_version": null,
+        "span_start": null,
+        "span_end": null,
+        "quote": null,
+        "observed_at_seq": 14,
+        "valid_from_seq": 0,
+        "valid_until_seq": null
+      },
+      "text": "决定\n满足条件后再推进。\n\n已核实依据\n政策v2规定每人每晚400元，超限仍须事前书面批准并留票据。所附三次酒店测试保留刷新前500、刷新后400的历史。首轮交付已改为400；本版进一步分开历史回答与当前政策。确切对象及版本见所附引用。\n\n拟议行动\n在10人试点前确认政策更新及人工兜底负责人、服务时段与验收标准，后续版本变化再同题复测。以上尚未获批或执行。\n\n待确认问题\n负责人及验收标准未定。已返回的交付记录没有反馈ID，现有反馈读取工具要求该ID；本次未能读取正式反馈，不声称完成反馈复核。",
+      "created_at": {
+        "schema_version": 2,
+        "business_seq": 14,
+        "workspace_revision": 27,
+        "storage_revision": 37
+      },
+      "declared_refs": [
+        {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 2,
+          "config_version": null,
+          "span_start": 38,
+          "span_end": 88,
+          "quote": "费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。",
+          "observed_at_seq": 12,
+          "valid_from_seq": 6,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "test",
+          "object_id": "66f9187f5eac36be37c5d5a808b7ee3c77c590f8d93f2ce15a7810b329b7804e",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "test",
+          "object_id": "eae4e5e71bb13bdd3c8a2d30dbbd743e0f2a162ad1d635b297f4b84f1bf27235",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "test",
+          "object_id": "ae36864c604db76c282d10ca1d138f91b9cca1ce0cb16906c69374719a18474e",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "product",
+          "object_id": "ebf3f16fe56598fcd36f2e0007c1dd63e6bc12e28e6d2d4f09affa6ae1597d73",
+          "version": 4,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 13,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        }
+      ]
+    },
+    "sources": [
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 2,
+          "config_version": null,
+          "span_start": 38,
+          "span_end": 88,
+          "quote": "费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。",
+          "observed_at_seq": 12,
+          "valid_from_seq": 6,
+          "valid_until_seq": null
+        },
+        "text": "# 费用管理通知：差旅住宿标准\n\n本案例的公司与业务资料为虚构训练设定。\n\n费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。\n\n出差出租车单程报销上限仍为200元；超限或特殊路线走例外核验。\n\n发布部门：费用管理。本文替代此前的住宿限额条款；个案材料由业务负责人协调核验。\n",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 6,
+          "workspace_revision": 14,
+          "storage_revision": 21
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "test",
+          "object_id": "66f9187f5eac36be37c5d5a808b7ee3c77c590f8d93f2ce15a7810b329b7804e",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 2,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "国内出差住宿每人每晚的报销上限是多少？\n国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 2,
+          "workspace_revision": 11,
+          "storage_revision": 18
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "test",
+          "object_id": "eae4e5e71bb13bdd3c8a2d30dbbd743e0f2a162ad1d635b297f4b84f1bf27235",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 7,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "国内出差住宿每人每晚的报销上限是多少？\n国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 7,
+          "workspace_revision": 15,
+          "storage_revision": 22
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "test",
+          "object_id": "ae36864c604db76c282d10ca1d138f91b9cca1ce0cb16906c69374719a18474e",
+          "version": 1,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 9,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "国内出差住宿每人每晚的报销上限是多少？\n费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 9,
+          "workspace_revision": 17,
+          "storage_revision": 24
+        }
+      },
+      {
+        "ref": {
+          "schema_version": 2,
+          "session_id": "0a1b62aa0dd84a6f94d80a37252d3c94",
+          "kind": "product",
+          "object_id": "ebf3f16fe56598fcd36f2e0007c1dd63e6bc12e28e6d2d4f09affa6ae1597d73",
+          "version": 4,
+          "config_version": null,
+          "span_start": null,
+          "span_end": null,
+          "quote": null,
+          "observed_at_seq": 10,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "我建议先暂缓试点，待上线条件核实后再推进。\n当前政策规定住宿报销上限为每人每晚400元。\n住宿费用超出上限时，员工须在出行前取得经理书面批准，并保留票据。\n我建议从10人开始，对超出服务范围的问题保留人工兜底。\n政策更新负责人和验收标准仍待确认。",
+        "created_at": {
+          "schema_version": 2,
+          "business_seq": 10,
+          "workspace_revision": 22,
+          "storage_revision": 30
+        }
+      }
+    ]
+  }
+}

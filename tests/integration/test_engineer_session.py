@@ -608,12 +608,15 @@ def test_ticket_detail_lists_each_trial_with_before_and_after(eng: Eng) -> None:
         "min_score": {"before": detail["baseline_config"]["min_score"], "after": 0.2},
     }
     assert detail["baseline_config"]["min_score"] != 0.2
-    # Field names stay as they were; rows stay with the run itself.
+    # Field names stay as they were; public rows are available to the signing person.
     assert listed[("trial", "external_agent")]["changed_fields"] == [
         "freshness_guard",
         "min_score",
     ]
-    assert all("rows" not in row for row in detail["trials"])
+    assert all(row["rows"] for row in detail["trials"])
+    assert all("request_hash" not in row for row in detail["trials"])
+    agent_detail = eng.ok(eng.read("/engineer/tickets/" + ticket["id"], token=agent))["ticket"]
+    assert all("rows" not in row for row in agent_detail["trials"])
 
 
 def test_review_names_who_wrote_the_signed_draft(eng: Eng) -> None:

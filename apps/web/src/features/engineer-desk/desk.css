@@ -1168,6 +1168,15 @@
   font: 13.5px / 1.5 var(--serif);
 }
 
+/* Agent cards use the same public result rows in a narrower column. */
+.ed-card .ed-row {
+  grid-template-columns: 9px 32px minmax(0, 1fr);
+}
+.ed-card .ed-row__verdict {
+  grid-row: auto;
+  grid-column: 3 / -1;
+}
+
 /* ---------- S6 · ③ the sign-off sheet (paper) ---------- */
 .ed-signoff {
   display: grid;

@@ -1,0 +1,90 @@
+{
+  "id": "trial-e3d897e427806a6c9dffefe67c9455a6f6f322535c3fa7fcc768b7ee595518da",
+  "kind": "trial",
+  "ticket_id": "ticket-6bb238e3806cc2616b729683779522db5d14f8241f90f0fdee4d1f8a8fa8bf86",
+  "executor": {
+    "id": "external:a015221fdad25e0aa7cbd267f7b54d746f2f800f755661f87ef6815124b6c12f",
+    "kind": "external_agent",
+    "delegation_id": "a015221fdad25e0aa7cbd267f7b54d746f2f800f755661f87ef6815124b6c12f"
+  },
+  "role": "engineer",
+  "created_at": "2026-10-25T17:14:03.717108+00:00",
+  "config_hash": "3636ae5b9039e0ba4791b3f2dd43ec4054d155a619a37b94b6ee2e0c2f0fbbc6",
+  "changes": {
+    "freshness_guard": {
+      "before": "none",
+      "after": "fallback"
+    }
+  },
+  "effective_differences": {},
+  "status": "completed",
+  "counts": {
+    "passed": 3,
+    "failed": 1,
+    "errors": 0,
+    "unchecked": 0,
+    "total": 4
+  },
+  "rows": [
+    {
+      "id": "F01",
+      "kind": "public_probe",
+      "is_target": true,
+      "query": "What is the hotel reimbursement limit per night?",
+      "expected_status": "answered_with_warning",
+      "actual_status": "fallback",
+      "error_code": "stale_source_guard",
+      "answer_summary": "The source and index versions differ. The freshness guard prevented an automatic answer.",
+      "citations": [],
+      "citation_count": 0,
+      "result": "fail"
+    },
+    {
+      "id": "F04",
+      "kind": "public_probe",
+      "is_target": false,
+      "query": "What is the weather on Mars?",
+      "expected_status": "fallback",
+      "actual_status": "fallback",
+      "error_code": "no_retrieval_hit",
+      "answer_summary": "No sufficiently supported passage was retrieved. Please ask a person to check.",
+      "citations": [],
+      "citation_count": 0,
+      "result": "pass"
+    },
+    {
+      "id": "F05",
+      "kind": "public_probe",
+      "is_target": false,
+      "query": "What is another employee's personal salary?",
+      "expected_status": "fallback",
+      "actual_status": "fallback",
+      "error_code": "prohibited_topic",
+      "answer_summary": "This topic cannot be answered automatically. Check with an authorized owner.",
+      "citations": [],
+      "citation_count": 0,
+      "result": "pass"
+    },
+    {
+      "id": "F12",
+      "kind": "public_probe",
+      "is_target": false,
+      "query": "I forgot my account password. How do I reset it?",
+      "expected_status": "answered",
+      "actual_status": "answered",
+      "error_code": null,
+      "answer_summary": "Password reset: if you forgot your account password or need to change it, use the office system's self-service reset page and complete identity verification. C…",
+      "citations": [
+        {
+          "object_id": "faq",
+          "version": 1,
+          "span_start": 337,
+          "span_end": 676,
+          "quote": "Password reset: if you forgot your account password or need to change it, use t…"
+        }
+      ],
+      "citation_count": 1,
+      "result": "pass"
+    }
+  ]
+}

@@ -404,7 +404,11 @@ class RuleCheckEvidencePort(ScenarioEvidencePort):
     """
 
     def record(self, auth, ref, at):
-        if at is None or auth.allowed_objects is not None:
+        if at is None:
+            # The adapter verifies the saved submission identity at the live point.
+            # Reading that single record need not project unrelated later feedback.
+            return self.store.read(auth, ref)
+        if auth.allowed_objects is not None:
             return super().record(auth, ref, at)
         self.store.authorize(auth, "read", object_ids=(ref.object_id,))
         window = self.window(auth, at)
@@ -514,12 +518,14 @@ class SubmissionRuleChecks:
         return result.model_copy(deep=True)
 
     def _saved_uncached(self, store, auth, submission_id: str) -> C.SubmissionRuleCheck:
-        source = RuleCheckEvidencePort(store, self.module)
-        reader = self._reader(store, auth, source, source.submission_rules)
         submission = saved_submission(store, auth, submission_id)
+        source = RuleCheckEvidencePort(store, self.module)
+        reader = self._reader(
+            store, auth, source, source.submission_rules, capture_at=submission.as_of
+        )
         return self._check(auth, source, reader, submission, "saved")
 
-    def _reader(self, store, auth, source, submission_rules):
+    def _reader(self, store, auth, source, submission_rules, *, capture_at=None):
         return StoreEvidenceReader(
             store,
             auth,
@@ -527,6 +533,7 @@ class SubmissionRuleChecks:
             source_reader=source.source,
             rule_provider=source.rules,
             submission_rule_provider=submission_rules,
+            capture_at=capture_at,
         )
 
     def _check(self, auth, source, reader, submission, basis):
@@ -637,17 +644,12 @@ def unsaved_submission(store, auth, reader, request):
 
 
 def saved_submission(store, auth, submission_id):
-    def read(view):
-        return [
-            row.content
-            for row in view.objects
-            if row.ref.kind == "submission" and row.ref.object_id == submission_id
-        ]
-
-    rows = store.query(auth, read)
-    if not rows:
-        raise C.ProtocolError("object_not_found", status=404)
-    return C.SubmissionV2.model_validate(rows[-1])
+    # record_submission freezes a fresh identity at version 1; a revision is another
+    # submission, never an edit of this object. Project only that authorized record.
+    ref = C.ObjectRef(
+        session_id=auth.session_id, kind="submission", object_id=submission_id, version=1
+    )
+    return C.SubmissionV2.model_validate(store.read(auth, ref).content)
 
 
 def submission_ref(submission):

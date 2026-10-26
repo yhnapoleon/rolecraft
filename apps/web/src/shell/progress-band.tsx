@@ -154,7 +154,7 @@ export function ProgressBand(props: ProgressBandProps) {
         .slice(0, at)
         .flatMap((l) => (narrow ? (l.compactConfirmed ?? l.confirmed.slice(0, 1)) : l.confirmed))
         .slice(-1);
-  const summary = (dock = false) => (
+  const summary = () => (
     <div className="rc-prog__summary" data-progress-current={current.id}>
       <div className="rc-prog__focus">
         <p className="rc-prog__eyebrow">
@@ -217,15 +217,7 @@ export function ProgressBand(props: ProgressBandProps) {
           </button>
         </p>
       )}
-      {dock && (
-        <button
-          type="button"
-          className="btn quiet small rc-prog__summary-link"
-          onClick={() => setMapOpen(true)}
-        >
-          {p.words.map} · {p.words.distilled}
-        </button>
-      )}
+
     </div>
   );
   return (
@@ -236,7 +228,18 @@ export function ProgressBand(props: ProgressBandProps) {
         aria-hidden={!docked || undefined}
       >
         <div className="rc-prog-dock__bar" inert={!docked || undefined}>
-          {summary(true)}
+          <span className="rc-prog-dock__current" title={current.label}>
+            <span className="rc-prog__n">{num(current.n)}</span> {current.label}
+          </span>
+          <button
+            type="button"
+            className="btn quiet small rc-prog-dock__expand"
+            aria-haspopup="dialog"
+            aria-expanded={mapOpen}
+            onClick={() => setMapOpen(true)}
+          >
+            {p.words.unfold}
+          </button>
         </div>
       </div>
       <section

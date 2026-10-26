@@ -247,6 +247,7 @@ class EvidenceAssemblerV2:
         missing = []
         subject_points = []
         source_issues = []
+        reference_errors = []
         disclosed = {digest(base_ref(r)) for r in evidence_refs}
 
         def add(ref, required=False):
@@ -263,6 +264,16 @@ class EvidenceAssemblerV2:
                 # echoed. Never expose private ledger source IDs, quotes or titles.
                 if digest(base_ref(ref)) in disclosed:
                     missing.append(base_ref(ref))
+                    # These failures follow a successful authorized source read. Keep the
+                    # supplied reference's validation reason separate from hidden/missing
+                    # sources, which must remain indistinguishable.
+                    if isinstance(error, ProtocolError) and error.code in {
+                        "evidence_time_mismatch",
+                        "evidence_quote_mismatch",
+                        "evidence_version_mismatch",
+                        "future_evidence",
+                    }:
+                        reference_errors.append(error.code)
                 if not source_issues:
                     source_issues.append(
                         {"status": "pending", "reason": message(work_language, SAFE_REASON)}
@@ -380,6 +391,7 @@ class EvidenceAssemblerV2:
             "business_response": response,
             "historical_responsibilities": history,
             "source_issues": source_issues,
+            **({"reference_errors": sorted(set(reference_errors))} if reference_errors else {}),
             "test_sources_complete": test_sources_complete,
             "anchor_mode": anchor_mode,
             "requested_at": (requested_at or as_of).model_dump(mode="json"),
