@@ -25,23 +25,28 @@ export function createAipmRegistry() {
   };
 }
 
-// L2 and L3 each export one installer from their feature's index; absent ones stay absent.
-const installers = import.meta.glob<Record<string, (host: AipmHost) => unknown>>([
-  '../features/aipm-design/index.ts',
-  '../features/aipm-evaluation/index.ts',
+// L2 and L3 each export one installer from their feature folder; absent ones stay absent.
+const modules = import.meta.glob<Record<string, unknown>>([
+  '../features/aipm-design/{index,install}.{ts,tsx}',
+  '../features/aipm-evaluation/{index,install}.{ts,tsx}',
 ]);
-const OWNERS: Record<AipmFeatureId, [path: string, name: string]> = {
-  design: ['../features/aipm-design/index.ts', 'installAipmDesign'],
-  evaluation: ['../features/aipm-evaluation/index.ts', 'installAipmEvaluation'],
+const OWNERS: Record<AipmFeatureId, [folder: string, name: string]> = {
+  design: ['../features/aipm-design/', 'installAipmDesign'],
+  evaluation: ['../features/aipm-evaluation/', 'installAipmEvaluation'],
 };
 
 /** Runs every installer present in this build once per host. Returns the features still missing,
  * so the page can say the candidate is incomplete instead of showing a stand-in. */
 export async function installAipmFeatures(host: AipmHost): Promise<AipmFeatureId[]> {
   const missing: AipmFeatureId[] = [];
-  for (const [id, [path, name]] of Object.entries(OWNERS) as [AipmFeatureId, [string, string]][]) {
-    const install = (await installers[path]?.())?.[name];
-    if (install) install(host);
+  for (const [id, [folder, name]] of Object.entries(OWNERS) as [
+    AipmFeatureId,
+    [string, string],
+  ][]) {
+    let install: unknown;
+    for (const [path, load] of Object.entries(modules))
+      if (path.startsWith(folder) && !install) install = (await load())[name];
+    if (typeof install === 'function') install(host);
     else missing.push(id);
   }
   return missing;

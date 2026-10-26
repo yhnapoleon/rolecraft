@@ -5,6 +5,7 @@ import type { AipmFeatureId, AipmHost } from '../../aipm/host';
 import { createAipmRegistry, installAipmFeatures } from '../../aipm/registry';
 import type { ObjectRef, ProductCreate, ProductEdit, ReviewInput } from '../../contracts-v2';
 import type { V4HostAdapter } from '../../v4-host';
+import { publishedContent } from './content';
 import type { GuideProps } from './guide';
 import {
   guideView,
@@ -210,6 +211,12 @@ export function createAipmPractice(deps: PracticeDeps) {
       const p = stateOf(a)?.progress;
       if (!p) throw new Error('AIPM progress unavailable');
       return p;
+    },
+    async readContent(id) {
+      const a = deps.current(),
+        g = a && stateOf(a)?.guide;
+      if (!g) throw new Error('AIPM guide unavailable');
+      return publishedContent(id, g.language, g.revision);
     },
     async readGuide() {
       const a = deps.current();

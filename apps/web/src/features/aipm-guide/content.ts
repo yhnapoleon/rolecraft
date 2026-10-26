@@ -6,6 +6,23 @@ import patternsZh from '../../../../../scenarios/pm_pilot/aipm-phase1/public/pat
 import patternsEn from '../../../../../scenarios/pm_pilot/aipm-phase1/public/patterns.en.json';
 import type { GuideQuestion, Language } from './model';
 
+// Every published file of the candidate present in this build (L2/L3 add design / evaluation).
+const published = import.meta.glob<unknown>(
+  '../../../../../scenarios/pm_pilot/aipm-phase1/public/*.json',
+  { import: 'default' },
+);
+/** One published content file in one language, only if it belongs to the given revision. */
+export async function publishedContent(id: string, language: Language, revision: string) {
+  const load = Object.entries(published).find(([path]) =>
+    path.endsWith(`/public/${id}.${language}.json`),
+  )?.[1];
+  if (!load) throw new Error(`AIPM content not in this build: ${id}`);
+  const value = (await load()) as { content_revision?: string };
+  if (value.content_revision !== undefined && value.content_revision !== revision)
+    throw new Error(`AIPM content revision differs: ${id}`);
+  return value;
+}
+
 export type CompanyBrief = {
   revision: string;
   title: string;
