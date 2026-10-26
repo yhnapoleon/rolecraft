@@ -454,13 +454,26 @@ export type RubricLine = {
   explanation: string;
   citations?: EvidenceRefV2[];
 };
+/** One model-judged item; note says where to look again, never the answer. */
+export type ModelJudgement = {
+  target: "rubric" | "coverage";
+  /** criterion id or coverage item id */
+  id: string;
+  label: string;
+  mark: "covered" | "missing" | "wrong" | "to_check";
+  note: string;
+  citations?: EvidenceRefV2[];
+  source?: "model_suggestion";
+};
+export type ModelStatus = "not_configured" | "running" | "done" | "failed";
 export type MentorPrompt = { colleague: Colleague; question: string; pointer?: Pointer | null; trigger_id: string };
 /** One learner-requested process review of one PRD section. Never a formal score. */
 export type SectionReview = {
   schema_version?: 2;
   id: string;
   session_id: string;
-  revision?: 1;
+  /** 1 = immediate rule results; 2 = the same review with model items filled in. */
+  revision?: number;
   step_id: StepId;
   prd_ref: ObjectRef;
   design_ref?: ObjectRef | null;
@@ -478,6 +491,10 @@ export type SectionReview = {
   decision_used?: Decision | null;
   basis?: Record<string, string>;
   sentence_labels?: null;
+  /** running: model items are on their way; poll the read again. */
+  model_status?: ModelStatus;
+  model_items?: ModelJudgement[];
+  model_reason?: string | null;
   affects_formal_score?: false;
 };
 export type SectionReviewInput = { schema_version?: 2; step_id: StepId; prd_ref: ObjectRef; design_ref?: ObjectRef | null };
