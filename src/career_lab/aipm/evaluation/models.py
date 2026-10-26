@@ -14,13 +14,13 @@ class EvaluationCase(BatchCase):
     coverage: Literal["assistant_answer", "plan_only"]
 
 
-class EvaluationBatch(AipmBatch, V2):
+class EvaluationBatch(AipmBatch):
     cases: tuple[EvaluationCase, ...]
     baseline_hash: str
     created_by: str
 
 
-class EvaluationAssessment(AipmAssessment, V2):
+class EvaluationAssessment(AipmAssessment):
     batch_ref: ObjectRef
     case_id: str
     case_revision: int = Field(ge=1)

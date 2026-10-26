@@ -12,16 +12,8 @@ from career_lab.aipm.evaluation.models import BatchRead
 from career_lab.aipm.evaluation.service import OBJECT_MODELS, EvaluationService
 from career_lab.aipm.types import AipmDesign, AipmProfile, TriageRow
 from career_lab.api.vertical_runtime import create_runtime_app
-from career_lab.contracts.v2 import V2, Command, ObjectRef
+from career_lab.contracts.v2 import Command, ObjectRef
 from career_lab.storage.v2_store import Mutation, ObjectWrite
-
-
-class FixtureProfile(AipmProfile, V2):
-    pass
-
-
-class FixtureDesign(AipmDesign, V2):
-    pass
 
 
 def test_real_store_preserves_original_request_results_and_assessment_history(tmp_path):
@@ -37,8 +29,8 @@ def test_real_store_preserves_original_request_results_and_assessment_history(tm
         service = EvaluationService(gateway.request_result)
         for kind, model in {
             **OBJECT_MODELS,
-            "aipm_profile": FixtureProfile,
-            "aipm_design": FixtureDesign,
+            "aipm_profile": AipmProfile,
+            "aipm_design": AipmDesign,
         }.items():
             store.register_object(kind, model)
 
@@ -60,14 +52,14 @@ def test_real_store_preserves_original_request_results_and_assessment_history(tm
                 content=obj.model_dump(mode="json"),
             )
 
-        profile = FixtureProfile(
+        profile = AipmProfile(
             session_id=sid,
             content_revision="fixture-v1",
             scenario_hash="fixture",
             work_language="zh",
             enrolled_at=datetime.now(UTC),
         )
-        design = FixtureDesign(
+        design = AipmDesign(
             id="design",
             session_id=sid,
             revision=1,
