@@ -348,7 +348,19 @@ def test_free_text_metric_is_never_marked_covered(base, with_judge):
             ]
         }
     )
-    content = replace(progress.content_for(base), coverage_rules=rules, coverage_revision=revision)
+    from career_lab.aipm.progress import authored
+
+    mentor_path = Path(__file__).resolve().parents[2] / (
+        "scenarios/pm_pilot/aipm-phase1/private/grading/mentor.json"
+    )
+    mentor_revision, mentors = authored(mentor_path.read_bytes(), "prompts", MentorRule)
+    content = replace(
+        progress.content_for(base),
+        coverage_rules=rules,
+        coverage_revision=revision,
+        mentor_rules=mentors,
+        mentor_revision=mentor_revision,
+    )
     install_aipm(base["app"], [content])
     base["app"].state.aipm_reviewer.sync = True
     if with_judge:
@@ -371,6 +383,10 @@ def test_free_text_metric_is_never_marked_covered(base, with_judge):
     assert first_fix["source"] == "model_suggestion" and first_fix["finding"] == "violation"
     assert first_fix["section_or_row_id"] == "need.metric_scope"
     assert done["status"] == "draft"
+    preset = next(p for p in done["mentor_prompts"] if p["colleague"] == "business")
+    assert preset["trigger_id"] == "need.metric_scope"
+    assert preset["question"].count("?") == 1
+    assert "active staff work" in preset["question"]
     assert text in json.dumps(judge.messages[0])
     # The Judge is asked the exact question for this point, not just its label.
     assert "elapsed time from ticket creation to closure" in json.dumps(judge.messages[0])

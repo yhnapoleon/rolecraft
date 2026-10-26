@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "aipm-mentor-1",
+  "revision": "aipm-mentor-2",
   "note": "Preset prompts, shown as such; never a live reply and never the answer.",
   "prompts": [
     {
@@ -88,8 +88,8 @@
       "id": "m.metric_scope",
       "colleague": "business",
       "question": {
-        "zh": "收益测算里的 429 分钟是怎么算的？里面有多少是在排队和等审批？",
-        "en": "How was the 429 minutes in the estimate worked out? How much of it is queueing and waiting for approval?"
+        "zh": "这 429 分钟中，哪部分有依据可算作人工处理时间？",
+        "en": "Which part of those 429 minutes has evidence that it is active staff work?"
       },
       "materials": [
         "business_case",
@@ -98,7 +98,13 @@
       "step_id": "need",
       "when_rule": [
         "metric_scope"
-      ]
+      ],
+      "when_coverage": {
+        "need.metric_scope": [
+          "wrong",
+          "to_check"
+        ]
+      }
     },
     {
       "id": "m.raw_evidence",
