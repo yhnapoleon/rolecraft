@@ -1,0 +1,205 @@
+/* Section review: the result page made small. Rows, sentence marks and colleague columns use the
+ * result page's own classes; this file only lays out the two sheets and the status pills. */
+.aipm-review__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.aipm-review__paper,
+.aipm-review__sheet {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 24px 26px;
+  border-radius: var(--r-paper, 18px);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.aipm-review__eyebrow,
+.aipm-review__meta,
+.aipm-review__muted,
+.aipm-review__note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.aipm-review__note {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.aipm-review__title {
+  margin: 0;
+  font: 600 20px / 1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+.aipm-review__plain {
+  display: grid;
+  gap: 10px;
+  font: 400 16px / 1.75 var(--serif);
+}
+.aipm-review__plain p {
+  margin: 0;
+}
+.aipm-review__unassigned summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.aipm-review__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.aipm-review__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.aipm-review__name {
+  margin: 0;
+  font: 600 19px / 1.3 var(--sans);
+}
+.aipm-review__chip,
+.aipm-review__step {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.aipm-review__steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.aipm-review__step[data-current] {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+}
+.aipm-review__step[data-passed] {
+  color: var(--ink);
+}
+.aipm-review__rule {
+  width: 18px;
+  height: 1px;
+  background: var(--line-2);
+}
+.aipm-review__hint {
+  margin-inline-start: 4px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.aipm-review__delta {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.aipm-review__stale {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--warn-tint);
+  color: var(--ink);
+  font-size: 13px;
+}
+.aipm-review__part {
+  display: grid;
+  gap: 8px;
+}
+.aipm-review__label {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.aipm-review__mis {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+}
+.aipm-review__mis[data-first] {
+  background: var(--bad-tint);
+}
+.aipm-review__mis-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.aipm-review__mis[data-first] .aipm-review__mis-title {
+  color: var(--bad);
+}
+.aipm-review__mis-line {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.aipm-review__coverage {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-review__mentor {
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.aipm-review .aipm-review__question {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  font: 400 14px / 1.6 var(--serif);
+}
+.aipm-review__ask {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  background: none;
+  color: var(--ink);
+  font: 500 13px / 1.5 var(--sans);
+  cursor: pointer;
+}
+.aipm-review__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.aipm-review__foot .aipm-review__muted {
+  flex: 1 1 16em;
+}
+.aipm-review__actions {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 960px) {
+  .aipm-review__grid {
+    grid-template-columns: 1fr;
+  }
+  .aipm-review__mentors {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .aipm-review__paper,
+  .aipm-review__sheet {
+    padding: 18px 16px;
+  }
+}
