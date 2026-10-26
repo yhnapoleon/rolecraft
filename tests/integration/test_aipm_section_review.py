@@ -208,3 +208,53 @@ def test_only_the_owner_reviews_and_agents_read_the_same_state(enabled):
 def test_old_binding_has_no_reviews(base):
     response = post(base, "section-reviews", "aipm.section_review.create", {})
     assert response.status_code in {409, 422}
+
+
+def test_mcp_section_review_resource_tool_and_prompt_match_http(enabled):
+    from fastapi.testclient import TestClient
+
+    from career_lab.mcp.protocol import CAPABILITIES, MODERN, VERSION
+    from career_lab.mcp.streamable_http import mount_mcp_http
+
+    mount_mcp_http(enabled["app"])
+    first = prd(enabled, "Tickets take 429 minutes.")
+    review(enabled, first, design(enabled, first))
+    post(enabled, "focus", "aipm.focus.set", {"step_id": "need"})
+    agent, _ = fixture.grant(enabled, allowed_actions=("observation",))
+    client = TestClient(enabled["app"], base_url="http://127.0.0.1")
+
+    def call(method, params, name=""):
+        response = client.post(
+            f"/sessions/{enabled['sid']}/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": {**params, "_meta": {VERSION: MODERN, CAPABILITIES: {}}},
+            },
+            headers={
+                "Authorization": "Bearer " + agent["token"],
+                "Accept": "application/json, text/event-stream",
+                "MCP-Protocol-Version": MODERN,
+                "Mcp-Method": method,
+                "Mcp-Name": name,
+            },
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["result"]
+
+    uri = f"rolecraft://sessions/{enabled['sid']}/aipm/sections/need/review"
+    value = json.loads(call("resources/read", {"uri": uri}, uri)["contents"][0]["text"])
+    http = result(get(enabled, "section-reviews?step_id=need&limit=1", agent["token"]))
+    assert value == {"step_id": "need", "latest": http["items"][0]}
+    tool = call(
+        "tools/call",
+        {"name": "aipm.context.read", "arguments": {"kind": "section_review", "step_id": "need"}},
+        "aipm.context.read",
+    )
+    assert tool["structuredContent"] == value
+    templates = call("resources/templates/list", {})["resourceTemplates"]
+    assert any(t["name"] == "aipm-section-review" for t in templates)
+    prompt = call("prompts/get", {"name": "aipm-next-step", "arguments": {}}, "aipm-next-step")
+    assert "Sheet status: solid" in prompt["messages"][0]["content"]["text"]
+    client.close()
