@@ -275,3 +275,10 @@
     transition: none;
   }
 }
+/* With a conversation model the preset card appears only after a held-back reply. */
+.aipm-mentor[data-when="held"] {
+  display: none;
+}
+.chat:has(.rc-roles__turn:last-child .rc-sys--held) .aipm-mentor[data-when="held"] {
+  display: block;
+}
