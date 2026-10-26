@@ -15,5 +15,10 @@ export async function loadModelIdentities(target: HTMLElement, read: () => Promi
   target.textContent = language === 'zh' ? '正在读取识别器身份…' : 'Reading recognizer identities…';
   let data: SessionRecognition | null = null;
   try { data = await read(); } catch { /* Keep an unreadable record explicit. */ }
-  if (target.isConnected) target.innerHTML = modelIdentitiesHtml(data, language);
+  if (target.isConnected) {
+    target.innerHTML = modelIdentitiesHtml(data, language);
+    // Content growth can anchor the viewport to the old runtime section below.
+    // Only finish this navigation while the identity target still owns focus.
+    if (target.ownerDocument.activeElement === target) target.scrollIntoView({ block: 'start' });
+  }
 }

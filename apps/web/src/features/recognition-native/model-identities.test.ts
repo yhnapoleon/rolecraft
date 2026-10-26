@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { loadModelIdentities, modelIdentitiesHtml } from './model-identities';
 import type { SessionRecognition } from './client';
 const saved: SessionRecognition = { session_id: 's', counts: {}, records: [], recognizers: [
@@ -22,4 +22,13 @@ it('does not paint a late response into a closed panel', async () => {
   const target = { isConnected: false, textContent: '', innerHTML: 'closed' };
   await loadModelIdentities(target as unknown as HTMLElement, async () => saved, 'en');
   expect(target.innerHTML).toBe('closed');
+});
+
+it.each([true, false])('keeps loaded identities in view only while the target retains focus (%s)', async focused => {
+  const target = { isConnected: true, textContent: '', innerHTML: '', ownerDocument: { activeElement: null as unknown }, scrollIntoView: vi.fn() };
+  target.ownerDocument.activeElement = focused ? target : {};
+  await loadModelIdentities(target as unknown as HTMLElement, async () => saved, 'en');
+  expect(target.innerHTML).toContain('rev-one');
+  expect(target.scrollIntoView).toHaveBeenCalledTimes(focused ? 1 : 0);
+  if (focused) expect(target.scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
 });
