@@ -240,6 +240,8 @@
   border-bottom: 0;
 }
 .aipm-prd-chip {
+  /* The composer is a grid: a chip keeps its own width. */
+  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 6px;

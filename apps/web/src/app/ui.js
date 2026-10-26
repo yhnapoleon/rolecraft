@@ -3881,12 +3881,23 @@ new MutationObserver(() => prdSentWith.size && requestAnimationFrame(notePrdBubb
 // The introduction folds to one line once you have written to that colleague (once, so opening
 // it again stays open).
 const introFolded = new Set();
-function foldIntroduction(a, role, msgs) {
+function foldIntroduction(a, role, msgs, sending = false) {
   const key = `${a.id}:${role}`;
-  if (introFolded.has(key) || !msgs.some((m) => m.role === 'user')) return;
+  if (introFolded.has(key) || !(sending || msgs.some((m) => m.role === 'user'))) return;
   introFolded.add(key);
   Greetings.rememberIntroduction(a.id, role);
+  document.querySelector('.chat .rc-greet-chat[open]')?.removeAttribute('open');
 }
+// Sending is the moment: the reply may take a while, the introduction steps aside at once.
+document.addEventListener(
+  'submit',
+  (e) => {
+    const a = current();
+    if (a && ui.chatRole && e.target instanceof HTMLFormElement && e.target.dataset.form === 'chat')
+      foldIntroduction(a, ui.chatRole, [], true);
+  },
+  true,
+);
 function railChat(a, role) {
   const msgs = a.conversations[role] || [];
   foldIntroduction(a, role, msgs);
