@@ -162,6 +162,7 @@ def test_mcp_feedback_resource_and_tool_use_real_http_projection(context):
 
     value = json.loads(resource.json()["result"]["contents"][0]["text"])
     assert value == read(context, ref, actor["token"]).json()["result"]["result"]
+    # Old-binding session: discovery stays available as a resource; the tool is absent.
     tool = call(
         "tools/call",
         {
@@ -174,8 +175,7 @@ def test_mcp_feedback_resource_and_tool_use_real_http_projection(context):
         },
         "aipm.context.read",
     )
-    assert tool.json()["result"]["structuredContent"] == value
-    assert tool.json()["result"]["isError"] is False
+    assert "result" not in tool.json()
     client.close()
 
 

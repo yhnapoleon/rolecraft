@@ -31,6 +31,17 @@ def available(backend):
     return callable(getattr(backend, "aipm_read", None))
 
 
+def tool_enabled(backend):
+    """Spec 7.2: the compatibility tool exists only in enrolled new-experience sessions."""
+    if not available(backend):
+        return False
+    try:
+        return enabled_guide(backend) is not None
+    except RemoteFailure:
+        # Discovery never fails the business tool list; the extension is simply absent.
+        return False
+
+
 def text(value):
     result = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     if len(result) > LIMIT:
