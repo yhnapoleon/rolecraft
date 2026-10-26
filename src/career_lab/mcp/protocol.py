@@ -204,7 +204,7 @@ class Protocol:
             if not isinstance(cursor, str) or not re.fullmatch(r"0|[1-9][0-9]{0,5}", cursor):
                 raise RpcFailure(-32602, "Invalid cursor")
             tools = sorted((t for t in self.backend.tools() if t.available), key=lambda t: t.name)
-            extra = [aipm_context.TOOL] if aipm_context.available(self.backend) else []
+            extra = [aipm_context.TOOL] if aipm_context.tool_enabled(self.backend) else []
             start = int(cursor)
             if start > len(tools) + len(extra):
                 raise RpcFailure(-32602, "Invalid cursor")
@@ -246,7 +246,7 @@ class Protocol:
             known = (
                 set() if name == aipm_context.TOOL_NAME else {t.name for t in self.backend.tools()}
             )
-            if aipm_context.available(self.backend):
+            if name == aipm_context.TOOL_NAME and aipm_context.tool_enabled(self.backend):
                 known.add(aipm_context.TOOL_NAME)
             if name not in known:
                 raise RpcFailure(-32602, "Unknown tool")
