@@ -215,6 +215,34 @@ describe('run, judgement and plan-only cases stay apart', () => {
     expect(renderDesk(desk({ tab: 'run', view: done }))).toMatch(/data-eval-action="run" disabled/);
   });
 
+  it('offers Send again or Prepare again only as the server read allows', () => {
+    const prepared = {
+      ...evalCase('p', 'retrieval_generation', 'pending'),
+      original_command: { request_id: 'req-p' },
+      abandoned: [{ request_id: 'old' }],
+    };
+    const at = (recovery?: 'send_again' | 'reprepare' | 'in_progress') =>
+      renderDesk(
+        desk({
+          tab: 'run',
+          view: {
+            ...view,
+            batch: { ...view.batch, cases: [prepared] },
+            recovery: recovery ? { p: recovery } : {},
+          },
+        }),
+      );
+    expect(at('send_again')).toContain('data-eval-action="send-again"');
+    expect(at('send_again')).toContain('服务端没有收到这道题');
+    expect(at('reprepare')).toContain('data-eval-action="reprepare"');
+    expect(at('reprepare')).toContain('条件已变，需重新准备');
+    for (const html of [at('in_progress'), at()]) {
+      expect(html).not.toMatch(/data-eval-action="(send-again|reprepare)"/);
+      expect(html).toContain('结果待确认');
+    }
+    expect(at('send_again')).toContain('已放弃 1 条旧请求，不计入统计');
+  });
+
   it('renders each language without the other', () => {
     for (const tab of ['cases', 'run', 'monitoring'] as const) {
       const english = renderDesk(
@@ -313,6 +341,43 @@ describe('installAipmEvaluation', () => {
     expect(installed.state.view?.batch.cases[0].status).toBe('completed');
     await installed.run();
     expect(sent).toHaveLength(1);
+  });
+  it('sends the same original again only when a fresh read still allows it', async () => {
+    const original = { schema_version: 2, request_id: 'req-y', operation: 'tests.create' };
+    let recovery: 'send_again' | 'reprepare' = 'reprepare';
+    let batch = structuredClone(view.batch);
+    batch.cases = [
+      { ...evalCase('y', 'retrieval_generation', 'pending'), original_command: original },
+    ];
+    const sent: unknown[] = [];
+    const actions: unknown[] = [];
+    const host = fakeHost({
+      getClient: () => ({
+        readDesign: async () => ({ design }),
+        readBatch: async () => ({
+          result: { result: { ...view, batch, recovery: { y: recovery } } },
+        }),
+      }),
+      readProgress: async () => ({ steps: [{ evidence_refs: [ref('aipm_batch', 'batch', 4)] }] }),
+      command: async (_operation: string, payload: Record<string, unknown>) => {
+        actions.push(payload.action);
+        batch = { ...batch, cases: [{ ...batch.cases[0], status: 'completed' }] };
+        return { status: 'confirmed', result: { result: { batch } } };
+      },
+      sendPreparedTest: async (command: Record<string, unknown>) => {
+        sent.push(command);
+      },
+    });
+    const installed = installAipmEvaluation(host);
+    await installed.load();
+    installed.sendAgain('y');
+    await vi.waitFor(() => expect(installed.state.busy).toBe(false));
+    expect(sent).toEqual([]);
+    recovery = 'send_again';
+    installed.sendAgain('y');
+    await vi.waitFor(() => expect(installed.state.busy).toBe(false));
+    expect(sent).toEqual([original]);
+    expect(actions).toEqual(['reconcile']);
   });
 });
 

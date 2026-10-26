@@ -15,6 +15,7 @@ import {
   monitoringGaps,
   pausedMessage,
   ROUTES,
+  type Recovery,
   type Route,
   rowsByRoute,
   summaryLines,
@@ -140,7 +141,7 @@ function casesScreen(state: DeskState) {
   return `${groups}${foot}`;
 }
 
-function statusLabel(language: Language, row: EvaluationCase) {
+function statusLabel(language: Language, row: EvaluationCase, recovery?: Recovery) {
   const t = (zh: string, en: string) => text(language, zh, en);
   switch (row.status ?? 'pending') {
     case 'completed':
@@ -152,9 +153,12 @@ function statusLabel(language: Language, row: EvaluationCase) {
     case 'cancelled':
       return t('已取消', 'Cancelled');
     default:
-      return row.original_command
-        ? t('结果待确认', 'Outcome not confirmed')
-        : t('待运行', 'Waiting');
+      if (!row.original_command) return t('待运行', 'Waiting');
+      if (recovery === 'send_again')
+        return t('服务端没有收到这道题', 'The server did not receive this case');
+      if (recovery === 'reprepare')
+        return t('条件已变，需重新准备', 'Conditions changed; prepare it again');
+      return t('结果待确认', 'Outcome not confirmed');
   }
 }
 
@@ -169,9 +173,22 @@ function caseLine(state: DeskState, row: EvaluationCase, extra = '') {
   const open = row.run_ref
     ? `<button type="button" class="aipm-eval__link" data-eval-action="open-run" data-case="${esc(row.id)}">${esc(t('看运行结果', 'View run'))}</button>`
     : '';
+  const recovery =
+    row.status === 'pending' && row.original_command ? state.view?.recovery?.[row.id] : undefined;
+  const disabled = state.readOnly || state.busy || state.running ? ' disabled' : '';
+  // Explicit only: the same saved original, or a new request after conditions moved.
+  const act =
+    recovery === 'send_again'
+      ? `<button type="button" class="btn" data-eval-action="send-again" data-case="${esc(row.id)}"${disabled}>${esc(t('重新发送', 'Send again'))}</button>`
+      : recovery === 'reprepare'
+        ? `<button type="button" class="btn" data-eval-action="reprepare" data-case="${esc(row.id)}"${disabled}>${esc(t('重新准备', 'Prepare again'))}</button>`
+        : '';
+  const abandoned = row.abandoned?.length
+    ? `<span>${esc(t(`已放弃 ${row.abandoned.length} 条旧请求，不计入统计`, `${row.abandoned.length} abandoned request${row.abandoned.length > 1 ? 's' : ''}, not counted`))}</span>`
+    : '';
   return `<li class="aipm-eval__case" data-status="${esc(row.status ?? 'pending')}">
-  <div class="aipm-eval__case-head"><span class="aipm-eval__q">${esc(caseQuery(state, row))}</span><span class="aipm-eval__state">${esc(statusLabel(state.language, row))}</span></div>
-  <div class="aipm-eval__meta"><span>${esc(routeLabel(state, row.route))}</span>${open}</div>${extra}
+  <div class="aipm-eval__case-head"><span class="aipm-eval__q">${esc(caseQuery(state, row))}</span><span class="aipm-eval__state">${esc(statusLabel(state.language, row, recovery))}</span></div>
+  <div class="aipm-eval__meta"><span>${esc(routeLabel(state, row.route))}</span>${abandoned}${open}${act}</div>${extra}
 </li>`;
 }
 

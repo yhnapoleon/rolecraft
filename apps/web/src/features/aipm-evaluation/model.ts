@@ -69,6 +69,8 @@ export type EvaluationCase = BatchCase & {
   case_revision: number;
   route: Route;
   coverage: 'assistant_answer' | 'plan_only';
+  /** Originals the server never received, set aside after conditions moved; never counted. */
+  abandoned?: { request_id: string }[];
 };
 export type EvaluationBatch = Omit<AipmBatch, 'cases'> & { cases: EvaluationCase[] };
 export type Assessment = {
@@ -92,7 +94,14 @@ export type RouteCount = {
   judge: 'learner_assessment';
 };
 export type Summary = Record<'all' | Route, RouteCount>;
-export type BatchView = { batch: EvaluationBatch; assessments: Assessment[]; summary: Summary };
+/** Server-derived per read for prepared cases: received, safe to send again, or must reprepare. */
+export type Recovery = 'in_progress' | 'send_again' | 'reprepare';
+export type BatchView = {
+  batch: EvaluationBatch;
+  assessments: Assessment[];
+  summary: Summary;
+  recovery?: Record<string, Recovery>;
+};
 
 /** One editable case before it is saved into a test plan. Expected text is required. */
 export type CaseDraft = {
