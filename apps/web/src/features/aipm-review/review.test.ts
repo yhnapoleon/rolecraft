@@ -207,10 +207,20 @@ describe('the model look', () => {
     );
   });
 
+  it('shows an interrupted look’s own sentence instead of running forever', () => {
+    const interrupted = {
+      ...fixtureModelReview('zh', 'failed'),
+      model_reason: '模型细看被中断；再点一次「交给批改」即可继续。',
+    };
+    expect(draw(interrupted).byClass('aipm-review__model-status')[0].textContent).toBe(
+      '模型细看没有完成。模型细看被中断；再点一次「交给批改」即可继续。下面是规则判定。',
+    );
+  });
+
   it('says why the model look failed, and keeps the rule results', () => {
     const root = draw(fixtureModelReview('zh', 'failed'));
-    expect(root.byClass('aipm-review__model-status')[0].textContent).toContain(
-      '模型细看没有完成：模型超时',
+    expect(root.byClass('aipm-review__model-status')[0].textContent).toBe(
+      '模型细看没有完成。模型超时。下面是规则判定。',
     );
     expect(root.byClass('fb-item')).toHaveLength(4);
   });
