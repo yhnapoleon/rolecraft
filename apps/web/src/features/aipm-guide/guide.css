@@ -333,3 +333,101 @@
     flex-basis: 100%;
   }
 }
+/* The three sub-steps of every step: understand → do → get feedback. */
+.aipm-phases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+.aipm-phases button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  width: 100%;
+  padding: 8px 10px 9px;
+  border: 0;
+  border-bottom: 2px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.3s ease,
+    color 0.3s ease;
+}
+.aipm-phases__n {
+  grid-row: span 2;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.aipm-phases strong {
+  font-size: 14px;
+  font-weight: 550;
+}
+.aipm-phases__hint {
+  font-size: 12px;
+  color: var(--ink-3, var(--ink-2));
+}
+.aipm-phases button[aria-current],
+.aipm-phases button[data-demo] {
+  border-bottom-color: var(--ink);
+  color: var(--ink);
+}
+.aipm-phases__demo {
+  margin: -8px 0 14px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.aipm-guide__why {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+.aipm-guide__why dt {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-bottom: 2px;
+}
+.aipm-guide__why dd {
+  margin: 0;
+  line-height: 1.65;
+}
+.aipm-guide__example {
+  margin: 0 0 8px;
+  padding-left: 14px;
+  border-left: 2px solid var(--line-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.aipm-agent {
+  border: 1px solid var(--line);
+  border-radius: var(--radius, 10px);
+  padding: 14px 16px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.aipm-agent p {
+  margin: 0 0 8px;
+}
+.aipm-agent pre {
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+  font: 13px / 1.6 var(--sans, system-ui, sans-serif);
+  color: var(--ink);
+}
+@media (max-width: 720px) {
+  .aipm-phases__hint {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-phases button {
+    transition: none;
+  }
+}
