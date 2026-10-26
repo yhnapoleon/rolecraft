@@ -3,7 +3,7 @@
  * progress over the real guide content, for development; it is never a fallback. */
 import zh from '../../../../../scenarios/pm_pilot/aipm-phase1/public/guide.zh.json';
 import en from '../../../../../scenarios/pm_pilot/aipm-phase1/public/guide.en.json';
-import { IDS, type Language, type StepId } from './model';
+import type { Language, StepId } from './model';
 
 export type GuideTransport = (path: string, body?: unknown, method?: string) => Promise<unknown>;
 type Writer = (command: Record<string, unknown>) => Promise<unknown>;
