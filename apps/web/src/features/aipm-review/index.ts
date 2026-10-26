@@ -10,6 +10,7 @@ import {
   modelPart,
   shownDelta,
   shownStatus,
+  reviewDetailForColleague,
   reviewSummaryForColleague,
   sheetName,
   sheetOfCriterion,
@@ -48,6 +49,8 @@ export interface ReviewHost {
     colleague: Colleague;
     prefill: string;
     attachPrd?: boolean;
+    /** The review's own words, offered as "Attach the review summary" (never inserted for you). */
+    detail?: string;
   }): Promise<void>;
 }
 export type ReviewOptions = {
@@ -289,6 +292,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     await host.askColleague({
       colleague: who,
       prefill: reviewSummaryForColleague(review, who, { language }),
+      detail: reviewDetailForColleague(review, { language }),
     });
   }
 

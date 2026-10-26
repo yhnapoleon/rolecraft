@@ -76,10 +76,13 @@ export interface AipmHost<TProgress = unknown, TClient = unknown> {
   openReview(step: AipmStepId, reviewRef?: ObjectRef): void;
   openWorkbench(): void;
   /** Opens that colleague's conversation with the message prefilled (never sent for the person).
-   * attachPrd defaults to true when that colleague has not been shared the latest PRD version. */
+   * attachPrd defaults to true when that colleague has not been shared the latest PRD version.
+   * detail: longer text (a review's own words) the person may insert with one click; never
+   * added for them. */
   askColleague(input: {
     colleague: AipmColleague;
     prefill: string;
     attachPrd?: boolean;
+    detail?: string;
   }): Promise<void>;
 }

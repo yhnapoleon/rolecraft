@@ -49,7 +49,12 @@ export type PracticeDeps = {
   notifyDraft(text: string, label: string, dismiss: string, open: () => void): void;
   /** Opens the colleague's conversation with this message in the composer (not sent), and the
    * PRD attachment chip set as given. */
-  prefillColleague(colleague: AipmColleague, prefill: string, attachPrd: boolean): void;
+  prefillColleague(
+    colleague: AipmColleague,
+    prefill: string,
+    attachPrd: boolean,
+    detail?: string,
+  ): void;
   /** A question asked from a review: its rule-triggered prompts for that colleague, shown under
    * a local reply as preset prompts (never as the colleague's words). */
   rememberPrompts(colleague: AipmColleague, prompts: MentorCard[]): void;
@@ -451,13 +456,13 @@ export function createAipmPractice(deps: PracticeDeps) {
     openWorkbench() {
       show({ kind: 'workbench' });
     },
-    async askColleague({ colleague, prefill, attachPrd }) {
+    async askColleague({ colleague, prefill, attachPrd, detail }) {
       const a = deps.current(),
         prd = a && stateOf(a)?.progress?.prd;
       const s = a && stateOf(a);
       if (s?.screen.kind === 'review') void reviewPrompts(s, s.screen, colleague);
       const attach = attachPrd ?? (!!prd && !deps.prdSharedWith(colleague, prd));
-      deps.prefillColleague(colleague, prefill, attach);
+      deps.prefillColleague(colleague, prefill, attach, detail);
     },
     // Phase-1 callers: the design panel is a worksheet now, the evaluation desk is sheet ⑥.
     openFeature(id) {

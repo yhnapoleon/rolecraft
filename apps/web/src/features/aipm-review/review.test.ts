@@ -441,6 +441,8 @@ describe('installAipmReview', () => {
     expect(askColleague).toHaveBeenCalledWith({
       colleague: 'technical',
       prefill: expect.stringMatching(/^I’m writing “Validate the need”, version 4\./),
+      // The review's own words travel separately, for the learner to add or leave out.
+      detail: expect.stringContaining('(rule check)'),
     });
   });
 });

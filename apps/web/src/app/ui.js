@@ -180,7 +180,7 @@ import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
 import { Compass } from '../features/aipm-guide/compass';
 import { WorkStack } from '../shell/work-stack/stack';
-import { quoteToWorksheet } from '../features/aipm-design/install';
+import { quoteToWorksheet, sourceLabel } from '../features/aipm-design/install';
 import { createAipmPractice } from '../features/aipm-guide/practice';
 import { showDraftToast } from '../features/aipm-guide/draft-toast';
 import '../shell/progress.css';
@@ -1696,10 +1696,14 @@ const Aipm = createAipmPractice({
     sheetDeliver();
   },
   notifyDraft: (text, label, dismiss, open) => showDraftToast(text, label, dismiss, open),
-  prefillColleague: (role, text, attach) => {
+  prefillColleague: (role, text, attach, detail) => {
     const a = current(),
       prd = Aipm.prdOf(a);
     if (a && prd) prdChoice.set(`${a.id}:${role}:${prd.version}`, attach);
+    if (a) {
+      if (detail?.trim()) reviewDetails.set(`${a.id}:${role}`, detail.trim());
+      else reviewDetails.delete(`${a.id}:${role}`);
+    }
     openChat(role, text);
   },
   prdSharedWith: (role, prd) => prdShared(current(), role, prd) === true,
@@ -1762,7 +1766,10 @@ const Aipm = createAipmPractice({
           focus: { session_id: a.id, kind: 'material', object_id: m.id, version: m.version },
         });
     for (const ref of refs.filter((r) => r.kind === 'material'))
-      quoteToWorksheet(ref, T(`《${materialTitle(m)}》v${ref.version}`, `“${materialTitle(m)}” v${ref.version}`));
+      if (!quoteToWorksheet(ref, sourceLabel(workLang(a) ?? locale(), materialTitle(m), ref.version))) {
+        notify(T('先打开一张工作纸，再引用这一段。', 'Open a sheet first, then quote this passage.'));
+        break;
+      }
   },
 });
 const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
@@ -3752,6 +3759,13 @@ async function readPrdShares(a) {
 const prdAttached = (a, role, prd) =>
   prdChoice.get(`${a.id}:${role}:${prd.version}`) ?? prdShared(a, role, prd) === false;
 // The chip above the composer, and what this colleague can see, in one line at the top.
+// A review's own words, offered beside the short prefill: one click puts them in the message.
+const reviewDetails = new Map();
+function detailChip(a, role) {
+  return reviewDetails.has(`${a.id}:${role}`)
+    ? `<button type="button" class="aipm-prd-chip" data-action="aipm-detail-insert" data-role="${role}">${icon('plus', 'i-xs')}${T('附上批改摘要', 'Add the review summary')}</button>`
+    : '';
+}
 function prdChip(a, role) {
   const prd = aipmHere(a) ? Aipm.prdOf(a) : null;
   if (!prd) return '';
@@ -3891,7 +3905,7 @@ function railChat(a, role) {
   // What travels with the next message sits on the composer as a card you can take off again.
   const attached = (quote
     ? `<div class="chat-quote" data-quote="${esc(quote)}">${icon('flask', 'i-sm chat-quote-i')}<span class="chat-quote-body"><span class="chat-quote-label">${T('测试记录 · 随这条消息发出', 'Test run · sent with your message')}</span><span class="chat-quote-text">${esc(quote)}</span></span><button type="button" class="btn icon quiet small" data-action="drop-quote" aria-label="${esc(T('移除这段引用', 'Remove this quote'))}">${icon('x', 'i-xs')}</button></div>`
-    : '') + prdChip(a, role);
+    : '') + prdChip(a, role) + detailChip(a, role);
   const tools = `${a.tests.length ? `<button type="button" class="composer-tool${quote ? ' on' : ''}" data-action="prefill-run" aria-label="${esc(T('附上最近一次测试', 'Attach the latest test run'))}" title="${esc(T('附上最近一次测试', 'Attach the latest test run'))}">${icon('flask', 'i-sm')}</button>` : ''}${x ? `<button type="button" class="composer-tool" data-action="prefill-artifact" aria-label="${esc(T('分享这份作品', 'Share this work'))}" title="${esc(T('分享这份作品', 'Share this work'))}">${icon('doc', 'i-sm')}</button>` : ''}`;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
@@ -7381,6 +7395,19 @@ async function act(el, ev = new Event('rc-action')) {
         role = el.dataset.role;
       if (prd) prdChoice.set(`${a.id}:${role}:${prd.version}`, !prdAttached(a, role, prd));
       refreshWS(['rail']);
+      break;
+    }
+    case 'aipm-detail-insert': {
+      const key = `${a.id}:${el.dataset.role}`,
+        detail = reviewDetails.get(key),
+        input = document.getElementById('chat-input');
+      reviewDetails.delete(key);
+      if (detail && input) {
+        input.value = `${input.value.trimEnd()}\n\n${detail}`;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+      }
+      el.remove();
       break;
     }
     case 'drop-quote': {
