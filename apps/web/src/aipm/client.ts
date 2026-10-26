@@ -31,6 +31,7 @@ export class AipmClient {
   recordAssessment = (command: Command) => this.write('assessments', 'aipm.assessment.record', command);
   /** Agent drafts awaiting the owner; adopt = save the design yourself, then resolve. */
   drafts = (status: 'pending_owner_review' | 'all' = 'pending_owner_review') => this.read<DraftPage>(`drafts?status=${status}`);
+  listDrafts = this.drafts;
   resolveDraft = (id: string, command: Command) => this.write(`drafts/${encodeURIComponent(id)}/state`, 'aipm.design_drafts.resolve', command);
 }
 export const createAipmClient = (sessionId: string, transport: AipmTransport) => new AipmClient(sessionId, transport);
