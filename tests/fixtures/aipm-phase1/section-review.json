@@ -1,0 +1,740 @@
+{
+  "_note": "SYNTHETIC FIXTURE for L1-L3 UI work. Not real scenario content, rules or grading answers.",
+  "review_en": {
+    "schema_version": 2,
+    "id": "review-need-4-en",
+    "session_id": "fixture-session",
+    "revision": 1,
+    "step_id": "need",
+    "prd_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "product",
+      "object_id": "pilot-prd",
+      "version": 4,
+      "config_version": null
+    },
+    "design_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "aipm_design",
+      "object_id": "design",
+      "version": 3,
+      "config_version": null
+    },
+    "as_of": {
+      "schema_version": 2,
+      "business_seq": 12,
+      "workspace_revision": 30,
+      "storage_revision": 41
+    },
+    "created_at": "2026-10-26T10:42:00+08:00",
+    "status": "draft",
+    "stale": null,
+    "previous_review_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "aipm_section_review",
+      "object_id": "review-need-3-en",
+      "version": 1,
+      "config_version": null
+    },
+    "delta": {
+      "citations": [
+        0,
+        2
+      ],
+      "gaps": [
+        3,
+        2
+      ],
+      "wrong": [
+        0,
+        1
+      ]
+    },
+    "misconceptions": [
+      {
+        "id": "design-3-metric_scope-need",
+        "input_ref": {
+          "schema_version": 2,
+          "session_id": "fixture-session",
+          "kind": "aipm_design",
+          "object_id": "design",
+          "version": 3,
+          "config_version": null
+        },
+        "step_id": "need",
+        "section_or_row_id": "need",
+        "rule_revision": "aipm-design-1",
+        "content_revision": null,
+        "source": "rule",
+        "finding": "violation",
+        "message": "Elapsed ticket time is used as labour time here.",
+        "basis_refs": [
+          {
+            "schema_version": 2,
+            "session_id": "fixture-session",
+            "kind": "material",
+            "object_id": "service_desk_sample",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "checked_scope": "Metric type and source field only.",
+        "next_action": {
+          "action": "open_material",
+          "label": "Look again at the SD-120 field notes",
+          "target": null,
+          "step_id": "need"
+        },
+        "stale": false,
+        "affects_formal_score": false
+      }
+    ],
+    "coverage": [
+      {
+        "id": "need.metric_scope",
+        "label": "Metric definition",
+        "check": "rule",
+        "severity": "high",
+        "mark": "wrong",
+        "pointer": {
+          "text": "SD-120 field notes · duration fields",
+          "refs": [
+            {
+              "schema_version": 2,
+              "session_id": "fixture-session",
+              "kind": "material",
+              "object_id": "service_desk_sample",
+              "version": 1,
+              "config_version": null,
+              "span_start": null,
+              "span_end": null,
+              "quote": null,
+              "observed_at_seq": 0,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          ]
+        },
+        "owner": "business",
+        "source": "rule"
+      },
+      {
+        "id": "need.raw_evidence",
+        "label": "Cites raw data or interviews",
+        "check": "citation",
+        "severity": "high",
+        "mark": "covered",
+        "pointer": null,
+        "owner": "business",
+        "source": "citation"
+      },
+      {
+        "id": "need.counterfact",
+        "label": "A fact that would make us stop",
+        "check": "model",
+        "severity": "medium",
+        "mark": "to_check",
+        "pointer": {
+          "text": "Demand interviews · objections",
+          "refs": []
+        },
+        "owner": "manager",
+        "source": "model_suggestion"
+      },
+      {
+        "id": "need.next_validation",
+        "label": "How to validate next",
+        "check": "choice",
+        "severity": "medium",
+        "mark": "missing",
+        "pointer": null,
+        "owner": "manager",
+        "source": "choice"
+      }
+    ],
+    "rubric": [
+      {
+        "criterion": "R1.metrics",
+        "label": "Metrics and definitions",
+        "source": "pending",
+        "explanation": "Judged by formal feedback at delivery.",
+        "citations": []
+      },
+      {
+        "criterion": "R2.support",
+        "label": "Evidence support",
+        "source": "pending",
+        "explanation": "Judged by formal feedback at delivery.",
+        "citations": []
+      }
+    ],
+    "mentor_prompts": [
+      {
+        "colleague": "business",
+        "question": "Of these 429 minutes, how many were someone actually working the ticket?",
+        "pointer": {
+          "text": "SD-120 field notes",
+          "refs": [
+            {
+              "schema_version": 2,
+              "session_id": "fixture-session",
+              "kind": "material",
+              "object_id": "service_desk_sample",
+              "version": 1,
+              "config_version": null,
+              "span_start": null,
+              "span_end": null,
+              "quote": null,
+              "observed_at_seq": 0,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          ]
+        },
+        "trigger_id": "need.metric_scope"
+      },
+      {
+        "colleague": "manager",
+        "question": "What result would make you recommend not doing it?",
+        "pointer": null,
+        "trigger_id": "need.next_validation"
+      }
+    ],
+    "decision_used": null,
+    "basis": {
+      "design_rules": "aipm-design-1",
+      "coverage": "coverage-1",
+      "material:service_desk_sample": "1"
+    },
+    "sentence_labels": null,
+    "affects_formal_score": false
+  },
+  "review_zh": {
+    "schema_version": 2,
+    "id": "review-need-4-zh",
+    "session_id": "fixture-session",
+    "revision": 1,
+    "step_id": "need",
+    "prd_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "product",
+      "object_id": "pilot-prd",
+      "version": 4,
+      "config_version": null
+    },
+    "design_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "aipm_design",
+      "object_id": "design",
+      "version": 3,
+      "config_version": null
+    },
+    "as_of": {
+      "schema_version": 2,
+      "business_seq": 12,
+      "workspace_revision": 30,
+      "storage_revision": 41
+    },
+    "created_at": "2026-10-26T10:42:00+08:00",
+    "status": "draft",
+    "stale": null,
+    "previous_review_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "aipm_section_review",
+      "object_id": "review-need-3-zh",
+      "version": 1,
+      "config_version": null
+    },
+    "delta": {
+      "citations": [
+        0,
+        2
+      ],
+      "gaps": [
+        3,
+        2
+      ],
+      "wrong": [
+        0,
+        1
+      ]
+    },
+    "misconceptions": [
+      {
+        "id": "design-3-metric_scope-need",
+        "input_ref": {
+          "schema_version": 2,
+          "session_id": "fixture-session",
+          "kind": "aipm_design",
+          "object_id": "design",
+          "version": 3,
+          "config_version": null
+        },
+        "step_id": "need",
+        "section_or_row_id": "need",
+        "rule_revision": "aipm-design-1",
+        "content_revision": null,
+        "source": "rule",
+        "finding": "violation",
+        "message": "这里把结单时长当成了人工工时。",
+        "basis_refs": [
+          {
+            "schema_version": 2,
+            "session_id": "fixture-session",
+            "kind": "material",
+            "object_id": "service_desk_sample",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "checked_scope": "只核对指标类型与来源字段。",
+        "next_action": {
+          "action": "open_material",
+          "label": "再看 SD-120 字段说明",
+          "target": null,
+          "step_id": "need"
+        },
+        "stale": false,
+        "affects_formal_score": false
+      }
+    ],
+    "coverage": [
+      {
+        "id": "need.metric_scope",
+        "label": "指标口径",
+        "check": "rule",
+        "severity": "high",
+        "mark": "wrong",
+        "pointer": {
+          "text": "SD-120 字段说明 · 时长字段",
+          "refs": [
+            {
+              "schema_version": 2,
+              "session_id": "fixture-session",
+              "kind": "material",
+              "object_id": "service_desk_sample",
+              "version": 1,
+              "config_version": null,
+              "span_start": null,
+              "span_end": null,
+              "quote": null,
+              "observed_at_seq": 0,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          ]
+        },
+        "owner": "business",
+        "source": "rule"
+      },
+      {
+        "id": "need.raw_evidence",
+        "label": "引用原始数据或访谈",
+        "check": "citation",
+        "severity": "high",
+        "mark": "covered",
+        "pointer": null,
+        "owner": "business",
+        "source": "citation"
+      },
+      {
+        "id": "need.counterfact",
+        "label": "会让我们不做的事实",
+        "check": "model",
+        "severity": "medium",
+        "mark": "to_check",
+        "pointer": {
+          "text": "需求访谈 · 反对意见",
+          "refs": []
+        },
+        "owner": "manager",
+        "source": "model_suggestion"
+      },
+      {
+        "id": "need.next_validation",
+        "label": "下一步怎么验证",
+        "check": "choice",
+        "severity": "medium",
+        "mark": "missing",
+        "pointer": null,
+        "owner": "manager",
+        "source": "choice"
+      }
+    ],
+    "rubric": [
+      {
+        "criterion": "R1.metrics",
+        "label": "指标与口径",
+        "source": "pending",
+        "explanation": "交付时由正式反馈判断。",
+        "citations": []
+      },
+      {
+        "criterion": "R2.support",
+        "label": "证据支持",
+        "source": "pending",
+        "explanation": "交付时由正式反馈判断。",
+        "citations": []
+      }
+    ],
+    "mentor_prompts": [
+      {
+        "colleague": "business",
+        "question": "这 429 分钟里，同事真正在处理这一单的有多少？",
+        "pointer": {
+          "text": "SD-120 字段说明",
+          "refs": [
+            {
+              "schema_version": 2,
+              "session_id": "fixture-session",
+              "kind": "material",
+              "object_id": "service_desk_sample",
+              "version": 1,
+              "config_version": null,
+              "span_start": null,
+              "span_end": null,
+              "quote": null,
+              "observed_at_seq": 0,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          ]
+        },
+        "trigger_id": "need.metric_scope"
+      },
+      {
+        "colleague": "manager",
+        "question": "什么样的结果会让你建议不做？",
+        "pointer": null,
+        "trigger_id": "need.next_validation"
+      }
+    ],
+    "decision_used": null,
+    "basis": {
+      "design_rules": "aipm-design-1",
+      "coverage": "coverage-1",
+      "material:service_desk_sample": "1"
+    },
+    "sentence_labels": null,
+    "affects_formal_score": false
+  },
+  "page": {
+    "items": [
+      {
+        "ref": {
+          "session_id": "fixture-session",
+          "kind": "aipm_section_review",
+          "object_id": "review-need-4-en",
+          "version": 1
+        },
+        "review": {
+          "schema_version": 2,
+          "id": "review-need-4-en",
+          "session_id": "fixture-session",
+          "revision": 1,
+          "step_id": "need",
+          "prd_ref": {
+            "schema_version": 2,
+            "session_id": "fixture-session",
+            "kind": "product",
+            "object_id": "pilot-prd",
+            "version": 4,
+            "config_version": null
+          },
+          "design_ref": {
+            "schema_version": 2,
+            "session_id": "fixture-session",
+            "kind": "aipm_design",
+            "object_id": "design",
+            "version": 3,
+            "config_version": null
+          },
+          "as_of": {
+            "schema_version": 2,
+            "business_seq": 12,
+            "workspace_revision": 30,
+            "storage_revision": 41
+          },
+          "created_at": "2026-10-26T10:42:00+08:00",
+          "status": "draft",
+          "stale": null,
+          "previous_review_ref": {
+            "schema_version": 2,
+            "session_id": "fixture-session",
+            "kind": "aipm_section_review",
+            "object_id": "review-need-3-en",
+            "version": 1,
+            "config_version": null
+          },
+          "delta": {
+            "citations": [
+              0,
+              2
+            ],
+            "gaps": [
+              3,
+              2
+            ],
+            "wrong": [
+              0,
+              1
+            ]
+          },
+          "misconceptions": [
+            {
+              "id": "design-3-metric_scope-need",
+              "input_ref": {
+                "schema_version": 2,
+                "session_id": "fixture-session",
+                "kind": "aipm_design",
+                "object_id": "design",
+                "version": 3,
+                "config_version": null
+              },
+              "step_id": "need",
+              "section_or_row_id": "need",
+              "rule_revision": "aipm-design-1",
+              "content_revision": null,
+              "source": "rule",
+              "finding": "violation",
+              "message": "Elapsed ticket time is used as labour time here.",
+              "basis_refs": [
+                {
+                  "schema_version": 2,
+                  "session_id": "fixture-session",
+                  "kind": "material",
+                  "object_id": "service_desk_sample",
+                  "version": 1,
+                  "config_version": null,
+                  "span_start": null,
+                  "span_end": null,
+                  "quote": null,
+                  "observed_at_seq": 0,
+                  "valid_from_seq": 0,
+                  "valid_until_seq": null
+                }
+              ],
+              "checked_scope": "Metric type and source field only.",
+              "next_action": {
+                "action": "open_material",
+                "label": "Look again at the SD-120 field notes",
+                "target": null,
+                "step_id": "need"
+              },
+              "stale": false,
+              "affects_formal_score": false
+            }
+          ],
+          "coverage": [
+            {
+              "id": "need.metric_scope",
+              "label": "Metric definition",
+              "check": "rule",
+              "severity": "high",
+              "mark": "wrong",
+              "pointer": {
+                "text": "SD-120 field notes · duration fields",
+                "refs": [
+                  {
+                    "schema_version": 2,
+                    "session_id": "fixture-session",
+                    "kind": "material",
+                    "object_id": "service_desk_sample",
+                    "version": 1,
+                    "config_version": null,
+                    "span_start": null,
+                    "span_end": null,
+                    "quote": null,
+                    "observed_at_seq": 0,
+                    "valid_from_seq": 0,
+                    "valid_until_seq": null
+                  }
+                ]
+              },
+              "owner": "business",
+              "source": "rule"
+            },
+            {
+              "id": "need.raw_evidence",
+              "label": "Cites raw data or interviews",
+              "check": "citation",
+              "severity": "high",
+              "mark": "covered",
+              "pointer": null,
+              "owner": "business",
+              "source": "citation"
+            },
+            {
+              "id": "need.counterfact",
+              "label": "A fact that would make us stop",
+              "check": "model",
+              "severity": "medium",
+              "mark": "to_check",
+              "pointer": {
+                "text": "Demand interviews · objections",
+                "refs": []
+              },
+              "owner": "manager",
+              "source": "model_suggestion"
+            },
+            {
+              "id": "need.next_validation",
+              "label": "How to validate next",
+              "check": "choice",
+              "severity": "medium",
+              "mark": "missing",
+              "pointer": null,
+              "owner": "manager",
+              "source": "choice"
+            }
+          ],
+          "rubric": [
+            {
+              "criterion": "R1.metrics",
+              "label": "Metrics and definitions",
+              "source": "pending",
+              "explanation": "Judged by formal feedback at delivery.",
+              "citations": []
+            },
+            {
+              "criterion": "R2.support",
+              "label": "Evidence support",
+              "source": "pending",
+              "explanation": "Judged by formal feedback at delivery.",
+              "citations": []
+            }
+          ],
+          "mentor_prompts": [
+            {
+              "colleague": "business",
+              "question": "Of these 429 minutes, how many were someone actually working the ticket?",
+              "pointer": {
+                "text": "SD-120 field notes",
+                "refs": [
+                  {
+                    "schema_version": 2,
+                    "session_id": "fixture-session",
+                    "kind": "material",
+                    "object_id": "service_desk_sample",
+                    "version": 1,
+                    "config_version": null,
+                    "span_start": null,
+                    "span_end": null,
+                    "quote": null,
+                    "observed_at_seq": 0,
+                    "valid_from_seq": 0,
+                    "valid_until_seq": null
+                  }
+                ]
+              },
+              "trigger_id": "need.metric_scope"
+            },
+            {
+              "colleague": "manager",
+              "question": "What result would make you recommend not doing it?",
+              "pointer": null,
+              "trigger_id": "need.next_validation"
+            }
+          ],
+          "decision_used": null,
+          "basis": {
+            "design_rules": "aipm-design-1",
+            "coverage": "coverage-1",
+            "material:service_desk_sample": "1"
+          },
+          "sentence_labels": null,
+          "affects_formal_score": false
+        }
+      }
+    ],
+    "next_cursor": null
+  },
+  "progress_step_sheet": {
+    "status": "draft",
+    "recheck_reason": null,
+    "review_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "aipm_section_review",
+      "object_id": "review-need-4-en",
+      "version": 1,
+      "config_version": null
+    },
+    "prd_version": 4,
+    "edited_since_review": false,
+    "gap_hint": "Elapsed ticket time is used as labour time here.",
+    "agent_draft_pending": false
+  },
+  "progress_step_sheet_recheck": {
+    "status": "recheck",
+    "recheck_reason": "source_changed",
+    "review_ref": {
+      "schema_version": 2,
+      "session_id": "fixture-session",
+      "kind": "aipm_section_review",
+      "object_id": "review-need-4-en",
+      "version": 1,
+      "config_version": null
+    },
+    "prd_version": 4,
+    "edited_since_review": false,
+    "gap_hint": null,
+    "agent_draft_pending": true
+  },
+  "coverage_rule_example": {
+    "id": "need.metric_scope",
+    "step_id": "need",
+    "check": "rule",
+    "predicate": {
+      "rule": "metric_scope"
+    },
+    "severity": "high",
+    "owner": "business",
+    "label": {
+      "zh": "指标口径",
+      "en": "Metric definition"
+    },
+    "look_again": {
+      "zh": "SD-120 字段说明 · 时长字段",
+      "en": "SD-120 field notes · duration fields"
+    },
+    "look_again_materials": [
+      "service_desk_sample"
+    ],
+    "false_positive_examples": []
+  },
+  "mentor_rule_example": {
+    "id": "mentor.need.metric",
+    "step_id": "need",
+    "when_rule": [
+      "metric_scope"
+    ],
+    "when_coverage": {},
+    "colleague": "business",
+    "question": {
+      "zh": "这 429 分钟里，同事真正在处理这一单的有多少？",
+      "en": "Of these 429 minutes, how many were someone actually working the ticket?"
+    },
+    "materials": [
+      "service_desk_sample"
+    ]
+  }
+}
