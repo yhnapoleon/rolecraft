@@ -22,6 +22,7 @@ import {
   emptyBlocks,
   fromText,
   headings,
+  insertAfter,
   insertAt,
   quoteRefs,
   readChoice,
@@ -60,7 +61,7 @@ type Loaded = {
   titles: Record<string, string>;
   /** Server view of this sheet and its latest review; absent until the host provides them. */
   sheetState?: SheetState | null;
-  lastReview?: { at: string; version: number } | null;
+  lastReview?: { at: string; version: number; ref: ObjectRef } | null;
 };
 const ROLE: Record<'manager' | 'business' | 'tech', Role> = {
   manager: 'manager',
@@ -77,10 +78,14 @@ const notFound = (e: unknown) =>
   (e as { status?: number })?.status === 404 ||
   /object_not_found|404/.test(String((e as Error)?.message ?? e));
 
-/** Text a quote from the material view sends to the open sheet (L1 calls worksheetApi.quote). */
+/** A quote from the material view, delivered to the open sheet. Returns false when no sheet
+ * is open, so the caller can say so instead of dropping the quote. */
 const quotes = new EventTarget();
+let openSheets = 0;
 export function sendQuote(ref: EvidenceRefV2, label: string) {
+  if (!openSheets) return false;
   quotes.dispatchEvent(new CustomEvent('quote', { detail: { ref, label } }));
+  return true;
 }
 
 async function loadSheet(host: WorksheetHost, step: StepId): Promise<Loaded> {
@@ -130,7 +135,9 @@ async function loadSheet(host: WorksheetHost, step: StepId): Promise<Loaded> {
     sheetState = progress?.steps?.find((s) => s.id === step)?.sheet ?? null;
     const page = await client?.sectionReviews?.(step, 0, 1);
     const latest = page?.items?.[0]?.review;
-    if (latest) lastReview = { at: latest.created_at, version: latest.prd_ref.version };
+    const item = page?.items?.[0];
+    if (latest && item)
+      lastReview = { at: latest.created_at, version: latest.prd_ref.version, ref: item.ref };
   } catch {
     // Status is a label only; the sheet stays usable without it.
   }
@@ -184,6 +191,18 @@ export function Worksheet({
   const [note, setNote] = useState('');
   const [menu, setMenu] = useState(false);
   const [structureOpen, setStructureOpen] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // An angle's one-line hint appears after a 300ms hover (at once on keyboard focus).
+  const hoverIn = (id: string, delay = 300) => {
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHover(id), delay);
+  };
+  const hoverOut = () => {
+    clearTimeout(hoverTimer.current);
+    setHover(null);
+  };
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
 
   const apply = useCallback(
     (l: Loaded) => {
@@ -210,8 +229,10 @@ export function Worksheet({
     setNote('');
     void host.getDataHost()?.keepDraft('workspace', draftKey(step), next);
   };
+  /** Subheadings split the paragraph at the caret; quotes go after the caret's paragraph. */
   const insert = (block: Block) => {
-    edit({ ...sheet, blocks: insertAt(sheet.blocks, caret, block) });
+    const place = block.type === 'quote' ? insertAfter : insertAt;
+    edit({ ...sheet, blocks: place(sheet.blocks, caret, block) });
     setCaret(null);
   };
   useEffect(() => {
@@ -222,6 +243,12 @@ export function Worksheet({
     quotes.addEventListener('quote', on);
     return () => quotes.removeEventListener('quote', on);
   });
+  useEffect(() => {
+    openSheets += 1;
+    return () => {
+      openSheets -= 1;
+    };
+  }, []);
 
   const content = loaded?.content.sheets[step];
   const prd = loaded?.prd ?? null;
@@ -427,7 +454,17 @@ export function Worksheet({
           {segment} · {c.t(`第 ${content.order} 张`, `Sheet ${content.order}`)}
         </span>
         <span className={`aipm-sheet__tag is-${dirty ? 'draft' : serverStatus}`}>{status}</span>
-        {versionNote && <span>{versionNote}</span>}
+        {last && host.openReview ? (
+          <button
+            type="button"
+            className="aipm-sheet__review-link"
+            onClick={() => host.openReview?.(step, last.ref)}
+          >
+            {versionNote} ›
+          </button>
+        ) : (
+          versionNote && <span>{versionNote}</span>
+        )}
       </p>
       <h1>{sheetName}</h1>
       <p className="aipm-sheet__goal">{content.goal}</p>
@@ -457,12 +494,27 @@ export function Worksheet({
             <span key={a.id} className="aipm-sheet__angle">
               <button
                 type="button"
-                title={a.hint}
                 aria-expanded={angle === a.id}
-                onClick={() => setAngle(angle === a.id ? null : a.id)}
+                aria-describedby={`angle-hint-${step}-${a.id}`}
+                onMouseEnter={() => hoverIn(a.id)}
+                onMouseLeave={hoverOut}
+                onFocus={() => hoverIn(a.id, 0)}
+                onBlur={hoverOut}
+                onClick={() => {
+                  hoverOut();
+                  setAngle(angle === a.id ? null : a.id);
+                }}
               >
                 {a.label}
               </button>
+              <span
+                id={`angle-hint-${step}-${a.id}`}
+                role="tooltip"
+                className="aipm-sheet__hint"
+                data-show={hover === a.id && angle !== a.id ? 'true' : undefined}
+              >
+                {a.hint}
+              </span>
               {angle === a.id && (
                 <span className="aipm-sheet__pop" role="menu">
                   <small>{a.hint}</small>

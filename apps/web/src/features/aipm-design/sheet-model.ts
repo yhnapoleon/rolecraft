@@ -121,6 +121,23 @@ export function insertAt(
   ];
 }
 
+/** Quotes go after the paragraph holding the caret, never inside or before it; an empty
+ * paragraph is replaced. A paragraph follows so writing can continue under the quote. */
+export function insertAfter(blocks: Block[], at: { id: string } | null, insert: Block): Block[] {
+  const index = at ? blocks.findIndex((b) => b.id === at.id) : -1;
+  if (index < 0) return insertAt(blocks, null, insert);
+  const target = blocks[index];
+  const empty = target.type === 'p' && !target.text.trim();
+  const next = blocks[index + 1];
+  const tail = next?.type === 'p' ? [] : [{ id: blockId(), type: 'p' as const, text: '' }];
+  return [
+    ...blocks.slice(0, empty ? index : index + 1),
+    insert,
+    ...tail,
+    ...blocks.slice(index + 1),
+  ];
+}
+
 const APPROVER = 'approver-choice';
 const MAIN_NEED = 'need-main';
 /** The single choice of a sheet lives in the structured design, as the rules read it. */

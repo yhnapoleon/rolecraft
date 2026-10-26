@@ -8,10 +8,14 @@ import { STEP_IDS } from '../../aipm/types';
 import { copy } from './copy';
 import { sendQuote, Worksheet, type WorksheetHost } from './worksheet';
 
-/** The material view's "quote to worksheet": the open sheet inserts it at the caret. */
-export function quoteToWorksheet(ref: EvidenceRefV2, label: string) {
-  sendQuote(ref, label);
+/** The material view's "quote to worksheet". The open sheet puts the quote after the paragraph
+ * holding the caret (or at the end). Pass the reference exactly as the material read returned it,
+ * and the label in the sheet's language (《title》v1 / “title” v1). Returns false when no sheet
+ * is open, so the caller can ask the learner to open one. */
+export function quoteToWorksheet(ref: EvidenceRefV2, label: string): boolean {
+  return sendQuote(ref, label);
 }
+export { sourceLabel } from './worksheet';
 
 function CurrentSheet({ host }: { host: WorksheetHost }) {
   const sheet = host.currentScreen?.().sheet ?? '';

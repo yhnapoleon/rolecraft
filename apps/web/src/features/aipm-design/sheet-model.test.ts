@@ -4,6 +4,7 @@ import {
   type Block,
   fromText,
   headings,
+  insertAfter,
   insertAt,
   quoteRefs,
   readChoice,
@@ -116,5 +117,30 @@ describe('worksheet metric block', () => {
     expect(readMetric(d)).toMatchObject({ kind: 'labor_time', source_field: 'duration_minutes' });
     expect(readChoice('need', d)).toBe('supported');
     expect(d.needs).toHaveLength(1);
+  });
+});
+
+describe('worksheet quote placement', () => {
+  const q: Block = { id: 'q', type: 'quote', text: '原句', label: '《SD-120》v1', ref };
+  it('puts a quote after the whole paragraph holding the caret, never splitting it', () => {
+    const blocks: Block[] = [
+      { id: 'a', type: 'p', text: '第一段' },
+      { id: 'b', type: 'p', text: '第二段' },
+    ];
+    expect(strip(insertAfter(blocks, { id: 'a' }, q)).map((b) => b.type)).toEqual([
+      'p',
+      'quote',
+      'p',
+    ]);
+    expect(insertAfter(blocks, { id: 'a' }, q)[0]).toEqual(blocks[0]);
+    expect(insertAfter(blocks, { id: 'a' }, q)[2]).toEqual(blocks[1]);
+  });
+  it('replaces an empty paragraph and leaves one to keep writing', () => {
+    const out = insertAfter([{ id: 'e', type: 'p', text: '' }], { id: 'e' }, q);
+    expect(strip(out).map((b) => b.type)).toEqual(['quote', 'p']);
+  });
+  it('appends when there is no caret', () => {
+    const out = insertAfter([{ id: 'a', type: 'p', text: '写过的' }], null, q);
+    expect(strip(out).map((b) => b.type)).toEqual(['p', 'quote', 'p']);
   });
 });

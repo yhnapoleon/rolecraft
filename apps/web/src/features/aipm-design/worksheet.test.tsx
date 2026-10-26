@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { StepId } from '../../aipm/types';
 import type { DesignContent } from './sheet-model';
-import { Worksheet, type WorksheetHost } from './worksheet';
+import { sendQuote, Worksheet, type WorksheetHost } from './worksheet';
 
 const content = (language: 'zh' | 'en') =>
   JSON.parse(
@@ -106,6 +106,32 @@ describe('worksheet', () => {
     expect(
       html(<Worksheet host={host()} step="business" preload={preload('zh', { drafts })} />),
     ).not.toContain('data-draft-id');
+  });
+  it('links the last review and keeps angle hints hidden until hover', () => {
+    const openReview = vi.fn();
+    const withReview = { ...host(), openReview } as unknown as WorksheetHost;
+    const last = {
+      at: '2026-10-26T15:44:00Z',
+      version: 1,
+      ref: { session_id: 's', kind: 'aipm_section_review', object_id: 'r', version: 1 },
+    };
+    const page = html(
+      <Worksheet host={withReview} step="need" preload={preload('zh', { lastReview: last })} />,
+    );
+    expect(page).toMatch(/class="aipm-sheet__review-link"[^>]*>上次批改 .* · 第 1 版 ›</);
+    expect(page).toContain('role="tooltip"');
+    expect(page).not.toContain('data-show="true"');
+  });
+  it('reports that a quote was not delivered when no sheet is open', () => {
+    const ref = {
+      session_id: 's',
+      kind: 'material',
+      object_id: 'demand',
+      version: 1,
+      observed_at_seq: 0,
+      quote: 'x',
+    };
+    expect(sendQuote(ref, '《SD-120》v1')).toBe(false);
   });
   it('keeps the English sheet free of Chinese', () => {
     for (const step of STEPS) {
