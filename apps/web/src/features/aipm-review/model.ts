@@ -393,15 +393,33 @@ export function reviewSummaryForColleague(
     );
   }
   const status = statusName(shownStatus(review), language);
+  const ask = ASK_DIRECTION[who][language === 'zh' ? 0 : 1];
   if (language === 'zh') {
     const said = points.length ? `批改说：${points.join('；')}。` : `批改结果是「${status}」。`;
-    return `我在写「${sheet}」第 ${version} 版。${said}你怎么看？`;
+    return `我在写「${sheet}」第 ${version} 版。${said}${ask}`;
   }
   const said = points.length
     ? `The review says: ${points.join('; ')}.`
     : `The review marks it “${status}”.`;
-  return `I’m writing “${sheet}”, version ${version}. ${said} What do you think?`;
+  return `I’m writing “${sheet}”, version ${version}. ${said} ${ask}`;
 }
+
+/** The closing question asks each colleague, from their own remit, where to look first — never
+ * for the fix, which the reply check would rightly stop (L4's audit on 18810). */
+const ASK_DIRECTION: Record<ReviewColleague, [string, string]> = {
+  manager: [
+    '从目标和资源看，你觉得我最该先核对哪一处？',
+    'Looking at goals and resources, which part do you think I should check first?',
+  ],
+  business: [
+    '从业务口径看，你觉得我最该先核对哪一处？',
+    'From the business side, which part do you think I should check first?',
+  ],
+  tech: [
+    '从系统和测试证据看，你觉得我最该先核对哪一处？',
+    'From the system and test evidence, which part do you think I should check first?',
+  ],
+};
 
 // ---- Result page: back to a sheet -------------------------------------------------------
 
