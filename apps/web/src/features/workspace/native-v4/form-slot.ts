@@ -1,3 +1,5 @@
+import type { ObjectRef } from '../../../contracts-v2';
+import { STEP_IDS, type StepId } from '../../../aipm/types';
 import type { V4HostAdapter, V4CommandResult } from '../../../v4-host';
 import type { WorkspaceSlotController } from './slot-controller';
 import { canonicalPurpose, taskPriority } from './form-values';
@@ -10,6 +12,10 @@ export type FormDraft = {
   requestId?: string;
   requestToken?: string;
   saved?: boolean;
+  /** Creation and linking are separate commands; resume linking without creating twice. */
+  createdProduct?: ObjectRef;
+  createdResult?: V4CommandResult;
+  linkRequestId?: string;
 };
 export function confirmedFormDraft(current: FormDraft | undefined, sent: FormDraft) {
   const changed = !!current && current.token !== sent.token;
@@ -29,12 +35,13 @@ export function bindWorkspaceForm(
 ) {
   const sid = host.snapshot().session?.sessionId,
     id = kind === 'task' ? (form.dataset.id ?? '') : '';
-  const key = sid + ':' + kind + '-form:' + id,
+  const freeSheet = kind === 'product' && !!form.querySelector('[name="aipmStep"]');
+  const key = `${sid}:${kind}-form:${id}${freeSheet ? ':aipm' : ''}`,
     T = (zh: string, en: string) => (host.snapshot().uiLanguage === 'en' ? en : zh);
   const fields =
     kind === 'task'
       ? ['title', 'note', 'priority', 'split']
-      : ['title', 'purpose', 'taskId', 'content', 'kind'];
+      : ['title', 'purpose', 'taskId', 'content', 'kind', ...(freeSheet ? ['aipmStep'] : [])];
   let stopped = false,
     pending = false;
   const capturedRevision = Number(form.dataset.revision);
@@ -79,6 +86,7 @@ export function bindWorkspaceForm(
   } else draft = undefined;
   const keep = async () => {
     if (!active()) return;
+    if (draft?.createdProduct) return;
     draft = {
       schema: 1,
       token: crypto.randomUUID(),
@@ -100,6 +108,50 @@ export function bindWorkspaceForm(
   };
   const confirmed = async (result: V4CommandResult, sent: FormDraft) => {
     if (!active()) return;
+    if (freeSheet && sent.values.aipmStep) {
+      const step = sent.values.aipmStep as StepId;
+      if (!STEP_IDS.includes(step)) throw Error('invalid_aipm_step');
+      const record = (value: unknown): Record<string, unknown> =>
+        value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+      const raw = record(result.result);
+      const response = record(raw.response ?? raw);
+      const product = record(record(response.result ?? response).object);
+      const productRef =
+        draft?.createdProduct ??
+        (sid &&
+        product.session_id === sid &&
+        typeof product.product_id === 'string' &&
+        typeof product.version === 'number'
+          ? {
+              session_id: sid,
+              kind: 'product',
+              object_id: product.product_id,
+              version: product.version,
+            }
+          : undefined);
+      if (!productRef) throw Error('unconfirmed_workspace_result');
+      draft = {
+        ...sent,
+        createdProduct: productRef,
+        createdResult: result,
+        linkRequestId: draft?.linkRequestId,
+      };
+      await host.keepDraft('workspace', key, draft);
+      const linked = draft.linkRequestId
+        ? await host.recover(draft.linkRequestId)
+        : await host.command('aipm.step_links.save', { step_id: step, product_ref: productRef });
+      if (linked.status !== 'confirmed') {
+        draft.linkRequestId = ['unconfirmed', 'pending'].includes(linked.status)
+          ? linked.requestId
+          : undefined;
+        await host.keepDraft('workspace', key, draft);
+        status.textContent = T(
+          '自由纸已保存，关联尚未完成；再次点“开始写”只重试关联。',
+          'The sheet is saved; linking is incomplete. Select “Start writing” to retry only the link.',
+        );
+        return;
+      }
+    }
     const confirmation = confirmedFormDraft(draft, sent),
       changed = confirmation.changed;
     draft = confirmation.draft;
@@ -125,12 +177,16 @@ export function bindWorkspaceForm(
     pending = true;
     status.textContent = '';
     try {
-      await keep();
+      // Capture values before disabling free-sheet fields; FormData omits disabled controls.
+      const keeping = keep();
+      if (freeSheet) update();
+      await keeping;
       await controller.flush();
       const sent = structuredClone(draft!),
         v = sent.values;
       let result;
-      if (kind === 'task')
+      if (draft?.createdResult) result = draft.createdResult;
+      else if (kind === 'task')
         result = await controller.saveTaskForm({
           id,
           title: v.title ?? '',
@@ -166,8 +222,12 @@ export function bindWorkspaceForm(
       }
     } catch (error) {
       const code = error instanceof Error ? error.message : '';
-      status.textContent =
-        code === 'task_revision_missing'
+      status.textContent = draft?.createdProduct
+        ? T(
+            '自由纸已保存，关联尚未完成；再次点“开始写”只重试关联。',
+            'The sheet is saved; linking is incomplete. Select “Start writing” to retry only the link.',
+          )
+        : code === 'task_revision_missing'
           ? T(
               '原事项版本未提供；文字已保留，请重新打开事项。',
               'The original task version is missing. Your text is retained; reopen the task.',
@@ -216,6 +276,11 @@ export function bindWorkspaceForm(
   };
   function update() {
     if (!active()) return;
+    if (freeSheet)
+      for (const field of form.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+        'input,select',
+      ))
+        field.disabled = pending || (!!draft?.createdProduct && !draft.saved);
     recover.textContent = T('查看原请求结果', 'Check original request result');
     recover.hidden = !draft?.requestId || draft.saved === true;
     recover.disabled = pending || host.snapshot().busy;

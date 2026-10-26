@@ -491,6 +491,12 @@
   color: var(--ink-3, #7b818d);
   font-size: 11.5px;
 }
+/* The one readable sentence a local reply opens with. */
+.rc-local__gist {
+  margin: 0;
+  font: 400 14.5px / 1.6 var(--sans, system-ui, sans-serif);
+  color: var(--ink);
+}
 /* Each passage under the small tag of its source. */
 .rc-local__row {
   display: grid;

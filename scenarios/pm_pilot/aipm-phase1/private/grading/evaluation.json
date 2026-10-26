@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "revision": "aipm-evaluation-1",
+  "judge": "learner_assessment",
+  "automatic_semantic_scoring": false,
+  "routes": {
+    "deterministic": {
+      "runnable": false,
+      "reason": "no_rule_executor",
+      "result_when_planned": "unsupported"
+    },
+    "retrieval_generation": {
+      "runnable": true,
+      "coverage": "assistant_answer",
+      "objective_predicates": [
+        {
+          "id": "cited_source_version",
+          "checks": "run.citations[].source_version is recorded",
+          "decides": "traceability_only"
+        },
+        {
+          "id": "run_status",
+          "checks": "test.status in {completed, failed}",
+          "decides": "execution_only"
+        }
+      ],
+      "semantic_quality": "learner_assessment"
+    },
+    "agent_confirmation": {
+      "runnable": false,
+      "reason": "no_agent_executor",
+      "result_when_planned": "unsupported",
+      "runnable_substep": "retrieval_generation"
+    },
+    "human": {
+      "runnable": false,
+      "reason": "no_ticketing",
+      "result_when_planned": "unsupported",
+      "checkable": [
+        "public_permission",
+        "recorded_action"
+      ]
+    }
+  },
+  "regression": {
+    "id": "hotel_limit_change",
+    "fact_id": "hotel_limit",
+    "from_value": 500,
+    "to_value": 400,
+    "unit": "CNY/person/night",
+    "comparison": "cited source must be the latest indexed policy version at run time",
+    "decides": "traceability_only"
+  },
+  "outcomes": {
+    "execution_failed": "The run did not produce a result; not a quality judgement.",
+    "unsupported": "No executor exists for this route; excluded from the run denominator.",
+    "unknown": "Ran, but not yet judged, or the learner could not decide; excluded from the satisfaction denominator.",
+    "pending": "Original request outcome not confirmed; never resubmitted under a new request_id."
+  }
+}

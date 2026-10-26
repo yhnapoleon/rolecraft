@@ -1,0 +1,374 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-phase1-draft-1",
+  "work_language": "en",
+  "steps": [
+    {
+      "id": "business",
+      "order": 1,
+      "label": "Understand the business",
+      "goal": "Separate the company’s business from this internal-tool assignment.",
+      "segment": "clarify",
+      "icon": "Building2",
+      "expected_outputs": [
+        "Business explanation and sources"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Separate the company’s business from this internal-tool assignment.",
+          "summary": "Read the company brief, then Grace’s assignment. This pilot directly serves internal staff. Explain the external business and the assistant’s responsibility separately.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "What services does the company sell?"
+            },
+            {
+              "role": "business",
+              "text": "Who does this pilot directly help?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Record your business understanding"
+          },
+          "why": "Separate what the company sells from whom this tool serves first, so choosing users and scope later stays on track.",
+          "feedback": "After saving, the audience you name (internal or external) is checked against the company sources and any conflict is pointed out; next, Users and stakeholders is suggested.",
+          "example": "Example: “Starbridge sells implementation and operations services to companies; this assistant serves only internal new staff and admin support, not customers.”",
+          "agent_brief": "Using this practice’s company brief and Grace’s assignment, write two or three sentences: what the company sells to its customers; whom this assistant directly serves (internal or external); and the goal of this assignment. Write only what the sources support and mark anything uncertain as “to confirm”."
+        },
+        {
+          "level": "explanation",
+          "text": "Use two sentences for the company’s services and this assistant’s users; mark uncertain background as unconfirmed."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "What services does the company sell?",
+        "Who does this pilot directly help?"
+      ]
+    },
+    {
+      "id": "stakeholders",
+      "order": 2,
+      "label": "Users and stakeholders",
+      "goal": "Distinguish users, approvers and people affected.",
+      "segment": "clarify",
+      "icon": "Users",
+      "expected_outputs": [
+        "Users and responsibilities"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Distinguish users, approvers and people affected.",
+          "summary": "Candidates are not invited users. Ask who uses the assistant, who approves and who handles exceptions. Keep opinions separate from approvals.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "Who has this problem, and who takes on extra work?"
+            },
+            {
+              "role": "manager",
+              "text": "Who approves the scope and resources?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Record users and responsibilities"
+          },
+          "why": "Users, approvers, operators and those affected each carry a different responsibility; mixing them turns a colleague’s opinion into an approval.",
+          "feedback": "After saving, the target users and at least one responsibility are checked for support, and an opinion taken as approval is pointed out; next, Validate the real need is suggested.",
+          "example": "Example: “First users: 20 admin support staff (assumption, Chen to confirm); Grace approves scope and resources; Daniel owns indexing and launch.”",
+          "agent_brief": "Using this practice’s candidate users, interview notes and resource approval rules, list the target users, approvers, operators and those affected, one sentence of responsibility each, marked as fact (with the source name) or assumption."
+        },
+        {
+          "level": "explanation",
+          "text": "One person may hold several roles. Record one responsibility to verify, then find its source."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "user_groups",
+            "interviews",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Who has this problem, and who takes on extra work?",
+        "Who approves the scope and resources?"
+      ]
+    },
+    {
+      "id": "need",
+      "order": 3,
+      "label": "Validate the need",
+      "goal": "Make the need hypothesis open to disproof.",
+      "segment": "clarify",
+      "icon": "Search",
+      "expected_outputs": [
+        "Need hypothesis, counterevidence and validation"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Make the need hypothesis open to disproof.",
+          "summary": "Start with one problem, supporting evidence and a possible counterexample or unknown. Check time definitions: elapsed case time is not automatically labour saved.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "How was time measured in this benefit estimate?"
+            },
+            {
+              "role": "business",
+              "text": "What evidence would make us stop?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Record a hypothesis and validation"
+          },
+          "why": "Write the need as a hypothesis that could be proved wrong, so you know what evidence to look for and do not mistake a false benefit for a need.",
+          "feedback": "After saving, the metric definition is checked (for example, ticket close time taken as staff hours is pointed out) and missing counter-evidence or next checks are shown; next, Draw the AI boundary is suggested.",
+          "example": "Example: “Hypothesis: new staff spend 2 hours a week finding policy answers. Support: interview notes. Counter-evidence: most sampled enquiries are approvals. Next: check 20 samples.”",
+          "agent_brief": "Using the enquiry sample, the benefit estimate and the interview notes, write one need hypothesis: the problem, supporting evidence (with source names), at least one counter-point or unknown, and how to check it next; for any time metric, state the field, unit and how it is counted."
+        },
+        {
+          "level": "explanation",
+          "text": "Ask about the metric’s unit, population and window. Keep unsupported benefits as hypotheses."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "demand",
+            "business_case",
+            "interviews"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "How was time measured in this benefit estimate?",
+        "What evidence would make us stop?"
+      ]
+    },
+    {
+      "id": "boundary",
+      "order": 4,
+      "label": "Set AI boundaries",
+      "goal": "Specify the answer, the action and who can approve it.",
+      "segment": "design",
+      "icon": "ShieldHalf",
+      "expected_outputs": [
+        "Versioned request triage"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Specify the answer, the action and who can approve it.",
+          "summary": "Split a request into an answer, calculation, draft or real action. Establish human authority and available tools before choosing an approach.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "Which actions follow rules and which need retrieval?"
+            },
+            {
+              "role": "manager",
+              "text": "Who has final approval authority?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Split and triage requests"
+          },
+          "why": "Split each need into rule-based handling, retrieval answers, agent plus confirmation, or human handling, so you know what the assistant may take and what a person must own.",
+          "feedback": "Each saved row is checked by rule for its handling and final authority; for example, giving final expense approval to the AI is pointed out at once. Next, System design and market patterns is suggested.",
+          "example": "Example: “Explain the expense process → retrieval answer, the assistant may answer; final expense approval → human handling, decided by the finance manager.”",
+          "agent_brief": "Split this practice’s employee requests into target actions and choose a handling for each (deterministic rule, retrieval answer, agent with human confirmation, human handling), naming who holds final authority. Draft only."
+        },
+        {
+          "level": "explanation",
+          "text": "A request can be split: retrieving a process, preparing a draft and approving it may belong to different actors."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "policy",
+            "approvals",
+            "faq"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Which actions follow rules and which need retrieval?",
+        "Who has final approval authority?"
+      ]
+    },
+    {
+      "id": "solution",
+      "order": 5,
+      "label": "Solution and reference patterns",
+      "goal": "Compare feasible approaches; separate plans from applied settings.",
+      "segment": "design",
+      "icon": "Workflow",
+      "expected_outputs": [
+        "Approach comparison and dependencies"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Compare feasible approaches; separate plans from applied settings.",
+          "summary": "Compare at least two substantive approaches using your triage. Reference cards describe public methods. Saving a plan does not apply settings or request resources.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "Which development work does this approach depend on?"
+            },
+            {
+              "role": "manager",
+              "text": "What trade-offs are available if resources are insufficient?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Compare and save approaches"
+          },
+          "why": "With the boundary set, compare at least two approaches so you can say what the chosen one needs and what it costs.",
+          "feedback": "After saving, the plan is compared with the current configuration and resources, and differences are pointed out; saving never changes settings. Next, Evaluation, monitoring and rollback is suggested.",
+          "example": "Example: “Option A: office FAQ retrieval only, daily index. Option B: add a repair-draft agent, 2 developer-days. Choose A: only 3 developer-days are available.”",
+          "agent_brief": "Using the triage, the technical notes and the current configuration, compare two workable approaches: components, resources and dependencies, main costs; recommend one with reasons. Do not change any settings."
+        },
+        {
+          "level": "explanation",
+          "text": "Compare costs, data updates and human responsibility. Unavailable tools belong only in proposed designs."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "technical",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Which development work does this approach depend on?",
+        "What trade-offs are available if resources are insufficient?"
+      ]
+    },
+    {
+      "id": "assurance",
+      "order": 6,
+      "label": "Evaluation, monitoring and rollback",
+      "goal": "Test risks against expectations and plan observation and recovery.",
+      "segment": "verify",
+      "icon": "ListChecks",
+      "expected_outputs": [
+        "Expectations, tests and monitoring / rollback plan"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Test risks against expectations and plan observation and recovery.",
+          "summary": "Save each expectation and its basis before running supported tests. Separate execution, quality assessments and unsupported cases. Name monitoring owners and rollback triggers.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "Which test is most likely to disprove this approach?"
+            },
+            {
+              "role": "business",
+              "text": "Who takes responsibility when something goes wrong?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_evaluation",
+            "label": "Open the evaluation plan"
+          },
+          "why": "Write down what you expect before launch and check it with real questions, so you know where the plan fails and who catches it.",
+          "feedback": "After a run, each question shows met, not met or unsupported separately, judged by you with a reason; monitoring and rollback plans are marked “planned, not executed”. Next, Launch decision is suggested.",
+          "example": "Example: “Question: what is the hotel limit for travel? Expected: the exact amount from policy v2; hand over to a person if it cannot answer.”",
+          "agent_brief": "Using my saved triage, write one acceptance question for each handling type: the question, the key points and source of the expected answer, and the fallback if it is not met. Questions and expectations only; do not run them."
+        },
+        {
+          "level": "explanation",
+          "text": "Keep the basis for each expectation and name an owner for exceptions. Planned alerts are not deployed monitoring."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "failures",
+            "technical"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Which test is most likely to disprove this approach?",
+        "Who takes responsibility when something goes wrong?"
+      ]
+    },
+    {
+      "id": "decision",
+      "order": 7,
+      "label": "Launch decision",
+      "goal": "Decide on exact versions and the conditions you commit to.",
+      "segment": "verify",
+      "icon": "Flag",
+      "expected_outputs": [
+        "Exact-version submission and linked revision"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Decide on exact versions and the conditions you commit to.",
+          "summary": "Check the exact work versions, evidence and unresolved conditions. Proceed, narrow the scope or pause; link a revision when formal feedback is ready.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "What can I commit to under these conditions?"
+            },
+            {
+              "role": "technical",
+              "text": "Which changes since last time need another check?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_submission",
+            "label": "Check and submit"
+          },
+          "why": "A decision answers for an exact version and its conditions: when to launch and what makes you pause.",
+          "feedback": "After you submit, formal feedback is prepared and shows “ready” when done; later revisions link as new versions without replacing the submission.",
+          "example": "Example: “Open office FAQ to 20 admin staff for two weeks; pause after more than 3 wrong answers or an index lag over 24 hours.”",
+          "agent_brief": "Using this practice’s saved triage, plan and evaluation results, draft a launch decision: scope, conditions, owner, pause conditions and open items. Draft only."
+        },
+        {
+          "level": "explanation",
+          "text": "Leave uncovered work visible. A submission record does not mean every judgement has been verified."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "What can I commit to under these conditions?",
+        "Which changes since last time need another check?"
+      ]
+    }
+  ]
+}

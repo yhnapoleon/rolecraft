@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "revision": "aipm-design-2",
+  "rules": [
+    {
+      "id": "authority",
+      "revision": "aipm-design-1",
+      "applies_when": {
+        "scopes": [
+          "expense",
+          "access"
+        ],
+        "input": "structured_fields_only"
+      },
+      "required_public_sources": [
+        "assistant_authority"
+      ],
+      "predicate": "ai_final_approval",
+      "severity": "violation",
+      "zh_feedback": {
+        "message": "你把最终批准交给了 AI；当前助手没有审批权限。",
+        "checked_scope": "仅核对所选最终动作与当前审批权限。",
+        "next_action": "将最终批准交给有权限的经理；可另拆一项解释或拟稿。"
+      },
+      "en_feedback": {
+        "message": "You assigned final approval to AI; the current assistant has no approval authority.",
+        "checked_scope": "Declared final action and current approval authority only.",
+        "next_action": "Assign final approval to an authorized manager; separate explanation or drafting."
+      },
+      "false_positive_examples": [
+        {
+          "target_action": "explain",
+          "final_authority": "ai",
+          "expected": "no_violation"
+        },
+        {
+          "target_action": "prepare_draft",
+          "final_authority": "named_human_role",
+          "expected": "no_violation"
+        },
+        {
+          "target_action": "approve",
+          "final_authority": "named_human_role",
+          "expected": "no_violation"
+        }
+      ]
+    },
+    {
+      "id": "metric_scope",
+      "revision": "aipm-design-2",
+      "applies_when": {
+        "scopes": [],
+        "input": "structured_fields_only",
+        "elapsed_fields": [
+          "duration_minutes",
+          "elapsed_minutes"
+        ]
+      },
+      "required_public_sources": [
+        "elapsed_definition"
+      ],
+      "predicate": "elapsed_as_labor",
+      "severity": "violation",
+      "zh_feedback": {
+        "message": "你把结单历时声明为人工工时；这个字段包含等待时间。",
+        "checked_scope": "仅核对你在指标小块里声明的来源字段（如 duration_minutes）和指标类型，不推断自由文本。",
+        "next_action": "保留为结单历时；要估算人工节省，请另收集实际处理工时。"
+      },
+      "en_feedback": {
+        "message": "You classified elapsed case time as labor time; the field includes waiting.",
+        "checked_scope": "Only the source field (such as duration_minutes) and metric type declared in the metric block; free text is not interpreted.",
+        "next_action": "Keep it as elapsed time. Collect active handling time before estimating labor saved."
+      },
+      "false_positive_examples": [
+        {
+          "kind": "elapsed_time",
+          "source_field": "duration_minutes",
+          "expected": "no_violation"
+        },
+        {
+          "kind": "labor_time",
+          "source_field": "handling_minutes",
+          "expected": "no_violation"
+        },
+        {
+          "free_text": "could save time",
+          "expected": "unknown"
+        }
+      ]
+    },
+    {
+      "id": "tool_capability",
+      "revision": "aipm-design-1",
+      "applies_when": {
+        "scopes": [
+          "expense",
+          "access"
+        ],
+        "input": "structured_fields_only"
+      },
+      "required_public_sources": [
+        "assistant_authority"
+      ],
+      "predicate": "tool_unavailable",
+      "severity": "improve",
+      "zh_feedback": {
+        "message": "这个工具流程目前只作为方案保存，没有执行。",
+        "checked_scope": "仅核对当前已安装的动作；不评价架构想法是否合理。",
+        "next_action": "写清确认人和确认时点，再和 Daniel 核对工具接入。"
+      },
+      "en_feedback": {
+        "message": "This tool workflow is saved as a proposal; it has not run.",
+        "checked_scope": "Installed actions only; this does not judge the architecture idea.",
+        "next_action": "Name the confirmer and confirmation point, then check tool availability with Daniel."
+      },
+      "false_positive_examples": [
+        {
+          "target_action": "prepare_draft",
+          "confirmation_point": "manager before submission",
+          "expected": "plan_only_not_violation"
+        }
+      ]
+    },
+    {
+      "id": "dependency",
+      "revision": "aipm-design-1",
+      "applies_when": {
+        "scopes": [],
+        "input": "structured_fields_only"
+      },
+      "required_public_sources": [
+        "configuration_dependencies"
+      ],
+      "predicate": "config_difference",
+      "severity": "improve",
+      "zh_feedback": {
+        "message": "请求的设置与实际生效设置不同，请核对依赖。",
+        "checked_scope": "仅比较实际配置记录，不从方案推断配置已应用。",
+        "next_action": "打开实际设置，查看未生效原因和所需工作项或批准。"
+      },
+      "en_feedback": {
+        "message": "Requested settings differ from effective settings; check their dependencies.",
+        "checked_scope": "Actual configuration records only; saving a design does not apply settings.",
+        "next_action": "Open actual settings to inspect missing work items or approvals."
+      },
+      "false_positive_examples": [
+        {
+          "requested": "realtime",
+          "effective": "realtime",
+          "expected": "no_finding"
+        }
+      ]
+    },
+    {
+      "id": "audience_scope",
+      "revision": "aipm-design-2",
+      "applies_when": {
+        "conflicting_audiences": [
+          "external"
+        ],
+        "input": "structured_fields_only"
+      },
+      "required_public_sources": [
+        "pilot_users"
+      ],
+      "predicate": "audience_conflict",
+      "severity": "violation",
+      "zh_feedback": {
+        "message": "你选的服务对象和委托里写的试点用户对不上。",
+        "checked_scope": "仅核对所选服务对象与委托中的试点用户，不读你写的文字。",
+        "next_action": "再看看委托里这次试点直接给谁用，和公司对外卖给谁分开看。"
+      },
+      "en_feedback": {
+        "message": "The audience you chose does not match the pilot users named in the brief.",
+        "checked_scope": "Only the chosen audience against the pilot users in the brief; your text is not read.",
+        "next_action": "Re-read whom the brief says this pilot directly serves, apart from whom the company sells to."
+      },
+      "false_positive_examples": [
+        {
+          "audience": "internal",
+          "expected": "no_violation"
+        },
+        {
+          "audience": "both",
+          "expected": "no_violation"
+        },
+        {
+          "audience": "unknown",
+          "expected": "no_violation"
+        }
+      ]
+    },
+    {
+      "id": "approval_authority",
+      "revision": "aipm-design-2",
+      "applies_when": {
+        "known_people": [
+          "grace",
+          "chen",
+          "daniel",
+          "xu_qing"
+        ],
+        "authorized": [
+          "grace"
+        ],
+        "input": "structured_fields_only"
+      },
+      "required_public_sources": [
+        "approval_rules"
+      ],
+      "predicate": "unauthorized_approver",
+      "severity": "violation",
+      "zh_feedback": {
+        "message": "你选的拍板人在资料里没有批准权；同事的意见不等于批准。",
+        "checked_scope": "仅核对你选的拍板人和审批规则的发布人，不读你写的文字。",
+        "next_action": "再看看资源审批规则是谁发布的、管哪些申请。"
+      },
+      "en_feedback": {
+        "message": "The person you chose to decide has no approval authority in the materials; a colleague's view is not an approval.",
+        "checked_scope": "Only the chosen decision-maker against who published the approval rules; your text is not read.",
+        "next_action": "Re-read who published the resource-approval rules and which requests they cover."
+      },
+      "false_positive_examples": [
+        {
+          "approver": "grace",
+          "expected": "no_violation"
+        },
+        {
+          "approver": "unknown",
+          "expected": "no_violation"
+        },
+        {
+          "stakeholder": "chen",
+          "relationships": [
+            "user"
+          ],
+          "expected": "no_violation"
+        },
+        {
+          "approver_free_text": "Chen 的意见",
+          "expected": "no_violation"
+        }
+      ]
+    }
+  ]
+}

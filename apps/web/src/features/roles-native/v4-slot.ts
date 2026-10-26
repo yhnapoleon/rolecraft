@@ -10,6 +10,7 @@ import {
   type RolesView,
   type TurnStatus,
 } from './index';
+import { sharedPrdVersions } from './shared-prd';
 import { noteOutgoing } from './chat-memory';
 import {
   object,
@@ -68,6 +69,21 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       },
     };
   }
+  // Exact share versions are immutable; reuse successful reads across this conversation’s polls.
+  const shareReads = new Map<string, Promise<import('../../v4-host-operations').PublicObject>>();
+  const readShare = (input: { kind: string; object_id: string; version: number }) => {
+    const key = `${input.object_id}@${input.version}`;
+    let reading = shareReads.get(key);
+    if (!reading) {
+      reading = host.query('objects.read', input).catch((error) => {
+        shareReads.delete(key);
+        throw error;
+      });
+      shareReads.set(key, reading);
+    }
+    return reading;
+  };
+
   const inputNode = input;
   const form = composer;
   const draftKey = 'question:' + selected;
@@ -209,6 +225,32 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     const replies = publicData.rows.filter((r) => r.ref.kind === 'role_reply');
     const displays = publicData.rows.filter((r) => r.ref.kind === 'role_display');
     const titles = publicData.data.workspace?.material_titles ?? {};
+    const hasShares = publicData.rows.some(
+      (row) =>
+        row.ref.kind === 'role_turn' &&
+        Array.isArray(row.content.input?.shares) &&
+        row.content.input.shares.length > 0,
+    );
+    // The timeline omits AIPM objects. Read its public projection only for turns with shares.
+    const prd = hasShares
+      ? await host
+          .query('aipm.progress')
+          .then((p) => p.prd_ref)
+          .catch(() => null)
+      : null;
+    const turnRows = publicData.rows.filter((r) => r.ref.kind === 'role_turn');
+    const prdVersions = new Map(
+      await Promise.all(
+        turnRows.map(
+          async (row) =>
+            [
+              row.ref.object_id,
+              await sharedPrdVersions(row.content.input?.shares, prd, sid, readShare),
+            ] as const,
+        ),
+      ),
+    );
+    session(host, sid);
     const turns = publicData.rows
       .filter((r) => r.ref.kind === 'role_turn')
       .map((row) => {
@@ -267,6 +309,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
           id: row.ref.object_id,
           roleId: source.role_id,
           question: source.text,
+          prdVersions: prdVersions.get(row.ref.object_id),
           status,
           reply: reply?.content.text,
           materials,

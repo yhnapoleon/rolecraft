@@ -1,0 +1,374 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-phase1-draft-1",
+  "work_language": "zh",
+  "steps": [
+    {
+      "id": "business",
+      "order": 1,
+      "label": "看懂业务",
+      "goal": "分清公司经营业务和本次内部工具任务。",
+      "segment": "clarify",
+      "icon": "Building2",
+      "expected_outputs": [
+        "业务说明与来源"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "分清公司经营业务和本次内部工具任务。",
+          "summary": "先看公司一页纸，再核对 Grace 的委托。这次直接服务内部人员；公司对外经营什么，和助手负责什么，要分别说清。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "公司靠什么业务服务客户？"
+            },
+            {
+              "role": "business",
+              "text": "这次试点直接帮谁？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "写下业务理解"
+          },
+          "why": "先分清公司对外卖什么、这次工具服务谁，后面选用户、定范围才不会跑偏。",
+          "feedback": "保存后会核对你写的服务对象（内部还是外部）是否和公司资料一致，冲突会直接指出；接着建议进入「用户与相关方」。",
+          "example": "例：「星桥数字向企业客户卖应用实施和运维服务；这次知识助手只服务内部新员工和行政支持，不面向客户。」",
+          "agent_brief": "请根据这局的公司一页纸和 Grace 的委托，用两三句话写出：公司对外靠什么业务服务客户；这次知识助手直接服务谁（内部还是外部）；本次任务的目标。只写有资料依据的内容，不确定的标「待确认」。"
+        },
+        {
+          "level": "explanation",
+          "text": "试着用两句话分别说明公司的服务和本次助手的用户；不确定的背景标为待确认。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "公司靠什么业务服务客户？",
+        "这次试点直接帮谁？"
+      ]
+    },
+    {
+      "id": "stakeholders",
+      "order": 2,
+      "label": "用户与相关方",
+      "goal": "区分使用者、批准者和承担后果的人。",
+      "segment": "clarify",
+      "icon": "Users",
+      "expected_outputs": [
+        "用户与责任记录"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "区分使用者、批准者和承担后果的人。",
+          "summary": "候选用户不等于已邀请用户。问清谁使用、谁批准、谁接手异常；同事的意见要和正式批准分开。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "谁有这个问题，谁会承担额外工作？"
+            },
+            {
+              "role": "manager",
+              "text": "谁批准范围与资源？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "记录用户与责任"
+          },
+          "why": "用户、批准的人、执行的人和受影响的人各担一段责任，混在一起就会把同事意见当成批准。",
+          "feedback": "保存后会检查目标用户和至少一项责任有没有依据，把意见当成批准会被指出；接着建议进入「验证真需求」。",
+          "example": "例：「首批用户：行政支持 20 人（假设，待 Chen 确认）；Grace 批准范围与资源；Daniel 负责索引与上线。」",
+          "agent_brief": "请根据这局的候选用户、访谈原文和资源审批规则，列出目标用户、批准者、执行者和受影响者，每项写一句责任，并标明是事实（附资料名）还是假设。"
+        },
+        {
+          "level": "explanation",
+          "text": "一个人可能兼任多个角色；先记下一项需要核实的责任，再找相应来源。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "user_groups",
+            "interviews",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "谁有这个问题，谁会承担额外工作？",
+        "谁批准范围与资源？"
+      ]
+    },
+    {
+      "id": "need",
+      "order": 3,
+      "label": "验证真需求",
+      "goal": "让需求假设可以被证据推翻。",
+      "segment": "clarify",
+      "icon": "Search",
+      "expected_outputs": [
+        "需求假设、反证与验证办法"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "让需求假设可以被证据推翻。",
+          "summary": "从一个具体问题开始，找支持证据，也留一个反证或未知。时间字段要看口径，结单时长不能直接当作节省的人工工时。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "这份收益测算的时间怎么统计？"
+            },
+            {
+              "role": "business",
+              "text": "什么事实会让我们不做？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "写下假设与验证办法"
+          },
+          "why": "先写成能被推翻的假设，才知道该找什么证据，也不会把伪收益当成需求。",
+          "feedback": "保存后会核对指标口径（比如把结单时长当成人工工时会被指出），并提示还缺的反证或验证办法；接着建议进入「划定 AI 边界」。",
+          "example": "例：「假设：新员工每周花 2 小时找政策答案。依据：访谈原文。反证：咨询样本里多数是审批类问题。下一步：抽 20 条样本核对。」",
+          "agent_brief": "请根据咨询样本、收益测算和访谈原文写一个需求假设：问题、支持证据（附资料名）、至少一个反证或未知、下一步怎么验证；涉及时间指标时写清字段、单位和统计口径。"
+        },
+        {
+          "level": "explanation",
+          "text": "问这项指标的单位、样本范围和观察窗口；没有证据的收益保留为假设。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "demand",
+            "business_case",
+            "interviews"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "这份收益测算的时间怎么统计？",
+        "什么事实会让我们不做？"
+      ]
+    },
+    {
+      "id": "boundary",
+      "order": 4,
+      "label": "划定 AI 边界",
+      "goal": "明确要回答什么、要做什么，以及谁能批准。",
+      "segment": "design",
+      "icon": "ShieldHalf",
+      "expected_outputs": [
+        "有版本的需求分拣"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "明确要回答什么、要做什么，以及谁能批准。",
+          "summary": "把咨询拆成回答、计算、拟稿或实际动作。先弄清人类权限和工具是否存在，再选择处理办法。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "哪些动作算规则，哪些要检索？"
+            },
+            {
+              "role": "manager",
+              "text": "谁有最终批准权？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "拆分并分拣请求"
+          },
+          "why": "把需求拆成规则计算、检索回答、Agent 加确认、人工处理四类，才知道哪些能交给助手、哪些必须有人负责。",
+          "feedback": "每保存一行，就按规则检查这一行的处理方式和最终决定权，比如把报销最终批准交给 AI 会被直接指出；接着建议进入「系统方案与市场做法」。",
+          "example": "例：「解释报销流程 → 检索回答，助手可答；报销最终批准 → 人工处理，由财务经理决定。」",
+          "agent_brief": "请把这局的员工请求逐条拆成目标动作，为每条选一种处理方式（确定性规则、检索回答、Agent 加人工确认、人工处理），并写明谁有最终决定权。只给建议草稿。"
+        },
+        {
+          "level": "explanation",
+          "text": "同一请求可以拆开：检索流程、准备草稿和最终批准可能由不同主体完成。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "policy",
+            "approvals",
+            "faq"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "哪些动作算规则，哪些要检索？",
+        "谁有最终批准权？"
+      ]
+    },
+    {
+      "id": "solution",
+      "order": 5,
+      "label": "系统方案与市场做法",
+      "goal": "比较可行办法，分清方案和实际配置。",
+      "segment": "design",
+      "icon": "Workflow",
+      "expected_outputs": [
+        "方案比较与依赖"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "比较可行办法，分清方案和实际配置。",
+          "summary": "从分拣结果比较至少两个实质办法。市场卡只是公开方法参考；保存方案不会替你应用设置或申请资源。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "这个方案依赖哪些开发项？"
+            },
+            {
+              "role": "manager",
+              "text": "资源不足时可以怎样取舍？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "比较并保存方案"
+          },
+          "why": "边界定了，还要比较至少两种做法，才能说清选这个方案需要什么资源、代价是什么。",
+          "feedback": "保存后会对照当前配置和资源，指出方案与实际配置不一致的地方；保存方案不会改设置。接着建议进入「评测、监控与回退」。",
+          "example": "例：「方案 A：只上办公 FAQ 检索，每日索引；方案 B：再加报修草稿 Agent，需 2 人日开发。选 A，因为可用开发只有 3 人日。」",
+          "agent_brief": "请根据分拣结果、技术说明和当前配置比较两个可行方案：组件、需要的资源和依赖、主要代价，并推荐一个、说明理由。不要修改任何设置。"
+        },
+        {
+          "level": "explanation",
+          "text": "比较代价、资料更新与人工责任。尚不存在的工具只能进入拟议方案。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "technical",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "这个方案依赖哪些开发项？",
+        "资源不足时可以怎样取舍？"
+      ]
+    },
+    {
+      "id": "assurance",
+      "order": 6,
+      "label": "评测、监控与回退",
+      "goal": "用明确预期验证风险，留下观察和退路。",
+      "segment": "verify",
+      "icon": "ListChecks",
+      "expected_outputs": [
+        "预期、测试与观察／回退计划"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "用明确预期验证风险，留下观察和退路。",
+          "summary": "先保存每题的预期和依据，再运行支持的题目。运行完成、质量判定和未支持分开看；监控与回退先写清负责人和触发条件。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "哪一题最可能推翻这个方案？"
+            },
+            {
+              "role": "business",
+              "text": "出错后业务上由谁接手？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_evaluation",
+            "label": "打开评测计划"
+          },
+          "why": "上线前先写下期望、再用真题验证，才知道方案会在哪里出错、出错时谁来接。",
+          "feedback": "运行后每题分开显示符合、不符合或未支持，由你判定并写理由；监控和回退计划会标「计划，未执行」。接着建议进入「上线决策」。",
+          "example": "例：「题目：差旅住宿上限是多少？期望：引用政策 v2 的具体金额；答不出时转人工。」",
+          "agent_brief": "请根据我已保存的分拣，为每类处理方式各写一道验收题：问题、期望回答的要点和依据、不符合时怎么回退。只写题目和期望，不要运行。"
+        },
+        {
+          "level": "explanation",
+          "text": "给每题保留预期来源，给异常指定负责人。计划中的告警不等于已经部署。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "failures",
+            "technical"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "哪一题最可能推翻这个方案？",
+        "出错后业务上由谁接手？"
+      ]
+    },
+    {
+      "id": "decision",
+      "order": 7,
+      "label": "上线决策",
+      "goal": "对确切版本和承诺条件作出决定。",
+      "segment": "verify",
+      "icon": "Flag",
+      "expected_outputs": [
+        "精确版本交付与关联修订"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "对确切版本和承诺条件作出决定。",
+          "summary": "核对将交付的作品版本、依据和未决条件。你可以推进、缩范围或暂停；正式反馈准备好后，再关联修订。",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "在这些条件下，我能承诺什么？"
+            },
+            {
+              "role": "technical",
+              "text": "相较上次，哪些变化需要重新核对？"
+            }
+          ],
+          "primary_action": {
+            "id": "open_submission",
+            "label": "核对并交付"
+          },
+          "why": "决定要对确切版本和条件负责：说清在什么条件下上线、出现什么情况就暂停。",
+          "feedback": "交付后会生成正式反馈，准备好时显示「已就绪」；之后的修订作为新版本关联，不覆盖原交付。",
+          "example": "例：「建议先给行政 20 人开放办公 FAQ 两周；错误回答超过 3 次或索引滞后超过 24 小时就暂停。」",
+          "agent_brief": "请根据这局已保存的分拣、方案和评测结果，起草一份上线决定：范围、条件、负责人、暂停条件和未决事项。只写草稿。"
+        },
+        {
+          "level": "explanation",
+          "text": "没有覆盖的工作如实保留；交付记录存在不代表语义判断都已核实。"
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "在这些条件下，我能承诺什么？",
+        "相较上次，哪些变化需要重新核对？"
+      ]
+    }
+  ]
+}

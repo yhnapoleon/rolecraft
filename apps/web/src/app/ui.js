@@ -153,6 +153,7 @@ import {
   installShell,
   lastTicket,
   onAgentConnection,
+  lightState,
   setHat,
   setLastTicket,
   stageOf,
@@ -177,7 +178,14 @@ import * as Greetings from '../features/colleague-greetings';
 import { messageRows, noteKey } from '../features/colleague-greetings/unread';
 import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
+import { Compass } from '../features/aipm-guide/compass';
+import { WorkStack } from '../shell/work-stack/stack';
+import { quoteToWorksheet, sourceLabel } from '../features/aipm-design/install';
+import { createAipmPractice } from '../features/aipm-guide/practice';
+import { showDraftToast } from '../features/aipm-guide/draft-toast';
 import '../shell/progress.css';
+import '../shell/unread-light.css';
+import '../shell/home-pill.css';
 import { agentLine } from '../screens/board/agent-line';
 import * as Board from '../screens/board';
 import { dossierHtml, installDossier } from '../screens/investigate';
@@ -722,7 +730,12 @@ function go(route, opts = {}) {
     ui.railOpen = false;
     ui.route = route;
     ui.routeId = id;
-    history.pushState(null, '', hashOf(route, id));
+    const state = opts.aipmScreen
+      ? { aipm: opts.aipmScreen, aipmSession: current()?.id }
+      : null;
+    if (route === 'work') Aipm.restoreHistory(state);
+    if (!opts.aipmScreen || from !== route || fromId !== id || JSON.stringify(history.state) !== JSON.stringify(state))
+      history.pushState(state, '', hashOf(route, id));
     render();
     window.scrollTo(0, 0);
     document.getElementById('main')?.scrollTo?.(0, 0);
@@ -736,7 +749,7 @@ function go(route, opts = {}) {
     else run();
   }
 }
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', (event) => {
   commit();
   dropUndo();
   if (sheet.open) closeSheet(true);
@@ -748,6 +761,7 @@ window.addEventListener('popstate', () => {
   const update = () => {
     ui.route = p.r;
     ui.routeId = p.id;
+    Aipm.restoreHistory(p.r === 'work' ? event.state : null);
     render();
     if (p.r === 'doc') document.getElementById('main')?.scrollTo(0, 0);
   };
@@ -1325,7 +1339,7 @@ function renderWorkspace() {
   ui.notesCache = Coach.notes(a, E);
   const html = `<div class="ws view-${ui.route} ${arriving ? 'arriving' : ''} ${ui.railOpen ? 'rail-open' : ''}" data-status="${statusOf(a)}">
     ${wsToolbar(a)}
-    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div></main>
+    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${aipmScreen(a) ? '' : wsStage(a)}</div></main>
     ${docLayer()}
     <aside class="rail" id="ws-rail" aria-label="${esc(T('同事与需要你回应的事', 'Colleagues and what needs you'))}">${wsRail(a)}</aside>
     <button type="button" class="scrim" data-action="close-panels" aria-label="${esc(T('关闭面板', 'Close panel'))}" tabindex="-1"></button>
@@ -1347,22 +1361,64 @@ function wsToolbar(a) {
   const deskBack =
     isRegisteredRoute(ui.route) && ui.route !== 'engineer' && hatHere(a) === 'engineer';
   const ticket = deskBack ? ticketOf(lastTicket(a.id)) : null;
+  const home = homePill(a);
   const back =
-    ui.route === 'work' || (ui.route === 'engineer' && isRegisteredRoute('engineer'))
+    ui.route === 'work' || (ui.route === 'engineer' && isRegisteredRoute('engineer')) || home
       ? ''
       : deskBack
         ? ticket
           ? `<a class="btn quiet back up" style="text-decoration: none" href="${esc(hashOf('engineer', ticket))}">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></a>`
           : `<button type="button" class="btn quiet back up" data-action="hat-switch" data-hat="engineer">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></button>`
         : `<button type="button" class="btn quiet back up" data-action="to-board">${icon('back')}<span>${T('工作板', 'Board')}</span></button>`;
-  const here = t
+  const here = home
+    ? ''
+    : t
     ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${esc(taskTitle(t))}</span>`
     : m
       ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${esc(materialTitle(m))}</span>`
       : ui.route === 'bench'
         ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${T('测试台', 'Test bench')}</span>`
         : '';
-  return shellBar(a, { back, here, id: 'ws-toolbar', cls: 'ws-toolbar', brief: true });
+  return shellBar(a, { back, here, home, id: 'ws-toolbar', cls: 'ws-toolbar', brief: true });
+}
+/* ---------- the way back to the workbench ---------- */
+// Wherever a product manager is in a practice other than the workbench, one pill at the top
+// centre takes them back: "Workbench › where you are". The workbench itself shows none.
+function awayFrom(a) {
+  if (!a || hatHere(a) !== 'pm') return null;
+  if (ui.docSheet) {
+    const m = E.getMaterials(a).find((x) => x.id === ui.docSheet);
+    return m ? materialTitle(m) : T('资料', 'Material');
+  }
+  if (ui.route === 'work') return aipmHere(a) ? Aipm.screenName(a) : null;
+  const t = routeTask(a);
+  if (t) return taskTitle(t);
+  if (ui.route === 'doc') {
+    const m = E.getMaterials(a).find((x) => x.id === ui.routeId);
+    return m ? materialTitle(m) : T('资料', 'Material');
+  }
+  const named = {
+    bench: T('测试台', 'Test bench'),
+    agent: T('我的 Agent', 'My agent'),
+    review: T('交付结果', 'Delivery result'),
+    investigate: T('调查记录', 'Findings'),
+  };
+  return named[ui.route] ?? null;
+}
+function homePill(a) {
+  const where = awayFrom(a);
+  if (!where) return '';
+  return `<button type="button" class="ws-home" data-action="to-workbench" aria-label="${esc(T(`回到工作台，当前在：${where}`, `Back to the workbench, now in: ${where}`))}"><span class="ws-home__go">${icon('board', 'i-sm')}<span>${T('工作台', 'Workbench')}</span></span><span class="ws-home__sep" aria-hidden="true">›</span><span class="ws-home__here"${langOf(a)}>${esc(where)}</span></button>`;
+}
+function toWorkbench() {
+  const a = current();
+  if (ui.docSheet) {
+    ui.docSheet = null;
+    ui.compare = false;
+    refreshWS(['overlay', 'toolbar']);
+  }
+  if (a && aipmHere(a)) Aipm.host.openWorkbench();
+  if (ui.route !== 'work') go('work', { transition: true });
 }
 /* ---------- the shell bar (decision 1) ---------- */
 // The situation's own name, for a hat that has no title of its own yet (the engineer's, until
@@ -1384,7 +1440,10 @@ function hatHere(a) {
   if (WS.slice(0, 4).includes(ui.route) || ui.route === 'review') return 'pm';
   return hatOf(a.id);
 }
-function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief = false } = {}) {
+function shellBar(
+  a,
+  { back = '', here = '', home = '', more = '', id = '', cls = '', brief = false } = {},
+) {
   const st = statusOf(a);
   const n = snap();
   const s = sessionOf(a);
@@ -1408,32 +1467,25 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
       ? `<div class="menu-wrap title-wrap"><h1 class="ws-title"><button type="button" class="title-btn" data-action="menu" data-menu="brief" aria-expanded="${ui.menu === 'brief'}" aria-haspopup="dialog" title="${esc(T('委托与条件', 'Brief and conditions'))}">${titleText}</button></h1>${ui.menu === 'brief' ? briefPopover(a) : ''}</div>`
       : `<p class="ws-title"><span class="title-btn">${titleText}</span></p>`;
   // Phone width keeps a way out even where the wide bar has none.
-  const narrowBack = back
+  const narrowBack =
+    back || home
     ? ''
     : `<button type="button" class="btn quiet back narrow-only" data-action="to-entry" aria-label="${esc(T('离开练习', 'Leave the practice'))}">${icon('back')}</button>`;
   const c = agentConnection();
-  const lampLabel =
-    c.state === 'none'
-      ? T('连接 Agent', 'Connect agent')
-      : c.state === 'waiting'
-        ? T('等待 Agent', 'Waiting for agent')
-        : c.client || T('我的 Agent', 'My agent');
-  const lampTitle =
-    c.state === 'idle' && c.lastSeen
-      ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`)
-      : T('我的 Agent', 'My agent');
-  const lamp = `<button type="button" class="agent-lamp" data-action="open-agent" data-state="${c.state}" title="${esc(lampTitle)}" aria-label="${esc(`${lampTitle}: ${lampLabel}`)}"><span class="lamp rc-agent-light" data-state="${c.state}" aria-hidden="true"><span class="lamp-ring"></span></span><span class="lamp-label">${esc(lampLabel)}</span></button>`;
+  const { label: lampLabel, title: lampTitle, state: lampState } = lampText(c);
+  const lamp = `<button type="button" class="agent-lamp" data-action="open-agent" data-state="${lampState}" title="${esc(lampTitle)}" aria-label="${esc(`${lampTitle}: ${lampLabel}`)}"><span class="lamp rc-agent-light" data-state="${lampState}" aria-hidden="true"><span class="lamp-ring"></span></span><span class="lamp-label">${esc(lampLabel)}</span></button>`;
   const record = `<button type="button" class="btn quiet icon icon-key record-btn" data-action="records" aria-label="${esc(T('记录', 'Record'))}" title="${esc(T('记录', 'Record'))}">${icon('hours', 'i-sm')}</button>`;
   const moreWrap =
     more ||
     `<div class="menu-wrap">${btn(icon('more'), 'menu', 'icon quiet icon-key', `data-menu="more" aria-haspopup="menu" aria-expanded="${['more', 'lang', 'model'].includes(ui.menu)}" aria-label="${esc(T('更多', 'More'))}"`)}${ui.menu === 'more' ? moreMenu(a) : ui.menu === 'lang' ? langMenu() : ui.menu === 'model' && modelStatusOf(a) ? modelPopoverHtml(modelStatusOf(a)) : ''}</div>`;
-  return `<header class="topbar shell-bar ${cls} ${barFolds.join(' ')}" ${id ? `id="${id}"` : ''} data-hat="${hat}">
+  return `<header class="topbar shell-bar ${cls} ${barFolds.join(' ')}" ${id ? `id="${id}"` : ''} data-hat="${hat}"${home ? ` data-away${homeInline ? ' data-home-inline' : ''}` : ''}>
     ${back}${narrowBack}${wordmark()}<span class="sep before-title" aria-hidden="true"></span>
     <nav class="crumbbar" aria-label="${esc(T('位置', 'Location'))}">${title}${here}</nav>
     ${/* Delivered is the scale's to say; the chip stays only for states the scale does not show. */ ''}
     ${st !== 'active' && (st !== 'submitted' || s?.v2ReadOnly) ? `<span class="state-chip ${st}">${s?.v2ReadOnly ? T('旧版 · 只读', 'Earlier version · Read-only') : T('已暂停', 'Paused')}</span>` : ''}
     <span class="sep before-hat" aria-hidden="true"></span>
     ${islandSlot('shell-hatscale')}
+    ${home}
     <div class="spacer"></div>
     <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: true })).join('')}<span class="team-compact">${icon('team', 'i-sm')}${unreadBadge(ROLES.reduce((n, r) => n + unread(a, r), 0))}</span></button>
     <span class="shell-connection">${conn}</span>${lamp}${record}${moreWrap}
@@ -1634,14 +1686,161 @@ function passedNow(a, p) {
   const seen = new Set(all[a.id]);
   return { arrived: done.filter((id) => !seen.has(id)).at(-1), all };
 }
+// A product manager's practice the server enrolled in the seven steps (AIPM phase 1): one guide,
+// one numbering, read from the server's progress. Every other practice keeps the six layers.
+const Aipm = createAipmPractice({
+  current,
+  transport: (a) => L.gatewayTransport(a),
+  dataHost: (a) => (L.nativeWorkspace(a) ? L.v4Host(a) : null),
+  language: (a) => workLang(a) ?? locale(),
+  redraw: () => refreshWS(['stage', 'toolbar']),
+  openMaterial: (id) => openMaterial(id),
+  openChat: (role, text) => openChat(role, text),
+  ask: (role, text) => {
+    const a = current();
+    if (a) void askColleague(a, role, text);
+  },
+  openWork: () => go('work'),
+  openSettings: () => {
+    closeSheet(true);
+    ui.menu = null;
+    sheetConfig();
+  },
+  submit: () => {
+    commit();
+    sheetDeliver();
+  },
+  notifyDraft: (text, label, dismiss, open) => showDraftToast(text, label, dismiss, open),
+  prefillColleague: (role, text, attach, detail) => {
+    const a = current(),
+      prd = Aipm.prdOf(a);
+    if (a && prd) prdChoice.set(`${a.id}:${role}:${prd.version}`, attach);
+    if (a) {
+      if (detail?.trim()) reviewDetails.set(`${a.id}:${role}`, detail.trim());
+      else reviewDetails.delete(`${a.id}:${role}`);
+    }
+    openChat(role, text);
+  },
+  prdSharedWith: (role, prd) => prdShared(current(), role, prd) === true,
+  rememberPrompts: (role, prompts) => {
+    const a = current();
+    if (!a) return;
+    mentorPrompts.set(`${a.id}:${role}`, prompts);
+    if (ui.rail === 'chat' && ui.chatRole === role) refreshWS(['rail']);
+  },
+  showBoard: (screen) => go('work', { aipmScreen: screen }),
+  openProduct: (id) => {
+    const a = current(),
+      x = a?.artifacts.find((y) => y.id === id && !y.removedAt);
+    if (!x) return;
+    Aipm.host.openWorkbench();
+    if (x.taskId) openTask(x.taskId, { type: 'work', id });
+    else previewWork(a, id);
+  },
+  newFreeSheet: () => sheetNewArtifact(undefined, true),
+  materialHtml: (id) => {
+    const a = current();
+    return a ? docBody(a, id, true) : '';
+  },
+  readMaterial: async (id) => {
+    const a = current();
+    if (!a) return;
+    await recordRead(a, id);
+    if (current()?.id === a.id) refreshWS(['stage']);
+  },
+  materialTitle: (id) => {
+    const a = current(),
+      m = a && E.getMaterials(a).find((x) => x.id === id);
+    return m ? materialTitle(m) : id;
+  },
+  colleagueName: (c) => PEOPLE[c]?.name ?? c,
+  quoteToSheet: async (id, paragraphs = []) => {
+    const a = current(),
+      host = a && L.nativeWorkspace(a) ? L.v4Host(a) : null,
+      m = a && E.getMaterials(a).find((x) => x.id === id);
+    if (!host || !m) return;
+    // Selected paragraphs quote the passages read from this exact version, in order; anything
+    // that matches none falls back to the picker.
+    const flat = (t) => (t || '').replace(/\s+/g, '');
+    const read = (host.draft('workspace', 'evidence-cache') ?? []).filter(
+      (r) => r.kind === 'material' && r.object_id === m.id && r.version === m.version && r.quote,
+    );
+    const hits = [
+      ...new Set(
+        paragraphs
+          .map(flat)
+          .filter(Boolean)
+          .map((p) => read.find((r) => flat(r.quote) === p) ?? read.find((r) => flat(r.quote).includes(p))),
+      ),
+    ].filter(Boolean);
+    const refs = hits.length
+      ? hits
+      : await host.chooseEvidence({
+          focus: { session_id: a.id, kind: 'material', object_id: m.id, version: m.version },
+        });
+    for (const ref of refs.filter((r) => r.kind === 'material'))
+      if (!quoteToWorksheet(ref, sourceLabel(workLang(a) ?? locale(), materialTitle(m), ref.version))) {
+        notify(T('先打开一张工作纸，再引用这一段。', 'Open a sheet first, then quote this passage.'));
+        break;
+      }
+  },
+});
+const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
+// The materials pile beside the sheets: the same component, every material, new ones counted.
+function materialPile(a) {
+  const rows = docRows(a);
+  if (!rows.length) return null;
+  const word = {
+    new: T('有新版本', 'New version'),
+    agent: T('你的 Agent 在读', 'Your agent is reading'),
+    unread: T('未读', 'Unread'),
+    cited: T('已引用', 'Cited'),
+    read: T('已读', 'Read'),
+  };
+  const fresh = rows.filter((r) => r.state === 'new').length;
+  const status = fresh
+    ? T(`${rows.length} 份 · ${fresh} 份更新`, `${rows.length} · ${fresh} updated`)
+    : T(`${rows.length} 份`, `${rows.length} documents`);
+  return {
+    kind: 'materials',
+    title: T('资料', 'Materials'),
+    status,
+    ariaLabel: T(`资料，${rows.length} 份`, `Materials, ${rows.length}`) + (fresh ? T(`，${fresh} 份有新版本`, `, ${fresh} with a new version`) : ''),
+    capsule: T('资料', 'Materials'),
+    items: rows.map((r) => ({
+      id: r.id,
+      order: null,
+      segment: 'material',
+      icon: 'FileText',
+      name: r.title,
+      purpose: `v${r.version}`,
+      status: 'not_started',
+      statusText: `v${r.version} · ${word[r.state]}`,
+      agentDraft: false,
+      suggested: false,
+      updated: r.state === 'new',
+    })),
+    words: { suggested: T('建议', 'Suggested'), close: T('收起', 'Close') },
+    onOpen: (id) =>
+      Aipm.screenOf(a) === 'worksheet' ? Aipm.host.openMaterialSplit(id) : openMaterial(id),
+  };
+}
+// A seven-step practice opens a sheet or a review in the main screen instead of the board.
+const aipmScreen = (a) => ui.route === 'work' && aipmHere(a) && Aipm.screenOf(a) !== 'workbench';
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every
-// product manager's screen of the practice.
-const progressSlot = (a) =>
+// product manager's screen of the practice. A seven-step practice (v2) has the compass there
+// instead, the sheet pile in the lower-left corner and, when open, a sheet in the main screen.
+// The seven steps start loading while Grace's brief is still open, so the walk-through finds them.
+const progressSlot = (a, sevenSteps = aipmHere(a)) =>
   ['work', 'engineer'].includes(ui.route) && Board.entryPending(a)
     ? ''
-    : (hatHere(a) === 'pm'
-        ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
-        : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
+    : sevenSteps
+      ? `<div class="rc-prog-wrap aipm-v2">${islandSlot('aipm-compass')}</div>${
+          aipmScreen(a) ? '<div class="aipm-main" data-aipm-main></div>' : ''
+        }<div class="aipm-stack-slot">${islandSlot('aipm-materials')}${islandSlot('aipm-stack')}</div>`
+      : (hatHere(a) === 'pm'
+          ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
+          : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
 function nextSuggestion(a) {
   if (!(a.tests || []).length)
     return T('先试一个员工会问的问题。', 'Try a question an employee would ask.');
@@ -1663,6 +1862,16 @@ function nextStep(a) {
   return `<p class="rc-entry-next" data-entry-next><b>${label ? esc(T(label[0], label[1])) : T('复现', 'Reproduce')}</b><span>${T('下一步：', 'Next: ')}${next ? esc(T(next[0], next[1])) : T('先复现委托里的问题。', 'Reproduce the issue in the ticket.')}</span></p>`;
 }
 function mountProgress(a) {
+  const compass = a && document.querySelector('[data-island="aipm-compass"]') && Aipm.compassProps(a);
+  if (compass) {
+    keepIsland('aipm-compass', Compass, compass);
+    const pile = Aipm.stackProps(a);
+    if (pile) keepIsland('aipm-stack', WorkStack, pile);
+    const materials = materialPile(a);
+    if (materials) keepIsland('aipm-materials', WorkStack, materials);
+    Aipm.mountMain(a, document.querySelector('[data-aipm-main]'));
+    return;
+  }
   if (!document.querySelector('[data-island="shell-progress"]')) return;
   const p = progressOf(progressFacts(a));
   const tx = (t) => T(t[0], t[1]);
@@ -1881,6 +2090,8 @@ const keepBoardPlace = () => {
 const BAR_FOLDS = ['fold-words', 'fold-scale', 'fold-hat'];
 // A redrawn bar starts with the last folds, so it never paints one frame overlapped.
 let barFolds = [];
+/** Whether the way home last had to leave the centre; kept across renders so it never jumps. */
+let homeInline = false;
 const watchedBar = new WeakSet();
 const barResize = new ResizeObserver(() => requestAnimationFrame(fitShellBar));
 function fitShellBar() {
@@ -1892,6 +2103,22 @@ function fitShellBar() {
     if (bar.scrollWidth <= bar.clientWidth + 1) break;
     bar.classList.add(fold);
     barFolds.push(fold);
+  }
+  // The way home holds the centre only while nothing else in the bar reaches it.
+  const home = bar.querySelector('.ws-home');
+  if (home) {
+    bar.removeAttribute('data-home-inline');
+    const r = home.getBoundingClientRect();
+    const boxes = (el) =>
+      getComputedStyle(el).display === 'contents' ? [...el.children].flatMap(boxes) : [el];
+    homeInline = [...bar.children]
+      .filter((el) => el !== home && !el.classList.contains('spacer'))
+      .flatMap(boxes)
+      .some((el) => {
+        const o = el.getBoundingClientRect();
+        return o.width > 0 && o.left < r.right + 12 && o.right > r.left - 12;
+      });
+    if (homeInline) bar.setAttribute('data-home-inline', '');
   }
   // The islands draw after this render and change width with the stage: fit again then.
   for (const el of bar.querySelectorAll('.rc-hatscale, .rc-primary, .crumbbar'))
@@ -2543,11 +2770,12 @@ function findingsOf(a) {
   const unfiled = (a.artifacts || []).filter((w) => !w.taskId && !w.removedAt).map(workOf);
   return { docs, people, tests, tasks, unfiled };
 }
-function docGrid(a) {
-  const list = E.getMaterials(a);
+// Each material once, with what is new about it: a new version, your agent reading it, unread,
+// cited in your work, or read. The board's list and the materials pile say the same.
+function docRows(a) {
   const read = readSet(a);
   const cited = citedMaterials(a);
-  const rows = list.map((m) => {
+  return E.getMaterials(a).map((m) => {
     const fresh = m.version > 1 && !(a.acks || []).includes(`read-${m.id}-v${m.version}`);
     const state = fresh
       ? 'new'
@@ -2560,6 +2788,9 @@ function docGrid(a) {
             : 'read';
     return { id: m.id, title: materialTitle(m), version: m.version, state };
   });
+}
+function docGrid(a) {
+  const rows = docRows(a);
   const html = Board.documentsSection(rows, {
     all: Board.docsAll(a.id),
     loading: snap().connected
@@ -3478,8 +3709,182 @@ function replyingRoles(a) {
     return new Set();
   }
 }
+/* ---------- the pilot PRD travels with a question (AIPM v2, Q5) ---------- */
+// Which PRD versions each colleague has been shared, read from the share projection. A colleague
+// who has not seen the latest version gets it attached by default; the person can take it off.
+const prdShares = new Map(); // `${session}:${role}` → Set of `${product}@${version}`
+const prdSharesAt = new Map(); // session → version point the shares were read at
+const prdChoice = new Map(); // `${session}:${role}:${version}` → attach (true/false) chosen
+const mentorPrompts = new Map(); // `${session}:${role}` → preset prompts from the review asked from
+// Without a conversation model a colleague answers with excerpts; the review's rule-triggered
+// question for them follows as a dashed card that says it is preset, not their reply. With a
+// model the card waits, and shows only when their latest reply was held back by the checks, so
+// the person is never left with nothing.
+function mentorCard(a, role) {
+  const prompts = mentorPrompts.get(`${a.id}:${role}`) || [];
+  if (!prompts.length) return '';
+  const model = L.v4Host(a)?.snapshot().semantic?.roles === 'model';
+  const name = PEOPLE[role].name;
+  return `<aside class="aipm-mentor"${model ? ' data-when="held"' : ''}>${prompts
+    .map(
+      (m) =>
+        `<p class="aipm-mentor__label">${T(`预设提示 · 按批改规则触发，不是 ${name} 的实时回复`, `Preset prompt · triggered by review rules, not ${PEOPLE[role].ref}’s live reply`)}</p><p class="aipm-mentor__q">${T('“', '“')}${esc(m.question)}${T('”', '”')}</p>${
+          m.materialId
+            ? `<button type="button" class="aipm-mentor__link" data-action="open-material" data-id="${esc(m.materialId)}">${esc(m.pointer || T('打开相关资料', 'Open the material'))} ›</button>`
+            : m.pointer
+              ? `<p class="aipm-mentor__pointer">${esc(m.pointer)}</p>`
+              : ''
+        }`,
+    )
+    .join('')}</aside>`;
+}
+function prdShared(a, role, prd) {
+  if (!a || !prd) return undefined;
+  const set = prdShares.get(`${a.id}:${ROLE_ID[role]}`);
+  return set ? set.has(`${prd.id}@${prd.version}`) : undefined;
+}
+async function readPrdShares(a) {
+  const host = L.v4Host(a);
+  const at = JSON.stringify(host?.snapshot().asOf ?? null);
+  if (!host || prdSharesAt.get(a.id) === at) return;
+  prdSharesAt.set(a.id, at);
+  try {
+    const found = new Map();
+    let cursor = 0;
+    for (;;) {
+      const page = await host.query('work_products.list', { cursor, limit: 100 });
+      const data = page?.result ?? page;
+      for (const share of data.shares || []) {
+        if (share.revoked_at != null || !share.product) continue;
+        const key = `${a.id}:${share.recipient_role}`;
+        if (!found.has(key)) found.set(key, new Set());
+        found.get(key).add(`${share.product.object_id}@${share.product.version}`);
+      }
+      if (data.next_cursor == null || data.next_cursor <= cursor) break;
+      cursor = data.next_cursor;
+    }
+    for (const r of ROLES) prdShares.set(`${a.id}:${ROLE_ID[r]}`, found.get(`${a.id}:${ROLE_ID[r]}`) || new Set());
+    if (current()?.id === a.id && ui.rail === 'chat') refreshWS(['rail']);
+  } catch (_) {
+    prdSharesAt.delete(a.id);
+  }
+}
+const prdAttached = (a, role, prd) =>
+  prdChoice.get(`${a.id}:${role}:${prd.version}`) ?? prdShared(a, role, prd) === false;
+// The chip above the composer, and what this colleague can see, in one line at the top.
+// A review's own words, offered beside the short prefill: one click puts them in the message.
+const reviewDetails = new Map();
+function detailChip(a, role) {
+  return reviewDetails.has(`${a.id}:${role}`)
+    ? `<button type="button" class="aipm-prd-chip" data-action="aipm-detail-insert" data-role="${role}">${icon('plus', 'i-xs')}${T('附上批改摘要', 'Add the review summary')}</button>`
+    : '';
+}
+function prdChip(a, role) {
+  const prd = aipmHere(a) ? Aipm.prdOf(a) : null;
+  if (!prd) return '';
+  void readPrdShares(a);
+  const seen = prdShared(a, role, prd);
+  if (seen === undefined) return '';
+  if (seen)
+    return `<p class="aipm-prd-note">${T(`${PEOPLE[role].name} 已看过试点 PRD 第 ${prd.version} 版`, `${PEOPLE[role].ref} has seen pilot PRD version ${prd.version}`)}</p>`;
+  const on = prdAttached(a, role, prd);
+  return `<button type="button" class="aipm-prd-chip" data-action="aipm-prd-toggle" data-role="${role}" aria-pressed="${on}">${on ? icon('check', 'i-xs') : ''}${T(`附上 PRD 第 ${prd.version} 版`, `Attach PRD version ${prd.version}`)}</button>`;
+}
+function prdSees(a, role) {
+  const prd = aipmHere(a) ? Aipm.prdOf(a) : null;
+  if (!prd) return '';
+  const set = prdShares.get(`${a.id}:${ROLE_ID[role]}`);
+  const versions = set
+    ? [...set].filter((k) => k.startsWith(`${prd.id}@`)).map((k) => Number(k.split('@')[1]))
+    : [];
+  const latest = versions.length ? Math.max(...versions) : 0;
+  const name = PEOPLE[role].name;
+  // One line that opens: what this colleague has, and on request what they do not.
+  return `<details class="aipm-sees"><summary><b>${T(`${name} 能看到：`, `${PEOPLE[role].ref} can see: `)}</b><span class="aipm-sees__what">${
+    latest
+      ? T(`试点 PRD 第 ${latest} 版 · 你的消息`, `pilot PRD version ${latest} · your messages`)
+      : T('你消息里写的内容（还没附上 PRD）', 'what your messages say (no PRD attached yet)')
+  }</span><span class="aipm-sees__i" aria-hidden="true">ⓘ</span></summary><p>${T('看不到：没附上的版本、你的 Agent 对话、批改单里的其余内容', 'Cannot see: versions you did not attach, your agent’s conversation, the rest of a review')}</p></details>`;
+}
+// Sending with the chip on: share that exact PRD version first, then let the message go as usual
+// (a native turn carries every share its colleague has).
+document.addEventListener(
+  'submit',
+  async (e) => {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement) || form.dataset.form !== 'chat') return;
+    if (form.dataset.prdReady === '1') {
+      delete form.dataset.prdReady;
+      return;
+    }
+    const a = current(),
+      role = ui.chatRole,
+      prd = a && aipmHere(a) ? Aipm.prdOf(a) : null;
+    if (!a || !prd || !role || !prdAttached(a, role, prd) || prdShared(a, role, prd) !== false) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    try {
+      const result = await L.v4Host(a).command('work_products.shares.create', {
+        product_id: prd.id,
+        product_version: prd.version,
+        recipient_role: ROLE_ID[role],
+      });
+      if (result.status !== 'confirmed') throw new Error(result.result?.message || result.status);
+      prdShares.get(`${a.id}:${ROLE_ID[role]}`)?.add(`${prd.id}@${prd.version}`);
+    } catch (err) {
+      notify(
+        T(
+          `PRD 没有附上，消息还没发：${err?.message || err}`,
+          `The PRD was not attached, so nothing was sent: ${err?.message || err}`,
+        ),
+      );
+      return;
+    }
+    // Hand it to the bound composer as a typed message would go, and, once it is accepted, clear
+    // the draft the way a suggested question does (the composer kept it while the share was made).
+    const live = document.querySelector('form.composer[data-form="chat"]') || form;
+    const question = live.querySelector('#chat-input')?.value ?? '';
+    const token = crypto.randomUUID();
+    live.addEventListener('rolecraft:greeting-result', async function done(event) {
+      if (event.detail?.token !== token) return;
+      live.removeEventListener('rolecraft:greeting-result', done);
+      if (!event.detail.accepted) return;
+      const key = `question:${ROLE_ID[role]}`;
+      const host = L.v4Host(a);
+      if (host?.draft('roles', key) === question) await host.keepDraft('roles', key, '');
+      const input = document.getElementById('chat-input');
+      if (input && input.value === question) input.value = '';
+    });
+    live.dataset.greetingRequest = token;
+    live.dataset.prdReady = '1';
+    const send = live.querySelector('button[type="submit"]');
+    live.requestSubmit(send || undefined);
+  },
+  true,
+);
+// The introduction folds to one line once you have written to that colleague (once, so opening
+// it again stays open).
+const introFolded = new Set();
+function foldIntroduction(a, role, msgs, sending = false) {
+  const key = `${a.id}:${role}`;
+  if (introFolded.has(key) || !(sending || msgs.some((m) => m.role === 'user'))) return;
+  introFolded.add(key);
+  Greetings.rememberIntroduction(a.id, role);
+  document.querySelector('.chat .rc-greet-chat[open]')?.removeAttribute('open');
+}
+// Sending is the moment: the reply may take a while, the introduction steps aside at once.
+document.addEventListener(
+  'submit',
+  (e) => {
+    const a = current();
+    if (a && ui.chatRole && e.target instanceof HTMLFormElement && e.target.dataset.form === 'chat')
+      foldIntroduction(a, ui.chatRole, [], true);
+  },
+  true,
+);
 function railChat(a, role) {
   const msgs = a.conversations[role] || [];
+  foldIntroduction(a, role, msgs);
   const t = routeTask(a);
   const x = t && ui.obj && ui.obj.type === 'work' ? artifact() : null;
   const typing = typingRole(a) === role;
@@ -3493,14 +3898,16 @@ function railChat(a, role) {
   const failed = s?.failedTurn && ROLE_OF[s.failedTurn.body.role_id] === role;
   const quote = ui.chatQuotes[quoteKey(a, role)];
   // What travels with the next message sits on the composer as a card you can take off again.
-  const attached = quote
+  const attached = (quote
     ? `<div class="chat-quote" data-quote="${esc(quote)}">${icon('flask', 'i-sm chat-quote-i')}<span class="chat-quote-body"><span class="chat-quote-label">${T('测试记录 · 随这条消息发出', 'Test run · sent with your message')}</span><span class="chat-quote-text">${esc(quote)}</span></span><button type="button" class="btn icon quiet small" data-action="drop-quote" aria-label="${esc(T('移除这段引用', 'Remove this quote'))}">${icon('x', 'i-xs')}</button></div>`
-    : '';
+    : '') + prdChip(a, role) + detailChip(a, role);
   const tools = `${a.tests.length ? `<button type="button" class="composer-tool${quote ? ' on' : ''}" data-action="prefill-run" aria-label="${esc(T('附上最近一次测试', 'Attach the latest test run'))}" title="${esc(T('附上最近一次测试', 'Attach the latest test run'))}">${icon('flask', 'i-sm')}</button>` : ''}${x ? `<button type="button" class="composer-tool" data-action="prefill-artifact" aria-label="${esc(T('分享这份作品', 'Share this work'))}" title="${esc(T('分享这份作品', 'Share this work'))}">${icon('doc', 'i-sm')}</button>` : ''}`;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
+    ${prdSees(a, role)}
     <div data-chat-greeting>${Greetings.hasArrived(a.id, role) ? Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a)) : ''}</div>
     <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? messageRows(msgs).map(({ message, key }) => msgHtml(a, message, key)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
+    ${mentorCard(a, role)}
     ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
     <form class="composer" data-form="chat">${attached}<div class="composer-line">${tools ? `<span class="composer-tools">${tools}</span>` : ''}<label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="1" maxlength="4000" required enterkeyhint="send" aria-describedby="chat-hint" placeholder="${esc(quote ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></div></form>
     <p class="composer-hint" id="chat-hint">${T('回车发送 · Shift+回车换行', 'Enter to send · Shift+Enter for a new line')}</p>
@@ -4372,13 +4779,14 @@ function sheetTask(id) {
     L.nativeWorkspace(a) ? 'workspace-form' : '',
   );
 }
-function sheetNewArtifact(purpose) {
+function sheetNewArtifact(purpose, freeSheet = false) {
   const a = current();
   const t = task();
   openSheet(
-    T('新作品', 'New piece of work'),
+    freeSheet ? T('新建自由纸', 'New free sheet') : T('新作品', 'New piece of work'),
     `<form data-form="artifact" id="artifact-form" class="stack">
     <label class="field"><span>${T('标题', 'Title')}</span><input class="input" name="title" required maxlength="160" value="${purpose === '试点决定' ? esc(T('试点决定', 'Pilot decision')) : ''}" placeholder="${esc(T('例如：我对首批范围的判断', 'For example: who goes first, and why'))}" autofocus></label>
+    ${freeSheet ? `<label class="field"><span>${T('关联到能力点（可选）', 'Link to a point (optional)')}</span><select class="select" name="aipmStep"><option value="">${T('不关联', 'No link')}</option>${(Aipm.compassProps(a)?.rows ?? []).map((row) => `<option value="${esc(row.id)}">${row.order} · ${esc(row.label)}</option>`).join('')}</select></label>` : ''}
     <fieldset class="field"><legend>${T('它现在用来做什么', 'What it is for, for now')}</legend><div class="choices wrap">${E.PURPOSES.map((p) => `<label class="choice"><input type="radio" name="purpose" value="${p}" ${p === (purpose || '探索笔记') ? 'checked' : ''}><span>${esc(purposeLabel(p))}</span></label>`).join('')}</div></fieldset>
     <label class="field"><span>${T('属于哪件事', 'Which task')}</span><select class="select" name="taskId" required>${t || purpose ? '' : `<option value="" selected disabled>${T('选一件事', 'Pick a task')}</option>`}${a.tasks.map((x) => `<option value="${x.id}" ${(t ? x.id === t.id : purpose && x.seed === 'decision') ? 'selected' : ''}>${esc(taskTitle(x))}</option>`).join('')}</select></label>
   </form>`,
@@ -4939,7 +5347,7 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     // shorter and the scroll position clamped. Hold the old height until the cards are back.
     const held = document.getElementById('ws-stage')?.offsetHeight || 0;
     document.getElementById('ws-stage').outerHTML =
-      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div>`;
+      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${aipmScreen(a) ? '' : wsStage(a)}</div>`;
     const next = document.getElementById('ws-stage');
     if (next && held) {
       next.style.minHeight = `${held}px`;
@@ -5120,6 +5528,116 @@ function openChat(role, prefill = '') {
     input.focus();
   }
 }
+// Opens a colleague's conversation and sends the question through its bound composer, the same
+// path a typed question takes (pending requests, retries and the real reply stay with it). A draft
+// or attachment already there is kept and nothing is sent. Resolves whether it was accepted.
+async function askColleague(a, person, question) {
+  const attemptId = a.id;
+  openChat(person);
+  // Let the existing native slot bind its permissions and composer. It owns submission,
+  // pending requests, retries and the eventual real reply; no alternate send API is added.
+  for (let i = 0; i < 100; i += 1) {
+    if (current()?.id !== attemptId || ui.chatRole !== person) return false;
+    const form = document.querySelector('.composer');
+    const input = document.getElementById('chat-input');
+    const send = form?.querySelector('button[type="submit"]');
+    if (
+      form &&
+      input &&
+      send &&
+      !send.disabled &&
+      form.dataset.rolesBound === ROLE_ID[person]
+    ) {
+      if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
+        notify(
+          T(
+            '你的草稿和引用已保留。先处理它们，再点建议问题。',
+            'Your draft and attachment are safe. Send or clear them before choosing a suggested question.',
+          ),
+        );
+        return false;
+      }
+      // Submit synchronously through the bound owner. Its send method saves the draft;
+      // a synthetic input event here could remount the form before submit.
+      input.value = question;
+      return await new Promise((resolve) => {
+        const token = crypto.randomUUID();
+        let revised = false;
+        const changed = (event) => {
+          if (
+            current()?.id === attemptId &&
+            ui.chatRole === person &&
+            event.target.id === 'chat-input'
+          )
+            revised = true;
+        };
+        const cleanup = () => {
+          clearTimeout(timeout);
+          document.removeEventListener('input', changed, true);
+          form.removeEventListener('rolecraft:greeting-result', settled);
+        };
+        const settled = async (event) => {
+          if (event.detail?.token !== token) return;
+          clearTimeout(timeout);
+          form.removeEventListener('rolecraft:greeting-result', settled);
+          try {
+            if (event.detail.accepted && !revised) {
+              const host = L.v4Host(a);
+              const key = `question:${ROLE_ID[person]}`;
+              if (host?.draft('roles', key) === question)
+                await host.keepDraft('roles', key, '');
+              const liveInput = document.getElementById('chat-input');
+              if (
+                !revised &&
+                current()?.id === attemptId &&
+                ui.chatRole === person &&
+                liveInput?.value === question
+              )
+                liveInput.value = '';
+            }
+            resolve(!!event.detail.accepted);
+          } catch (error) {
+            notify(errText(error));
+            resolve(false);
+          } finally {
+            cleanup();
+          }
+        };
+        const timeout = setTimeout(() => {
+          cleanup();
+          resolve(false);
+        }, 25000);
+        document.addEventListener('input', changed, true);
+        form.addEventListener('rolecraft:greeting-result', settled);
+        form.dataset.greetingRequest = token;
+        form.requestSubmit(send);
+      });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  notify(
+    T(
+      '对话还没就绪，请稍后再点这个问题。',
+      'The conversation is not ready yet. Try the question again shortly.',
+    ),
+  );
+  return false;
+}
+// Reading is a counted business action on the server; record the first read of each version only.
+async function recordRead(a, id, m = E.getMaterials(a).find((x) => x.id === id)) {
+  if (m) a.acks = [...new Set([...(a.acks || []), `read-${id}-v${m.version}`])];
+  const readKey = id + '@' + (m ? m.version : 0);
+  a.readSent = Array.isArray(a.readSent) ? a.readSent : [];
+  if (!a.readSent.includes(readKey) || !m?.body) {
+    try {
+      await L.read(a, id);
+      a.readSent.push(readKey);
+      persist();
+    } catch (err) {
+      notify(errText(err));
+    }
+  }
+}
 // Inside a task a document opens beside the work; from the board it opens on its own page.
 async function openMaterial(id, compare = false) {
   const a = current();
@@ -5146,18 +5664,7 @@ async function openMaterial(id, compare = false) {
     ui.compare = false;
     refreshWS(['overlay', 'toolbar']);
   }
-  // Reading is a counted business action on the server; record the first read of each version only.
-  const readKey = id + '@' + (m ? m.version : 0);
-  a.readSent = Array.isArray(a.readSent) ? a.readSent : [];
-  if (!a.readSent.includes(readKey) || !m?.body) {
-    try {
-      await L.read(a, id);
-      a.readSent.push(readKey);
-      persist();
-    } catch (err) {
-      notify(errText(err));
-    }
-  }
+  await recordRead(a, id, m);
   if (m && m.version > 1 && !ui.previous[id]) {
     try {
       // The version before, read without recording a read (as the change band does).
@@ -6406,6 +6913,9 @@ async function act(el, ev = new Event('rc-action')) {
     case 'to-entry':
       go('pm', { transition: true });
       break;
+    case 'to-workbench':
+      toWorkbench();
+      break;
     case 'to-board':
     case 'to-work':
       go('work', { transition: true });
@@ -6823,104 +7333,13 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     case 'greet-ask': {
       const person = el.dataset.role;
-      const attemptId = a.id;
       await Greetings.askGreeting(
         a.id,
         hatHere(a) === 'engineer' ? 'engineer' : 'pm',
         person,
         Number(el.dataset.question),
         locale(),
-        async (question) => {
-          openChat(person);
-          // Let the existing native slot bind its permissions and composer. It owns submission,
-          // pending requests, retries and the eventual real reply; no alternate send API is added.
-          for (let i = 0; i < 100; i += 1) {
-            if (current()?.id !== attemptId || ui.chatRole !== person) return false;
-            const form = document.querySelector('.composer');
-            const input = document.getElementById('chat-input');
-            const send = form?.querySelector('button[type="submit"]');
-            if (
-              form &&
-              input &&
-              send &&
-              !send.disabled &&
-              form.dataset.rolesBound === ROLE_ID[person]
-            ) {
-              if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
-                notify(
-                  T(
-                    '你的草稿和引用已保留。先处理它们，再点建议问题。',
-                    'Your draft and attachment are safe. Send or clear them before choosing a suggested question.',
-                  ),
-                );
-                return false;
-              }
-              // Submit synchronously through the bound owner. Its send method saves the draft;
-              // a synthetic input event here could remount the form before submit.
-              input.value = question;
-              return await new Promise((resolve) => {
-                const token = crypto.randomUUID();
-                let revised = false;
-                const changed = (event) => {
-                  if (
-                    current()?.id === attemptId &&
-                    ui.chatRole === person &&
-                    event.target.id === 'chat-input'
-                  )
-                    revised = true;
-                };
-                const cleanup = () => {
-                  clearTimeout(timeout);
-                  document.removeEventListener('input', changed, true);
-                  form.removeEventListener('rolecraft:greeting-result', settled);
-                };
-                const settled = async (event) => {
-                  if (event.detail?.token !== token) return;
-                  clearTimeout(timeout);
-                  form.removeEventListener('rolecraft:greeting-result', settled);
-                  try {
-                    if (event.detail.accepted && !revised) {
-                      const host = L.v4Host(a);
-                      const key = `question:${ROLE_ID[person]}`;
-                      if (host?.draft('roles', key) === question)
-                        await host.keepDraft('roles', key, '');
-                      const liveInput = document.getElementById('chat-input');
-                      if (
-                        !revised &&
-                        current()?.id === attemptId &&
-                        ui.chatRole === person &&
-                        liveInput?.value === question
-                      )
-                        liveInput.value = '';
-                    }
-                    resolve(!!event.detail.accepted);
-                  } catch (error) {
-                    notify(errText(error));
-                    resolve(false);
-                  } finally {
-                    cleanup();
-                  }
-                };
-                const timeout = setTimeout(() => {
-                  cleanup();
-                  resolve(false);
-                }, 25000);
-                document.addEventListener('input', changed, true);
-                form.addEventListener('rolecraft:greeting-result', settled);
-                form.dataset.greetingRequest = token;
-                form.requestSubmit(send);
-              });
-            }
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-          notify(
-            T(
-              '对话还没就绪，请稍后再点这个问题。',
-              'The conversation is not ready yet. Try the question again shortly.',
-            ),
-          );
-          return false;
-        },
+        (question) => askColleague(a, person, question),
       );
       break;
     }
@@ -6967,6 +7386,26 @@ async function act(el, ev = new Event('rc-action')) {
     case 'practice-continue':
       await choosePractice(a, 'continue_revision', null);
       break;
+    case 'aipm-prd-toggle': {
+      const prd = Aipm.prdOf(a),
+        role = el.dataset.role;
+      if (prd) prdChoice.set(`${a.id}:${role}:${prd.version}`, !prdAttached(a, role, prd));
+      refreshWS(['rail']);
+      break;
+    }
+    case 'aipm-detail-insert': {
+      const key = `${a.id}:${el.dataset.role}`,
+        detail = reviewDetails.get(key),
+        input = document.getElementById('chat-input');
+      reviewDetails.delete(key);
+      if (detail && input) {
+        input.value = `${input.value.trimEnd()}\n\n${detail}`;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+      }
+      el.remove();
+      break;
+    }
     case 'drop-quote': {
       if (ui.chatRole) delete ui.chatQuotes[quoteKey(a, ui.chatRole)];
       refreshWS(['rail']);
@@ -7809,6 +8248,12 @@ document.addEventListener('keydown', (e) => {
       go('work');
       return;
     }
+    const typing = e.target?.closest?.('input, textarea, select, [contenteditable="true"]');
+    if (!typing && ui.route !== 'work' && awayFrom(current())) {
+      e.preventDefault();
+      toWorkbench();
+      return;
+    }
   }
   if (
     e.altKey &&
@@ -8102,7 +8547,12 @@ Board.installWalkThrough({
     if (hatHere(current()) === 'pm' && ui.route !== 'work') go('work');
     else refreshWS(['toolbar', 'rail', 'stage']);
   },
-  finish: (id) => Greetings.finishArrivals(id),
+  finish: (id) => {
+    Greetings.finishArrivals(id);
+    // The sheet pile's first hint was held back during the walk-through: give it its turn.
+    const a = current();
+    if (a?.id === id && document.querySelector('[data-island="aipm-stack"]')) mountProgress(a);
+  },
   openTicket: async () => {
     const a = current(), id = ui.routeId?.split('?')[0];
     if (!a || !id) return;
@@ -8233,23 +8683,44 @@ installEngineer({
   notify,
   download,
 });
+// The topbar lamp's words and drawn state, from the one connection the agent line reports.
+function lampText(c) {
+  const state = lightState(c);
+  const label =
+    c.state === 'none'
+      ? T('连接 Agent', 'Connect agent')
+      : c.state === 'waiting'
+        ? T('等待 Agent', 'Waiting for agent')
+        : state === 'reachable'
+          ? T('已连通', 'Reachable')
+          : c.client || T('我的 Agent', 'My agent');
+  const title =
+    state === 'reachable'
+      ? T(
+          '我的 Agent · 配置已写好；已经开着的会话要重启或在 /mcp 里重连才能用上',
+          'My agent · Setup written; a session that was already open must restart or reconnect in /mcp',
+        )
+      : c.state === 'idle' && c.lastSeen
+        ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`)
+        : T('我的 Agent', 'My agent');
+  return { label, title, state };
+}
 onAgentConnection(() => {
   if (inPractice()) {
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'rail']);
     else {
       const c = agentConnection();
       const lamp = document.querySelector('.agent-lamp');
-      const label = c.state === 'none' ? T('连接 Agent', 'Connect agent') : c.state === 'waiting' ? T('等待 Agent', 'Waiting for agent') : c.client || T('我的 Agent', 'My agent');
-      const title = c.state === 'idle' && c.lastSeen ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`) : T('我的 Agent', 'My agent');
+      const { label, title, state } = lampText(c);
       if (lamp) {
-        lamp.dataset.state = c.state;
+        lamp.dataset.state = state;
         lamp.title = title;
         lamp.setAttribute('aria-label', `${title}: ${label}`);
         const text = lamp.querySelector('.lamp-label');
         if (text) text.textContent = label;
       }
       for (const light of document.querySelectorAll('.agent-lamp .rc-agent-light, .person.mine .rc-agent-light')) {
-        light.dataset.state = c.state;
+        light.dataset.state = state;
         if (light.getAttribute('role') === 'img') light.setAttribute('aria-label', c.state === 'connected' ? T('已连接', 'Connected') : T('未连接或空闲', 'Not connected or idle'));
       }
     }
@@ -8283,7 +8754,7 @@ Board.installBoard({
       Board.noteBriefRead(a.id);
       Board.captureBoard();
     }
-    refreshWS(['overlay', 'stage']);
+    refreshWS(['overlay', 'stage', 'toolbar']);
     if (rolls) Board.playBoard();
   },
   openRecords: () => boardSettle(),

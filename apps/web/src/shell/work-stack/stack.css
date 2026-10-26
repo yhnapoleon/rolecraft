@@ -1,0 +1,717 @@
+/* The work stack: real paper on the desk, warm brown shadows, one quiet amber for what waits.
+ * Segment colours are three low-saturation notes of the warm light (sand, slate, sage), never a
+ * new accent. Values follow the v2 wireframe (192-AIPM体验层v2-线框), as tokens here. */
+:root {
+  --seg-clarify: #c8b597;
+  --seg-design: #9cadbf;
+  --seg-verify: #9db79f;
+  /* What waits is the site's own warning colour; text on it is chosen per theme. */
+  --stack-amber: var(--warn);
+  --stack-amber-ink: #fff;
+  --stack-shadow:
+    0 0 0 0.5px var(--line-2), inset 0 0.5px 0 rgba(255, 255, 255, 0.8),
+    0 1px 1px rgba(60, 40, 20, 0.08), 0 6px 14px -6px rgba(60, 40, 20, 0.25);
+  --stack-thumb-shadow: 0 0 0 0.5px var(--line-2), 0 4px 10px -3px rgba(60, 40, 20, 0.28);
+  --stack-pop: rgba(250, 247, 242, 0.86);
+  --stack-pop-shadow:
+    0 0 0 0.5px rgba(60, 40, 20, 0.1), 0 12px 32px -8px rgba(60, 40, 20, 0.28),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
+  --stack-scrim: rgba(40, 28, 14, 0.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --seg-clarify: #b9a483;
+    --seg-design: #8fa2bb;
+    --seg-verify: #94ad8f;
+    --stack-amber-ink: #1d1712;
+    --stack-paper: #3a342e;
+    --stack-shadow:
+      0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+      0 4px 10px -3px rgba(0, 0, 0, 0.55);
+    --stack-thumb-shadow:
+      0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+      0 6px 14px -6px rgba(0, 0, 0, 0.6);
+    --stack-pop: rgba(38, 34, 30, 0.84);
+    --stack-pop-shadow:
+      0 0 0 0.5px rgba(255, 248, 236, 0.1), 0 14px 32px -10px rgba(0, 0, 0, 0.6),
+      inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+    --stack-scrim: rgba(0, 0, 0, 0.2);
+  }
+}
+:root[data-theme="dark"] {
+  --seg-clarify: #b9a483;
+  --seg-design: #8fa2bb;
+  --seg-verify: #94ad8f;
+  --stack-amber-ink: #1d1712;
+  --stack-paper: #3a342e;
+  --stack-shadow:
+    0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+    0 4px 10px -3px rgba(0, 0, 0, 0.55);
+  --stack-thumb-shadow:
+    0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+    0 6px 14px -6px rgba(0, 0, 0, 0.6);
+  --stack-pop: rgba(38, 34, 30, 0.84);
+  --stack-pop-shadow:
+    0 0 0 0.5px rgba(255, 248, 236, 0.1), 0 14px 32px -10px rgba(0, 0, 0, 0.6),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+  --stack-scrim: rgba(0, 0, 0, 0.2);
+}
+
+.ws-stack {
+  position: relative;
+  width: 96px;
+  color: var(--ink);
+  font-family: var(--sans);
+}
+[data-segment="clarify"] {
+  --seg: var(--seg-clarify);
+}
+[data-segment="design"] {
+  --seg: var(--seg-design);
+}
+[data-segment="verify"] {
+  --seg: var(--seg-verify);
+}
+[data-segment="free"],
+[data-segment="material"] {
+  --seg: var(--line-2);
+}
+
+/* ---------- the pile ---------- */
+.ws-stack__pile {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 96px;
+  padding: 6px 0 4px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.ws-stack__pile:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.ws-stack__papers {
+  position: relative;
+  display: block;
+  width: 64px;
+  height: 64px;
+}
+.ws-stack__paper {
+  position: absolute;
+  left: 10px;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 56px;
+  border-radius: 5px;
+  background: var(--stack-paper, var(--paper));
+  box-shadow: var(--stack-shadow);
+  color: var(--ink-2);
+  overflow: hidden;
+  transition: transform var(--mid) var(--spring);
+}
+.ws-stack[data-kind="materials"] .ws-stack__paper {
+  background: color-mix(in srgb, var(--paper) 92%, var(--seg-clarify));
+}
+.ws-stack__paper--back {
+  transform: translate(-6px, 2px) rotate(-9deg);
+}
+.ws-stack__paper--mid {
+  transform: translate(6px, 0) rotate(6deg);
+}
+.ws-stack__paper--top::before,
+.ws-stack__thumb::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  border-radius: 5px 5px 0 0;
+  background: var(--seg);
+}
+.ws-stack__thumb::before {
+  height: 5px;
+}
+.ws-stack[data-kind="materials"] .ws-stack__paper--top::before {
+  display: none;
+}
+.ws-stack__pile:hover .ws-stack__paper--back,
+.ws-stack[data-open="preview"] .ws-stack__paper--back {
+  transform: translate(-8px, 2px) rotate(-11deg);
+}
+.ws-stack__pile:hover .ws-stack__paper--mid,
+.ws-stack[data-open="preview"] .ws-stack__paper--mid {
+  transform: translate(8px, -1px) rotate(8deg);
+}
+.ws-stack__pile:hover .ws-stack__paper--top {
+  transform: translateY(-2px);
+}
+.ws-stack__pile[data-hint] .ws-stack__papers {
+  animation: ws-stack-lift 900ms var(--spring) 400ms 1 both;
+}
+@keyframes ws-stack-lift {
+  0%,
+  100% {
+    transform: none;
+  }
+  40% {
+    transform: translateY(-7px);
+  }
+}
+.ws-stack__badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--stack-amber);
+  box-shadow: 0 0 0 2px var(--canvas);
+  color: var(--stack-amber-ink);
+  font: 700 11px / 1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.ws-stack__agent {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--p-agent);
+  box-shadow: 0 0 0 2px var(--canvas);
+  color: var(--canvas);
+}
+.ws-stack__caption {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+.ws-stack__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.ws-stack__status {
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.ws-stack__hint {
+  position: absolute;
+  left: calc(100% + 6px);
+  bottom: 52px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--on-primary);
+  font-size: 12px;
+  white-space: nowrap;
+  animation: ws-stack-hint 4.2s ease both;
+  pointer-events: none;
+}
+@keyframes ws-stack-hint {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 1;
+  }
+}
+
+/* Pinned reads differently from a preview: an ink ring round the pile. */
+.ws-stack[data-open="pinned"] .ws-stack__pile {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+/* ---------- open ---------- */
+.ws-stack__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--stack-scrim);
+}
+.ws-stack__panel {
+  position: absolute;
+  z-index: 2;
+  left: 2px;
+  bottom: 100%;
+  /* The gap to the pile belongs to the panel, so a pointer crossing it stays inside. */
+  padding-bottom: 14px;
+}
+/* The fan reads over a patch of frosted canvas instead of a dimmed page: whatever is behind
+ * blurs away, so no label ever sits on legible text. */
+.ws-stack__panel--fan::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -28px -40px -12px -20px;
+  border-radius: 28px;
+  background: color-mix(in oklab, var(--canvas) 62%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-mask-image: radial-gradient(170% 150% at 0% 100%, #000 62%, transparent 96%);
+  mask-image: radial-gradient(170% 150% at 0% 100%, #000 62%, transparent 96%);
+  pointer-events: none;
+}
+.ws-stack__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  white-space: nowrap;
+}
+.ws-stack__head-title,
+.ws-stack__head-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--paper);
+  box-shadow:
+    0 0 0 0.5px var(--line-2),
+    0 0.5px 1.5px rgba(29, 29, 31, 0.1);
+  color: var(--ink);
+  font: 600 12.5px / 1 var(--sans);
+}
+.ws-stack__head-title {
+  background: var(--stack-pop);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  box-shadow: var(--stack-pop-shadow);
+  font-size: 13px;
+  font-weight: 700;
+}
+.ws-stack__head-action {
+  cursor: pointer;
+}
+.ws-stack__head-action[data-plus] {
+  background: var(--stack-pop);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  box-shadow: none;
+  color: var(--ink-2);
+}
+.ws-stack__head-action:hover {
+  color: var(--ink);
+}
+.ws-stack__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ws-stack__row {
+  display: grid;
+  justify-items: start;
+}
+.ws-stack__segment {
+  justify-self: start;
+  margin: 6px 0 2px 2px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--canvas) 85%, transparent);
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.ws-stack__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transform-origin: left center;
+  transition: transform var(--mid) var(--spring);
+}
+.ws-stack__item:hover,
+.ws-stack__item:focus-visible {
+  outline: none;
+  transform: translateY(-4px) scale(1.04);
+}
+.ws-stack__thumb {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 52px;
+  border-radius: 5px;
+  background: var(--stack-paper, var(--paper));
+  box-shadow: var(--stack-thumb-shadow);
+  rotate: var(--tilt, 0deg);
+  color: var(--ink-2);
+}
+.ws-stack__dot {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--ink-4);
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 0 0 2px var(--paper);
+  color: #fff;
+  font: 700 10px / 1 var(--sans);
+}
+.ws-stack__dot[data-status="draft"] {
+  border-color: var(--ink-2);
+  background: linear-gradient(90deg, var(--ink-2) 50%, var(--paper) 50%);
+}
+.ws-stack__dot[data-status="based"] {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.ws-stack__dot[data-status="solid"] {
+  border-color: var(--good);
+  background: var(--good);
+}
+.ws-stack__dot[data-status="recheck"] {
+  border-color: var(--stack-amber);
+  background: var(--stack-amber);
+  color: var(--stack-amber-ink);
+}
+.ws-stack__agent--thumb {
+  bottom: -6px;
+  left: -6px;
+  width: 15px;
+  height: 15px;
+}
+.ws-stack__label {
+  position: relative;
+  display: grid;
+  min-width: 210px;
+  max-width: 300px;
+  padding: 6px 12px 7px;
+  border-radius: 10px;
+  background: var(--stack-pop);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  box-shadow: var(--stack-pop-shadow);
+  transition: box-shadow var(--fast) var(--ease-out);
+}
+.ws-stack__item:hover .ws-stack__label,
+.ws-stack__item:focus-visible .ws-stack__label {
+  box-shadow:
+    0 0 0 1.5px var(--ink),
+    var(--stack-pop-shadow);
+}
+.ws-stack__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.ws-stack__tag {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--ink);
+  color: var(--on-primary);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.ws-stack__state {
+  margin-top: 1px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.ws-stack__state[data-status="recheck"] {
+  color: var(--stack-amber);
+  font-weight: 600;
+}
+.ws-stack__state[data-status="solid"] {
+  color: var(--good);
+  font-weight: 600;
+}
+/* What it is for and what is missing: a card beside the one pointed at, so nothing above it
+ * moves. */
+.ws-stack__more {
+  position: absolute;
+  z-index: 1;
+  left: calc(100% + 10px);
+  top: 50%;
+  width: max-content;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  /* Solid paper: it sits inside the frosted label, where a second blur cannot see the page. */
+  background: var(--paper);
+  box-shadow: var(--stack-pop-shadow);
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-4px, -50%);
+  transition:
+    opacity var(--fast) var(--ease-out),
+    transform var(--fast) var(--ease-out);
+}
+.ws-stack__item:hover .ws-stack__more,
+.ws-stack__item:focus-visible .ws-stack__more {
+  opacity: 1;
+  transform: translate(0, -50%);
+  transition-delay: 80ms;
+}
+
+/* ---------- grid: short windows, many sheets ---------- */
+.ws-stack__panel--grid {
+  left: 0;
+  width: 360px;
+}
+.ws-stack__panel--grid .ws-stack__list {
+  max-height: calc(var(--room, 60vh) - 60px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--shadow-float);
+}
+.ws-stack__panel--grid .ws-stack__item {
+  position: relative;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 6px 8px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: 0 0 0 0.5px var(--line);
+  transform-origin: center;
+}
+.ws-stack__panel--grid .ws-stack__item:hover,
+.ws-stack__panel--grid .ws-stack__item:focus-visible {
+  box-shadow: 0 0 0 1.5px var(--ink);
+  transform: translateY(-2px);
+}
+.ws-stack__panel--grid .ws-stack__item .ws-stack__thumb {
+  width: 30px;
+  height: 38px;
+  rotate: none;
+}
+.ws-stack__panel--grid .ws-stack__item > .ws-stack__dot {
+  top: 6px;
+  right: 6px;
+  bottom: auto;
+  width: 14px;
+  height: 14px;
+  font-size: 8px;
+  box-shadow: none;
+}
+.ws-stack__panel--grid .ws-stack__item .ws-stack__label {
+  min-width: 0;
+  max-width: none;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  text-align: center;
+}
+.ws-stack__panel--sheet .ws-stack__item .ws-stack__label {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.ws-stack__panel--grid .ws-stack__item:hover .ws-stack__label,
+.ws-stack__panel--grid .ws-stack__item:focus-visible .ws-stack__label {
+  box-shadow: none;
+}
+.ws-stack__panel--grid .ws-stack__name {
+  justify-content: center;
+  flex-wrap: wrap;
+  text-wrap: balance;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.ws-stack__panel--grid .ws-stack__tag {
+  display: none;
+}
+.ws-stack__panel--grid .ws-stack__state {
+  font-size: 11px;
+}
+
+/* ---------- phone: a capsule and a bottom sheet ---------- */
+.ws-stack[data-layout="sheet"] {
+  width: auto;
+}
+.ws-stack[data-layout="sheet"] .ws-stack__pile {
+  width: auto;
+  padding: 0;
+  border-radius: 999px;
+}
+.ws-stack__capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: var(--stack-pop);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  box-shadow: var(--stack-pop-shadow);
+  font-size: 13px;
+  font-weight: 600;
+}
+.ws-stack__capsule .ws-stack__badge {
+  position: static;
+  box-shadow: none;
+}
+.ws-stack__panel--sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 72vh;
+  overflow: auto;
+  padding: 16px 16px calc(14px + env(safe-area-inset-bottom));
+  border-radius: 18px 18px 0 0;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--shadow-float);
+}
+.ws-stack__panel--sheet::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: -6px auto 12px;
+  border-radius: 2px;
+  background: var(--line-2);
+}
+.ws-stack[data-layout="sheet"]:not([data-open="closed"]) .ws-stack__pile {
+  opacity: 0;
+  pointer-events: none;
+}
+.ws-stack__panel--sheet .ws-stack__head {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+.ws-stack__panel--sheet .ws-stack__item {
+  width: 100%;
+  transform: none;
+}
+.ws-stack__panel--sheet .ws-stack__item .ws-stack__more {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin-top: 2px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  opacity: 1;
+  transform: none;
+}
+.ws-stack__sheet-close {
+  width: 100%;
+  height: 44px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--fill);
+  color: var(--ink);
+  font: 600 14px var(--sans);
+}
+
+/* 1200–1439: the pile shows its icon and badge, not its words. */
+@media (max-width: 1439px) {
+  .ws-stack__caption {
+    display: none;
+  }
+  .ws-stack,
+  .ws-stack__pile {
+    width: 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-stack__paper,
+  .ws-stack__item,
+  .ws-stack__more {
+    transition: none;
+  }
+  .ws-stack__pile:hover .ws-stack__paper--back,
+  .ws-stack[data-open="preview"] .ws-stack__paper--back {
+    transform: translate(-6px, 2px) rotate(-9deg);
+  }
+  .ws-stack__pile:hover .ws-stack__paper--mid,
+  .ws-stack[data-open="preview"] .ws-stack__paper--mid {
+    transform: translate(6px, 0) rotate(6deg);
+  }
+  .ws-stack__pile:hover .ws-stack__paper--top {
+    transform: none;
+  }
+  .ws-stack__item:hover,
+  .ws-stack__item:focus-visible {
+    transform: none;
+  }
+  .ws-stack__pile[data-hint] .ws-stack__papers {
+    animation: none;
+  }
+}
+
+/* Shared paper geometry, scoped so the outer route's transitions keep their own timing. */
+html[data-aipm-flying]::view-transition-group(aipm-paper) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease-out);
+}
+html[data-aipm-flying]::view-transition-old(root),
+html[data-aipm-flying]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-aipm-flying]::view-transition-old(aipm-paper),
+html[data-aipm-flying]::view-transition-new(aipm-paper) {
+  animation-duration: 280ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-aipm-flying]::view-transition-group(aipm-paper) {
+    animation: none;
+  }
+}

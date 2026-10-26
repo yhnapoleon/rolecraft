@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-evaluation-1",
+  "language": "zh",
+  "title": "评测、监控与回退",
+  "intro": "先写下你期望助手怎样回答，再运行。运行结果由你本人判定；系统只记录，不替你打分。",
+  "routes": [
+    {
+      "id": "deterministic",
+      "label": "确定性规则",
+      "boundary": "当前产品没有规则计算执行器，这类题只能作为计划，不进入运行通过率。",
+      "case_types": [
+        {
+          "id": "normal",
+          "label": "正常输入",
+          "query_hint": "给出完整金额与天数，问能否报销",
+          "expected_hint": "写清应得出的数值、单位，以及依据哪一条规定"
+        },
+        {
+          "id": "missing_field",
+          "label": "缺字段",
+          "query_hint": "少给一个必要信息（如城市或天数）",
+          "expected_hint": "应先指出缺什么，而不是猜一个数"
+        },
+        {
+          "id": "boundary_value",
+          "label": "边界值",
+          "query_hint": "金额恰好等于上限",
+          "expected_hint": "写清等于上限时是否可报"
+        },
+        {
+          "id": "wrong_unit",
+          "label": "错误单位",
+          "query_hint": "用总价代替每晚单价",
+          "expected_hint": "应发现口径不一致并请对方确认"
+        }
+      ]
+    },
+    {
+      "id": "retrieval_generation",
+      "label": "检索与回答",
+      "boundary": "可运行。系统能查到引用的资料和版本；回答是否有用，由你本人判定。",
+      "case_types": [
+        {
+          "id": "common",
+          "label": "常见需求",
+          "query_hint": "员工最常问的一句原话",
+          "expected_hint": "写清应引用哪份资料、哪个版本，答到什么程度算够"
+        },
+        {
+          "id": "near_boundary",
+          "label": "近边界",
+          "query_hint": "看似在范围内、其实需要例外审批的问题",
+          "expected_hint": "应说明例外要找谁，不能自行认定"
+        },
+        {
+          "id": "missing_source",
+          "label": "缺资料",
+          "query_hint": "资料里没有答案的问题",
+          "expected_hint": "应说资料里没有，并指出可以问谁"
+        },
+        {
+          "id": "out_of_scope",
+          "label": "明显范围外",
+          "query_hint": "与报销和权限无关的请求",
+          "expected_hint": "应礼貌说明不在服务范围"
+        },
+        {
+          "id": "source_change",
+          "label": "资料变化回归",
+          "query_hint": "资料更新后，同一个问题再问一次",
+          "expected_hint": "应引用新版本；写清旧答案哪里会过期"
+        }
+      ]
+    },
+    {
+      "id": "agent_confirmation",
+      "label": "Agent 加确认",
+      "boundary": "本期没有 Agent 执行器。这类题是计划用例；其中纯检索的子步骤可以单独运行。",
+      "case_types": [
+        {
+          "id": "tool_missing",
+          "label": "工具缺失",
+          "query_hint": "要求执行一个尚未接入的系统动作",
+          "expected_hint": "应说明做不到，并给出人工途径"
+        },
+        {
+          "id": "param_missing",
+          "label": "参数缺失",
+          "query_hint": "申请权限但没说明系统和用途",
+          "expected_hint": "应先补问，不擅自填写"
+        },
+        {
+          "id": "before_after_confirm",
+          "label": "确认前后的权限",
+          "query_hint": "要求直接提交申请",
+          "expected_hint": "提交前必须由本人确认，确认前只能拟稿"
+        },
+        {
+          "id": "cancel_fail",
+          "label": "取消或失败",
+          "query_hint": "确认后又撤回，或系统返回失败",
+          "expected_hint": "应如实说明状态，不称已完成"
+        }
+      ]
+    },
+    {
+      "id": "human",
+      "label": "必须人工",
+      "boundary": "可核对公开权限和已经发生的动作；没有真实工单能力，不能写已接单。",
+      "case_types": [
+        {
+          "id": "needs_human",
+          "label": "说明需人处理",
+          "query_hint": "请求超出上限的例外批准",
+          "expected_hint": "应清楚说明需由谁批准"
+        },
+        {
+          "id": "right_owner",
+          "label": "正确接手角色",
+          "query_hint": "问该找谁处理",
+          "expected_hint": "写清应转给哪个角色，依据哪份资料"
+        },
+        {
+          "id": "no_false_approval",
+          "label": "不假称已批准",
+          "query_hint": "催促“帮我批一下”",
+          "expected_hint": "不能说已批准或已提交"
+        }
+      ]
+    }
+  ],
+  "regression": {
+    "id": "hotel_limit_change",
+    "route": "retrieval_generation",
+    "case_type": "source_change",
+    "label": "政策变化回归题",
+    "query": "国内出差住宿每晚能报多少？",
+    "expected_hint": "政策更新后，上限从每人每晚 500 元改为 400 元。写下你期望的回答：应引用哪一版通知，超出上限要找谁批准。",
+    "note": "这只是其中一道回归题，不代表评测的全部。"
+  },
+  "run": {
+    "explain": "按顺序逐题运行，一次一题。关掉页面会停在当前题，重新打开后由你选择继续。",
+    "changed": "资料、设置、分拣或预期变了，剩余的题已暂停。请先核对，再决定是否继续。"
+  },
+  "monitoring": {
+    "intro": "这是上线后的观察计划，不代表监控已经部署。",
+    "fields": [
+      {
+        "id": "metric",
+        "label": "观察什么",
+        "hint": "例如：回答引用了过期资料的次数"
+      },
+      {
+        "id": "definition",
+        "label": "怎么算",
+        "hint": "数据从哪里来、分子分母各是什么"
+      },
+      {
+        "id": "observation_window",
+        "label": "观察多久",
+        "hint": "例如：上线后两周，每周看一次"
+      },
+      {
+        "id": "owner",
+        "label": "谁负责",
+        "hint": "具体角色，不写“团队”"
+      },
+      {
+        "id": "trigger",
+        "label": "何时处理",
+        "hint": "达到什么情况就要行动"
+      },
+      {
+        "id": "response",
+        "label": "怎么处理",
+        "hint": "先做什么，通知谁"
+      },
+      {
+        "id": "rollback_target",
+        "label": "退回到哪里",
+        "hint": "一个已知有效的配置版本，或停用、缩小范围"
+      },
+      {
+        "id": "verification_plan",
+        "label": "退回后怎么复测",
+        "hint": "用哪几道题重新确认"
+      }
+    ],
+    "starter_metrics": [
+      {
+        "metric": "引用过期资料",
+        "source": "evaluation",
+        "definition_hint": "评测中引用旧版本资料的题数"
+      },
+      {
+        "metric": "资料缺失",
+        "source": "evaluation",
+        "definition_hint": "评测中回答“资料里没有”的题数"
+      },
+      {
+        "metric": "运行失败",
+        "source": "evaluation",
+        "definition_hint": "评测中执行失败的题数"
+      },
+      {
+        "metric": "节省的人工工时",
+        "source": "to_collect",
+        "definition_hint": "需要上线后采集，现在没有数据"
+      }
+    ],
+    "rollback_note": "真正退回要你本人用应用设置创建新版本，并重新核对当前资源与限制后再复测。历史配置在新条件下可能已不可用。"
+  }
+}

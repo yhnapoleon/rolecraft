@@ -1,0 +1,252 @@
+/* The compass: one 44px line under the toolbar. States share the stack's shapes:
+ * hollow · half · ink · green tick · amber "!" — never colour alone. */
+/* It stays at the top of the stage while the board or a sheet scrolls under it. */
+.aipm-compass {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 44px;
+  padding: 0 28px;
+  border-bottom: 0.5px solid var(--line);
+  background: color-mix(in oklab, var(--canvas) 78%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  color: var(--ink);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.aipm-compass__points {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: none;
+}
+.aipm-compass__segment {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.aipm-compass__rule {
+  width: 14px;
+  height: 1px;
+  margin-right: 7px;
+  background: var(--line-2);
+}
+.aipm-compass__segment-label {
+  margin-right: 2px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.aipm-compass__dot {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--ink-4);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-3);
+  font: 700 10px / 1 var(--sans);
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--fast) var(--ease-out);
+}
+.aipm-compass__dot[data-status="draft"] {
+  border-color: var(--ink-2);
+  background: linear-gradient(90deg, var(--ink-2) 50%, transparent 50%);
+  color: transparent;
+}
+.aipm-compass__dot[data-status="based"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-primary);
+}
+.aipm-compass__dot[data-status="solid"] {
+  border-color: var(--good);
+  background: var(--good);
+  color: #fff;
+}
+.aipm-compass__dot[data-status="recheck"] {
+  border-color: var(--stack-amber, var(--warn));
+  background: color-mix(in srgb, var(--stack-amber, var(--warn)) 12%, transparent);
+  color: var(--stack-amber, var(--warn));
+}
+.aipm-compass__point {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.aipm-compass__point:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.aipm-compass__point:hover .aipm-compass__dot {
+  transform: scale(1.12);
+}
+.aipm-compass__point[aria-current] .aipm-compass__dot {
+  box-shadow:
+    0 0 0 2px var(--canvas),
+    0 0 0 3.5px var(--ink);
+}
+.aipm-compass__agent {
+  position: absolute;
+  top: -1px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--p-agent);
+  box-shadow: 0 0 0 1.5px var(--canvas);
+  color: var(--canvas);
+}
+.aipm-compass__next {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-left: 16px;
+  border-left: 0.5px solid var(--line-2);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.aipm-compass__next-label {
+  flex: none;
+  color: var(--ink-3);
+}
+.aipm-compass__link {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.aipm-compass__link:hover {
+  color: var(--ink);
+}
+.aipm-compass__fixture {
+  flex: none;
+  color: var(--warn);
+  font-size: 12px;
+}
+.aipm-compass__prd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  padding: 4px 2px 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  font: 500 12.5px var(--sans);
+  cursor: pointer;
+}
+.aipm-compass__prd:hover {
+  color: var(--ink);
+  background: var(--fill);
+}
+.aipm-compass__here,
+.aipm-compass__list {
+  display: none;
+}
+
+/* Below 1200 the segment names go; below 768 one line says where you are. */
+@media (max-width: 1199px) {
+  .aipm-compass__segment-label {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .aipm-compass {
+    gap: 8px;
+  }
+  .aipm-compass__points,
+  .aipm-compass__next {
+    display: none;
+  }
+  .aipm-compass__here {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: 600 13.5px var(--sans);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .aipm-compass__list {
+    position: absolute;
+    z-index: 20;
+    top: 44px;
+    left: 0;
+    right: 0;
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 8px;
+    border-radius: 0 0 14px 14px;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: var(--shadow-float);
+    list-style: none;
+  }
+  .aipm-compass__list button {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    align-items: center;
+    column-gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--ink);
+    font: 500 14px var(--sans);
+    text-align: left;
+  }
+  .aipm-compass__list small {
+    grid-column: 2;
+    color: var(--ink-3);
+    font-size: 12px;
+  }
+  .aipm-compass__fixture {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-compass__dot {
+    transition: none;
+  }
+  .aipm-compass__point:hover .aipm-compass__dot {
+    transform: none;
+  }
+}

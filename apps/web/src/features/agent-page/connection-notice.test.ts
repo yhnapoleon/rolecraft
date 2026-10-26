@@ -5,11 +5,12 @@ const snap = (
   state: 'none' | 'connected' | 'idle',
   seq = 1,
   client: string | null = 'claude-code',
+  kind: 'connected' | 'tool_call' = 'tool_call',
 ): FeedSnapshot => ({
   loaded: true,
   liveFrom: 1,
   events: [],
-  rows: [{ seq, at: '2026-10-25T12:00:00Z', delegation_id: 'd1', kind: 'connected', status: 'ok' }],
+  rows: [{ seq, at: '2026-10-25T12:00:00Z', delegation_id: 'd1', kind, status: 'ok' }],
   connection: { state, client, last_seen: '2026-10-25T12:00:00Z' },
 });
 const storage = () => {
@@ -22,6 +23,20 @@ const storage = () => {
   };
 };
 describe('global MCP connection notice', () => {
+  it('stays quiet for a setup handshake and speaks at the first tool call', () => {
+    const texts: string[] = [];
+    const watch = createConnectionNotice(
+      'setup',
+      (t) => texts.push(t),
+      () => 'zh',
+      storage(),
+    );
+    watch(snap('none'));
+    watch(snap('connected', 2, 'claude-code', 'connected'));
+    expect(texts).toEqual([]);
+    watch(snap('connected', 3));
+    expect(texts).toEqual(['你的 Agent 已连接 · 来自 Claude Code']);
+  });
   it('notifies once on real connection, never on normal polls or a refresh', () => {
     const texts: string[] = [];
     const saved = storage();

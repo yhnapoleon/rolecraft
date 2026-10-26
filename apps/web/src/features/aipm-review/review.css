@@ -1,0 +1,646 @@
+/* Section review, drawn to the v2 wireframe (5-批改结果): two sheets of paper, the written
+ * section with numbered sentence marks, and the review. Rows and avatars keep the result
+ * page's classes; sizes and colours here follow the wireframe in project tokens. */
+.aipm-review {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.aipm-review__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.76fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.aipm-review__paper,
+.aipm-review__sheet {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 22px 24px;
+  border-radius: var(--r-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.aipm-review__sheet {
+  padding: 20px 22px;
+}
+.aipm-review__eyebrow,
+.aipm-review__meta {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.aipm-review__muted {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.aipm-review__title {
+  margin: 4px 0 12px;
+  font: 600 18px / 1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+/* What you wrote: one sentence per line, underlined by relation, a numbered mark at the end. */
+.aipm-review__written {
+  display: grid;
+  gap: 6px;
+}
+/* Headings and quotes look as on the worksheet, and are never numbered or marked. */
+.aipm-review__h {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font: 600 13px / 1.5 var(--sans);
+}
+.aipm-review {
+  --review-sand: color-mix(in srgb, var(--warn) 30%, var(--surface-3));
+}
+.aipm-review__quote {
+  margin: 4px 0;
+  padding: 6px 12px;
+  border-left: 2px solid var(--review-sand);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--review-sand) 12%, transparent);
+}
+.aipm-review__quote p {
+  margin: 0;
+  color: var(--ink-2);
+  font: 400 14px / 1.7 var(--serif);
+  white-space: pre-line;
+}
+.aipm-review__quote cite {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font: normal 400 11.5px / 1.5 var(--sans);
+}
+.aipm-review__plain {
+  display: grid;
+  gap: 6px;
+  font: 400 15px / 1.85 var(--serif);
+}
+.aipm-review__plain p {
+  margin: 0;
+}
+.aipm-review__sentences {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-review__sent {
+  position: relative;
+  padding-right: 26px;
+}
+.aipm-review__s {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 400 15px / 1.85 var(--serif);
+  text-align: start;
+  cursor: pointer;
+}
+.aipm-review__s:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--focus-ring);
+}
+.aipm-review__u {
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+  text-decoration-skip-ink: none;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+[data-tone="supported"] > .aipm-review__s .aipm-review__u {
+  text-decoration-color: var(--good);
+}
+[data-tone="contradicted"] > .aipm-review__s .aipm-review__u {
+  text-decoration-color: var(--bad);
+  background: var(--bad-tint);
+}
+[data-tone="insufficient"] > .aipm-review__s .aipm-review__u {
+  text-decoration-style: dotted;
+  text-decoration-color: var(--ink-3);
+}
+[data-tone="deferred"] > .aipm-review__s .aipm-review__u {
+  text-decoration-style: dashed;
+  text-decoration-color: var(--ink-3);
+}
+.aipm-review__n {
+  position: absolute;
+  top: 6px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font: 700 10px / 1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+[data-tone="supported"] > .aipm-review__n {
+  background: var(--good);
+  color: var(--on-primary);
+}
+[data-tone="contradicted"] > .aipm-review__n {
+  background: var(--bad);
+  color: var(--on-primary);
+}
+[data-tone="insufficient"] > .aipm-review__n {
+  box-shadow: inset 0 0 0 1.5px var(--ink-3);
+  color: var(--ink-3);
+}
+[data-tone="deferred"] > .aipm-review__n {
+  border: 1.5px dashed var(--ink-3);
+  color: var(--ink-3);
+}
+.aipm-review__src {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 4px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.aipm-review__src[hidden] {
+  display: none;
+}
+.aipm-review__src p {
+  margin: 0;
+}
+.aipm-review__src-where,
+.aipm-review__src-tone {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+.aipm-review__src-quote {
+  color: var(--ink-2);
+  font: 400 13.5px / 1.6 var(--serif);
+}
+[data-tone="contradicted"] .aipm-review__src-tone {
+  color: var(--bad);
+}
+.aipm-review__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 14px 0 6px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+.aipm-review__key i {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  margin-right: 4px;
+  border-top: 2px solid var(--ink-3);
+  vertical-align: 3px;
+}
+.aipm-review__key[data-tone="supported"] i {
+  border-top-color: var(--good);
+}
+.aipm-review__key[data-tone="contradicted"] i {
+  border-top-color: var(--bad);
+}
+.aipm-review__key[data-tone="insufficient"] i {
+  border-top-style: dotted;
+}
+.aipm-review__key[data-tone="deferred"] i {
+  border-top-style: dashed;
+}
+.aipm-review__unassigned {
+  margin-top: 8px;
+}
+.aipm-review__unassigned summary {
+  color: var(--ink-3);
+  font-size: 12px;
+  cursor: pointer;
+}
+.aipm-review__note {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--line);
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+/* The review: header, three-step track, comparison line, then blocks. */
+.aipm-review__head,
+.aipm-review__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.aipm-review__name {
+  margin: 0;
+  font: 600 17px / 1.3 var(--sans);
+}
+.aipm-review__head .aipm-review__meta {
+  margin-left: auto;
+}
+.aipm-review__chip,
+.aipm-review__step {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.aipm-review__steps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.aipm-review__step {
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.aipm-review__track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.aipm-review__track .aipm-review__step {
+  position: relative;
+  z-index: 1;
+}
+.aipm-review__knob {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  transition:
+    transform var(--slow) var(--spring),
+    width var(--slow) var(--spring);
+}
+.aipm-review__knob[data-still] {
+  transition: none;
+}
+.aipm-review__step[data-current] {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+}
+/* Once the knob is placed it carries the dark fill; the pill keeps only its light text. */
+.aipm-review__knob[style] ~ .aipm-review__step[data-current] {
+  background: transparent;
+}
+.aipm-review__step[data-looking] {
+  background:
+    linear-gradient(90deg, var(--fill) 0%, var(--fill-2) 50%, var(--fill) 100%) 0 0 / 200% 100%;
+  animation: aipm-review-shimmer 1.2s linear infinite;
+}
+@keyframes aipm-review-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-review__knob {
+    transition: none;
+  }
+  .aipm-review__step[data-looking] {
+    animation: none;
+  }
+}
+.aipm-review__step[data-passed] {
+  color: var(--ink);
+}
+.aipm-review__rule {
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  background: var(--line-2);
+}
+.aipm-review__hint {
+  margin-left: 8px;
+}
+.aipm-review__delta {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.aipm-review__delta b {
+  font-weight: 600;
+}
+.aipm-review__stale {
+  margin: 10px 0 0;
+  padding: 7px 12px;
+  border-radius: var(--r-md);
+  background: var(--warn-tint);
+  color: var(--ink);
+  font-size: 12.5px;
+}
+.aipm-review__part {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+.aipm-review__label {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Fix this first: the pink card. */
+.aipm-review__mis {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  font-size: 12.5px;
+}
+.aipm-review__mis[data-first] {
+  background: var(--bad-tint);
+}
+.aipm-review__mis p {
+  margin: 0;
+}
+.aipm-review__mis-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.aipm-review__mis-title {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.aipm-review__mis[data-first] .aipm-review__mis-title {
+  color: var(--bad);
+}
+.aipm-review__mis-body {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.aipm-review__mis-quote {
+  color: var(--ink-2);
+  font: 400 14px / 1.65 var(--serif);
+}
+.aipm-review__mis-line {
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.aipm-review__link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  background: none;
+  color: var(--ink-2);
+  font: 500 12px / 1.6 var(--sans);
+  text-align: start;
+  cursor: pointer;
+}
+
+/* Coverage: the result page's rows, flattened into the wireframe's ruled list with word pills. */
+.native-feedback .aipm-review__coverage {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 12.5px;
+}
+.aipm-review__coverage .fb-item {
+  border-bottom: 0.5px solid var(--line);
+}
+.aipm-review__coverage .fb-item + .fb-item {
+  box-shadow: none;
+}
+.native-feedback .aipm-review__coverage .fb-item__head {
+  grid-template-columns: 60px minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 6px 0;
+}
+.aipm-review__coverage .fb-item__name {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.aipm-review__coverage .fb-item__line {
+  font-size: 11.5px;
+}
+.aipm-review__coverage .fb-mark.aipm-review__pill {
+  justify-self: start;
+  width: auto;
+  height: auto;
+  margin-top: 0;
+  padding: 2px 9px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.aipm-review__coverage [data-coverage="wrong"] .aipm-review__pill {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.aipm-review__coverage [data-coverage="missing"] .aipm-review__pill {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.aipm-review__coverage [data-coverage="to_check"] .aipm-review__pill {
+  background: var(--fill);
+  color: var(--ink-2);
+}
+.aipm-review__coverage [data-coverage="covered"] .aipm-review__pill {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.aipm-review__coverage .btn.small {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* How colleagues would see it: three compact cards in the result page's person colours. */
+.aipm-review__mentors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
+  gap: 8px;
+}
+.aipm-review__angle {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.aipm-review__mentor[data-preset="none"] {
+  background: transparent;
+}
+.aipm-review__ask--light {
+  border-bottom-color: transparent;
+  color: var(--ink-2);
+}
+.aipm-review__ask--light:hover {
+  border-bottom-color: var(--line-2);
+}
+.aipm-review__mentor {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--line);
+  font-size: 12px;
+}
+.aipm-review__who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.aipm-review__who b {
+  font-weight: 600;
+}
+.aipm-review .aipm-review__mentor .result-colleague__avatar {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+}
+.aipm-review .aipm-review__question {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--ink-2);
+  font: 400 12.5px / 1.5 var(--serif);
+}
+.aipm-review__ask {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  background: none;
+  color: var(--ink);
+  font: 500 11.5px / 1.6 var(--sans);
+  cursor: pointer;
+}
+.aipm-review__part > .aipm-review__muted {
+  font-size: 11px;
+}
+
+.aipm-review__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.aipm-review__foot .aipm-review__muted {
+  flex: 1 1 16em;
+}
+.aipm-review__actions {
+  display: flex;
+  gap: 8px;
+}
+.aipm-review__actions .btn {
+  margin: 0;
+}
+@media (max-width: 960px) {
+  .aipm-review__grid,
+  .aipm-review__mentors {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .aipm-review__paper,
+  .aipm-review__sheet {
+    padding: 18px 16px;
+  }
+}
+
+/* The model's look: a quiet status line while it runs, and its verdicts marked as advice. */
+.aipm-review__model-status {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.aipm-review__model-status[data-model="running"]::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 1px;
+  animation: aipm-review-pulse 1.2s var(--ease) infinite alternate;
+}
+.aipm-review__model-status[data-model="failed"] {
+  color: var(--bad);
+}
+@keyframes aipm-review-pulse {
+  from {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-review__model-status[data-model="running"]::before {
+    animation: none;
+  }
+}
+.aipm-review__model-tag {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.6;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+.aipm-review__advised {
+  display: grid;
+  gap: 4px;
+  padding: 6px 0 0 10px;
+  border-left: 2px dashed var(--line-2);
+}
+.aipm-review__advised .aipm-review__model-tag {
+  justify-self: start;
+  margin-left: 0;
+}
+/* Rule lines at the review's scale (the result page sets them larger). */
+.aipm-review .rule-lines__item,
+.aipm-review .rule-lines__note {
+  font-size: 12.5px;
+}
+.aipm-review__mis-head .aipm-review__model-tag {
+  margin-left: auto;
+}

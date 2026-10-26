@@ -148,8 +148,8 @@ export const feedStore = {
 
 const OPENERS: Record<'pm' | 'engineer', Pair> = {
   pm: [
-    '读 RoleCraft 里的委托，起草第一批试点方案。',
-    'Read the brief in RoleCraft and draft a first-wave pilot plan.',
+    '读一下我的 RoleCraft 进度，告诉我下一步你能帮我做什么。',
+    'Read my RoleCraft progress and tell me what you can help with next.',
   ],
   engineer: [
     '读 RoleCraft 里的工程委托，复现问题，试一个修法并起草提交；不要签字。',

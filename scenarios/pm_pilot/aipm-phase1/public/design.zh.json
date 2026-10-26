@@ -1,0 +1,446 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-design-2",
+  "language": "zh",
+  "title": "需求与方案",
+  "intro": "先选一项需求，拆清动作和最终责任。保存方案不会执行工具或应用设置。",
+  "routes": [
+    {
+      "id": "deterministic",
+      "label": "确定性规则",
+      "description": "按确认的输入和规则计算或校验。"
+    },
+    {
+      "id": "retrieval_generation",
+      "label": "检索与回答",
+      "description": "找资料、解释流程，并说明出处与未知。"
+    },
+    {
+      "id": "agent_confirmation",
+      "label": "Agent 加确认",
+      "description": "组织多步工作，重要动作前由本人或指定角色确认。"
+    },
+    {
+      "id": "human",
+      "label": "必须人工",
+      "description": "将批准、例外裁量或未授权动作交给有权限的人。"
+    }
+  ],
+  "starter_needs": [
+    {
+      "id": "expenses",
+      "scope": "expense",
+      "request": "解释报销流程"
+    },
+    {
+      "id": "access",
+      "scope": "access",
+      "request": "准备权限申请草稿"
+    }
+  ],
+  "source_requirements": {
+    "assistant_authority": "technical",
+    "elapsed_definition": "demand",
+    "configuration_dependencies": "technical",
+    "pilot_users": "brief",
+    "approval_rules": "approvals"
+  },
+  "solution_prompts": [
+    "方案理由",
+    "实质替代方案",
+    "依赖和资源"
+  ],
+  "sheets": {
+    "business": {
+      "order": 1,
+      "segment": "clarify",
+      "goal": "分清公司靠什么服务客户，和这次内部工具帮谁。",
+      "angles": [
+        {
+          "id": "offering",
+          "label": "公司卖什么、卖给谁",
+          "hint": "从公司一页纸看它的客户是谁。",
+          "materials": [
+            "brief"
+          ]
+        },
+        {
+          "id": "users",
+          "label": "这次的助手给谁用",
+          "hint": "委托和候选名单里，谁会直接用它。",
+          "materials": [
+            "brief",
+            "user_groups"
+          ]
+        },
+        {
+          "id": "today",
+          "label": "现在大家怎么解决这个问题",
+          "hint": "咨询登记和访谈里，现在的做法是什么。",
+          "materials": [
+            "demand",
+            "interviews"
+          ]
+        },
+        {
+          "id": "unknowns",
+          "label": "还不知道的事",
+          "hint": "哪些背景资料里没有，先标出来。",
+          "materials": []
+        }
+      ],
+      "colleagues": [
+        "manager",
+        "business"
+      ],
+      "choice": {
+        "id": "audience",
+        "label": "这个助手服务谁",
+        "options": [
+          {
+            "id": "internal",
+            "label": "公司内部员工"
+          },
+          {
+            "id": "external",
+            "label": "外部客户"
+          },
+          {
+            "id": "both",
+            "label": "两者都有"
+          },
+          {
+            "id": "unknown",
+            "label": "还不确定"
+          }
+        ]
+      }
+    },
+    "stakeholders": {
+      "order": 2,
+      "segment": "clarify",
+      "goal": "分清谁用、谁拍板、谁多干活、谁担后果。",
+      "angles": [
+        {
+          "id": "daily",
+          "label": "谁每天会用",
+          "hint": "候选名单按组列了人，访谈里有他们的说法。",
+          "materials": [
+            "user_groups",
+            "interviews"
+          ]
+        },
+        {
+          "id": "decides",
+          "label": "谁拍板资源",
+          "hint": "看审批规则是谁发布的、管什么。",
+          "materials": [
+            "approvals",
+            "brief"
+          ]
+        },
+        {
+          "id": "extra",
+          "label": "谁会多干活",
+          "hint": "协调纪要和访谈里，谁要额外配合。",
+          "materials": [
+            "coordination",
+            "interviews"
+          ]
+        },
+        {
+          "id": "blame",
+          "label": "出了错谁担责",
+          "hint": "技术交接里写了助手能做和不能做什么。",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "manager",
+        "business"
+      ],
+      "choice": {
+        "id": "approver",
+        "label": "这次试点谁拍板",
+        "options": [
+          {
+            "id": "grace",
+            "label": "Grace · 经理"
+          },
+          {
+            "id": "chen",
+            "label": "Chen · 业务负责人"
+          },
+          {
+            "id": "daniel",
+            "label": "Daniel · 技术负责人"
+          },
+          {
+            "id": "xu_qing",
+            "label": "许青 · 项目助理"
+          },
+          {
+            "id": "unknown",
+            "label": "还不清楚"
+          }
+        ]
+      }
+    },
+    "need": {
+      "order": 3,
+      "segment": "clarify",
+      "goal": "让需求假设能被证据推翻。",
+      "angles": [
+        {
+          "id": "evidence",
+          "label": "原始证据说了什么",
+          "hint": "先看导出的原始记录和访谈原话。",
+          "materials": [
+            "demand",
+            "interviews"
+          ]
+        },
+        {
+          "id": "number",
+          "label": "这个数字怎么算出来的",
+          "hint": "对照字段说明和收益测算的口径。",
+          "materials": [
+            "demand",
+            "business_case"
+          ]
+        },
+        {
+          "id": "stop",
+          "label": "什么事实会让我们不做",
+          "hint": "找一个如果成立、就不值得做的事实。",
+          "materials": [
+            "interviews",
+            "coordination"
+          ]
+        },
+        {
+          "id": "validate",
+          "label": "下一步怎么验证",
+          "hint": "写下最小的一步核对。",
+          "materials": []
+        }
+      ],
+      "colleagues": [
+        "business",
+        "manager"
+      ],
+      "choice": {
+        "id": "claim",
+        "label": "这个需求现在是",
+        "options": [
+          {
+            "id": "hypothesis",
+            "label": "只是假设"
+          },
+          {
+            "id": "supported",
+            "label": "有一些支持"
+          },
+          {
+            "id": "unresolved",
+            "label": "还说不准"
+          }
+        ]
+      },
+      "structure": "metric"
+    },
+    "boundary": {
+      "order": 4,
+      "segment": "design",
+      "goal": "每类请求：要回答还是要动手，谁最后批准。",
+      "angles": [
+        {
+          "id": "act",
+          "label": "要回答还是要动手",
+          "hint": "技术交接写了执行边界。",
+          "materials": [
+            "technical"
+          ]
+        },
+        {
+          "id": "final",
+          "label": "谁有最后批准权",
+          "hint": "审批规则和执行边界放在一起看。",
+          "materials": [
+            "approvals",
+            "technical"
+          ]
+        },
+        {
+          "id": "fallback",
+          "label": "出错谁接",
+          "hint": "访谈里谁在处理转交和兜底。",
+          "materials": [
+            "interviews"
+          ]
+        },
+        {
+          "id": "cannot",
+          "label": "哪些现在做不到",
+          "hint": "当前能力和配置项。",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "technical",
+        "manager"
+      ],
+      "structure": "triage"
+    },
+    "solution": {
+      "order": 5,
+      "segment": "design",
+      "goal": "比较可行做法，分清方案和实际配置。",
+      "angles": [
+        {
+          "id": "two",
+          "label": "至少两种做法比一比",
+          "hint": "用小标题各写一种，下面的选择会列出它们。",
+          "materials": []
+        },
+        {
+          "id": "cost",
+          "label": "要多少开发日、什么资源",
+          "hint": "工作项预算和审批上限。",
+          "materials": [
+            "technical",
+            "approvals"
+          ]
+        },
+        {
+          "id": "market",
+          "label": "外面一般怎么做",
+          "hint": "市场做法卡只介绍公开方法。",
+          "materials": [],
+          "patterns": true
+        },
+        {
+          "id": "gap",
+          "label": "方案和实际配置差在哪",
+          "hint": "请求参数、实际参数和未生效原因。",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "technical",
+        "manager"
+      ],
+      "choice": {
+        "id": "selected_approach",
+        "label": "选定方案",
+        "from_headings": true,
+        "empty": "在大框里用小标题列出至少两种做法，就能在这里选一个。"
+      },
+      "structure": "diagram"
+    },
+    "assurance": {
+      "order": 6,
+      "segment": "verify",
+      "goal": "用明确预期验证风险，留下观察和退路。",
+      "angles": [
+        {
+          "id": "disprove",
+          "label": "哪一题能推翻这个方案",
+          "hint": "试用问答记录里出过什么错。",
+          "materials": [
+            "failures"
+          ]
+        },
+        {
+          "id": "policy",
+          "label": "政策变了要复测什么",
+          "hint": "差旅政策有新旧两版。",
+          "materials": [
+            "policy"
+          ]
+        },
+        {
+          "id": "signal",
+          "label": "上线后看什么信号",
+          "hint": "咨询登记里能看到哪些量。",
+          "materials": [
+            "demand"
+          ]
+        },
+        {
+          "id": "rollback",
+          "label": "出事怎么退",
+          "hint": "哪些配置能单独回退。",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "technical",
+        "business"
+      ],
+      "structure": "evaluation"
+    },
+    "decision": {
+      "order": 7,
+      "segment": "verify",
+      "goal": "对确切版本和条件作决定。",
+      "angles": [
+        {
+          "id": "conditions",
+          "label": "在什么条件下我承诺",
+          "hint": "审批上限和你申请的资源。",
+          "materials": [
+            "approvals"
+          ]
+        },
+        {
+          "id": "open",
+          "label": "还没解决的事",
+          "hint": "把仍待核对的事列出来。",
+          "materials": []
+        },
+        {
+          "id": "changed",
+          "label": "和上一版比改了什么",
+          "hint": "对照你上一版的 PRD。",
+          "materials": []
+        }
+      ],
+      "colleagues": [
+        "manager"
+      ],
+      "choice": {
+        "id": "intended_decision",
+        "label": "拟作出的决定",
+        "options": [
+          {
+            "id": "launch",
+            "label": "按方案推进"
+          },
+          {
+            "id": "launch_narrow",
+            "label": "缩小范围推进"
+          },
+          {
+            "id": "defer_with_conditions",
+            "label": "满足条件后再推进"
+          },
+          {
+            "id": "no_go",
+            "label": "停止这项方案"
+          }
+        ]
+      }
+    }
+  },
+  "placeholder": "在这里写。可以写错，也可以先空着；写完点「交给批改」才会核对。"
+}

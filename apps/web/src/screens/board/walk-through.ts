@@ -86,15 +86,26 @@ const steps = (): Step[] => {
   const a = host?.current();
   const engineer = !!a && host?.job(a) === 'engineer';
   const find = (selector: string) => visible(document.querySelector(selector));
+  // A practice in the seven steps has one numbering: its guide bar, not the six-layer ruler.
+  const sevenSteps = !engineer && !!document.querySelector('.aipm-compass');
   return [
-    {
-      target: () => find(engineer ? '.rc-scale' : '.rc-prog'),
-      title: T('当前在哪一层', 'Where you are'),
-      body: T(
-        '问题航段尺告诉你当前的问题、已有依据和还没解决的事。',
-        'The progress ruler shows the current question, the evidence you have and what remains unresolved.',
-      ),
-    },
+    sevenSteps
+      ? {
+          target: () => find('.aipm-compass'),
+          title: T('七个能力点', 'Seven points'),
+          body: T(
+            '按你实际写下、批改过的内容亮起，不规定顺序。点任何一点就打开那张工作纸；建议下一步只是建议。',
+            'They light up from what you actually write and review, in any order. Any point opens its sheet; the suggested next step is only a suggestion.',
+          ),
+        }
+      : {
+          target: () => find(engineer ? '.rc-scale' : '.rc-prog'),
+          title: T('当前在哪一层', 'Where you are'),
+          body: T(
+            '问题航段尺告诉你当前的问题、已有依据和还没解决的事。',
+            'The progress ruler shows the current question, the evidence you have and what remains unresolved.',
+          ),
+        },
     {
       target: () => visible(currentItem()),
       title: T('当前事项', 'Your current work'),
@@ -239,7 +250,8 @@ export function startTour(id: string) {
     if (landing) {
       landing.scrollIntoView({ block: 'center' });
       landing.setAttribute('tabindex', '-1');
-      landing.focus({ preventScroll: true });
+      // Focus lands for the keyboard without leaving a ring on the card.
+      landing.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
     } else if (before?.isConnected) before.focus({ preventScroll: true });
   };
   card.addEventListener('click', (e) => {

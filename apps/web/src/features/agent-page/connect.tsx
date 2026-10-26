@@ -1,7 +1,7 @@
 // Desktop and terminal setup share persistent client configuration. Secrets are fetched only
 // for an explicit copy/download; connection status comes from the server's activity feed.
 import { Copy, Download } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   accessDuration,
   claudeCodeCommand,
@@ -42,7 +42,13 @@ export function commandFor(client: Client, endpoint: string, token: string, open
   );
 }
 
-export function connectionLabel(connection: AgentConnection | undefined, lang: 'zh' | 'en') {
+export function connectionLabel(
+  connection: AgentConnection | undefined,
+  lang: 'zh' | 'en',
+  reachable = false,
+) {
+  if (connection?.state === 'connected' && reachable)
+    return t(lang, '已连通 · 配置已写好', 'Reachable · setup written');
   if (connection?.state === 'connected') {
     const name = connection.client?.trim();
     return name
@@ -54,16 +60,93 @@ export function connectionLabel(connection: AgentConnection | undefined, lang: '
   return t(lang, '等待首次调用', 'Waiting for the first call');
 }
 
+/** Said while only the handshake arrived. An open session never picks up a newly added server
+ * (the client's own behaviour), so this never suggests it works without a restart. */
+export function reachableHint(lang: 'zh' | 'en', client: Client) {
+  if (client === 'codex' || client === 'codex-desktop')
+    return t(
+      lang,
+      '已经开着的 Codex 对话读不到新连接，要新开对话（仍没有就完全退出再打开 Codex）；新开的对话直接能用。',
+      'An open Codex conversation does not see the new connection: start a new one (if it is still missing, quit and reopen Codex). New conversations can use it right away.',
+    );
+  return t(
+    lang,
+    '已经开着的 Claude Code 要重启，或者在 /mcp 里重连，才能用上；新开的会话直接能用。',
+    'A Claude Code session that was already open must restart or reconnect in /mcp to use it; new sessions can use it right away.',
+  );
+}
+
+/** After this long with no call, the waiting line turns into a short check. */
+export const SLOW_MS = 2 * 60_000;
+
+/** Whether a real call arrived after the setup command was copied. */
+function arrived(connection: AgentConnection | undefined, copiedAt: number) {
+  if (connection?.state === 'connected') return true;
+  const seen = connection?.last_seen ? Date.parse(connection.last_seen) : NaN;
+  return connection?.state === 'idle' && seen >= copiedAt;
+}
+
+/** The line between copying the setup and the agent's first real call; null once it arrived. */
+export function waitingHint(
+  lang: 'zh' | 'en',
+  client: Client,
+  copiedAt: number | null,
+  now: number,
+  connection?: AgentConnection,
+): { slow: boolean; text: string } | null {
+  if (copiedAt === null || arrived(connection, copiedAt)) return null;
+  if (now - copiedAt < SLOW_MS)
+    return {
+      slow: false,
+      text: t(
+        lang,
+        '已复制连接命令，正在等它的第一次调用。照下面三步做完，这里会亮绿灯。',
+        'Setup command copied. Waiting for its first call: finish the three steps below and this turns green.',
+      ),
+    };
+  const check =
+    client === 'codex' || client === 'codex-desktop'
+      ? t(
+          lang,
+          '在终端运行 codex mcp list，看 rolecraft 是否已列出并启用；',
+          'Run codex mcp list in Terminal and check that rolecraft is listed and enabled;',
+        )
+      : client === 'other'
+        ? t(
+            lang,
+            '在客户端的 MCP 设置里看 rolecraft 是否已启用；',
+            'Check that rolecraft is enabled in your client’s MCP settings;',
+          )
+        : t(
+            lang,
+            '在终端运行 claude mcp list，看 rolecraft 是否显示 Connected；',
+            'Run claude mcp list in Terminal and check that rolecraft shows Connected;',
+          );
+  return {
+    slow: true,
+    text:
+      t(lang, '两分钟还没收到调用。', 'No call after two minutes. ') +
+      check +
+      t(
+        lang,
+        '正常的话，新开一个会话（已开着的要重启，或在 /mcp 里重连），再把第 3 步那句话发给它。',
+        ' if it is, start a new session (restart one that was already open, or reconnect in /mcp) and send it the request in step 3.',
+      ),
+  };
+}
+
 export function CopyKey({
   label,
   getText,
   lang,
   onFail,
+  onCopied,
 }: {
   label: string;
   getText: () => Promise<string | null>;
   lang: 'zh' | 'en';
   onFail?: (text: string) => void;
+  onCopied?: () => void;
 }) {
   const [state, setState] = useState<ButtonState>('idle');
   return (
@@ -86,6 +169,7 @@ export function CopyKey({
           }
           await navigator.clipboard.writeText(text);
           setState('done');
+          onCopied?.();
           setTimeout(() => setState('idle'), 1600);
         } catch {
           setState('idle');
@@ -107,6 +191,7 @@ export function ConnectPanel({
   opener,
   secret,
   connection,
+  reachable = false,
 }: {
   lang: 'zh' | 'en';
   sessionId: string;
@@ -114,10 +199,23 @@ export function ConnectPanel({
   opener: Pair;
   secret: () => Promise<string | null>;
   connection?: AgentConnection;
+  /** Connected by a handshake only: setup is written, no tool call yet. */
+  reachable?: boolean;
 }) {
   const [client, setClient] = useState<Client>('claude-desktop');
   const [manual, setManual] = useState<string | null>(null);
   const [downloaded, setDownloaded] = useState(false);
+  const [copiedAt, setCopiedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  // Re-check once the slow threshold passes; the activity feed re-renders on any real call.
+  useEffect(() => {
+    if (copiedAt === null) return;
+    const left = copiedAt + SLOW_MS - Date.now();
+    if (left <= 0) return;
+    const timer = setTimeout(() => setNow(Date.now()), left + 50);
+    return () => clearTimeout(timer);
+  }, [copiedAt]);
+  const waiting = waitingHint(lang, client, copiedAt, Math.max(now, Date.now()), connection);
   const endpoint = mcpEndpoint(origin, sessionId);
   const ask = opener[lang === 'en' ? 1 : 0];
   const isCodex = client === 'codex' || client === 'codex-desktop';
@@ -138,12 +236,22 @@ export function ConnectPanel({
         <p className="ag-connect-status" role="status" data-connected={connected}>
           <span
             className="ag-status-dot rc-agent-light"
-            data-state={connection?.state ?? 'none'}
+            data-state={reachable ? 'reachable' : (connection?.state ?? 'none')}
             aria-hidden="true"
           />
-          {connectionLabel(connection, lang)}
+          {connectionLabel(connection, lang, reachable)}
         </p>
       </header>
+      {reachable ? (
+        <p className="ag-step-hint ag-connect-wait" role="note">
+          {reachableHint(lang, client)}
+        </p>
+      ) : null}
+      {waiting ? (
+        <p className="ag-step-hint ag-connect-wait" role="status" data-slow={waiting.slow}>
+          {waiting.text}
+        </p>
+      ) : null}
       <fieldset className="ag-client-options" aria-label={t(lang, '客户端', 'Client')}>
         {CLIENTS.map(([key, label]) => (
           <Button
@@ -189,6 +297,7 @@ export function ConnectPanel({
               }
               getText={textToCopy}
               onFail={setManual}
+              onCopied={() => setCopiedAt(Date.now())}
             />
           </div>
           {other ? (
@@ -206,6 +315,7 @@ export function ConnectPanel({
                 link.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 setDownloaded(true);
+                setCopiedAt(Date.now());
               }}
             >
               {downloaded
@@ -270,8 +380,8 @@ export function ConnectPanel({
             {client === 'claude-desktop'
               ? t(
                   lang,
-                  '在 Claude 桌面 App 的 Code 标签页选择本机文件夹，新开会话；Chat 标签页不使用这份配置。未出现时完全退出并重开 App。',
-                  'In the Claude desktop app’s Code tab, choose a local folder and start a new session. The Chat tab does not use this config. If missing, fully quit and reopen the app.',
+                  '在 Claude 桌面 App 的 Code 标签页选择本机文件夹，新开会话；Chat 标签页不使用这份配置。已经开着的会话读不到新连接：请新开一个，或在会话里输入 /mcp 重连 rolecraft。仍未出现时完全退出并重开 App。',
+                  'In the Claude desktop app’s Code tab, choose a local folder and start a new session. The Chat tab does not use this config. A session that was already open does not see the new connection: start a new one, or type /mcp in it and reconnect rolecraft. If missing, fully quit and reopen the app.',
                 )
               : client === 'codex-desktop'
                 ? t(
@@ -287,8 +397,8 @@ export function ConnectPanel({
                     )
                   : t(
                       lang,
-                      '命令会启动 Agent 并带上下面的请求；以后直接启动命令行即可。',
-                      'The command starts your agent with the request below. Start the CLI normally next time.',
+                      '命令会启动一个新的 Agent 并带上下面的请求；已经开着的命令行会话读不到新连接，要重启或在 /mcp 里重连。以后直接启动命令行即可。',
+                      'The command starts a new agent with the request below. A CLI session that was already open does not see the new connection: restart it or reconnect in /mcp. Start the CLI normally next time.',
                     )}
           </p>
         </li>

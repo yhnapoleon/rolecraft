@@ -200,9 +200,21 @@ export function noticeRow(
   return row;
 }
 
+/** Held by the colleague-help review (a full solution or several questions), not a fact check. */
+const HELP_REVIEW = new Set(['role_help_unverified', 'role_help_citation_invalid']);
+
 /** What a reply that did not come through says, in plain words. */
-export function noticeText(kind: Exclude<NoticeKind, 'typing'>, roleId: string) {
+export function noticeText(
+  kind: Exclude<NoticeKind, 'typing'>,
+  roleId: string,
+  errorCode?: string,
+) {
   const name = personName(roleId);
+  if (kind === 'held' && errorCode && HELP_REVIEW.has(errorCode))
+    return T(
+      `这次没有生成 ${name} 的实时回复：生成的回复超出了同事帮助的边界（给出结论或操作指令、指出多处问题等），没有发出。不影响你的评价，可以请对方重新回答。`,
+      `No live reply from ${name} this time: the generated reply went beyond a colleague's help (such as giving conclusions or instructions, or raising several problems) and was not sent. It does not count against you; you can ask again.`,
+    );
   return {
     held: T(
       '这条回复没有发出：没通过和资料的事实核对，不影响你的评价。',

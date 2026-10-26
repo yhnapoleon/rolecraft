@@ -45,6 +45,7 @@ export const VERBS: Record<string, Verb> = {
   'workspace_imports.read': read('读了导入', 'Read an import'),
   'engineer.tickets.read': read('读了', 'Read'),
   'engineer.reviews.read': read('读了', 'Read'),
+  'aipm.context.read': read('查看了七步进度', 'Checked the seven-step progress'),
   'tests.create': act('跑了一次测试', 'Ran a test'),
   'engineer.reproduce': act('复现了', 'Reproduced'),
   'engineer.trial': act('试跑了', 'Ran a trial on'),
@@ -56,6 +57,10 @@ export const VERBS: Record<string, Verb> = {
   'work_items.update': handBack('改了一件事', 'Updated a task'),
   'work_items.batch': handBack('整理了事项', 'Rearranged tasks'),
   'engineer.submissions.draft': handBack('起草了签字', 'Drafted a sign-off for'),
+  'aipm.design.draft': handBack(
+    '交回了需求与分拣草稿，等你确认',
+    'Handed back a design draft for you to confirm',
+  ),
 };
 
 /** Tools a connection is granted: everything above, nothing a person must do themselves. */

@@ -6,7 +6,6 @@ import {
 } from './reply-presentation';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, locale, onLocaleChange } from '../../app/i18n';
-import { modelWaitNode } from '../../app/model-status';
 import { markdownNodes } from '../../app/markdown';
 import { PERSON_OF_ROLE } from '../../app/people.js';
 import { OPENER } from '../../app/vocab.js';
@@ -20,6 +19,7 @@ import {
   localRoleLine,
   localRows,
   noticeKind,
+  localGist,
   replyParts,
   splitCitations,
   type Cite,
@@ -63,6 +63,8 @@ export interface ConversationTurn {
   id: string;
   roleId: RoleId;
   question: string;
+  /** Exact pilot PRD versions present in this stored turn’s shares. */
+  prdVersions?: readonly number[];
   status: TurnStatus;
   reply?: string;
   materials?: readonly MaterialReference[];
@@ -465,7 +467,13 @@ export function mount(
     render();
   };
   /** The toggle after a long reply's first paragraphs; the rest opens below them. */
-  const moreToggle = (turn: ConversationTurn, rest: HTMLElement, open: boolean, count: number) => {
+  const moreToggle = (
+    turn: ConversationTurn,
+    rest: HTMLElement,
+    open: boolean,
+    count: number,
+    label?: string,
+  ) => {
     const toggle = button('rc-roles__more');
     toggle.dataset.focus = `more:${turn.id}`;
     rest.id = `rc-rest-${crypto.randomUUID()}`;
@@ -474,9 +482,11 @@ export function mount(
     const text = el('span');
     text.textContent = open
       ? T('收起', 'Show less')
-      : count > 0
-        ? T(`展开全文 · 还有 ${count} 段`, `Show the full reply · ${count} more`)
-        : T('展开全文', 'Show the full reply');
+      : label
+        ? label
+        : count > 0
+          ? T(`展开全文 · 还有 ${count} 段`, `Show the full reply · ${count} more`)
+          : T('展开全文', 'Show the full reply');
     toggle.append(text, glyph(doc, 'chevron', 12));
     toggle.addEventListener('click', () => {
       if (expandedReplies.has(turn.id)) expandedReplies.delete(turn.id);
@@ -502,6 +512,11 @@ export function mount(
     you.textContent = T('你：', 'You: ');
     asked.append(you, turn.question);
     mine.append(asked);
+    for (const version of turn.prdVersions ?? []) {
+      const note = el('p', 'aipm-bubble-note');
+      note.textContent = T(`附上：试点 PRD · 第 ${version} 版`, `Attached: pilot PRD · version ${version}`);
+      mine.append(note);
+    }
     item.append(mine);
     const kind =
       turn.status === 'completed' && turn.reply !== undefined
@@ -531,7 +546,7 @@ export function mount(
                 () => adapter.refreshContext?.(turn.id) ?? Promise.resolve(),
               )
             : undefined;
-      item.append(noticeRow(doc, kind, turn.explanation || noticeText(kind, selected), action));
+      item.append(noticeRow(doc, kind, turn.explanation || noticeText(kind, selected, turn.errorCode), action));
       return { item, kind };
     }
     const reply = turn.reply ?? '';
@@ -554,11 +569,14 @@ export function mount(
     rest.hidden = !open;
     const local = turn.generationMode === 'local' || isLocalReply(reply);
     if (local) {
-      // Excerpts quoted by rules: one dashed bubble, each passage under its own small tag.
+      // Excerpts quoted by rules: one dashed bubble that opens with a sentence a person can read;
+      // every passage, each under its own small tag, folds away as the evidence behind it.
       const bubble = el('div', 'rc-bubble rc-bubble--them rc-bubble--local is-first');
       const status = el('p', 'rc-local__status rc-roles__status');
-      status.append(presentation.status ?? T('规则核实', 'Rule-checked'));
-      status.append(modelWaitNode(doc, presentation.waitingNote ?? ''));
+      status.textContent = T(
+        '资料摘录（未接入对话模型）',
+        'Source excerpts (no conversation model connected)',
+      );
       bubble.append(status);
       const rows = localRows(reply);
       const row = (r: (typeof rows)[number], first: boolean) => {
@@ -594,9 +612,14 @@ export function mount(
         line.textContent = r.text;
         return line;
       };
-      const [lead, ...others] = rows;
-      if (lead) bubble.append(row(lead, true));
-      for (const r of others) rest.append(row(r, false));
+      const gist = localGist(rows);
+      if (gist) {
+        const line = el('p', 'rc-local__gist rc-roles__preview');
+        line.textContent = gist;
+        bubble.append(line);
+      }
+      for (const r of rows) rest.append(row(r, false));
+      const evidence = rows.filter((r) => r.kind === 'excerpt').length;
       const role = localRoleLine(reply);
       if (role) {
         const line = el('p', 'rc-local__role');
@@ -605,7 +628,17 @@ export function mount(
       }
       if (rest.childElementCount) {
         bubble.append(rest);
-        extra.append(moreToggle(turn, rest, open, others.length));
+        extra.append(
+          moreToggle(
+            turn,
+            rest,
+            open,
+            evidence,
+            evidence
+              ? T(`依据 ${evidence} 条`, `Evidence · ${evidence}`)
+              : T('展开详情', 'Show details'),
+          ),
+        );
       }
       body.append(bubble);
       observe = rest.childElementCount ? rest : bubble;

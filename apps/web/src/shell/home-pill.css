@@ -1,0 +1,110 @@
+/* The way back to the workbench: one frosted pill at the top centre, only away from it.
+ * Same paper as the compass band, warm shadow, a 1px lift under the pointer. The bar is sticky,
+ * which also makes it the pill's containing block. */
+.ws-home {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(46vw, 520px);
+  height: 32px;
+  padding: 0 14px 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    0 0 0 0.5px var(--line-2),
+    0 1px 2px rgba(60, 40, 20, 0.06),
+    0 6px 16px -10px rgba(60, 40, 20, 0.3);
+  color: var(--ink);
+  font: 500 13px / 1 var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+  /* Centring rides on `translate`, so the lift and press below compose with it. */
+  translate: -50% -50%;
+  transition:
+    transform var(--mid) var(--spring),
+    box-shadow var(--fast) var(--ease-out);
+}
+.ws-home:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 0.5px var(--line-2),
+    0 2px 4px rgba(60, 40, 20, 0.08),
+    0 10px 22px -10px rgba(60, 40, 20, 0.38);
+}
+.ws-home:active {
+  transform: scale(0.98);
+}
+.ws-home:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.ws-home__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.ws-home__go .i {
+  color: var(--ink-2);
+}
+.ws-home__sep {
+  color: var(--ink-4);
+}
+.ws-home__here {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+}
+/* Away from the workbench the pill takes the centre; the case title steps aside. */
+.shell-bar[data-away] .crumbbar .ws-title {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ws-home {
+    box-shadow:
+      0 0 0 0.5px var(--line-2),
+      0 8px 20px -10px rgba(0, 0, 0, 0.7);
+  }
+}
+:root[data-theme="dark"] .ws-home {
+  box-shadow:
+    0 0 0 0.5px var(--line-2),
+    0 8px 20px -10px rgba(0, 0, 0, 0.7);
+}
+/* Phone, or a bar too full to keep the centre clear (fitShellBar measures): the pill sits in
+ * line where the title was. */
+.shell-bar[data-home-inline] .ws-home {
+  position: static;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: none;
+  translate: none;
+}
+@media (max-width: 720px) {
+  .ws-home {
+    position: static;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: none;
+    height: 34px;
+    padding: 0 12px 0 9px;
+    translate: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-home {
+    transition: none;
+  }
+  .ws-home:hover,
+  .ws-home:active {
+    transform: none;
+  }
+}

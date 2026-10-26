@@ -375,13 +375,13 @@ html.scrolled body:not([data-view="work"]) .topbar:not(.shell-bar)::before,
   height: 560px;
   z-index: -1;
   pointer-events: none;
-  background:
-    var(--grain),
-    radial-gradient(
-      90% 100% at 50% 0% in oklab,
-      var(--world-light, var(--light-calm)),
-      transparent 72%
-    );
+  /* Only the light: the body already carries the grain, and a second grain layer cut off at
+   * 560px left a visible seam on dark canvases. */
+  background: radial-gradient(
+    90% 100% at 50% 0% in oklab,
+    var(--world-light, var(--light-calm)),
+    transparent 72%
+  );
   opacity: 1;
   transition: opacity var(--slow) var(--ease-out);
 }
