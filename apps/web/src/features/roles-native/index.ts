@@ -9,6 +9,7 @@ import { T, locale, onLocaleChange } from '../../app/i18n';
 import { markdownNodes } from '../../app/markdown';
 import { PERSON_OF_ROLE } from '../../app/people.js';
 import { OPENER } from '../../app/vocab.js';
+import { intentAction } from './intent-action';
 import type { RecognitionRecord } from '../recognition-native/badge';
 import { lensOn, onLensChange } from '../recognition-native/lens';
 import { renderSignals } from '../recognition-native/signals';
@@ -107,6 +108,7 @@ export interface RolesNativeAdapter {
   retry?(turnId: string): Promise<void>;
   refreshContext?(turnId: string): Promise<void>;
   openMaterial?(material: MaterialReference): void | Promise<void>;
+  openRequests?(): void | Promise<void>;
   /** Map a visibly painted reply to the existing idempotent display command.
    * Supply only when authorized; journal/recovery remain with the shared client.
    */
@@ -721,6 +723,23 @@ export function mount(
       const line = el('p', 'rc-roles__limitation');
       line.textContent = note;
       extra.append(line);
+    }
+    const related = intentAction(turn.recognition, turn.materials, locale());
+    if (turn.status === 'completed' && turn.reply && related &&
+        ((related.kind === 'request' && adapter.openRequests) || (related.kind === 'material' && adapter.openMaterial))) {
+      const action = button('rc-intent-action');
+      action.textContent = `${related.label} ↗`;
+      action.title = related.reason;
+      action.setAttribute('aria-label', `${related.label}. ${related.reason}`);
+      action.addEventListener('click', async () => {
+        action.disabled = true;
+        try {
+          if (related.kind === 'request') await adapter.openRequests?.();
+          else await adapter.openMaterial?.(related.material);
+        } catch { action.title = T('暂时打不开，请稍后重试。', 'Could not open this yet. Please try again.'); }
+        finally { action.disabled = false; }
+      });
+      extra.append(action);
     }
     const signals = renderSignals(doc, turn.recognition, locale(), {
       context: 'reply',

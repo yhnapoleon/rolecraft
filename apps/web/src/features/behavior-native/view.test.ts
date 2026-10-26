@@ -45,9 +45,9 @@ describe('behaviour view', () => {
   });
 
   it('stays out of the learner’s default view, and away entirely when the layer is off', () => {
-    expect(BEHAVIOR_PLACEMENT).toBe('lens');
-    expect(behaviorHtml(data, 'zh')).toBe('');
-    expect(behaviorHtml(data, 'zh', { lens: false })).toBe('');
+    expect(BEHAVIOR_PLACEMENT).toBe('default');
+    expect(behaviorHtml(data, 'zh')).toContain('回看工作过程');
+    expect(behaviorHtml(data, 'zh', { lens: false })).toContain('本次可见动作');
     expect(behaviorHtml({ enabled: false }, 'zh', { lens: true })).toBe('');
   });
 
@@ -75,7 +75,7 @@ describe('behaviour view', () => {
     expect(view?.steps[0]).toBe('read “Brief”');
     expect(view?.nearest).toBe('Closest way of working: Requests before reading');
     expect(view?.order).toEqual(['Requested resources before reading the technical material']);
-    expect(behaviorView(data, 'en')).toBeNull();
+    expect(behaviorView(data, 'en')?.title).toBe('Look back at your work');
   });
 
   it('labels only the phases wide enough and keys every phase in a legend under the bar', () => {
@@ -117,4 +117,17 @@ describe('behaviour view', () => {
 it('keeps the chosen disclosure state when the same behavior is redrawn', () => {
   expect(behaviorHtml(data, 'en', { lens: true })).toContain('<details class="rc-behavior__steps">');
   expect(behaviorHtml(data, 'en', { lens: true, stepsOpen: true })).toContain('<details class="rc-behavior__steps" open>');
+});
+
+it('keeps equally close references and a missing reference honest', () => {
+ const d = {...data, strategy:{nearest:'test_heavy',distance:.25,top3:[{strategy:'thorough',distance:.25}]}};
+ const h=behaviorHtml(d,'en',{stepsOpen:true});
+ expect(h).toContain('Equally close: Test-heavy, Read, ask, then test');
+ expect(h).toContain('No reference trajectory was returned');
+ expect(h).not.toContain('point-by-point alignment path was computed');
+});
+it('uses action positions even when business sequence numbers repeat', () => {
+ const h=behaviorHtml(data,'en',{stepsOpen:true});
+ expect(h).toContain('read brief');expect(h).toContain('ask Daniel');
+ expect((h.match(/Record sequence 1/g)||[]).length).toBe(2);
 });

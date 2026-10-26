@@ -1,3 +1,4 @@
+import { judgmentChainHtml } from './judgment-chain';
 import type { PreviewRecognition, ChainUnit } from './chain';
 import type { Language } from '../results-native/localization';
 import { escapeMoment as esc, signatureHtml } from './signature';
@@ -14,16 +15,18 @@ export function businessSentencesHtml(preview: PreviewRecognition, language: Lan
   const [id, revision] = (preview.recognizer ?? '').split('@');
   const record: RecognitionRecord = { task: 'relation', recognizer_id: id, revision: revision || '', ...(typeof preview.fallback === 'boolean' ? { fallback: preview.fallback } : {}), outputs: { units: preview.units ?? [] } };
   const signature = id && typeof preview.fallback === 'boolean'
-    ? signatureHtml(record, language, { source: 'current' }, identity)
+    ? signatureHtml(record, language, { source: preview.origin ?? 'current' }, identity)
     : `<p class="rc-moment-note">${t('实际方法未记录', 'Actual method not recorded')}</p>`;
   return `<section class="rc-business-reading" aria-label="${t('逐句核对依据', 'Sentence evidence check')}"><h3>${t('这一版的依据核对', 'Evidence check for this version')}</h3>${signature}<ol>${(preview.units ?? []).map((unit) => {
     const state = businessSentenceState(unit);
     const reason = state === 'deferred' ? `<p class="rc-moment-note">${t('自动判定的预期代价较高，暂缓判定，留待人工核验。', 'The expected cost of an automatic judgement is high; deferred for human checking.')}</p>` : '';
+    // The support assembler prepends a structured section key on its own line.
+    const quote = unit.quote.replace(/^(business|stakeholders|need|boundary|solution|assurance|decision)\n+/, '');
     const source = unit.source;
-    const evidence = unit.evidence ? `<blockquote>${esc(unit.evidence)}</blockquote>` : `<p class="rc-moment-note">${t('这次没有返回可展示的原文。', 'No source passage was returned for this sentence.')}</p>`;
+    const evidence = unit.evidence ? `<blockquote>${esc(unit.evidence)}</blockquote>` : `<p class="rc-moment-note">${unit.top?.length ? t('未记录选定原文；候选原文见下方。', 'No selected passage was recorded; see the candidates below.') : t('这次没有返回可展示的原文。', 'No source passage was returned for this sentence.')}</p>`;
     const sourceKind: Record<string, string> = { material: t('资料', 'Material'), test: t('测试记录', 'Test record'), product: t('作品', 'Work'), role_reply: t('同事回复', 'Colleague reply') };
     const location = [source?.title || (source ? sourceKind[source.kind ?? ''] || t('依据记录', 'Evidence record') : ''), typeof source?.version === 'number' ? `v${source.version}` : ''].filter(Boolean).join(' · ');
-    return `<li data-sentence-state="${state}"><p class="rc-business-quote">${esc(unit.quote)}</p><span class="rc-business-label">${names[state]}</span>${reason}<details ${state === 'contradicted' ? 'open' : ''}><summary>${t('查看本次依据', 'View this check’s evidence')}${location ? ` · ${esc(location)}` : ''}</summary>${evidence}</details></li>`;
+    return `<li data-sentence-state="${state}"><p class="rc-business-quote">${esc(quote)}</p><span class="rc-business-label">${names[state]}</span>${reason}<details ${state === 'contradicted' ? 'open' : ''}><summary>${t('查看本次依据', 'View this check’s evidence')}${location ? ` · ${esc(location)}` : ''}</summary>${evidence}${judgmentChainHtml(unit, preview, language)}</details></li>`;
   }).join('')}</ol></section>`;
 }
 export function renderBusinessSentences(doc: Document, preview: PreviewRecognition, language: Language) {

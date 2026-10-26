@@ -866,3 +866,9 @@ button.rc-tag:active {
 .chat .rc-roles__composer {
   padding-top: 12px;
 }
+
+.rc-intent-action { justify-self:start; align-self:start; max-width:100%; border:1px solid var(--line); border-radius:999px; padding:7px 12px; background:var(--surface); color:var(--ink-2); font:500 12px/1.5 var(--sans); cursor:pointer; transition:transform 160ms var(--spring,cubic-bezier(.32,.72,0,1)); }
+.rc-intent-action:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+@media(hover:hover) { .rc-intent-action:hover { color:var(--ink); border-color:var(--ink-3); } }
+.rc-intent-action:active { transform:scale(.97); }
+@media(prefers-reduced-motion:reduce) { .rc-intent-action { transition:none; } .rc-intent-action:active { transform:none; } }

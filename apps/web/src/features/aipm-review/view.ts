@@ -2,6 +2,7 @@
  * recognition layer is on) beside the review. The look follows the v2 wireframe (5-批改结果);
  * the structure is the result page's: its sentence tones, rule lines, item rows and colleague
  * colours, called here without changing how the result page uses them. */
+import { renderJudgmentChain } from '../recognition-native/judgment-chain';
 import type { ChainUnit, PreviewRecognition } from '../recognition-native/chain';
 import { toneOf } from '../recognition-native/sentence-view';
 import { renderItemRow, type ItemRow } from '../feedback-native/feedback-items';
@@ -152,7 +153,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
           ? el('p', unit.evidence, 'aipm-review__src-quote')
           : el(
               'p',
-              t('这次没有返回可展示的原文。', 'No source passage was returned for this sentence.'),
+              unit.top?.length ? t('未记录选定原文；候选原文见下方。', 'No selected passage was recorded; see the candidates below.') : t('这次没有返回可展示的原文。', 'No source passage was returned for this sentence.'),
               'aipm-review__muted',
             ),
         el('p', toneName[tone], 'aipm-review__src-tone'),
@@ -164,6 +165,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
             input.onOpenMaterial?.(material),
           ),
         );
+      if (input.sentences.kind === 'ready') source.append(renderJudgmentChain(doc, unit, input.sentences.preview, language));
       words.setAttribute('aria-expanded', 'false');
       words.addEventListener('click', () => {
         source.hidden = !source.hidden;

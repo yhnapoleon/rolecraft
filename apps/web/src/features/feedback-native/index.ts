@@ -74,6 +74,8 @@ import type { RecognitionRecord } from '../recognition-native/badge';
 import { lensOn, onLensChange } from '../recognition-native/lens';
 import { splitRecognitionPrefix } from '../recognition-native/prefix';
 import type { FeedbackActivityCount, FeedbackReferenceCheck } from '../../contracts-v2';
+import { renderBusinessSentences } from '../recognition-native/business-sentences';
+import { recordedSentencePreview } from '../recognition-native/judgment-chain';
 import { renderSentenceLens } from '../recognition-native/sentences';
 import { renderExplanationTag, renderSignals } from '../recognition-native/signals';
 
@@ -913,6 +915,9 @@ export function mountNativeFeedback(
     const subject = readOnly ? null : (chips([report.subject]).firstElementChild as HTMLElement | null);
     const lens = lensOn() && !readOnly;
     const after: Node[] = [];
+    const sentencePreview = recordedSentencePreview(report.recognition ?? []);
+    if (!readOnly && !lens && sentencePreview?.units?.length)
+      after.push(renderBusinessSentences(doc, sentencePreview, language));
     if (lens) {
       // With the recognition lens open: this feedback's recognizer signals and the work sentence
       // by sentence, from the records stored with it. Closed: nothing.

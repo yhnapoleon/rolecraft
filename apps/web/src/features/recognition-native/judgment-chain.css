@@ -1,0 +1,209 @@
+.judgment-chain {
+  display: block;
+  container-type: inline-size;
+  margin-block: 18px 6px;
+  padding: 20px 0 6px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.judgment-chain header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.judgment-chain h4 {
+  margin: 0;
+  font: 500 19px / 1.3 var(--serif);
+}
+.judgment-chain header span,
+.jc-step small,
+.jc-note {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.jc-explanation {
+  padding: 12px 16px;
+  border-left: 2px solid var(--ink-2);
+  background: var(--surface);
+  margin: 0 0 20px;
+}
+.judgment-chain .jc-track {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(var(--jc-count, 6), minmax(0, 1fr));
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+}
+.judgment-chain .jc-step {
+  position: relative;
+  min-width: 0;
+  padding: 0 0 12px;
+  margin: 0;
+  border: 0;
+  background: none;
+  border-radius: 0;
+}
+.jc-step::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: 28px;
+  right: -16px;
+  height: 1px;
+  background: var(--line-2, var(--line));
+}
+.jc-step:last-child::before {
+  display: none;
+}
+.jc-dot {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--ink-3);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink-2);
+  font: 500 11px / 1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.jc-step h5 {
+  margin: 12px 0 3px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.jc-step small {
+  display: block;
+  min-height: 30px;
+}
+.jc-step p {
+  margin: 8px 0 0;
+}
+.jc-step blockquote {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 1px solid var(--line);
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.jc-step summary {
+  cursor: pointer;
+  min-height: 36px;
+  padding: 6px 0;
+}
+.jc-step summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.jc-verdict {
+  font-weight: 600;
+}
+.jc-distribution {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+.jc-distribution div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+.jc-distribution dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.jc-number {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.jc-step[data-tone="supported"] .jc-dot,
+.jc-distribution [data-tone="supported"] {
+  color: var(--good);
+}
+.jc-step[data-tone="contradicted"] .jc-dot,
+.jc-distribution [data-tone="contradicted"] {
+  color: var(--bad);
+}
+.jc-step[data-step="decision"] {
+  padding: 0 12px 12px;
+  background: var(--surface);
+  border-radius: 10px;
+}
+.jc-step[data-step="decision"] h5 {
+  font-size: 15px;
+}
+.jc-step[data-step="decision"] .jc-dot {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.jc-cost {
+  font-size: 16px;
+  font-weight: 600;
+}
+.jc-source-scores {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+@container (max-width: 700px) {
+  .judgment-chain .jc-track {
+    display: block;
+  }
+  .judgment-chain .jc-step {
+    padding: 0 0 20px 44px;
+    min-height: 64px;
+  }
+  .jc-dot {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .jc-step::before {
+    top: 30px;
+    bottom: 0;
+    left: 14px;
+    width: 1px;
+    height: auto;
+  }
+  .jc-step h5 {
+    margin: 0 0 3px;
+    padding-top: 3px;
+  }
+  .jc-step small {
+    min-height: 0;
+  }
+  .jc-step[data-step="decision"] {
+    padding: 12px 12px 16px 44px;
+  }
+  .jc-step[data-step="decision"] .jc-dot {
+    top: 12px;
+  }
+}
+.jc-enter .jc-step {
+  animation: jc-arrive 280ms var(--spring, cubic-bezier(0.32, 0.72, 0, 1)) both;
+  animation-delay: calc(var(--jc-order) * 160ms);
+}
+@keyframes jc-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jc-enter .jc-step {
+    animation: none;
+  }
+}
+
+.jc-step .jc-candidate { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; padding:0 0 0 8px; }

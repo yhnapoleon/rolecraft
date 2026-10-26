@@ -106,7 +106,8 @@
   cursor: pointer;
 }
 .aipm-review__s:focus-visible {
-  outline: none;
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
   border-radius: 4px;
   box-shadow: var(--focus-ring);
 }
@@ -643,4 +644,9 @@
 }
 .aipm-review__mis-head .aipm-review__model-tag {
   margin-left: auto;
+}
+
+/* Open a sentence's instrument at reading width; the review follows on its own paper. */
+@media(min-width:1100px) {
+ .aipm-review__grid:has(.aipm-review__src:not([hidden])) { grid-template-columns:minmax(0,1fr); }
 }
