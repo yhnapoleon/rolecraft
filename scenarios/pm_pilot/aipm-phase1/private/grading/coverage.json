@@ -1,38 +1,23 @@
 {
   "schema_version": 1,
   "revision": "aipm-coverage-1",
-  "checks": [
-    "choice",
-    "citation",
-    "rule",
-    "rubric_rule",
-    "sentence",
-    "model",
-    "self"
-  ],
-  "note": "Server-only. Labels and pointers name topics and sources, never the expected conclusion.",
-  "points": [
+  "note": "Server-only. Labels and look_again name topics and sources, never the expected conclusion.",
+  "items": [
     {
       "id": "business.audience",
       "step_id": "business",
       "check": "choice",
-      "predicate": {
-        "choice": "audience",
-        "made": true
-      },
       "severity": "medium",
       "owner": "manager",
-      "zh": {
-        "label": "选了服务对象",
-        "look": "有没有明确这次助手服务谁",
-        "pointer": "委托里的试点用户"
+      "label": {
+        "zh": "选了服务对象",
+        "en": "Audience chosen"
       },
-      "en": {
-        "label": "Audience chosen",
-        "look": "Whether you said whom this assistant serves",
-        "pointer": "The pilot users in the brief"
+      "look_again": {
+        "zh": "再看看委托里的试点用户",
+        "en": "Look again at the pilot users in the brief"
       },
-      "materials": [
+      "look_again_materials": [
         "brief"
       ],
       "false_positive_examples": [
@@ -44,147 +29,136 @@
           "audience": "both",
           "expected": "covered"
         }
-      ]
+      ],
+      "predicate": {
+        "field": "business.audience",
+        "conflicts_with": []
+      }
     },
     {
       "id": "business.audience_scope",
       "step_id": "business",
       "check": "rule",
-      "predicate": {
-        "rule_id": "audience_scope"
-      },
       "severity": "high",
       "owner": "manager",
-      "zh": {
-        "label": "服务对象和资料一致",
-        "look": "所选服务对象有没有和委托冲突",
-        "pointer": "委托里这次试点直接给谁用"
+      "label": {
+        "zh": "服务对象和资料一致",
+        "en": "Audience matches the materials"
       },
-      "en": {
-        "label": "Audience matches the materials",
-        "look": "Whether the chosen audience conflicts with the brief",
-        "pointer": "Whom the brief says the pilot directly serves"
+      "look_again": {
+        "zh": "再看看委托里这次试点直接给谁用",
+        "en": "Look again at whom the brief says the pilot directly serves"
       },
-      "materials": [
+      "look_again_materials": [
         "brief"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "rule": "audience_scope"
+      }
     },
     {
       "id": "business.cited",
       "step_id": "business",
       "check": "citation",
-      "predicate": {
-        "materials_any": [
-          "brief",
-          "user_groups"
-        ]
-      },
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "引用了委托或候选名单",
-        "look": "说法有没有落到资料原句",
-        "pointer": "委托、候选名单 INV-50"
+      "label": {
+        "zh": "引用了委托或候选名单",
+        "en": "Cites the brief or the candidate list"
       },
-      "en": {
-        "label": "Cites the brief or the candidate list",
-        "look": "Whether your statements rest on a quoted source",
-        "pointer": "The brief and candidate list INV-50"
+      "look_again": {
+        "zh": "再看看委托、候选名单 INV-50",
+        "en": "Look again at the brief and candidate list INV-50"
       },
-      "materials": [
+      "look_again_materials": [
         "brief",
         "user_groups"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "materials": [
+          "brief",
+          "user_groups"
+        ]
+      }
     },
     {
       "id": "business.offering_vs_tool",
       "step_id": "business",
       "check": "model",
-      "predicate": {},
       "severity": "medium",
       "owner": "manager",
-      "zh": {
-        "label": "分开写了公司业务和这次工具",
-        "look": "公司对外卖什么、这次工具帮谁，是不是分开说的",
-        "pointer": "公司一页纸和委托"
+      "label": {
+        "zh": "分开写了公司业务和这次工具",
+        "en": "Separates the business from this tool"
       },
-      "en": {
-        "label": "Separates the business from this tool",
-        "look": "Whether what the company sells and whom this tool helps are kept apart",
-        "pointer": "The company brief and the manager brief"
+      "look_again": {
+        "zh": "再看看公司一页纸和委托",
+        "en": "Look again at the company brief and the manager brief"
       },
-      "materials": [
+      "look_again_materials": [
         "brief"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "business.unknowns",
       "step_id": "business",
       "check": "model",
-      "predicate": {},
       "severity": "low",
       "owner": "manager",
-      "zh": {
-        "label": "标出了还不知道的事",
-        "look": "资料没给的背景有没有标成待确认",
-        "pointer": "公司一页纸里未提供的部分"
+      "label": {
+        "zh": "标出了还不知道的事",
+        "en": "Marks what is unknown"
       },
-      "en": {
-        "label": "Marks what is unknown",
-        "look": "Whether missing background is marked as unconfirmed",
-        "pointer": "What the company brief does not supply"
+      "look_again": {
+        "zh": "再看看公司一页纸里未提供的部分",
+        "en": "Look again at what the company brief does not supply"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "stakeholders.approver",
       "step_id": "stakeholders",
       "check": "choice",
-      "predicate": {
-        "choice": "approver",
-        "made": true
-      },
       "severity": "medium",
       "owner": "manager",
-      "zh": {
-        "label": "选了拍板人",
-        "look": "有没有指出这次试点由谁拍板",
-        "pointer": "资源审批规则"
+      "label": {
+        "zh": "选了拍板人",
+        "en": "Decision-maker chosen"
       },
-      "en": {
-        "label": "Decision-maker chosen",
-        "look": "Whether you named who decides on this pilot",
-        "pointer": "The resource-approval rules"
+      "look_again": {
+        "zh": "再看看资源审批规则",
+        "en": "Look again at the resource-approval rules"
       },
-      "materials": [
+      "look_again_materials": [
         "approvals"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "field": "stakeholders.approver-choice.name_or_role",
+        "conflicts_with": []
+      }
     },
     {
       "id": "stakeholders.approval_authority",
       "step_id": "stakeholders",
       "check": "rule",
-      "predicate": {
-        "rule_id": "approval_authority"
-      },
       "severity": "high",
       "owner": "manager",
-      "zh": {
-        "label": "拍板人有批准权",
-        "look": "所选拍板人在资料里有没有批准权",
-        "pointer": "审批规则的发布人"
+      "label": {
+        "zh": "拍板人有批准权",
+        "en": "The decision-maker holds authority"
       },
-      "en": {
-        "label": "The decision-maker holds authority",
-        "look": "Whether the chosen person can approve per the materials",
-        "pointer": "Who published the approval rules"
+      "look_again": {
+        "zh": "再看看审批规则的发布人",
+        "en": "Look again at who published the approval rules"
       },
-      "materials": [
+      "look_again_materials": [
         "approvals"
       ],
       "false_positive_examples": [
@@ -192,609 +166,570 @@
           "approver": "Chen 的意见",
           "expected": "not_judged"
         }
-      ]
+      ],
+      "predicate": {
+        "rule": "approval_authority"
+      }
     },
     {
       "id": "stakeholders.cited",
       "step_id": "stakeholders",
       "check": "citation",
-      "predicate": {
-        "materials_any": [
-          "user_groups",
-          "interviews",
-          "coordination"
-        ]
-      },
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "引用了名单、访谈或纪要",
-        "look": "用户和多干活的人有没有资料依据",
-        "pointer": "INV-50、INT-03、COORD-01"
+      "label": {
+        "zh": "引用了名单、访谈或纪要",
+        "en": "Cites the list, interviews or notes"
       },
-      "en": {
-        "label": "Cites the list, interviews or notes",
-        "look": "Whether users and those with extra work rest on sources",
-        "pointer": "INV-50, INT-03, COORD-01"
+      "look_again": {
+        "zh": "再看看INV-50、INT-03、COORD-01",
+        "en": "Look again at INV-50, INT-03, COORD-01"
       },
-      "materials": [
+      "look_again_materials": [
         "user_groups",
         "interviews",
         "coordination"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "materials": [
+          "user_groups",
+          "interviews",
+          "coordination"
+        ]
+      }
     },
     {
       "id": "stakeholders.burden",
       "step_id": "stakeholders",
       "check": "model",
-      "predicate": {},
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "写了谁会多干活",
-        "look": "有没有写出谁要额外配合、配合什么",
-        "pointer": "协调纪要和访谈"
+      "label": {
+        "zh": "写了谁会多干活",
+        "en": "Names who gets extra work"
       },
-      "en": {
-        "label": "Names who gets extra work",
-        "look": "Whether you said who must pitch in, and with what",
-        "pointer": "The coordination notes and interviews"
+      "look_again": {
+        "zh": "再看看协调纪要和访谈",
+        "en": "Look again at the coordination notes and interviews"
       },
-      "materials": [
+      "look_again_materials": [
         "coordination",
         "interviews"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "stakeholders.opinion_vs_approval",
       "step_id": "stakeholders",
       "check": "model",
-      "predicate": {},
       "severity": "medium",
       "owner": "manager",
-      "zh": {
-        "label": "没把意见当批准",
-        "look": "同事的意见和正式批准有没有分开",
-        "pointer": "公司一页纸里关于批准的说明"
+      "label": {
+        "zh": "没把意见当批准",
+        "en": "Keeps opinion apart from approval"
       },
-      "en": {
-        "label": "Keeps opinion apart from approval",
-        "look": "Whether a colleague's view is kept apart from a formal approval",
-        "pointer": "The company brief on approvals"
+      "look_again": {
+        "zh": "再看看公司一页纸里关于批准的说明",
+        "en": "Look again at the company brief on approvals"
       },
-      "materials": [
+      "look_again_materials": [
         "approvals"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "need.claim",
       "step_id": "need",
       "check": "choice",
-      "predicate": {
-        "choice": "claim",
-        "made": true
-      },
       "severity": "low",
       "owner": "business",
-      "zh": {
-        "label": "标明了需求现在的状态",
-        "look": "需求是假设、有支持还是说不准",
-        "pointer": "原始记录与访谈"
+      "label": {
+        "zh": "标明了需求现在的状态",
+        "en": "States how established the need is"
       },
-      "en": {
-        "label": "States how established the need is",
-        "look": "Whether the need is a hypothesis, supported or unclear",
-        "pointer": "The raw records and interviews"
+      "look_again": {
+        "zh": "再看看原始记录与访谈",
+        "en": "Look again at the raw records and interviews"
       },
-      "materials": [
+      "look_again_materials": [
         "demand",
         "interviews"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "field": "needs.need-main.claim_status",
+        "conflicts_with": []
+      }
     },
     {
       "id": "need.raw_evidence",
       "step_id": "need",
       "check": "citation",
-      "predicate": {
-        "materials_any": [
-          "demand",
-          "interviews"
-        ]
-      },
       "severity": "high",
       "owner": "business",
-      "zh": {
-        "label": "引用了原始数据或访谈",
-        "look": "有没有从原始记录或原话出发",
-        "pointer": "SD-120 导出、INT-03 访谈"
+      "label": {
+        "zh": "引用了原始数据或访谈",
+        "en": "Cites raw data or interviews"
       },
-      "en": {
-        "label": "Cites raw data or interviews",
-        "look": "Whether you start from raw records or original words",
-        "pointer": "SD-120 export, INT-03 interviews"
+      "look_again": {
+        "zh": "再看看SD-120 导出、INT-03 访谈",
+        "en": "Look again at SD-120 export, INT-03 interviews"
       },
-      "materials": [
+      "look_again_materials": [
         "demand",
         "interviews"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "materials": [
+          "demand",
+          "interviews"
+        ]
+      }
     },
     {
       "id": "need.metric_scope",
       "step_id": "need",
       "check": "rule",
-      "predicate": {
-        "rule_id": "metric_scope"
-      },
       "severity": "high",
       "owner": "business",
-      "zh": {
-        "label": "指标口径没混",
-        "look": "结单历时和人工工时有没有混在一起",
-        "pointer": "SD-120 字段说明"
+      "label": {
+        "zh": "指标口径没混",
+        "en": "Metric basis not mixed up"
       },
-      "en": {
-        "label": "Metric basis not mixed up",
-        "look": "Whether elapsed time and hands-on time are mixed up",
-        "pointer": "SD-120 field definitions"
+      "look_again": {
+        "zh": "再看看SD-120 字段说明",
+        "en": "Look again at SD-120 field definitions"
       },
-      "materials": [
+      "look_again_materials": [
         "demand"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "rule": "metric_scope"
+      }
     },
     {
       "id": "need.sentences",
       "step_id": "need",
       "check": "sentence",
-      "predicate": {
-        "recognition": "R2.support"
-      },
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "每句话和资料一致",
-        "look": "有没有句子与资料矛盾或依据不足",
-        "pointer": "被标出的句子对应的资料"
+      "label": {
+        "zh": "每句话和资料一致",
+        "en": "Sentences agree with sources"
       },
-      "en": {
-        "label": "Sentences agree with sources",
-        "look": "Whether any sentence contradicts or lacks support",
-        "pointer": "The sources matched to flagged sentences"
+      "look_again": {
+        "zh": "再看看被标出的句子对应的资料",
+        "en": "Look again at the sources matched to flagged sentences"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "need.disconfirming",
       "step_id": "need",
       "check": "model",
-      "predicate": {},
       "severity": "high",
       "owner": "manager",
-      "zh": {
-        "label": "写了会让我们不做的事实",
-        "look": "有没有一个成立就不值得做的事实",
-        "pointer": "访谈和协调纪要"
+      "label": {
+        "zh": "写了会让我们不做的事实",
+        "en": "Names a fact that would stop us"
       },
-      "en": {
-        "label": "Names a fact that would stop us",
-        "look": "Whether there is a fact that, if true, makes this not worth doing",
-        "pointer": "The interviews and coordination notes"
+      "look_again": {
+        "zh": "再看看访谈和协调纪要",
+        "en": "Look again at the interviews and coordination notes"
       },
-      "materials": [
+      "look_again_materials": [
         "interviews",
         "coordination"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "need.next_check",
       "step_id": "need",
       "check": "model",
-      "predicate": {},
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "写了下一步怎么验证",
-        "look": "有没有一个可执行的最小核对",
-        "pointer": "你自己的核对计划"
+      "label": {
+        "zh": "写了下一步怎么验证",
+        "en": "States the next check"
       },
-      "en": {
-        "label": "States the next check",
-        "look": "Whether there is a small, doable next check",
-        "pointer": "Your own validation plan"
+      "look_again": {
+        "zh": "再看看你自己的核对计划",
+        "en": "Look again at your own validation plan"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "boundary.authority",
       "step_id": "boundary",
       "check": "rule",
-      "predicate": {
-        "rule_id": "authority"
-      },
       "severity": "high",
       "owner": "tech",
-      "zh": {
-        "label": "没有把最终批准交给 AI",
-        "look": "分拣里有没有越过当前权限",
-        "pointer": "技术交接的执行边界"
+      "label": {
+        "zh": "没有把最终批准交给 AI",
+        "en": "No final approval left to AI"
       },
-      "en": {
-        "label": "No final approval left to AI",
-        "look": "Whether any triage row goes beyond current authority",
-        "pointer": "The execution boundary in the technical handover"
+      "look_again": {
+        "zh": "再看看技术交接的执行边界",
+        "en": "Look again at the execution boundary in the technical handover"
       },
-      "materials": [
+      "look_again_materials": [
         "technical"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "rule": "authority"
+      }
     },
     {
       "id": "boundary.tool",
       "step_id": "boundary",
       "check": "rule",
-      "predicate": {
-        "rule_id": "tool_capability"
-      },
       "severity": "medium",
       "owner": "tech",
-      "zh": {
-        "label": "拟议工具没冒充已可执行",
-        "look": "需要工具的行有没有标清只是方案",
-        "pointer": "当前能力与配置项"
+      "label": {
+        "zh": "拟议工具没冒充已可执行",
+        "en": "Proposed tools not passed off as runnable"
       },
-      "en": {
-        "label": "Proposed tools not passed off as runnable",
-        "look": "Whether rows needing tools are marked as proposals",
-        "pointer": "Current capabilities and configuration"
+      "look_again": {
+        "zh": "再看看当前能力与配置项",
+        "en": "Look again at current capabilities and configuration"
       },
-      "materials": [
+      "look_again_materials": [
         "technical"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "rule": "tool_capability"
+      }
     },
     {
       "id": "boundary.cited",
       "step_id": "boundary",
       "check": "citation",
-      "predicate": {
-        "materials_any": [
-          "technical",
-          "approvals"
-        ]
-      },
       "severity": "medium",
       "owner": "tech",
-      "zh": {
-        "label": "引用了执行边界或审批规则",
-        "look": "权限判断有没有资料依据",
-        "pointer": "技术交接、审批规则"
+      "label": {
+        "zh": "引用了执行边界或审批规则",
+        "en": "Cites the boundary or approval rules"
       },
-      "en": {
-        "label": "Cites the boundary or approval rules",
-        "look": "Whether authority calls rest on sources",
-        "pointer": "The technical handover and approval rules"
+      "look_again": {
+        "zh": "再看看技术交接、审批规则",
+        "en": "Look again at the technical handover and approval rules"
       },
-      "materials": [
+      "look_again_materials": [
         "technical",
         "approvals"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "materials": [
+          "technical",
+          "approvals"
+        ]
+      }
     },
     {
       "id": "boundary.fallback",
       "step_id": "boundary",
       "check": "model",
-      "predicate": {},
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "写了出错谁接",
-        "look": "转交和兜底有没有写到具体的人",
-        "pointer": "访谈"
+      "label": {
+        "zh": "写了出错谁接",
+        "en": "Says who picks up mistakes"
       },
-      "en": {
-        "label": "Says who picks up mistakes",
-        "look": "Whether hand-offs and fallbacks name a person",
-        "pointer": "The interviews"
+      "look_again": {
+        "zh": "再看看访谈",
+        "en": "Look again at the interviews"
       },
-      "materials": [
+      "look_again_materials": [
         "interviews"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "solution.selected",
       "step_id": "solution",
       "check": "choice",
-      "predicate": {
-        "choice": "selected_approach",
-        "made": true
-      },
       "severity": "medium",
       "owner": "manager",
-      "zh": {
-        "label": "选定了一种做法",
-        "look": "有没有在自己列的做法里选定一种",
-        "pointer": "你列出的做法"
+      "label": {
+        "zh": "选定了一种做法",
+        "en": "An approach is chosen"
       },
-      "en": {
-        "label": "An approach is chosen",
-        "look": "Whether you chose one of the approaches you listed",
-        "pointer": "The approaches you listed"
+      "look_again": {
+        "zh": "再看看你列出的做法",
+        "en": "Look again at the approaches you listed"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {
+        "field": "solution.selected_approach",
+        "conflicts_with": []
+      }
     },
     {
       "id": "solution.alternatives",
       "step_id": "solution",
       "check": "rubric_rule",
-      "predicate": {
-        "criteria": [
-          "R6.alternatives"
-        ]
-      },
       "severity": "medium",
       "owner": "manager",
-      "zh": {
-        "label": "比较了替代做法",
-        "look": "有没有认真比较至少两种做法",
-        "pointer": "你列出的做法"
+      "label": {
+        "zh": "比较了替代做法",
+        "en": "Alternatives compared"
       },
-      "en": {
-        "label": "Alternatives compared",
-        "look": "Whether at least two approaches were seriously compared",
-        "pointer": "The approaches you listed"
+      "look_again": {
+        "zh": "再看看你列出的做法",
+        "en": "Look again at the approaches you listed"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {
+        "criterion": "R6.alternatives"
+      }
     },
     {
-      "id": "solution.capacity",
+      "id": "solution.capacity.capacity",
       "step_id": "solution",
       "check": "rubric_rule",
-      "predicate": {
-        "criteria": [
-          "R3.capacity",
-          "R3.resources"
-        ]
-      },
       "severity": "high",
       "owner": "manager",
-      "zh": {
-        "label": "容量和资源在上限内",
-        "look": "人数和开发日有没有超出可批范围",
-        "pointer": "审批上限、工作项预算"
+      "label": {
+        "zh": "容量和资源在上限内",
+        "en": "Capacity and resources within limits"
       },
-      "en": {
-        "label": "Capacity and resources within limits",
-        "look": "Whether headcount and development days exceed what can be approved",
-        "pointer": "Approval limits and work-item budgets"
+      "look_again": {
+        "zh": "再看看审批上限、工作项预算",
+        "en": "Look again at approval limits and work-item budgets"
       },
-      "materials": [
+      "look_again_materials": [
         "approvals",
         "technical"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "criterion": "R3.capacity"
+      }
+    },
+    {
+      "id": "solution.capacity.resources",
+      "step_id": "solution",
+      "check": "rubric_rule",
+      "severity": "high",
+      "owner": "manager",
+      "label": {
+        "zh": "容量和资源在上限内",
+        "en": "Capacity and resources within limits"
+      },
+      "look_again": {
+        "zh": "再看看审批上限、工作项预算",
+        "en": "Look again at approval limits and work-item budgets"
+      },
+      "look_again_materials": [
+        "approvals",
+        "technical"
+      ],
+      "false_positive_examples": [],
+      "predicate": {
+        "criterion": "R3.resources"
+      }
     },
     {
       "id": "solution.dependency",
       "step_id": "solution",
       "check": "rule",
-      "predicate": {
-        "rule_id": "dependency"
-      },
       "severity": "medium",
       "owner": "tech",
-      "zh": {
-        "label": "分清了请求值和实际生效",
-        "look": "方案里的配置有没有被当成已经生效",
-        "pointer": "配置的请求参数和实际参数"
+      "label": {
+        "zh": "分清了请求值和实际生效",
+        "en": "Requested vs effective kept apart"
       },
-      "en": {
-        "label": "Requested vs effective kept apart",
-        "look": "Whether proposed settings are treated as already in effect",
-        "pointer": "Requested and actual configuration values"
+      "look_again": {
+        "zh": "再看看配置的请求参数和实际参数",
+        "en": "Look again at requested and actual configuration values"
       },
-      "materials": [
+      "look_again_materials": [
         "technical"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "rule": "dependency"
+      }
     },
     {
       "id": "solution.consistency",
       "step_id": "solution",
       "check": "rubric_rule",
-      "predicate": {
-        "criteria": [
-          "R6.consistency"
-        ]
-      },
       "severity": "medium",
       "owner": "tech",
-      "zh": {
-        "label": "方案和分拣一致",
-        "look": "做法有没有和你在 AI 边界里的分拣对得上",
-        "pointer": "你的分拣表"
+      "label": {
+        "zh": "方案和分拣一致",
+        "en": "Design matches the triage"
       },
-      "en": {
-        "label": "Design matches the triage",
-        "look": "Whether the approach matches your AI-boundary triage",
-        "pointer": "Your triage table"
+      "look_again": {
+        "zh": "再看看你的分拣表",
+        "en": "Look again at your triage table"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {
+        "criterion": "R6.consistency"
+      }
     },
     {
       "id": "assurance.functional",
       "step_id": "assurance",
       "check": "rubric_rule",
-      "predicate": {
-        "criteria": [
-          "R4.functional_tests"
-        ]
-      },
       "severity": "high",
       "owner": "tech",
-      "zh": {
-        "label": "有能推翻方案的测试",
-        "look": "测试题里有没有可能推翻这个方案的一题",
-        "pointer": "试用问答记录"
+      "label": {
+        "zh": "有能推翻方案的测试",
+        "en": "A test that could overturn the design"
       },
-      "en": {
-        "label": "A test that could overturn the design",
-        "look": "Whether any test could overturn the design",
-        "pointer": "The trial records"
+      "look_again": {
+        "zh": "再看看试用问答记录",
+        "en": "Look again at the trial records"
       },
-      "materials": [
+      "look_again_materials": [
         "failures"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "criterion": "R4.functional_tests"
+      }
     },
     {
       "id": "assurance.staleness",
       "step_id": "assurance",
       "check": "rubric_rule",
-      "predicate": {
-        "criteria": [
-          "R4.staleness_test"
-        ]
-      },
       "severity": "high",
       "owner": "tech",
-      "zh": {
-        "label": "政策变化有复测",
-        "look": "政策更新后有没有对应的复测",
-        "pointer": "差旅政策的两个版本"
+      "label": {
+        "zh": "政策变化有复测",
+        "en": "Retest after a policy change"
       },
-      "en": {
-        "label": "Retest after a policy change",
-        "look": "Whether a policy update has a matching retest",
-        "pointer": "Both versions of the travel policy"
+      "look_again": {
+        "zh": "再看看差旅政策的两个版本",
+        "en": "Look again at both versions of the travel policy"
       },
-      "materials": [
+      "look_again_materials": [
         "policy"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {
+        "criterion": "R4.staleness_test"
+      }
     },
     {
       "id": "assurance.rollback",
       "step_id": "assurance",
       "check": "model",
-      "predicate": {},
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "写了出事怎么退",
-        "look": "回退对象和负责人有没有写清",
-        "pointer": "可单独回退的配置"
+      "label": {
+        "zh": "写了出事怎么退",
+        "en": "States how to roll back"
       },
-      "en": {
-        "label": "States how to roll back",
-        "look": "Whether the rollback target and owner are named",
-        "pointer": "Settings that can be rolled back alone"
+      "look_again": {
+        "zh": "再看看可单独回退的配置",
+        "en": "Look again at settings that can be rolled back alone"
       },
-      "materials": [
+      "look_again_materials": [
         "technical"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "assurance.signal",
       "step_id": "assurance",
       "check": "model",
-      "predicate": {},
       "severity": "medium",
       "owner": "business",
-      "zh": {
-        "label": "写了上线后看什么信号",
-        "look": "观察指标和窗口有没有写",
-        "pointer": "咨询登记能测的量"
+      "label": {
+        "zh": "写了上线后看什么信号",
+        "en": "Names the signals to watch"
       },
-      "en": {
-        "label": "Names the signals to watch",
-        "look": "Whether the metric and window are stated",
-        "pointer": "What the request log can measure"
+      "look_again": {
+        "zh": "再看看咨询登记能测的量",
+        "en": "Look again at what the request log can measure"
       },
-      "materials": [
+      "look_again_materials": [
         "demand"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "decision.intended",
       "step_id": "decision",
       "check": "choice",
-      "predicate": {
-        "choice": "intended_decision",
-        "made": true
-      },
       "severity": "medium",
       "owner": "manager",
-      "zh": {
-        "label": "选了拟作出的决定",
-        "look": "有没有在四种决定里选一种",
-        "pointer": "交付决定"
+      "label": {
+        "zh": "选了拟作出的决定",
+        "en": "Intended decision chosen"
       },
-      "en": {
-        "label": "Intended decision chosen",
-        "look": "Whether one of the four decisions is chosen",
-        "pointer": "The delivery decision"
+      "look_again": {
+        "zh": "再看看交付决定",
+        "en": "Look again at the delivery decision"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {
+        "field": "intended_decision",
+        "conflicts_with": []
+      }
     },
     {
       "id": "decision.conditions",
       "step_id": "decision",
       "check": "model",
-      "predicate": {},
       "severity": "high",
       "owner": "manager",
-      "zh": {
-        "label": "写清承诺的条件",
-        "look": "决定附带的条件和未解决的事有没有写",
-        "pointer": "审批上限和你申请的资源"
+      "label": {
+        "zh": "写清承诺的条件",
+        "en": "Conditions stated"
       },
-      "en": {
-        "label": "Conditions stated",
-        "look": "Whether the conditions and open items are written",
-        "pointer": "Approval limits and your requests"
+      "look_again": {
+        "zh": "再看看审批上限和你申请的资源",
+        "en": "Look again at approval limits and your requests"
       },
-      "materials": [
+      "look_again_materials": [
         "approvals"
       ],
-      "false_positive_examples": []
+      "false_positive_examples": [],
+      "predicate": {}
     },
     {
       "id": "decision.self_changes",
       "step_id": "decision",
       "check": "self",
-      "predicate": {
-        "confirm": "compared_with_previous"
-      },
       "severity": "low",
       "owner": "manager",
-      "zh": {
-        "label": "本人核对过和上一版的差别",
-        "look": "你自己确认已对照上一版",
-        "pointer": "你的上一版 PRD"
+      "label": {
+        "zh": "本人核对过和上一版的差别",
+        "en": "You compared with the last version"
       },
-      "en": {
-        "label": "You compared with the last version",
-        "look": "You confirm you compared with the previous version",
-        "pointer": "Your previous PRD version"
+      "look_again": {
+        "zh": "再看看你的上一版 PRD",
+        "en": "Look again at your previous PRD version"
       },
-      "materials": [],
-      "false_positive_examples": []
+      "look_again_materials": [],
+      "false_positive_examples": [],
+      "predicate": {}
     }
   ]
 }

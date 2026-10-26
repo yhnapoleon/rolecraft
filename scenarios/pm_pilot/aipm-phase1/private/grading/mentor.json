@@ -5,217 +5,279 @@
   "prompts": [
     {
       "id": "m.audience_scope",
-      "trigger": {
-        "rule_id": "audience_scope"
-      },
       "colleague": "manager",
-      "zh": "这次的助手到底是给公司里的谁用的？你再对一下我的委托。",
-      "en": "Who inside the company is this assistant actually for? Check it against my brief.",
+      "question": {
+        "zh": "这次的助手到底是给公司里的谁用的？你再对一下我的委托。",
+        "en": "Who inside the company is this assistant actually for? Check it against my brief."
+      },
       "materials": [
         "brief"
+      ],
+      "step_id": "business",
+      "when_rule": [
+        "audience_scope"
       ]
     },
     {
       "id": "m.audience_missing",
-      "trigger": {
-        "coverage_id": "business.audience",
-        "mark": "missing"
-      },
       "colleague": "business",
-      "zh": "你觉得最先用上它的会是哪群人？",
-      "en": "Which group do you expect to use it first?",
+      "question": {
+        "zh": "你觉得最先用上它的会是哪群人？",
+        "en": "Which group do you expect to use it first?"
+      },
       "materials": [
         "user_groups"
-      ]
+      ],
+      "step_id": "business",
+      "when_coverage": {
+        "business.audience": [
+          "missing"
+        ]
+      }
     },
     {
       "id": "m.business_cited",
-      "trigger": {
-        "coverage_id": "business.cited",
-        "mark": "missing"
-      },
       "colleague": "manager",
-      "zh": "这段判断你是从哪份资料里看出来的？",
-      "en": "Which material did you draw this from?",
+      "question": {
+        "zh": "这段判断你是从哪份资料里看出来的？",
+        "en": "Which material did you draw this from?"
+      },
       "materials": [
         "brief"
-      ]
+      ],
+      "step_id": "business",
+      "when_coverage": {
+        "business.cited": [
+          "missing"
+        ]
+      }
     },
     {
       "id": "m.approval_authority",
-      "trigger": {
-        "rule_id": "approval_authority"
-      },
       "colleague": "manager",
-      "zh": "他提了意见，这算批准吗？资源是谁批的，你查过审批规则吗？",
-      "en": "They gave a view — is that an approval? Have you checked who signs off resources in the approval rules?",
+      "question": {
+        "zh": "他提了意见，这算批准吗？资源是谁批的，你查过审批规则吗？",
+        "en": "They gave a view — is that an approval? Have you checked who signs off resources in the approval rules?"
+      },
       "materials": [
         "approvals"
+      ],
+      "step_id": "stakeholders",
+      "when_rule": [
+        "approval_authority"
       ]
     },
     {
       "id": "m.burden",
-      "trigger": {
-        "coverage_id": "stakeholders.burden",
-        "mark": "to_check"
-      },
       "colleague": "business",
-      "zh": "试点一开，我们组谁会多出活来？",
-      "en": "Once the pilot opens, who in my team ends up with extra work?",
+      "question": {
+        "zh": "试点一开，我们组谁会多出活来？",
+        "en": "Once the pilot opens, who in my team ends up with extra work?"
+      },
       "materials": [
         "coordination"
-      ]
+      ],
+      "step_id": "stakeholders",
+      "when_coverage": {
+        "stakeholders.burden": [
+          "to_check"
+        ]
+      }
     },
     {
       "id": "m.metric_scope",
-      "trigger": {
-        "rule_id": "metric_scope"
-      },
       "colleague": "business",
-      "zh": "收益测算里的 429 分钟是怎么算的？里面有多少是在排队和等审批？",
-      "en": "How was the 429 minutes in the estimate worked out? How much of it is queueing and waiting for approval?",
+      "question": {
+        "zh": "收益测算里的 429 分钟是怎么算的？里面有多少是在排队和等审批？",
+        "en": "How was the 429 minutes in the estimate worked out? How much of it is queueing and waiting for approval?"
+      },
       "materials": [
         "business_case",
         "demand"
+      ],
+      "step_id": "need",
+      "when_rule": [
+        "metric_scope"
       ]
     },
     {
       "id": "m.raw_evidence",
-      "trigger": {
-        "coverage_id": "need.raw_evidence",
-        "mark": "missing"
-      },
       "colleague": "business",
-      "zh": "你看过导出的原始记录吗？里面最常见的是哪类问题？",
-      "en": "Have you looked at the raw export? Which kind of question comes up most?",
+      "question": {
+        "zh": "你看过导出的原始记录吗？里面最常见的是哪类问题？",
+        "en": "Have you looked at the raw export? Which kind of question comes up most?"
+      },
       "materials": [
         "demand"
-      ]
+      ],
+      "step_id": "need",
+      "when_coverage": {
+        "need.raw_evidence": [
+          "missing"
+        ]
+      }
     },
     {
       "id": "m.disconfirming",
-      "trigger": {
-        "coverage_id": "need.disconfirming",
-        "mark": "to_check"
-      },
       "colleague": "manager",
-      "zh": "如果哪件事成立，你会建议我们不做？",
-      "en": "What would have to be true for you to advise us not to do this?",
+      "question": {
+        "zh": "如果哪件事成立，你会建议我们不做？",
+        "en": "What would have to be true for you to advise us not to do this?"
+      },
       "materials": [
         "interviews"
-      ]
+      ],
+      "step_id": "need",
+      "when_coverage": {
+        "need.disconfirming": [
+          "to_check"
+        ]
+      }
     },
     {
       "id": "m.authority",
-      "trigger": {
-        "rule_id": "authority"
-      },
       "colleague": "tech",
-      "zh": "这一步助手在系统里真有权限做吗？你看过执行边界那段吗？",
-      "en": "Does the assistant actually have permission to do this step? Have you read the execution boundary?",
+      "question": {
+        "zh": "这一步助手在系统里真有权限做吗？你看过执行边界那段吗？",
+        "en": "Does the assistant actually have permission to do this step? Have you read the execution boundary?"
+      },
       "materials": [
         "technical"
+      ],
+      "step_id": "boundary",
+      "when_rule": [
+        "authority"
       ]
     },
     {
       "id": "m.tool",
-      "trigger": {
-        "rule_id": "tool_capability"
-      },
       "colleague": "tech",
-      "zh": "这个工具现在装了吗？没装的话，这一行算做到了吗？",
-      "en": "Is that tool installed today? If not, does this row count as done?",
+      "question": {
+        "zh": "这个工具现在装了吗？没装的话，这一行算做到了吗？",
+        "en": "Is that tool installed today? If not, does this row count as done?"
+      },
       "materials": [
         "technical"
+      ],
+      "step_id": "boundary",
+      "when_rule": [
+        "tool_capability"
       ]
     },
     {
       "id": "m.fallback",
-      "trigger": {
-        "coverage_id": "boundary.fallback",
-        "mark": "to_check"
-      },
       "colleague": "business",
-      "zh": "助手答错了，业务上谁来接？",
-      "en": "When the assistant gets it wrong, who on the business side picks it up?",
+      "question": {
+        "zh": "助手答错了，业务上谁来接？",
+        "en": "When the assistant gets it wrong, who on the business side picks it up?"
+      },
       "materials": [
         "interviews"
-      ]
+      ],
+      "step_id": "boundary",
+      "when_coverage": {
+        "boundary.fallback": [
+          "to_check"
+        ]
+      }
     },
     {
       "id": "m.capacity",
-      "trigger": {
-        "coverage_id": "solution.capacity",
-        "mark": "wrong"
-      },
       "colleague": "manager",
-      "zh": "这个人数和开发日，我按规则能批吗？",
-      "en": "Can I approve this headcount and these development days under the rules?",
+      "question": {
+        "zh": "这个人数和开发日，我按规则能批吗？",
+        "en": "Can I approve this headcount and these development days under the rules?"
+      },
       "materials": [
         "approvals"
-      ]
+      ],
+      "step_id": "solution",
+      "when_coverage": {
+        "solution.capacity.capacity": [
+          "wrong"
+        ]
+      }
     },
     {
       "id": "m.dependency",
-      "trigger": {
-        "rule_id": "dependency"
-      },
       "colleague": "tech",
-      "zh": "你要的这个设置现在真的生效了吗？请求值和实际值一样吗？",
-      "en": "Is the setting you want actually in effect? Do the requested and actual values match?",
+      "question": {
+        "zh": "你要的这个设置现在真的生效了吗？请求值和实际值一样吗？",
+        "en": "Is the setting you want actually in effect? Do the requested and actual values match?"
+      },
       "materials": [
         "technical"
+      ],
+      "step_id": "solution",
+      "when_rule": [
+        "dependency"
       ]
     },
     {
       "id": "m.alternatives",
-      "trigger": {
-        "coverage_id": "solution.alternatives",
-        "mark": "missing"
-      },
       "colleague": "manager",
-      "zh": "除了这个做法，你还认真考虑过哪一种？为什么不选？",
-      "en": "Besides this approach, which other did you seriously weigh, and why not choose it?",
-      "materials": []
+      "question": {
+        "zh": "除了这个做法，你还认真考虑过哪一种？为什么不选？",
+        "en": "Besides this approach, which other did you seriously weigh, and why not choose it?"
+      },
+      "materials": [],
+      "step_id": "solution",
+      "when_coverage": {
+        "solution.alternatives": [
+          "missing"
+        ]
+      }
     },
     {
       "id": "m.staleness",
-      "trigger": {
-        "coverage_id": "assurance.staleness",
-        "mark": "missing"
-      },
       "colleague": "tech",
-      "zh": "政策换了版本，你用哪一题确认助手跟上了？",
-      "en": "When the policy changes version, which question shows the assistant kept up?",
+      "question": {
+        "zh": "政策换了版本，你用哪一题确认助手跟上了？",
+        "en": "When the policy changes version, which question shows the assistant kept up?"
+      },
       "materials": [
         "policy"
-      ]
+      ],
+      "step_id": "assurance",
+      "when_coverage": {
+        "assurance.staleness": [
+          "missing"
+        ]
+      }
     },
     {
       "id": "m.rollback",
-      "trigger": {
-        "coverage_id": "assurance.rollback",
-        "mark": "to_check"
-      },
       "colleague": "business",
-      "zh": "出了问题，我们回到哪一步？谁来拍板退？",
-      "en": "If something breaks, what do we roll back to, and who calls it?",
+      "question": {
+        "zh": "出了问题，我们回到哪一步？谁来拍板退？",
+        "en": "If something breaks, what do we roll back to, and who calls it?"
+      },
       "materials": [
         "technical"
-      ]
+      ],
+      "step_id": "assurance",
+      "when_coverage": {
+        "assurance.rollback": [
+          "to_check"
+        ]
+      }
     },
     {
       "id": "m.conditions",
-      "trigger": {
-        "coverage_id": "decision.conditions",
-        "mark": "to_check"
-      },
       "colleague": "manager",
-      "zh": "在什么条件下你会让我批这个决定？",
-      "en": "Under what conditions would you have me approve this decision?",
+      "question": {
+        "zh": "在什么条件下你会让我批这个决定？",
+        "en": "Under what conditions would you have me approve this decision?"
+      },
       "materials": [
         "approvals"
-      ]
+      ],
+      "step_id": "decision",
+      "when_coverage": {
+        "decision.conditions": [
+          "to_check"
+        ]
+      }
     }
   ]
 }

@@ -119,30 +119,40 @@ CHECKS = {"choice", "citation", "rule", "rubric_rule", "sentence", "model", "sel
 STEPS = {"business", "stakeholders", "need", "boundary", "solution", "assurance", "decision"}
 
 
-def test_coverage_points_use_reviewed_checks_and_known_references():
+def test_coverage_items_use_reviewed_checks_and_known_references():
     import json
 
     coverage = json.loads((GRADING / "coverage.json").read_text())
     rule_ids = {rule["id"] for rule in load_rules(RULES)}
-    ids = [p["id"] for p in coverage["points"]]
+    ids = [item["id"] for item in coverage["items"]]
     assert len(ids) == len(set(ids))
-    for point in coverage["points"]:
-        assert point["check"] in CHECKS and point["step_id"] in STEPS
-        assert point["severity"] in {"high", "medium", "low"}
-        assert point["owner"] in {"manager", "business", "tech"}
-        assert set(point["zh"]) == set(point["en"]) == {"label", "look", "pointer"}
-        if point["check"] == "rule":
-            assert point["predicate"]["rule_id"] in rule_ids
-    assert {p["step_id"] for p in coverage["points"]} == STEPS
+    for item in coverage["items"]:
+        assert item["check"] in CHECKS and item["step_id"] in STEPS
+        assert item["severity"] in {"high", "medium", "low"}
+        assert item["owner"] in {"manager", "business", "tech"}
+        assert set(item["label"]) == set(item["look_again"]) == {"zh", "en"}
+        predicate = item["predicate"]
+        if item["check"] == "rule":
+            assert predicate["rule"] in rule_ids
+        if item["check"] == "choice":
+            assert predicate["field"] and predicate["conflicts_with"] == []
+        if item["check"] == "rubric_rule":
+            assert predicate["criterion"].startswith("R")
+    assert {item["step_id"] for item in coverage["items"]} == STEPS
 
 
 def test_mentor_prompts_are_questions_tied_to_real_triggers():
     import json
 
-    coverage = {p["id"] for p in json.loads((GRADING / "coverage.json").read_text())["points"]}
+    coverage = {
+        i["id"]: i["step_id"] for i in json.loads((GRADING / "coverage.json").read_text())["items"]
+    }
     rule_ids = {rule["id"] for rule in load_rules(RULES)}
     for prompt in json.loads((GRADING / "mentor.json").read_text())["prompts"]:
-        trigger = prompt["trigger"]
-        assert trigger.get("rule_id") in rule_ids or trigger.get("coverage_id") in coverage
+        assert set(prompt.get("when_rule", [])) <= rule_ids
+        for cid, marks in prompt.get("when_coverage", {}).items():
+            assert coverage[cid] == prompt["step_id"]
+            assert set(marks) <= {"wrong", "missing", "to_check"}
+        assert prompt.get("when_rule") or prompt.get("when_coverage")
         assert prompt["colleague"] in {"manager", "business", "tech"}
-        assert "？" in prompt["zh"] and "?" in prompt["en"]
+        assert "？" in prompt["question"]["zh"] and "?" in prompt["question"]["en"]
