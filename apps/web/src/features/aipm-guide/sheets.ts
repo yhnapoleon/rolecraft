@@ -16,6 +16,18 @@ const WORDS = {
     agent: '你的 Agent 交来草稿，待你确认',
     agentShort: 'Agent 草稿待确认',
     missing: '还差：',
+    missingLong: '批改单里还有要补的要点',
+    seeReview: (label: string) => `先看「${label}」的批改 ›`,
+    short: {
+      business: '看懂业务',
+      stakeholders: '相关方',
+      need: '真需求',
+      boundary: 'AI 边界',
+      solution: '方案',
+      assurance: '评测与回退',
+      decision: '上线决策',
+    },
+    pinned: '已固定 · Esc 收起',
     title: '我的工作纸',
     sheets: (n: number) => `试点 PRD · ${n} 张纸`,
     openPrd: '打开整份 PRD',
@@ -54,6 +66,18 @@ const WORDS = {
     agent: 'Your agent sent a draft for you to review',
     agentShort: 'agent draft to review',
     missing: 'Still missing: ',
+    missingLong: 'The review lists points to fill in',
+    seeReview: (label: string) => `See the review of “${label}” ›`,
+    short: {
+      business: 'Business',
+      stakeholders: 'Stakeholders',
+      need: 'Real need',
+      boundary: 'AI boundary',
+      solution: 'Solution',
+      assurance: 'Evals & rollback',
+      decision: 'Launch call',
+    },
+    pinned: 'Pinned · Esc to close',
     title: 'My sheets',
     sheets: (n: number) => `Pilot PRD · ${n} sheets`,
     openPrd: 'Open the whole PRD',
@@ -78,6 +102,9 @@ const WORDS = {
   },
 } as const;
 export const sheetWords = (language: Language) => WORDS[language];
+/** A review's open point reads as a phrase only when the server gives a short label; a longer
+ * one is the model's own sentence and stays on the review. */
+const shortGap = (gap?: string) => !!gap && [...gap].length <= 16;
 const ORDER = ['①', '②', '③', '④', '⑤', '⑥', '⑦'];
 export const orderGlyph = (n: number) => ORDER[n - 1] ?? '';
 
@@ -131,11 +158,14 @@ export function stackItems(rows: SheetRow[], language: Language): StackItem[] {
     segment: r.segment,
     icon: r.icon,
     name: r.label,
+    short: w.short[r.id] ?? r.label,
     purpose: r.goal,
     status: r.status,
     statusText: r.statusText,
     ...(r.recheckReason ? { recheckReason: r.recheckReason } : {}),
-    ...(r.gapHint ? { gapHint: `${w.missing}${r.gapHint}` } : {}),
+    ...(r.gapHint
+      ? { gapHint: shortGap(r.gapHint) ? `${w.missing}${r.gapHint}` : w.missingLong }
+      : {}),
     agentDraft: r.agentDraft,
     suggested: r.suggested,
   }));
@@ -153,11 +183,11 @@ export function stackSummary(rows: SheetRow[], language: Language) {
     : drafts
       ? w.agentLine(drafts)
       : w.basedLine(held, n);
-  const suggested = rows.find((r) => r.suggested);
   return {
     status,
     aria: w.aria(n, held, recheck, drafts),
-    capsule: `${w.capsule(held, n)}${suggested ? ` ${orderGlyph(suggested.order)}` : ''}`,
+    // The capsule's only number besides the count is the amber badge for what waits.
+    capsule: w.capsule(held, n),
   };
 }
 
@@ -166,9 +196,11 @@ export function suggestionLine(rows: SheetRow[], progress: ProgressView, languag
   const row = rows.find((r) => r.suggested);
   if (!row) return null;
   const step = progress.steps.find((s) => s.id === row.id);
+  const q = language === 'en' ? ['“', '”'] : ['「', '」'];
+  if (row.gapHint && !shortGap(row.gapHint))
+    return { step: row.id, text: sheetWords(language).seeReview(row.label), review: true };
   const detail = row.gapHint
     ? `${language === 'en' ? 'still missing ' : '还缺'}${row.gapHint}`
     : (step?.nextAction ?? row.goal);
-  const q = language === 'en' ? ['“', '”'] : ['「', '」'];
   return { step: row.id, text: `${q[0]}${row.label}${q[1]} ${detail}` };
 }

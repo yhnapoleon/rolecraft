@@ -1731,14 +1731,36 @@ const Aipm = createAipmPractice({
     await recordRead(a, id);
     if (current()?.id === a.id) refreshWS(['stage']);
   },
-  quoteToSheet: async (id) => {
+  materialTitle: (id) => {
+    const a = current(),
+      m = a && E.getMaterials(a).find((x) => x.id === id);
+    return m ? materialTitle(m) : id;
+  },
+  colleagueName: (c) => PEOPLE[c]?.name ?? c,
+  quoteToSheet: async (id, paragraphs = []) => {
     const a = current(),
       host = a && L.nativeWorkspace(a) ? L.v4Host(a) : null,
       m = a && E.getMaterials(a).find((x) => x.id === id);
     if (!host || !m) return;
-    const refs = await host.chooseEvidence({
-      focus: { session_id: a.id, kind: 'material', object_id: m.id, version: m.version },
-    });
+    // Selected paragraphs quote the passages read from this exact version, in order; anything
+    // that matches none falls back to the picker.
+    const flat = (t) => (t || '').replace(/\s+/g, '');
+    const read = (host.draft('workspace', 'evidence-cache') ?? []).filter(
+      (r) => r.kind === 'material' && r.object_id === m.id && r.version === m.version && r.quote,
+    );
+    const hits = [
+      ...new Set(
+        paragraphs
+          .map(flat)
+          .filter(Boolean)
+          .map((p) => read.find((r) => flat(r.quote) === p) ?? read.find((r) => flat(r.quote).includes(p))),
+      ),
+    ].filter(Boolean);
+    const refs = hits.length
+      ? hits
+      : await host.chooseEvidence({
+          focus: { session_id: a.id, kind: 'material', object_id: m.id, version: m.version },
+        });
     for (const ref of refs.filter((r) => r.kind === 'material'))
       quoteToWorksheet(ref, T(`《${materialTitle(m)}》v${ref.version}`, `“${materialTitle(m)}” v${ref.version}`));
   },
@@ -3750,11 +3772,12 @@ function prdSees(a, role) {
     : [];
   const latest = versions.length ? Math.max(...versions) : 0;
   const name = PEOPLE[role].name;
-  return `<p class="aipm-sees"><b>${T(`${name} 能看到：`, `${PEOPLE[role].ref} can see: `)}</b>${
+  // One line that opens: what this colleague has, and on request what they do not.
+  return `<details class="aipm-sees"><summary><b>${T(`${name} 能看到：`, `${PEOPLE[role].ref} can see: `)}</b><span class="aipm-sees__what">${
     latest
-      ? T(`试点 PRD 第 ${latest} 版（你附上过）`, `pilot PRD version ${latest} (you attached it)`)
-      : T('还没有你附上的 PRD', 'no PRD you attached yet')
-  }${T('、你消息里写的内容', ', and what your messages say')}<br><span>${T('看不到：没附上的版本、你的 Agent 对话、批改单里的其余内容', 'Cannot see: versions you did not attach, your agent’s conversation, the rest of a review')}</span></p>`;
+      ? T(`试点 PRD 第 ${latest} 版 · 你的消息`, `pilot PRD version ${latest} · your messages`)
+      : T('你消息里写的内容（还没附上 PRD）', 'what your messages say (no PRD attached yet)')
+  }</span><span class="aipm-sees__i" aria-hidden="true">ⓘ</span></summary><p>${T('看不到：没附上的版本、你的 Agent 对话、批改单里的其余内容', 'Cannot see: versions you did not attach, your agent’s conversation, the rest of a review')}</p></details>`;
 }
 // Sending with the chip on: share that exact PRD version first, then let the message go as usual
 // (a native turn carries every share its colleague has).
@@ -3781,6 +3804,8 @@ document.addEventListener(
       });
       if (result.status !== 'confirmed') throw new Error(result.result?.message || result.status);
       prdShares.get(`${a.id}:${ROLE_ID[role]}`)?.add(`${prd.id}@${prd.version}`);
+      const said = form.querySelector('#chat-input')?.value.trim();
+      if (said) prdSentWith.set(`${a.id}:${role}:${said}`, prd.version);
     } catch (err) {
       notify(
         T(
@@ -3812,8 +3837,45 @@ document.addEventListener(
   },
   true,
 );
+// "Attached: pilot PRD · version N" under the message that carried it (this page's memory: the
+// conversation itself does not record which message a share went with).
+const prdSentWith = new Map();
+function notePrdBubbles() {
+  const a = current(),
+    role = ui.chatRole;
+  if (!a || !role || !prdSentWith.size) return;
+  for (const q of document.querySelectorAll('.chat .rc-roles__question')) {
+    const group = q.closest('.rc-msg--mine');
+    if (!group || group.querySelector('.aipm-bubble-note')) continue;
+    const said = [...q.childNodes]
+      .filter((n) => !n.classList?.contains('sr-only'))
+      .map((n) => n.textContent)
+      .join('')
+      .trim();
+    const version = prdSentWith.get(`${a.id}:${role}:${said}`);
+    if (!version) continue;
+    const note = document.createElement('p');
+    note.className = 'aipm-bubble-note';
+    note.textContent = T(`附上：试点 PRD · 第 ${version} 版`, `Attached: pilot PRD · version ${version}`);
+    q.after(note);
+  }
+}
+new MutationObserver(() => prdSentWith.size && requestAnimationFrame(notePrdBubbles)).observe(
+  document.body,
+  { childList: true, subtree: true },
+);
+// The introduction folds to one line once you have written to that colleague (once, so opening
+// it again stays open).
+const introFolded = new Set();
+function foldIntroduction(a, role, msgs) {
+  const key = `${a.id}:${role}`;
+  if (introFolded.has(key) || !msgs.some((m) => m.role === 'user')) return;
+  introFolded.add(key);
+  Greetings.rememberIntroduction(a.id, role);
+}
 function railChat(a, role) {
   const msgs = a.conversations[role] || [];
+  foldIntroduction(a, role, msgs);
   const t = routeTask(a);
   const x = t && ui.obj && ui.obj.type === 'work' ? artifact() : null;
   const typing = typingRole(a) === role;
@@ -8462,7 +8524,12 @@ Board.installWalkThrough({
     if (hatHere(current()) === 'pm' && ui.route !== 'work') go('work');
     else refreshWS(['toolbar', 'rail', 'stage']);
   },
-  finish: (id) => Greetings.finishArrivals(id),
+  finish: (id) => {
+    Greetings.finishArrivals(id);
+    // The sheet pile's first hint was held back during the walk-through: give it its turn.
+    const a = current();
+    if (a?.id === id && document.querySelector('[data-island="aipm-stack"]')) mountProgress(a);
+  },
   openTicket: async () => {
     const a = current(), id = ui.routeId?.split('?')[0];
     if (!a || !id) return;

@@ -250,7 +250,8 @@ export function startTour(id: string) {
     if (landing) {
       landing.scrollIntoView({ block: 'center' });
       landing.setAttribute('tabindex', '-1');
-      landing.focus({ preventScroll: true });
+      // Focus lands for the keyboard without leaving a ring on the card.
+      landing.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
     } else if (before?.isConnected) before.focus({ preventScroll: true });
   };
   card.addEventListener('click', (e) => {

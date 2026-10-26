@@ -5,8 +5,12 @@
   --seg-clarify: #c8b597;
   --seg-design: #9cadbf;
   --seg-verify: #9db79f;
-  --stack-amber: #b7791f;
-  --stack-shadow: 0 0 0 0.5px var(--line-2), 0 3px 8px -2px rgba(60, 40, 20, 0.22);
+  /* What waits is the site's own warning colour; text on it is chosen per theme. */
+  --stack-amber: var(--warn);
+  --stack-amber-ink: #fff;
+  --stack-shadow:
+    0 0 0 0.5px var(--line-2), inset 0 0.5px 0 rgba(255, 255, 255, 0.8),
+    0 1px 1px rgba(60, 40, 20, 0.08), 0 6px 14px -6px rgba(60, 40, 20, 0.25);
   --stack-thumb-shadow: 0 0 0 0.5px var(--line-2), 0 4px 10px -3px rgba(60, 40, 20, 0.28);
   --stack-pop: rgba(250, 247, 242, 0.86);
   --stack-pop-shadow:
@@ -19,9 +23,14 @@
     --seg-clarify: #b9a483;
     --seg-design: #8fa2bb;
     --seg-verify: #94ad8f;
-    --stack-amber: #e09a4a;
-    --stack-shadow: 0 0 0 0.5px rgba(255, 248, 236, 0.12), 0 4px 10px -3px rgba(0, 0, 0, 0.55);
-    --stack-thumb-shadow: 0 0 0 0.5px rgba(255, 248, 236, 0.12), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+    --stack-amber-ink: #1d1712;
+    --stack-paper: #3a342e;
+    --stack-shadow:
+      0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+      0 4px 10px -3px rgba(0, 0, 0, 0.55);
+    --stack-thumb-shadow:
+      0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+      0 6px 14px -6px rgba(0, 0, 0, 0.6);
     --stack-pop: rgba(38, 34, 30, 0.84);
     --stack-pop-shadow:
       0 0 0 0.5px rgba(255, 248, 236, 0.1), 0 14px 32px -10px rgba(0, 0, 0, 0.6),
@@ -33,9 +42,14 @@
   --seg-clarify: #b9a483;
   --seg-design: #8fa2bb;
   --seg-verify: #94ad8f;
-  --stack-amber: #e09a4a;
-  --stack-shadow: 0 0 0 0.5px rgba(255, 248, 236, 0.12), 0 4px 10px -3px rgba(0, 0, 0, 0.55);
-  --stack-thumb-shadow: 0 0 0 0.5px rgba(255, 248, 236, 0.12), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+  --stack-amber-ink: #1d1712;
+  --stack-paper: #3a342e;
+  --stack-shadow:
+    0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+    0 4px 10px -3px rgba(0, 0, 0, 0.55);
+  --stack-thumb-shadow:
+    0 0 0 0.5px rgba(255, 248, 236, 0.16), inset 0 1px 0 rgba(255, 248, 236, 0.06),
+    0 6px 14px -6px rgba(0, 0, 0, 0.6);
   --stack-pop: rgba(38, 34, 30, 0.84);
   --stack-pop-shadow:
     0 0 0 0.5px rgba(255, 248, 236, 0.1), 0 14px 32px -10px rgba(0, 0, 0, 0.6),
@@ -98,7 +112,7 @@
   width: 44px;
   height: 56px;
   border-radius: 5px;
-  background: var(--paper);
+  background: var(--stack-paper, var(--paper));
   box-shadow: var(--stack-shadow);
   color: var(--ink-2);
   overflow: hidden;
@@ -163,7 +177,7 @@
   border-radius: 10px;
   background: var(--stack-amber);
   box-shadow: 0 0 0 2px var(--canvas);
-  color: #fff;
+  color: var(--stack-amber-ink);
   font: 700 11px / 1 var(--sans);
   font-variant-numeric: tabular-nums;
 }
@@ -219,6 +233,12 @@
   }
 }
 
+/* Pinned reads differently from a preview: an ink ring round the pile. */
+.ws-stack[data-open="pinned"] .ws-stack__pile {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
 /* ---------- open ---------- */
 .ws-stack__scrim {
   position: fixed;
@@ -233,6 +253,21 @@
   bottom: 100%;
   /* The gap to the pile belongs to the panel, so a pointer crossing it stays inside. */
   padding-bottom: 14px;
+}
+/* The fan reads over a patch of frosted canvas instead of a dimmed page: whatever is behind
+ * blurs away, so no label ever sits on legible text. */
+.ws-stack__panel--fan::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -28px -40px -12px -20px;
+  border-radius: 28px;
+  background: color-mix(in oklab, var(--canvas) 62%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-mask-image: radial-gradient(170% 150% at 0% 100%, #000 62%, transparent 96%);
+  mask-image: radial-gradient(170% 150% at 0% 100%, #000 62%, transparent 96%);
+  pointer-events: none;
 }
 .ws-stack__head {
   display: flex;
@@ -291,7 +326,11 @@
   justify-items: start;
 }
 .ws-stack__segment {
+  justify-self: start;
   margin: 6px 0 2px 2px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--canvas) 85%, transparent);
   color: var(--ink-3);
   font-size: 11px;
   font-weight: 600;
@@ -325,8 +364,9 @@
   width: 40px;
   height: 52px;
   border-radius: 5px;
-  background: var(--paper);
+  background: var(--stack-paper, var(--paper));
   box-shadow: var(--stack-thumb-shadow);
+  rotate: var(--tilt, 0deg);
   color: var(--ink-2);
 }
 .ws-stack__dot {
@@ -360,15 +400,16 @@
 .ws-stack__dot[data-status="recheck"] {
   border-color: var(--stack-amber);
   background: var(--stack-amber);
+  color: var(--stack-amber-ink);
 }
 .ws-stack__agent--thumb {
-  top: -6px;
-  bottom: auto;
+  bottom: -6px;
   left: -6px;
   width: 15px;
   height: 15px;
 }
 .ws-stack__label {
+  position: relative;
   display: grid;
   min-width: 210px;
   max-width: 300px;
@@ -417,27 +458,35 @@
   color: var(--good);
   font-weight: 600;
 }
-/* What it is for and what is missing: only for the one pointed at. */
+/* What it is for and what is missing: a card beside the one pointed at, so nothing above it
+ * moves. */
 .ws-stack__more {
-  display: grid;
-  max-height: 0;
-  overflow: hidden;
+  position: absolute;
+  z-index: 1;
+  left: calc(100% + 10px);
+  top: 50%;
+  width: max-content;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  /* Solid paper: it sits inside the frosted label, where a second blur cannot see the page. */
+  background: var(--paper);
+  box-shadow: var(--stack-pop-shadow);
   color: var(--ink-2);
   font-size: 12px;
   line-height: 1.5;
   opacity: 0;
+  pointer-events: none;
+  transform: translate(-4px, -50%);
   transition:
-    max-height var(--mid) var(--ease-out),
     opacity var(--fast) var(--ease-out),
-    margin var(--mid) var(--ease-out);
+    transform var(--fast) var(--ease-out);
 }
 .ws-stack__item:hover .ws-stack__more,
 .ws-stack__item:focus-visible .ws-stack__more {
-  max-height: 64px;
-  margin-top: 3px;
-  padding-top: 3px;
-  border-top: 0.5px solid var(--line);
   opacity: 1;
+  transform: translate(0, -50%);
+  transition-delay: 80ms;
 }
 
 /* ---------- grid: short windows, many sheets ---------- */
@@ -458,6 +507,7 @@
   box-shadow: var(--shadow-float);
 }
 .ws-stack__panel--grid .ws-stack__item {
+  position: relative;
   flex-direction: column;
   gap: 6px;
   width: 100%;
@@ -475,6 +525,16 @@
 .ws-stack__panel--grid .ws-stack__item .ws-stack__thumb {
   width: 30px;
   height: 38px;
+  rotate: none;
+}
+.ws-stack__panel--grid .ws-stack__item > .ws-stack__dot {
+  top: 6px;
+  right: 6px;
+  bottom: auto;
+  width: 14px;
+  height: 14px;
+  font-size: 8px;
+  box-shadow: none;
 }
 .ws-stack__panel--grid .ws-stack__item .ws-stack__label {
   min-width: 0;
@@ -502,6 +562,7 @@
 .ws-stack__panel--grid .ws-stack__name {
   justify-content: center;
   flex-wrap: wrap;
+  text-wrap: balance;
   font-size: 11.5px;
   font-weight: 500;
 }
@@ -553,6 +614,19 @@
   backdrop-filter: blur(18px) saturate(1.4);
   box-shadow: var(--shadow-float);
 }
+.ws-stack__panel--sheet::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: -6px auto 12px;
+  border-radius: 2px;
+  background: var(--line-2);
+}
+.ws-stack[data-layout="sheet"]:not([data-open="closed"]) .ws-stack__pile {
+  opacity: 0;
+  pointer-events: none;
+}
 .ws-stack__panel--sheet .ws-stack__head {
   flex-wrap: wrap;
   white-space: normal;
@@ -562,9 +636,17 @@
   transform: none;
 }
 .ws-stack__panel--sheet .ws-stack__item .ws-stack__more {
-  max-height: none;
+  position: static;
+  width: auto;
+  max-width: none;
   margin-top: 2px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   opacity: 1;
+  transform: none;
 }
 .ws-stack__sheet-close {
   width: 100%;

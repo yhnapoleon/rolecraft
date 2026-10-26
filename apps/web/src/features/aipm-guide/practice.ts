@@ -61,11 +61,14 @@ export type PracticeDeps = {
   openProduct(productId: string): void;
   /** A material's page, for the column beside a worksheet. */
   materialHtml(materialId: string): string;
+  materialTitle(materialId: string): string;
+  colleagueName(colleague: AipmColleague): string;
   /** Reads a material the way opening it does (a counted read), then redraws. */
   readMaterial(materialId: string): void;
-  /** Picks passages of that material (the existing evidence picker) and quotes them into the
-   * open worksheet, each with the exact reference the server returned. */
-  quoteToSheet(materialId: string): void;
+  /** Quotes passages of that material into the open worksheet, each with the exact reference
+   * the server returned: the given paragraphs when they match read passages, otherwise the
+   * ones picked in the existing evidence picker. */
+  quoteToSheet(materialId: string, paragraphs?: string[]): void;
   /** Starts a new free work product (a free sheet). */
   newFreeSheet(): void;
 };
@@ -566,6 +569,7 @@ export function createAipmPractice(deps: PracticeDeps) {
       stale: s.stale,
       ...(s.readAt ? { updatedAt: s.readAt } : {}),
       onOpen: (id) => host.openWorksheet(id as StepId),
+      onReview: (id) => host.openReview(id as StepId),
       onPrd: () => openPrd(a),
       onRefresh: () => void load(a),
     };
@@ -579,7 +583,8 @@ export function createAipmPractice(deps: PracticeDeps) {
     const w = sheetWords(lang);
     const rows = sheetRows(s.guide, s.progress);
     const sum = stackSummary(rows, lang);
-    const first = !hintSeen();
+    // The pile's first hint waits for the walk-through to close, so it is not hidden under it.
+    const first = !hintSeen() && !document.querySelector('.rc-tour');
     return {
       title: w.title,
       status: sum.status,
@@ -594,7 +599,7 @@ export function createAipmPractice(deps: PracticeDeps) {
           { label: w.newFree, plus: true, run: () => deps.newFreeSheet() },
         ],
       },
-      words: { suggested: w.suggested, close: w.close },
+      words: { suggested: w.suggested, close: w.close, pinned: w.pinned },
       ...(first ? { hint: w.hint, onHint: keepHint } : {}),
       onOpen: (id) => host.openWorksheet(id as StepId),
     };
@@ -658,22 +663,30 @@ export function createAipmPractice(deps: PracticeDeps) {
       live = { key, el };
     }
     const material = screen.kind === 'worksheet' ? screen.material : undefined;
-    const parts: HTMLElement[] = [crumbs(a, s), live.el];
+    const nav = crumbs(a, s);
+    const parts: HTMLElement[] = [nav, live.el];
     root.dataset.split = material ? 'true' : 'false';
     if (material) {
-      const aside = document.createElement('aside');
-      aside.className = 'aipm-main__aside';
-      aside.innerHTML = `<div class="aipm-main__aside-head"><button type="button" class="aipm-main__aside-quote" data-aipm-quote>${
-        en ? 'Quote into the sheet' : '引用到工作纸'
+      // "Side by side: SD-120 field notes ✕" closes the column from where the path is read.
+      const split = document.createElement('span');
+      split.className = 'aipm-main__split';
+      split.innerHTML = `${en ? 'Side by side: ' : '并排：'}<b></b><button type="button" class="aipm-main__aside-quote" data-aipm-quote>${
+        en ? 'Choose passages to quote' : '挑选段落引用'
       }</button><button type="button" class="aipm-main__aside-close" data-aipm-close-split aria-label="${
         en ? 'Close the side material' : '关闭并排资料'
-      }">✕</button></div>${deps.materialHtml(material)}`;
-      aside
-        .querySelector('[data-aipm-quote]')
-        ?.addEventListener('click', () => deps.quoteToSheet(material));
-      aside.querySelector('[data-aipm-close-split]')?.addEventListener('click', () => {
+      }">✕</button>`;
+      (split.querySelector('b') as HTMLElement).textContent = deps.materialTitle(material);
+      split.querySelector('[data-aipm-close-split]')?.addEventListener('click', () => {
         if (s.screen.kind === 'worksheet') show({ kind: 'worksheet', sheet: s.screen.sheet });
       });
+      split
+        .querySelector('[data-aipm-quote]')
+        ?.addEventListener('click', () => deps.quoteToSheet(material));
+      nav.append(split);
+      const aside = document.createElement('aside');
+      aside.className = 'aipm-main__aside';
+      aside.innerHTML = deps.materialHtml(material);
+      selectionPill(aside, material, en);
       parts.push(aside);
     }
     root.replaceChildren(...parts);
@@ -684,6 +697,79 @@ export function createAipmPractice(deps: PracticeDeps) {
       root.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
     }
     locateDraft(live.el);
+  }
+  /** Selecting words in the side material raises an ink pill above them: quote the paragraphs
+   * they sit in straight into the sheet, or ask a colleague about them. */
+  function selectionPill(aside: HTMLElement, material: string, en: boolean) {
+    const pill = document.createElement('div');
+    pill.className = 'aipm-quote-pill';
+    pill.setAttribute('role', 'toolbar');
+    pill.hidden = true;
+    const colleague: AipmColleague = 'business';
+    pill.innerHTML = `<button type="button" data-q>${en ? 'Quote into the sheet' : '引用到工作纸'}</button><span aria-hidden="true"></span><button type="button" data-ask></button>`;
+    (pill.querySelector('[data-ask]') as HTMLElement).textContent =
+      `${en ? 'Ask ' : '问 '}${deps.colleagueName(colleague)}`;
+    pill.setAttribute('aria-label', en ? 'Selected words' : '选中的文字');
+    aside.append(pill);
+    let picked: { text: string; paragraphs: string[] } | null = null;
+    const hide = () => {
+      pill.hidden = true;
+      picked = null;
+    };
+    const place = () => {
+      const sel = getSelection();
+      const range = sel && !sel.isCollapsed && sel.rangeCount ? sel.getRangeAt(0) : null;
+      const text = sel?.toString().trim() ?? '';
+      if (
+        !range ||
+        !text ||
+        !aside.contains(range.commonAncestorContainer) ||
+        pill.contains(range.commonAncestorContainer)
+      )
+        return hide();
+      const blocks = [...aside.querySelectorAll<HTMLElement>('p, li, blockquote, td, pre')].filter(
+        (el) => !el.closest('.aipm-quote-pill') && range.intersectsNode(el),
+      );
+      const paragraphs = blocks
+        .filter((el) => !blocks.some((o) => o !== el && el.contains(o)))
+        .map((el) => el.innerText.trim())
+        .filter(Boolean);
+      picked = { text, paragraphs: paragraphs.length ? paragraphs : [text] };
+      const r = range.getBoundingClientRect(),
+        box = aside.getBoundingClientRect();
+      pill.hidden = false;
+      const half = pill.offsetWidth / 2;
+      const x = Math.min(Math.max(r.left + r.width / 2 - box.left, half + 4), box.width - half - 4);
+      const above = r.top - box.top + aside.scrollTop - pill.offsetHeight - 8;
+      pill.style.left = `${x}px`;
+      pill.style.top = `${above < aside.scrollTop ? r.bottom - box.top + aside.scrollTop + 8 : above}px`;
+    };
+    aside.addEventListener('pointerup', () => requestAnimationFrame(place));
+    aside.addEventListener('keyup', (e) => {
+      if (e.shiftKey || e.key === 'Shift') place();
+      else if (e.key === 'Escape') hide();
+    });
+    aside.addEventListener('scroll', hide, { passive: true });
+    pill.addEventListener('pointerdown', (e) => e.preventDefault());
+    pill.querySelector('[data-q]')?.addEventListener('click', () => {
+      if (picked) deps.quoteToSheet(material, picked.paragraphs);
+      getSelection()?.removeAllRanges();
+      hide();
+    });
+    pill.querySelector('[data-ask]')?.addEventListener('click', () => {
+      if (!picked) return;
+      const title = deps.materialTitle(material);
+      const line =
+        [...picked.text].length > 80 ? `${[...picked.text].slice(0, 80).join('')}…` : picked.text;
+      void host.askColleague({
+        colleague,
+        prefill: en
+          ? `About this line in “${title}”: “${line}” — `
+          : `关于《${title}》里这句：「${line}」——`,
+      });
+      getSelection()?.removeAllRanges();
+      hide();
+    });
   }
   function locateDraft(el: HTMLElement) {
     if (!draftTarget) return;
@@ -738,7 +824,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     });
 
   // Esc closes the open sheet or review back to the workbench, unless something else used it
-  // (a dialog, the stack, a field being typed in).
+  // (a dialog, an open pile, a field being typed in).
   if (typeof document !== 'undefined')
     document.addEventListener('keydown', (e) => {
       const a = deps.current(),
@@ -750,6 +836,9 @@ export function createAipmPractice(deps: PracticeDeps) {
         !s ||
         s.screen.kind === 'workbench' ||
         document.querySelector('dialog[open]') ||
+        // An open pile, or a key pressed on one, belongs to the pile.
+        t?.closest?.('.ws-stack, .aipm-quote-pill') ||
+        document.querySelector('.ws-stack:not([data-open="closed"])') ||
         t?.closest('input, textarea, select, [contenteditable="true"]')
       )
         return;

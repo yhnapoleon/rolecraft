@@ -10,13 +10,15 @@ import './screen.css';
 export type CompassProps = {
   language: Language;
   rows: SheetRow[];
-  suggestion: { step: string; text: string } | null;
+  /** review: the suggestion points at the step's latest review rather than its sheet. */
+  suggestion: { step: string; text: string; review?: boolean } | null;
   /** The sheet open in the main screen, if any. */
   current?: string;
   fixture?: boolean;
   stale?: boolean;
   updatedAt?: string;
   onOpen(step: string): void;
+  onReview?(step: string): void;
   onPrd(): void;
   onRefresh(): void;
 };
@@ -140,7 +142,11 @@ export function Compass(p: CompassProps) {
             <button
               type="button"
               className="aipm-compass__link"
-              onClick={() => p.suggestion && p.onOpen(p.suggestion.step)}
+              onClick={() => {
+                const s = p.suggestion;
+                if (s?.review && p.onReview) p.onReview(s.step);
+                else if (s) p.onOpen(s.step);
+              }}
             >
               {p.suggestion.text}
             </button>

@@ -1,14 +1,19 @@
 /* The compass: one 44px line under the toolbar. States share the stack's shapes:
  * hollow · half · ink · green tick · amber "!" — never colour alone. */
+/* It stays at the top of the stage while the board or a sheet scrolls under it. */
 .aipm-compass {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 14px;
   height: 44px;
   padding: 0 28px;
   border-bottom: 0.5px solid var(--line);
-  background: color-mix(in srgb, var(--paper) 50%, transparent);
+  background: color-mix(in oklab, var(--canvas) 78%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
   color: var(--ink);
   font-size: 13px;
   white-space: nowrap;
