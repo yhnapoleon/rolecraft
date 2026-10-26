@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "aipm-design-1",
+  "revision": "aipm-design-2",
   "rules": [
     {
       "id": "authority",
@@ -139,6 +139,97 @@
           "requested": "realtime",
           "effective": "realtime",
           "expected": "no_finding"
+        }
+      ]
+    },
+    {
+      "id": "audience_scope",
+      "revision": "aipm-design-2",
+      "applies_when": {
+        "conflicting_audiences": [
+          "external"
+        ],
+        "input": "structured_fields_only"
+      },
+      "required_public_sources": [
+        "pilot_users"
+      ],
+      "predicate": "audience_conflict",
+      "severity": "violation",
+      "zh_feedback": {
+        "message": "你选的服务对象和委托里写的试点用户对不上。",
+        "checked_scope": "仅核对所选服务对象与委托中的试点用户，不读你写的文字。",
+        "next_action": "再看看委托里这次试点直接给谁用，和公司对外卖给谁分开看。"
+      },
+      "en_feedback": {
+        "message": "The audience you chose does not match the pilot users named in the brief.",
+        "checked_scope": "Only the chosen audience against the pilot users in the brief; your text is not read.",
+        "next_action": "Re-read whom the brief says this pilot directly serves, apart from whom the company sells to."
+      },
+      "false_positive_examples": [
+        {
+          "audience": "internal",
+          "expected": "no_violation"
+        },
+        {
+          "audience": "both",
+          "expected": "no_violation"
+        },
+        {
+          "audience": "unknown",
+          "expected": "no_violation"
+        }
+      ]
+    },
+    {
+      "id": "approval_authority",
+      "revision": "aipm-design-2",
+      "applies_when": {
+        "known_people": [
+          "grace",
+          "chen",
+          "daniel",
+          "xu_qing"
+        ],
+        "authorized": [
+          "grace"
+        ],
+        "input": "structured_fields_only"
+      },
+      "required_public_sources": [
+        "approval_rules"
+      ],
+      "predicate": "unauthorized_approver",
+      "severity": "violation",
+      "zh_feedback": {
+        "message": "你选的拍板人在资料里没有批准权；同事的意见不等于批准。",
+        "checked_scope": "仅核对你选的拍板人和审批规则的发布人，不读你写的文字。",
+        "next_action": "再看看资源审批规则是谁发布的、管哪些申请。"
+      },
+      "en_feedback": {
+        "message": "The person you chose to decide has no approval authority in the materials; a colleague's view is not an approval.",
+        "checked_scope": "Only the chosen decision-maker against who published the approval rules; your text is not read.",
+        "next_action": "Re-read who published the resource-approval rules and which requests they cover."
+      },
+      "false_positive_examples": [
+        {
+          "approver": "grace",
+          "expected": "no_violation"
+        },
+        {
+          "approver": "unknown",
+          "expected": "no_violation"
+        },
+        {
+          "stakeholder": "chen",
+          "relationships": [
+            "user"
+          ],
+          "expected": "no_violation"
+        },
+        {
+          "approver_free_text": "Chen 的意见",
+          "expected": "no_violation"
         }
       ]
     }
