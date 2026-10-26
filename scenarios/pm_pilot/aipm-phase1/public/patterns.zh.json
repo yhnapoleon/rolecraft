@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "work_language": "zh",
+  "status_label": "公开参考做法，非市场占有率结论",
+  "application_note": "场景适用性与人工权限说明是本练习的设计建议；不代表系统已实现。",
+  "cards": [
+    {
+      "id": "deterministic",
+      "title": "确定性流程",
+      "when": "输入、条件和处理顺序可以明确写出时使用。",
+      "cost_dimensions": "维护规则、异常分支和测试的成本。",
+      "when_not": "未知条件需要临场判断时，固定流程可能不够。",
+      "source": {
+        "title": "Building effective agents",
+        "url": "https://www.anthropic.com/research/building-effective-agents",
+        "accessed_at": "2026-10-26"
+      }
+    },
+    {
+      "id": "retrieval_generation",
+      "title": "检索回答",
+      "when": "答案依赖可获取、可更新的资料时使用。",
+      "cost_dimensions": "资料清理、分块、检索、更新与逐环节评估。",
+      "when_not": "资料缺失或任务要求执行动作时，单靠回答不足。",
+      "source": {
+        "title": "Design and develop a RAG solution",
+        "url": "https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/rag/rag-solution-design-and-evaluation-guide",
+        "accessed_at": "2026-10-26"
+      }
+    },
+    {
+      "id": "agent_confirmation",
+      "title": "Agent 加确认",
+      "when": "需要动态选择步骤和工具时考虑，并明确人类检查点。",
+      "cost_dimensions": "工具定义、检查点、延迟、成本及累积错误。",
+      "when_not": "简单可预测的流程或未提供工具的操作，不应宣称已有自主执行能力。",
+      "source": {
+        "title": "Building effective agents",
+        "url": "https://www.anthropic.com/research/building-effective-agents",
+        "accessed_at": "2026-10-26"
+      }
+    },
+    {
+      "id": "human",
+      "title": "人工处理",
+      "when": "保留人类检查点，让不确定或受权限限制的步骤交给人判断。",
+      "cost_dimensions": "人的时间、接手信息和判断责任。",
+      "when_not": "转交只是过程；不能据此声称已经完成。",
+      "source": {
+        "title": "Building effective agents",
+        "url": "https://www.anthropic.com/research/building-effective-agents",
+        "accessed_at": "2026-10-26"
+      }
+    }
+  ]
+}
