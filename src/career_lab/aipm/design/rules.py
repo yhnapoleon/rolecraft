@@ -129,13 +129,13 @@ def evaluate_design(
                 if matches and available:
                     emit(rule, row["id"], "boundary", basis)
         elif predicate == "elapsed_as_labor" and available:
+            # Field names come from the rule data, as the materials' field dictionary writes them.
+            elapsed = {f.lower() for f in rule["applies_when"].get("elapsed_fields", ())}
             for need in design.get("needs", []):
                 metric = need.get("metric") or {}
-                # Text is never parsed as a formula or a semantic claim.
-                if (
-                    metric.get("source_field") == "elapsed_minutes"
-                    and metric.get("kind") == "labor_time"
-                ):
+                # Only the declared field and type; text is never parsed as a formula or claim.
+                field = str(metric.get("source_field") or "").strip().lower().rsplit(".", 1)[-1]
+                if field in elapsed and metric.get("kind") == "labor_time":
                     emit(rule, need["id"], "need", basis)
         elif predicate == "audience_conflict" and available:
             business = design.get("business") or {}

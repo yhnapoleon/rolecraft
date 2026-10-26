@@ -591,7 +591,7 @@ function Needs({ c, draft, setDraft }: SectionProps) {
             />
             <Field
               label={c.t('数据来自哪个字段', 'Source field')}
-              placeholder="elapsed_minutes"
+              placeholder="duration_minutes"
               value={n.metric?.source_field ?? ''}
               onChange={(source_field) =>
                 set(n.id, { metric: { ...emptyMetric, ...n.metric, source_field } })
