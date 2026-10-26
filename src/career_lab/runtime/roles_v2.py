@@ -299,6 +299,15 @@ def _readable_source(source, language):
                 and isinstance(value.get("title"), str)
             ):
                 return value["title"] + "\n" + value["content"]
+            if (
+                isinstance(value, dict)
+                and value.get("kind") == "plan"
+                and isinstance(value.get("sections"), list)
+            ):
+                # A shared plan (context_v2.shared_work): its sections in written order.
+                parts = [str(value.get("title") or "")]
+                parts += [str(s.get("text", "")) for s in value["sections"] if isinstance(s, dict)]
+                return "\n".join(p for p in parts if p.strip())
             if isinstance(value, dict) and isinstance(value.get("historical_question"), str):
                 question = " ".join(value["historical_question"].split())
                 if len(question) > 120:
