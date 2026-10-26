@@ -50,8 +50,9 @@ import './desk.css';
 export const DESIGN_ID = 'aipm-design';
 export type DesignRead = { ref: ObjectRef; design: AipmDesign; feedback: ProcessFeedback[] };
 export type DraftItem = { ref: ObjectRef; draft: AgentDraft };
-/** L4 adds listDrafts to AipmClient; until then the panel simply shows no drafts. */
-type DraftClient = { listDrafts?: () => Promise<{ items: DraftItem[] }> };
+/** L4's AipmClient.listDrafts (GET /drafts, pending only); absent clients show no drafts.
+ * Typed loosely so it merges with L4's own DraftPage type without a clash. */
+type DraftClient = { listDrafts?: () => Promise<unknown> };
 type Host = AipmHost<unknown, AipmClient & DraftClient>;
 type Copy = ReturnType<typeof copy>;
 type Saved = { step: StepId; rowId?: string } | null;
@@ -108,8 +109,13 @@ export function DesignDesk({
       if (!notFound(e)) setError('read');
     }
     try {
-      const listed = await client.listDrafts?.();
-      setDrafts((listed?.items ?? []).filter((d) => d.draft.status === 'pending_owner_review'));
+      const listed = (await client.listDrafts?.()) as { items?: DraftItem[] } | undefined;
+      setDrafts(
+        (listed?.items ?? [])
+          .filter((d) => d.draft.status === 'pending_owner_review')
+          // The server checks expected_revision against the draft head, i.e. ref.version.
+          .map((d) => ({ ...d, draft: { ...d.draft, revision: d.ref.version } })),
+      );
     } catch {
       // Drafts are optional; the learner's own work stays usable without them.
     }
