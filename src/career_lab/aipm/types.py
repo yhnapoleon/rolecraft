@@ -1,6 +1,7 @@
 """AIPM phase 1 extension contract (not part of frozen contracts.v2 discovery).
 
-Read DTOs use schema_version=1; Gateway commands remain v2. Only the human
+Read DTOs use schema_version=1; Gateway commands and persisted objects remain v2
+(V2Store.register_object requires V2 models). Only the human
 may write. L2/L3 handlers return Mutation; their registration is owned by L4.
 """
 
@@ -68,7 +69,7 @@ class ProcessFeedback(DTO):
     affects_formal_score: Literal[False] = False
 
 
-class ProcessFeedbackRecord(ProcessFeedback):
+class ProcessFeedbackRecord(ProcessFeedback, V2):
     session_id: str
     revision: int = Field(default=1, ge=1)
 
@@ -147,7 +148,7 @@ class AipmProgress(DTO):
     next_cursor: str | None = None
 
 
-class AipmProfile(DTO):
+class AipmProfile(V2):
     id: Literal["aipm-profile"] = "aipm-profile"
     session_id: str
     revision: Literal[1] = 1
@@ -158,7 +159,7 @@ class AipmProfile(DTO):
     enrolled_at: datetime
 
 
-class AipmFocus(DTO):
+class AipmFocus(V2):
     id: Literal["aipm-focus"] = "aipm-focus"
     session_id: str
     step_id: StepId
@@ -167,7 +168,7 @@ class AipmFocus(DTO):
     changed_at: datetime
 
 
-class AipmStepLink(DTO):
+class AipmStepLink(V2):
     id: str
     session_id: str
     step_id: StepId
@@ -270,7 +271,7 @@ class SolutionIntent(DTO):
     source_refs: tuple[EvidenceRefV2, ...] = ()
 
 
-class AipmDesign(DTO):
+class AipmDesign(V2):
     id: str
     session_id: str
     revision: int = Field(ge=1)
@@ -308,7 +309,7 @@ class BatchCase(DTO):
     )
 
 
-class AipmBatch(DTO):
+class AipmBatch(V2):
     id: str
     session_id: str
     revision: int = Field(ge=1)
@@ -322,7 +323,7 @@ class AipmBatch(DTO):
     monitoring: tuple[MonitoringPlan, ...] = ()
 
 
-class AipmAssessment(DTO):
+class AipmAssessment(V2):
     id: str
     session_id: str
     revision: Literal[1] = 1

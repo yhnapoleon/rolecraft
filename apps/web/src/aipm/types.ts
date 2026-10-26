@@ -63,6 +63,7 @@ export type ProcessFeedback = {
 };
 
 export type ProcessFeedbackRecord = {
+  schema_version?: 2;
   id: string;
   input_ref: ObjectRef;
   step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
@@ -168,6 +169,7 @@ export type AipmProgress = {
 };
 
 export type AipmProfile = {
+  schema_version?: 2;
   id?: "aipm-profile";
   session_id: string;
   revision?: 1;
@@ -179,6 +181,7 @@ export type AipmProfile = {
 };
 
 export type AipmFocus = {
+  schema_version?: 2;
   id?: "aipm-focus";
   session_id: string;
   step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
@@ -188,6 +191,7 @@ export type AipmFocus = {
 };
 
 export type AipmStepLink = {
+  schema_version?: 2;
   id: string;
   session_id: string;
   step_id: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision";
@@ -293,6 +297,7 @@ export type SolutionIntent = {
 };
 
 export type AipmDesign = {
+  schema_version?: 2;
   id: string;
   session_id: string;
   revision: number;
@@ -329,6 +334,7 @@ export type BatchCase = {
 };
 
 export type AipmBatch = {
+  schema_version?: 2;
   id: string;
   session_id: string;
   revision: number;
@@ -343,6 +349,7 @@ export type AipmBatch = {
 };
 
 export type AipmAssessment = {
+  schema_version?: 2;
   id: string;
   session_id: string;
   revision?: 1;

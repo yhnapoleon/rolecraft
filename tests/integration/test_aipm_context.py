@@ -177,3 +177,19 @@ def test_mcp_feedback_resource_and_tool_use_real_http_projection(context):
     assert tool.json()["result"]["structuredContent"] == value
     assert tool.json()["result"]["isError"] is False
     client.close()
+
+
+def test_persisted_shared_models_register_in_real_store(env):
+    from career_lab.aipm import types as T
+
+    store = env["app"].state.v2_store
+    for model in (
+        T.AipmProfile,
+        T.AipmFocus,
+        T.AipmStepLink,
+        T.AipmDesign,
+        T.AipmBatch,
+        T.AipmAssessment,
+        T.ProcessFeedbackRecord,
+    ):
+        store.register_object(f"fixture_{model.__name__.lower()}", model)
