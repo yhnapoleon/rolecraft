@@ -5,6 +5,7 @@ import type { AipmColleague, AipmFeatureId, AipmHost, AipmScreen } from '../../a
 import { createAipmRegistry, installAipmFeatures } from '../../aipm/registry';
 import type { ObjectRef, ProductCreate, ProductEdit, ReviewInput } from '../../contracts-v2';
 import type { V4HostAdapter } from '../../v4-host';
+import { versionMoved } from '../../v4-data-host';
 import type { StackProps } from '../../shell/work-stack/stack';
 import type { CompassProps } from './compass';
 import { publishedContent } from './content';
@@ -138,6 +139,16 @@ const reason = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const absent = (e: unknown) =>
   [404, 409, 503].includes(Number((e as { status?: number })?.status)) ||
   (e as { code?: string })?.code === 'aipm_not_enabled';
+
+/** Sends once more, with a freshly built command, only when the version point had moved. */
+export async function withVersionRetry<T>(send: () => Promise<T>): Promise<T> {
+  try {
+    return await send();
+  } catch (error) {
+    if (!versionMoved(error)) throw error;
+    return send();
+  }
+}
 
 export function createAipmPractice(deps: PracticeDeps) {
   const states = new Map<string, State>();
@@ -279,7 +290,12 @@ export function createAipmPractice(deps: PracticeDeps) {
     return s.phase === 'ready';
   }
 
+  /** One explicit action. A version point moved by a background job (409 version_conflict: the
+   * server ran nothing) is rebuilt on the current state once, quietly; content conflicts are not. */
   async function command(operation: string, payload: Record<string, unknown>) {
+    return withVersionRetry(() => sendOnce(operation, payload));
+  }
+  async function sendOnce(operation: string, payload: Record<string, unknown>) {
     const a = deps.current();
     if (!a) throw new Error('No practice');
     const s = stateOf(a);

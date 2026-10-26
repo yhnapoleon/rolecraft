@@ -95,6 +95,9 @@ type IssuedGrant = {
 };
 /** The sole v2 command/draft journal used by every native v4 slot.
  * Construction, refresh and recovery are read-only on the server. */
+/** Only the version point moved under a command the server did not run; contents never retry. */
+export const versionMoved = (error: unknown) =>
+  error instanceof ApiError && error.status === 409 && error.code === 'version_conflict';
 export class V4DataHost implements V4HostAdapter {
   private readonly raw: GatewayTransport;
   private readonly key: string;
@@ -591,68 +594,80 @@ export class V4DataHost implements V4HostAdapter {
     this.busy = true;
     this.emit();
     try {
-      const state = await this.query('session.read');
-      if (state?.session_id !== this.ports.binding.sessionId || !point(state)) throw unconfirmed();
-      const requestId = crypto.randomUUID();
-      const command: Command = {
-        schema_version: 2,
-        request_id: requestId,
-        expected_version: state.business_seq,
-        expected_workspace_revision: state.workspace_revision,
-        operation: route.action,
-        payload: copy(input),
-      };
-      const entry: JournalEntry = {
-        command,
-        route,
-        input,
-        operation,
-        createdAt: new Date().toISOString(),
-        previousRequestId,
-        outcome: { requestId, status: 'unconfirmed', result: null },
-      };
-      this.local.requests[requestId] = entry;
-      try {
-        this.save();
-      } catch (error) {
-        // No POST is allowed unless the exact envelope is durable.
-        delete this.local.requests[requestId];
-        throw error;
-      }
-      try {
-        const response: any = await this.raw(this.path(route.path), command, route.method);
-        if (
-          response.boundary?.request_id !== requestId ||
-          response.state?.session_id !== this.ports.binding.sessionId ||
-          !point(response.state)
-        )
+      let entry!: JournalEntry;
+      // A background job (a model review, feedback, a colleague's reply) can move the version
+      // point between the state read and the send. The server proves such a command did nothing
+      // (409 version_conflict), so it is rebuilt once on the current state with a new request ID,
+      // without telling the person. A content conflict is never retried.
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const state = await this.query('session.read');
+        if (state?.session_id !== this.ports.binding.sessionId || !point(state))
           throw unconfirmed();
-        entry.outcome = {
-          requestId,
-          status:
-            response.result?.feedback_status === 'queued' ||
-            response.result?.status === 'queued' ||
-            response.jobs?.length
-              ? 'pending'
-              : 'confirmed',
-          result: response.result,
+        const requestId = crypto.randomUUID();
+        const command: Command = {
+          schema_version: 2,
+          request_id: requestId,
+          expected_version: state.business_seq,
+          expected_workspace_revision: state.workspace_revision,
+          operation: route.action,
+          payload: copy(input),
         };
-        this.save();
-      } catch (error) {
-        // 5xx, network loss and invalid bodies can follow a committed write.
-        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+        entry = {
+          command,
+          route,
+          input,
+          operation,
+          createdAt: new Date().toISOString(),
+          previousRequestId,
+          outcome: { requestId, status: 'unconfirmed', result: null },
+        };
+        this.local.requests[requestId] = entry;
+        try {
+          this.save();
+        } catch (error) {
+          // No POST is allowed unless the exact envelope is durable.
+          delete this.local.requests[requestId];
+          throw error;
+        }
+        let again = false;
+        try {
+          const response: any = await this.raw(this.path(route.path), command, route.method);
+          if (
+            response.boundary?.request_id !== requestId ||
+            response.state?.session_id !== this.ports.binding.sessionId ||
+            !point(response.state)
+          )
+            throw unconfirmed();
           entry.outcome = {
             requestId,
-            status: 'failed',
-            result: { code: error.code, message: error.message },
+            status:
+              response.result?.feedback_status === 'queued' ||
+              response.result?.status === 'queued' ||
+              response.jobs?.length
+                ? 'pending'
+                : 'confirmed',
+            result: response.result,
           };
           this.save();
+        } catch (error) {
+          // 5xx, network loss and invalid bodies can follow a committed write.
+          if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+            entry.outcome = {
+              requestId,
+              status: 'failed',
+              result: { code: error.code, message: error.message },
+            };
+            this.save();
+          }
+          again = attempt === 0 && versionMoved(error);
+          // The caller always receives the journal ID, including ambiguous responses.
+          if (!again)
+            this.ports.announce(
+              error instanceof Error ? error.message : 'Request unconfirmed',
+              'error',
+            );
         }
-        // The caller always receives the journal ID, including ambiguous responses.
-        this.ports.announce(
-          error instanceof Error ? error.message : 'Request unconfirmed',
-          'error',
-        );
+        if (!again) break;
       }
       if (entry.outcome.status !== 'unconfirmed') {
         try {

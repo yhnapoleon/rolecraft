@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { installAipmFeatures } from '../../aipm/registry';
-import { createAipmPractice, type PracticeDeps } from './practice';
+import { ApiError } from '../../api';
+import { createAipmPractice, type PracticeDeps, withVersionRetry } from './practice';
 
 const deps = (transport = vi.fn(async () => ({}))): PracticeDeps => ({
   current: () => ({ id: 's1' }),
@@ -51,5 +52,28 @@ describe('AIPM practice host', () => {
   it('an old practice without the client stays on its original page', () => {
     const p = createAipmPractice(deps());
     expect(p.ready({ id: 's1' })).toBe(false);
+  });
+});
+
+describe('AIPM commands and a moved version point', () => {
+  const moved = () => new ApiError('moved', 409, 'version_conflict');
+  it('resends once, built afresh, and succeeds quietly', async () => {
+    const send = vi.fn().mockRejectedValueOnce(moved()).mockResolvedValueOnce('ok');
+    await expect(withVersionRetry(send)).resolves.toBe('ok');
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+  it('reports a second conflict', async () => {
+    const send = vi.fn().mockRejectedValue(moved());
+    await expect(withVersionRetry(send)).rejects.toMatchObject({ code: 'version_conflict' });
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+  it('never retries a content conflict', async () => {
+    const send = vi
+      .fn()
+      .mockRejectedValue(new ApiError('edited', 409, 'aipm_design_revision_conflict'));
+    await expect(withVersionRetry(send)).rejects.toMatchObject({
+      code: 'aipm_design_revision_conflict',
+    });
+    expect(send).toHaveBeenCalledTimes(1);
   });
 });
