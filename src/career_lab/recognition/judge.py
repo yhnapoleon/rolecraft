@@ -105,6 +105,7 @@ def analyze_support(package: EvidencePackageV2, language: str) -> dict[str, Any]
                     "decision": choice.action,
                     "expected_cost": round(choice.expected_cost, 3),
                     "top": [dict(t) for t in found.top[:3]],
+                    "branches": found.branches,
                 }
             )
     decided = [r for r in rows if r["decision"] == "decide"]
@@ -135,16 +136,24 @@ _SENTENCE_END = re.compile(r"(?<=[。！？!?；;])|(?<=\.)\s+|\n+")
 
 
 def _closest_sentence(claim: str, text: str) -> str:
-    """The sentence of an evidence unit that shares the most character bigrams with the
-    claim (a unit can be a whole short material; the writing area shows one sentence)."""
+    """The sentence of an evidence unit closest to the claim: first by the quantities the two
+    share (a claim about 80 people lands on the sentence that says 80 people), then by
+    character bigrams (a unit can be a whole short material; the writing area shows one
+    sentence)."""
 
     def grams(s: str) -> set[str]:
         s = _NOISE.sub("", s.lower())
         return {s[i : i + 2] for i in range(len(s) - 1)}
 
-    want = grams(claim)
+    want, numbers = grams(claim), relation.quantities(claim)
     parts = [p.strip(" #*-\t") for p in _SENTENCE_END.split(text) if p and p.strip(" #*-\t")]
-    best = max(parts or [text], key=lambda p: len(want & grams(p)))
+    best = max(
+        parts or [text],
+        key=lambda p: (
+            len(numbers & relation.quantities(p)) if numbers else 0,
+            len(want & grams(p)),
+        ),
+    )
     return best[:160]
 
 
@@ -375,6 +384,8 @@ class RecognitionFeedback:
             "strategy_nearest": (result["strategy"] or {}).get("nearest"),
             "phase_sequence": [p["name"] for p in result["phases"]],
             "anomalies": [a["rule"] for a in result["anomalies"]],
+            "window": result.get("window"),
+            "steps": len(result["sequence"]),
             "record": result["record"],
         }
 
@@ -448,6 +459,7 @@ class RecognitionFeedback:
                             "reason",
                             "decision",
                             "expected_cost",
+                            "branches",
                         )
                     }
                     for r in rows

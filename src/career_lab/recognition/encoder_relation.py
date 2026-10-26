@@ -96,16 +96,24 @@ class EncoderRelation:
             )
         pairs = self.pair_probabilities(query, bodies)
         recognizer, revision = ENCODER_ID, self.revision
+        # What each branch said, kept with the judgement so a reader can see the
+        # contribution of C1 alone, of the ensemble and of every candidate pair.
+        branches = {"encoder": _named(aggregate_pairs(pairs, self.threshold)[0])}
         if stack is not None:
             pairs = stack.pair_probabilities(claim, as_of, candidates, pairs)
             recognizer, revision = STACK_ID, f"{stack.revision}+{self.revision}"
         probabilities, scores = aggregate_pairs(pairs, self.threshold)
+        if stack is not None:
+            branches["stack"] = _named(probabilities)
+        branches["pairs"] = {
+            c[0]: round(float(s), 4) for c, s in zip(candidates, scores, strict=False)
+        }
         probabilities = np.asarray(probabilities, dtype=float)
         label = LABELS[int(np.argmax(probabilities))]
+        # Cited candidates by their pair score, the strongest first.
+        ranked = sorted(zip(candidates, scores, strict=False), key=lambda pair: -float(pair[1]))
         evidence = (
-            tuple(c[0] for c, s in zip(candidates, scores, strict=False) if s >= self.threshold)
-            if label != "insufficient"
-            else ()
+            tuple(c[0] for c, s in ranked if s >= self.threshold) if label != "insufficient" else ()
         )
         return Judgement(
             label=label,
@@ -115,4 +123,9 @@ class EncoderRelation:
             revision=revision,
             fallback=False,
             reason="pair_aggregate",
+            branches=branches,
         )
+
+
+def _named(probabilities) -> dict[str, float]:
+    return {name: round(float(p), 4) for name, p in zip(LABELS, probabilities, strict=False)}

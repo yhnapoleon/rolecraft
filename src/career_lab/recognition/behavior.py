@@ -126,7 +126,12 @@ def symbols(view, auth) -> list[dict[str, Any]]:
         rows.append(
             (
                 float(event.seq),
-                {"seq": event.seq, "symbol": symbol, "executor": event.executor.kind},
+                {
+                    "seq": event.seq,
+                    "symbol": symbol,
+                    "executor": event.executor.kind,
+                    "event_id": event.id,
+                },
             )
         )
     for stored in view.objects:
@@ -323,17 +328,28 @@ def analyze(view, auth, *, language: str = "zh") -> dict[str, Any]:
                 submitted = submitted or symbol == "submit"
             ranked = sorted(
                 (
-                    (dtw(sequence, ref["sequence"]) / max(len(ref["sequence"]), 1), ref)
-                    for ref in references.get("references", [])
+                    (dtw(sequence, ref["sequence"]) / max(len(ref["sequence"]), 1), i, ref)
+                    for i, ref in enumerate(references.get("references", []))
                 ),
-                key=lambda pair: pair[0],
+                key=lambda row: row[0],
             )
             if ranked:
-                distance, nearest = ranked[0]
+                distance, index, nearest = ranked[0]
                 strategy = {
                     "nearest": nearest["strategy"],
                     "distance": distance,
-                    "top3": [{"strategy": ref["strategy"], "distance": d} for d, ref in ranked[:3]],
+                    "top3": [
+                        {"strategy": ref["strategy"], "distance": d} for d, _, ref in ranked[:3]
+                    ],
+                    # The reference trajectory this session was matched to: its place in
+                    # references.json of this revision and its symbols, so "your trajectory
+                    # vs. the reference" can be drawn and the match found again later.
+                    "reference": {
+                        "id": f"{ID}@{revision}#{index}",
+                        "index": index,
+                        "strategy": nearest["strategy"],
+                        "sequence": [str(s) for s in nearest["sequence"]],
+                    },
                 }
                 aligned = alignment(sequence, nearest["sequence"])
         else:
@@ -361,6 +377,15 @@ def analyze(view, auth, *, language: str = "zh") -> dict[str, Any]:
             "predicted": None,
             "confidence": None,
         }
+        # The window the symbols came from: every public event and role turn of the view,
+        # from the start of the session to the view's business point (for a feedback job,
+        # the point the work was handed in at).
+        window = {
+            "from_seq": 0,
+            "to_seq": int(view.state.business_seq),
+            "events": sum("event_id" in row for row in rows),
+            "turns": sum("event_id" not in row for row in rows),
+        }
     signature = record(
         ID,
         revision,
@@ -372,6 +397,14 @@ def analyze(view, auth, *, language: str = "zh") -> dict[str, Any]:
             "length": len(sequence),
             "phase_now": rows[-1]["phase"] if rows else None,
             "anomalies": [a["rule"] for a in flagged],
+            "window": window,
+            # Each step with the event it came from, so a frozen record can be laid next to
+            # the live trajectory of the same session step by step.
+            "steps": [
+                {"seq": row["seq"], "symbol": row["symbol"], "event_id": row.get("event_id")}
+                for row in rows
+            ],
+            "reference": strategy["reference"]["id"] if strategy else None,
         },
         duration_ms=clock.ms,
     )
@@ -382,6 +415,7 @@ def analyze(view, auth, *, language: str = "zh") -> dict[str, Any]:
         "phases": phases,
         "anomalies": flagged,
         "executor": executor,
+        "window": window,
         "recognizer": f"{ID}@{revision}",
         "record": signature.model_dump(mode="json"),
     }

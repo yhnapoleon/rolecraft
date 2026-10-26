@@ -13,7 +13,6 @@ The directory itself is the index: records are JSON files listed by name. No res
 contains a path; identifiers are checked against fixed patterns before any path is built.
 """
 
-import fcntl
 import json
 import os
 import re
@@ -23,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from career_lab.contracts import v2 as C
+from career_lab.runtime.file_lock import flock, funlock
 
 SESSION_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 RECORD_ID = re.compile(r"^(ticket|trial|draft|signoff|review)-[0-9a-f]{64}$")
@@ -75,13 +75,14 @@ class EngineerStore:
         """Serialize writers of one session record family, across threads and processes."""
         locks = self.session(session_id) / ".locks"
         locks.mkdir(parents=True, exist_ok=True, mode=0o700)
-        fd = os.open(locks / (name + ".lock"), os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(locks / (name + ".lock"), flags, 0o600)
         with os.fdopen(fd, "w") as stream:
-            fcntl.flock(stream, fcntl.LOCK_EX)
+            flock(stream)
             try:
                 yield
             finally:
-                fcntl.flock(stream, fcntl.LOCK_UN)
+                funlock(stream)
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -89,7 +90,8 @@ def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name("." + path.name + ".tmp")
     raw = (json.dumps(value, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
-    fd = os.open(temporary, os.O_CREAT | os.O_WRONLY | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    flags = os.O_CREAT | os.O_WRONLY | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(temporary, flags, 0o600)
     with os.fdopen(fd, "wb") as stream:
         stream.write(raw)
         stream.flush()

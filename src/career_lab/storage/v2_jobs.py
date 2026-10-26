@@ -6,9 +6,11 @@ credential or idempotency namespace of its own.
 
 import json
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from sqlalchemy import select, update
 from career_lab.contracts.v2 import *
+from career_lab.contracts.v2 import ObjectRef, ProtocolError, ResourcePage, SessionBindings
 from .v2_tables import v2_credentials, v2_snapshots, v2_transactions
 
 
@@ -171,7 +173,7 @@ class JobStoreMixin:
                 else None
             )
             cycle = max(cycles, key=lambda x: x.ref.version) if cycles else None
-            return TransactionView(
+            view = TransactionView(
                 state,
                 SessionBindings.model_validate_json(row["bindings"]),
                 visible,
@@ -180,6 +182,74 @@ class JobStoreMixin:
                 job_context=context,
                 worker_claim=worker_claim,
             )
+            return self._with_frozen_history(c, view, auth)
+
+    def _with_frozen_history(self, c, view, auth):
+        """``view`` with ``public_history`` served from the events read in this transaction.
+
+        A job view outlives its transaction, so the public history is read now, with the
+        job's own authorization and cut at the snapshot's business point, and kept with the
+        view. A job (feedback, a colleague turn) then sees the same events the learner's
+        live reads see up to that point. Without an installed history reader the view has
+        none, as before.
+        """
+        reader = self.public_history_reader
+        if reader is None:
+            return view
+        state, bindings, allowed = view.state, view.bindings, view.objects
+
+        def reference_allowed(ref):
+            if c.closed:
+                raise ProtocolError("reference_view_expired", status=409)
+            self._auth(c, auth, "read", object_ids=(ref.object_id,))
+            if ref.session_id != auth.session_id:
+                raise ProtocolError("object_not_found", status=404)
+            if ref.kind == "event":
+                self._event_reference(c, ref, auth=auth, ceiling=state)
+                return True
+            if ref.kind in self.reference_resolvers:
+                self._resolve_reference(c, auth, ref, state, bindings)
+                return True
+            bare = ObjectRef.model_validate(
+                {
+                    k: v
+                    for k, v in ref.model_dump(mode="json").items()
+                    if k in ObjectRef.model_fields
+                }
+            )
+            return any(r.ref == bare for r in allowed)
+
+        live = replace(view, reference_allowed=reference_allowed)
+        pages, cursor = [], 0
+        while True:
+            page = reader(c, live, ResourcePage(since_seq=cursor, limit=100), auth)
+            pages.append(page)
+            if page.next_seq <= cursor or page.next_seq >= state.business_seq:
+                break
+            cursor = page.next_seq
+        at = pages[0].as_of
+        events = tuple(event for page in pages for event in page.events)
+        receipts = tuple(receipt for page in pages for receipt in page.material_reads)
+        complete = all(page.acquisitions_complete for page in pages)
+
+        def history(page, request_auth):
+            if request_auth != auth:
+                raise ProtocolError("history_identity_mismatch", status=403)
+            if page.cursor or page.as_of_seq not in (None, at.business_seq):
+                raise ProtocolError("observation_window_unsupported", status=422)
+            since = page.since_seq or 0
+            if since > at.business_seq:
+                raise ProtocolError("history_cursor_invalid", status=422)
+            through = min(at.business_seq, since + page.limit)
+            return replace(
+                pages[0],
+                events=tuple(event for event in events if since < event.seq <= through),
+                material_reads=tuple(r for r in receipts if since < r.event.seq <= through),
+                next_seq=through,
+                acquisitions_complete=complete,
+            )
+
+        return replace(view, public_history=history)
 
     def _validate_job_commit(self, c, auth, command, context, claim, capability):
         from career_lab.jobs.repository import jobs

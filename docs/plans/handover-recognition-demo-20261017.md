@@ -37,8 +37,9 @@
 需要：
 
 - `.venv-encoder`（CPU 版 torch 2.8.0、transformers 4.57.1、hmmlearn 0.3.3；用 `uv pip` 装进去，没进 `uv.lock`）。
-- 识别器权重目录 `runs/local/recognizers/`（约 1.5 GB：`c1-xlmr-cpu` 1.1 GB、`retrieval-e5` 470 MB，其余几 MB），整个目录拷过去即可，`manifest.json` 里是相对路径。
+- 识别器权重目录 `runs/local/recognizers/`（约 1.5 GB：`c1-xlmr-cpu` 1.1 GB、`retrieval-e5` 470 MB，其余几 MB），整个目录拷过去即可，`manifest.json` 里是相对路径。e5 的版本号是目录的树哈希：`manifest.json` 里有它就按登记核对，没有也会在加载时现算（10-26 起不再显示 `unhashed`）；要把它正式登记进清单，在设好 `CAREER_LAB_RECOGNIZERS` 后跑 `python -m career_lab.recognition.registry add retrieval-e5 retrieval retrieval-e5`（本机已登记，revision `2933a10907b4`）。
 - DeepSeek key 文件（仓库根目录 `ds.txt`，已在 `.gitignore`）。
+- 「逐句模型建议」的 C1 编码器回传登记要**在运行它的那台机器上**做（`experiments/recognition/relation/register_c1.py`），因为登记项钉住了 torch / transformers / tokenizers / safetensors 的已装版本，Windows 的 `2.8.0+cpu` 在 Mac 上过不了 `registered_inference_runtime_changed`。各机器的登记 id（`encoder-…`）不同是正常的；要对得上的是 `model_revision`（本机 `hf-encoder-v3:1a620086ac00…`），它只由权重、阈值、`max_tokens` 和架构决定。改过 `src/career_lab/models/` 下任何 `.py` 或 `contracts/v2/{core,data}.py` 之后要重新登记（`inference_runtime.source_digest` 变了）。
 
 环境变量（本机写在 `runs/local/dev/env.ps1`，`runs/` 不入库，组员照下面设）：
 
