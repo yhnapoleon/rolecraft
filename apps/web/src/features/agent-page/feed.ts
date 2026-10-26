@@ -119,6 +119,14 @@ const FAST = 1500;
 const SLOW = 4000;
 const LIMIT = 400;
 
+/** Answers that will not change on a later read: the session is gone or not ours to read
+ * (e.g. a practice id kept from an earlier server). Polling then stops instead of retrying. */
+export function sessionGone(error: unknown) {
+  const { status, code } = (error ?? {}) as { status?: number; code?: string };
+  if (status === 401 || status === 403 || status === 404) return true;
+  return status === 409 && (code === 'v2_session_required' || code === 'session_binding_mismatch');
+}
+
 export function createAgentFeed(ports: FeedPorts) {
   let rows: AgentActivity[] = [];
   let events: AgentEvent[] = [];
@@ -138,7 +146,8 @@ export function createAgentFeed(ports: FeedPorts) {
     let page: AgentActivityPage;
     try {
       page = await ports.read(cursor);
-    } catch {
+    } catch (error) {
+      if (sessionGone(error)) running = false;
       return;
     }
     const fresh = page.items.filter((r) => r.seq > cursor);

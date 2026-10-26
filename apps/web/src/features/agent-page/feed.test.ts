@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { setPreference } from '../../app/i18n';
 import type { AgentActivity } from '../../contracts-v2';
-import { createAgentFeed, toEvent } from './feed';
+import { createAgentFeed, sessionGone, toEvent } from './feed';
 import { accessInput } from './grant';
 import { engineerCall, foldEvents } from './stream';
 import { NEVER_GRANTED, refusal } from './verbs';
@@ -137,5 +137,32 @@ describe('agent activity feed', () => {
     expect([toEvent(row(4)), trial].filter(engineerCall).map((e) => e.tool)).toEqual([
       'engineer.trial',
     ]);
+  });
+});
+
+describe('a session that no longer exists', () => {
+  it('stops polling instead of retrying the same refusal', async () => {
+    let reads = 0;
+    const tasks: (() => void)[] = [];
+    const feed = createAgentFeed({
+      read: async () => {
+        reads++;
+        throw Object.assign(new Error('gone'), { status: 409, code: 'v2_session_required' });
+      },
+      emit: () => {},
+      changed: () => {},
+      schedule: (task) => {
+        tasks.push(task);
+        return tasks.length;
+      },
+      cancel: () => {},
+    });
+    feed.start();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(reads).toBe(1);
+    expect(tasks).toHaveLength(0);
+    expect(sessionGone({ status: 409, code: 'version_conflict' })).toBe(false);
+    expect(sessionGone({ status: 503 })).toBe(false);
+    expect(sessionGone({ status: 404 })).toBe(true);
   });
 });
