@@ -16,7 +16,8 @@ function fixture() {
     read: async () => structuredClone(batch),
     prepare: async (_id, revision, caseId) => {
       expect(revision).toBe(batch.revision);
-      const row = batch.cases.find((c) => c.id === caseId)!;
+      const row = batch.cases.find((c) => c.id === caseId);
+      if (!row) throw new Error('fixture case missing');
       const command = {
         schema_version: 2 as const,
         request_id: row.request_id,
@@ -34,7 +35,8 @@ function fixture() {
       throw Error('response lost');
     },
     reconcile: async (_id, _revision, caseId) => {
-      const row = batch.cases.find((c) => c.id === caseId)!;
+      const row = batch.cases.find((c) => c.id === caseId);
+      if (!row) throw new Error('fixture case missing');
       if (results.has(row.request_id)) row.status = 'completed';
       batch = { ...batch, revision: batch.revision + 1 };
       return structuredClone(batch);
