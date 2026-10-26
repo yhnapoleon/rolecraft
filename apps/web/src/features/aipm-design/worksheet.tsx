@@ -1018,7 +1018,7 @@ function MetricBlock({
               <span>{c.t('来源字段', 'Source field')}</span>
               <input
                 value={metric?.source_field ?? ''}
-                placeholder="elapsed_minutes"
+                placeholder="duration_minutes"
                 onChange={(e) => onChange({ source_field: e.target.value.trim() })}
               />
             </label>

@@ -111,9 +111,9 @@ describe('worksheet metric block', () => {
   });
   it('stores the metric on the main need the metric_scope rule reads', () => {
     const d = writeMetric(writeMetric(base, 'supported', { kind: 'labor_time' }), 'supported', {
-      source_field: 'elapsed_minutes',
+      source_field: 'duration_minutes',
     });
-    expect(readMetric(d)).toMatchObject({ kind: 'labor_time', source_field: 'elapsed_minutes' });
+    expect(readMetric(d)).toMatchObject({ kind: 'labor_time', source_field: 'duration_minutes' });
     expect(readChoice('need', d)).toBe('supported');
     expect(d.needs).toHaveLength(1);
   });

@@ -47,10 +47,14 @@
     },
     {
       "id": "metric_scope",
-      "revision": "aipm-design-1",
+      "revision": "aipm-design-2",
       "applies_when": {
         "scopes": [],
-        "input": "structured_fields_only"
+        "input": "structured_fields_only",
+        "elapsed_fields": [
+          "duration_minutes",
+          "elapsed_minutes"
+        ]
       },
       "required_public_sources": [
         "elapsed_definition"
@@ -59,18 +63,23 @@
       "severity": "violation",
       "zh_feedback": {
         "message": "你把结单历时声明为人工工时；这个字段包含等待时间。",
-        "checked_scope": "仅核对 elapsed_minutes 的结构化指标类型，不推断自由文本。",
+        "checked_scope": "仅核对你在指标小块里声明的来源字段（如 duration_minutes）和指标类型，不推断自由文本。",
         "next_action": "保留为结单历时；要估算人工节省，请另收集实际处理工时。"
       },
       "en_feedback": {
         "message": "You classified elapsed case time as labor time; the field includes waiting.",
-        "checked_scope": "Structured metric type for elapsed_minutes only; free text is not interpreted.",
+        "checked_scope": "Only the source field (such as duration_minutes) and metric type declared in the metric block; free text is not interpreted.",
         "next_action": "Keep it as elapsed time. Collect active handling time before estimating labor saved."
       },
       "false_positive_examples": [
         {
           "kind": "elapsed_time",
-          "source_field": "elapsed_minutes",
+          "source_field": "duration_minutes",
+          "expected": "no_violation"
+        },
+        {
+          "kind": "labor_time",
+          "source_field": "handling_minutes",
           "expected": "no_violation"
         },
         {

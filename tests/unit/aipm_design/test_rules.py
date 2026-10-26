@@ -95,6 +95,27 @@ def test_client_supported_claim_cannot_enable_uninstalled_tool():
     assert findings[0]["finding"] == "improve"
 
 
+@pytest.mark.parametrize(
+    "field,kind,expected",
+    [
+        ("duration_minutes", "labor_time", 1),
+        (" Duration_Minutes ", "labor_time", 1),
+        ("SD-120.duration_minutes", "labor_time", 1),
+        ("elapsed_minutes", "labor_time", 1),
+        ("duration_minutes", "elapsed_time", 0),
+        ("duration_minutes", "other", 0),
+        ("handling_minutes", "labor_time", 0),
+        ("", "labor_time", 0),
+    ],
+)
+def test_elapsed_field_from_the_field_dictionary_as_labor_is_flagged(field, kind, expected):
+    metric = {"kind": kind, "source_field": field}
+    _, findings = evaluate_design(
+        {"needs": [{"id": "n", "metric": metric}]}, REF, FACTS, load_rules(RULES), "zh"
+    )
+    assert len(findings) == expected
+
+
 def test_elapsed_as_labor_requires_structured_claim_not_words():
     rules = load_rules(RULES)
     for kind, expected in [("labor_time", 1), ("elapsed_time", 0), ("other", 0)]:
@@ -105,7 +126,7 @@ def test_elapsed_as_labor_requires_structured_claim_not_words():
                         "id": "n",
                         "metric": {
                             "kind": kind,
-                            "source_field": "elapsed_minutes",
+                            "source_field": "duration_minutes",
                             "formula_description": "labor_saved_minutes",
                         },
                     }
