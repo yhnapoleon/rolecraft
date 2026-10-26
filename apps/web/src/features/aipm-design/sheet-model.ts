@@ -135,6 +135,8 @@ export function readChoice(step: StepId, design: SheetDesign): string {
   }
 }
 export function writeChoice(step: StepId, design: SheetDesign, value: string): SheetDesign {
+  // Leaving the choice open is allowed: write nothing rather than an empty, invalid value.
+  if (!value) return design;
   switch (step) {
     case 'business':
       return {
