@@ -72,13 +72,22 @@ describe('review content (L4 shared fixture)', () => {
 
   it('writes a colleague summary as questions to discuss, in one language', () => {
     expect(reviewSummaryForColleague(fixtureReview('zh'), 'business', { language: 'zh' })).toBe(
-      '我在写「验证真需求」第 4 版。批改说：这里把结单时长当成了人工工时；有误：指标口径。你怎么看？',
+      '我在写「验证真需求」第 4 版。批改说：这里把结单时长当成了人工工时；有误：指标口径。从业务口径看，你觉得我最该先核对哪一处？',
     );
     const en = reviewSummaryForColleague(fixtureReview('en'), 'technical', { language: 'en' });
     expect(en).toBe(
-      'I’m writing “Validate the need”, version 4. The review says: Elapsed ticket time is used as labour time here; Wrong: Metric definition. What do you think?',
+      'I’m writing “Validate the need”, version 4. The review says: Elapsed ticket time is used as labour time here; Wrong: Metric definition. From the system and test evidence, which part do you think I should check first?',
     );
     expect(en).not.toMatch(CJK);
+  });
+
+  it('asks each colleague for a direction, never for the fix', () => {
+    for (const language of ['zh', 'en'] as const)
+      for (const who of ['manager', 'business', 'technical'] as const) {
+        const said = reviewSummaryForColleague(fixtureReview(language), who, { language });
+        expect(said).toMatch(language === 'zh' ? /最该先核对哪一处？$/ : /should check first\?$/);
+        expect(said).not.toMatch(/怎么改|改法|How should I fix|rewrite/i);
+      }
   });
 
   it('maps result-page criteria back to their sheet', () => {
