@@ -39,6 +39,8 @@ function setup(
     currentMode?: RolesView['mode'];
     spokenEvidence?: unknown[];
     materialTitles?: Record<string, string>;
+    shares?: unknown[];
+    prdVersion?: number;
     /** The turn's job ended without a reply. */
     job?: { status: string; error_code?: string };
   },
@@ -65,7 +67,7 @@ function setup(
   });
   const turn = {
     ref: reference('role_turn', 't'),
-    content: { session_id: 's', input: { role_id: 'supervisor', text: 'question' } },
+    content: { session_id: 's', input: { role_id: 'supervisor', text: 'question', shares: presentation?.shares } },
   };
   const reply = {
     ref: reference('role_reply', 'r'),
@@ -85,7 +87,12 @@ function setup(
   const host = {
     snapshot: () => snapshot,
     subscribe: () => () => {},
-    query: async () => ({
+    query: async (operation: string, input?: {object_id: string; version: number}) => operation === 'objects.read'
+      ? { ref: { ...reference('share', (input?.object_id ?? '')), version: input?.version ?? 1 },
+          content: { product: { ...reference('product', (input?.object_id ?? '') === 'shared-prd' ? 'prd' : 'other'), version: 2 } } }
+      : operation === 'aipm.progress'
+      ? { prd_ref: { ...reference('product', 'prd'), version: presentation?.prdVersion ?? 4 } }
+      : ({
       objects: changeDuringRead && calls === 0 ? [turn] : records,
       role_mode: currentMode,
       workspace: {
@@ -404,3 +411,12 @@ for (const accepted of [true, false]) {
     expect(form.dataset.rolesBound).toBeUndefined();
   });
 }
+
+it('restores the attached PRD version from stored turn shares on fresh conversation mounts', async () => {
+  const share = { session_id: 's', kind: 'share', object_id: 'shared-prd', version: 1 };
+  const input = { text: 'reply', omissionCount: 0, currentVersion: 1, prdVersion: 4,
+    shares: [share, { ...share, object_id: 'other' }, { ...share, session_id: 'foreign', version: 8 }] };
+  expect((await setup(false, input).read()).turns[0].prdVersions).toEqual([2]);
+  expect((await setup(false, input).read()).turns[0].prdVersions).toEqual([2]);
+  expect((await setup(false, { ...input, shares: [] }).read()).turns[0].prdVersions).toEqual([]);
+});

@@ -485,7 +485,7 @@
 /* How colleagues would see it: three compact cards in the result page's person colours. */
 .aipm-review__mentors {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
   gap: 8px;
 }
 .aipm-review__angle {
@@ -505,6 +505,8 @@
   border-bottom-color: var(--line-2);
 }
 .aipm-review__mentor {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
   gap: 4px;

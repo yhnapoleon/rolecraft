@@ -29,6 +29,7 @@ import {
   stackLayout,
   topItem,
 } from './model';
+import { flySheet } from './sheet-transition';
 import './stack.css';
 
 const ICONS: Record<string, LucideIcon> = {
@@ -215,9 +216,14 @@ export function WorkStack(p: StackProps) {
     else if (e.key === 'Home') move(0);
     else if (e.key === 'End') move(n - 1);
   };
-  const choose = (item: StackItem) => {
-    close(false);
-    p.onOpen(item.id);
+  const choose = (item: StackItem, event: React.MouseEvent<HTMLButtonElement>) => {
+    const openSheet = () => {
+      close(false);
+      p.onOpen(item.id);
+    };
+    const thumb = event.currentTarget.querySelector<HTMLElement>('.ws-stack__thumb');
+    if (p.kind === 'materials' || event.detail === 0 || reduce || !thumb) openSheet();
+    else flySheet(thumb, openSheet);
   };
 
   const isOpen = open !== 'closed';
@@ -230,6 +236,9 @@ export function WorkStack(p: StackProps) {
     ease: [0.4, 0, 1, 1] as const,
     delay: fromTop * 0.016,
   });
+
+  // Materials stay in the board on phones; omit the hidden pile from keyboard navigation too.
+  if (w < 768 && p.kind === 'materials') return null;
 
   return (
     <div
@@ -334,7 +343,7 @@ export function WorkStack(p: StackProps) {
                       data-suggested={item.suggested || undefined}
                       tabIndex={active === i || (active < 0 && i === 0) ? 0 : -1}
                       onFocus={() => setActive(i)}
-                      onClick={() => choose(item)}
+                      onClick={(event) => choose(item, event)}
                     >
                       <Thumb item={item} dot={layout !== 'grid'} />
                       {layout === 'grid' && <Dot status={item.status} />}

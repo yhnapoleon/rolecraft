@@ -695,3 +695,23 @@
     animation: none;
   }
 }
+
+/* Shared paper geometry, scoped so the outer route's transitions keep their own timing. */
+html[data-aipm-flying]::view-transition-group(aipm-paper) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease-out);
+}
+html[data-aipm-flying]::view-transition-old(root),
+html[data-aipm-flying]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-aipm-flying]::view-transition-old(aipm-paper),
+html[data-aipm-flying]::view-transition-new(aipm-paper) {
+  animation-duration: 280ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-aipm-flying]::view-transition-group(aipm-paper) {
+    animation: none;
+  }
+}

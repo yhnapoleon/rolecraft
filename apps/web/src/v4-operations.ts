@@ -12,6 +12,7 @@ const id = (input: Input, key: string) => {
   return encodeURIComponent(value);
 };
 const reads: Record<string, string> = {
+  'aipm.progress': '/aipm/progress',
   'workbench.read': '/workbench',
   'materials.list': '/materials',
   timeline: '/timeline',
@@ -75,6 +76,7 @@ export function commandRoute(operation: string, input: Input): Route {
     'work_items.create': '/work-items',
     'work_items.batch': '/work-items/batch',
     'work_products.create': '/work-products',
+    'aipm.step_links.save': '/aipm/step-links',
     workspace_imports: '/workspace-imports',
     'delegations.create': '/delegations',
   };

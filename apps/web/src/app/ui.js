@@ -730,7 +730,12 @@ function go(route, opts = {}) {
     ui.railOpen = false;
     ui.route = route;
     ui.routeId = id;
-    history.pushState(null, '', hashOf(route, id));
+    const state = opts.aipmScreen
+      ? { aipm: opts.aipmScreen, aipmSession: current()?.id }
+      : null;
+    if (route === 'work') Aipm.restoreHistory(state);
+    if (!opts.aipmScreen || from !== route || fromId !== id || JSON.stringify(history.state) !== JSON.stringify(state))
+      history.pushState(state, '', hashOf(route, id));
     render();
     window.scrollTo(0, 0);
     document.getElementById('main')?.scrollTo?.(0, 0);
@@ -744,7 +749,7 @@ function go(route, opts = {}) {
     else run();
   }
 }
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', (event) => {
   commit();
   dropUndo();
   if (sheet.open) closeSheet(true);
@@ -756,6 +761,7 @@ window.addEventListener('popstate', () => {
   const update = () => {
     ui.route = p.r;
     ui.routeId = p.id;
+    Aipm.restoreHistory(p.r === 'work' ? event.state : null);
     render();
     if (p.r === 'doc') document.getElementById('main')?.scrollTo(0, 0);
   };
@@ -1713,9 +1719,7 @@ const Aipm = createAipmPractice({
     mentorPrompts.set(`${a.id}:${role}`, prompts);
     if (ui.rail === 'chat' && ui.chatRole === role) refreshWS(['rail']);
   },
-  showBoard: () => {
-    if (ui.route !== 'work') go('work');
-  },
+  showBoard: (screen) => go('work', { aipmScreen: screen }),
   openProduct: (id) => {
     const a = current(),
       x = a?.artifacts.find((y) => y.id === id && !y.removedAt);
@@ -1724,7 +1728,7 @@ const Aipm = createAipmPractice({
     if (x.taskId) openTask(x.taskId, { type: 'work', id });
     else previewWork(a, id);
   },
-  newFreeSheet: () => sheetNewArtifact(),
+  newFreeSheet: () => sheetNewArtifact(undefined, true),
   materialHtml: (id) => {
     const a = current();
     return a ? docBody(a, id, true) : '';
@@ -3818,8 +3822,6 @@ document.addEventListener(
       });
       if (result.status !== 'confirmed') throw new Error(result.result?.message || result.status);
       prdShares.get(`${a.id}:${ROLE_ID[role]}`)?.add(`${prd.id}@${prd.version}`);
-      const said = form.querySelector('#chat-input')?.value.trim();
-      if (said) prdSentWith.set(`${a.id}:${role}:${said}`, prd.version);
     } catch (err) {
       notify(
         T(
@@ -3850,33 +3852,6 @@ document.addEventListener(
     live.requestSubmit(send || undefined);
   },
   true,
-);
-// "Attached: pilot PRD · version N" under the message that carried it (this page's memory: the
-// conversation itself does not record which message a share went with).
-const prdSentWith = new Map();
-function notePrdBubbles() {
-  const a = current(),
-    role = ui.chatRole;
-  if (!a || !role || !prdSentWith.size) return;
-  for (const q of document.querySelectorAll('.chat .rc-roles__question')) {
-    const group = q.closest('.rc-msg--mine');
-    if (!group || group.querySelector('.aipm-bubble-note')) continue;
-    const said = [...q.childNodes]
-      .filter((n) => !n.classList?.contains('sr-only'))
-      .map((n) => n.textContent)
-      .join('')
-      .trim();
-    const version = prdSentWith.get(`${a.id}:${role}:${said}`);
-    if (!version) continue;
-    const note = document.createElement('p');
-    note.className = 'aipm-bubble-note';
-    note.textContent = T(`附上：试点 PRD · 第 ${version} 版`, `Attached: pilot PRD · version ${version}`);
-    q.after(note);
-  }
-}
-new MutationObserver(() => prdSentWith.size && requestAnimationFrame(notePrdBubbles)).observe(
-  document.body,
-  { childList: true, subtree: true },
 );
 // The introduction folds to one line once you have written to that colleague (once, so opening
 // it again stays open).
@@ -4795,13 +4770,14 @@ function sheetTask(id) {
     L.nativeWorkspace(a) ? 'workspace-form' : '',
   );
 }
-function sheetNewArtifact(purpose) {
+function sheetNewArtifact(purpose, freeSheet = false) {
   const a = current();
   const t = task();
   openSheet(
-    T('新作品', 'New piece of work'),
+    freeSheet ? T('新建自由纸', 'New free sheet') : T('新作品', 'New piece of work'),
     `<form data-form="artifact" id="artifact-form" class="stack">
     <label class="field"><span>${T('标题', 'Title')}</span><input class="input" name="title" required maxlength="160" value="${purpose === '试点决定' ? esc(T('试点决定', 'Pilot decision')) : ''}" placeholder="${esc(T('例如：我对首批范围的判断', 'For example: who goes first, and why'))}" autofocus></label>
+    ${freeSheet ? `<label class="field"><span>${T('关联到能力点（可选）', 'Link to a point (optional)')}</span><select class="select" name="aipmStep"><option value="">${T('不关联', 'No link')}</option>${(Aipm.compassProps(a)?.rows ?? []).map((row) => `<option value="${esc(row.id)}">${row.order} · ${esc(row.label)}</option>`).join('')}</select></label>` : ''}
     <fieldset class="field"><legend>${T('它现在用来做什么', 'What it is for, for now')}</legend><div class="choices wrap">${E.PURPOSES.map((p) => `<label class="choice"><input type="radio" name="purpose" value="${p}" ${p === (purpose || '探索笔记') ? 'checked' : ''}><span>${esc(purposeLabel(p))}</span></label>`).join('')}</div></fieldset>
     <label class="field"><span>${T('属于哪件事', 'Which task')}</span><select class="select" name="taskId" required>${t || purpose ? '' : `<option value="" selected disabled>${T('选一件事', 'Pick a task')}</option>`}${a.tasks.map((x) => `<option value="${x.id}" ${(t ? x.id === t.id : purpose && x.seed === 'decision') ? 'selected' : ''}>${esc(taskTitle(x))}</option>`).join('')}</select></label>
   </form>`,

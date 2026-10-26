@@ -65,6 +65,7 @@ export type DelegationPage = Omit<C.DelegationListPage, 'items'> & {
 };
 
 export interface V4Queries {
+  'aipm.progress': { input: Empty; output: import('./aipm/types').AipmProgress };
   'session.read': { input: Empty; output: C.PublicState };
   'workbench.read': { input: PageInput; output: WorkbenchContext };
   'materials.list': { input: PageInput; output: MaterialPage };
@@ -192,6 +193,10 @@ export interface V4Commands {
   'work_items.batch': {
     input: C.TaskBatch;
     output: { objects: C.WorkspaceTask[]; refs: C.ObjectRef[]; as_of: C.VersionPoint };
+  };
+  'aipm.step_links.save': {
+    input: import('./aipm/types').StepLinkInput;
+    output: { ref: C.ObjectRef; link: C.JsonValue };
   };
   'work_products.create': { input: C.ProductCreate; output: ObjectResult<C.WorkProductVersion> };
   'work_products.versions.create': {

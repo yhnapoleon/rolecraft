@@ -63,6 +63,8 @@ export interface ConversationTurn {
   id: string;
   roleId: RoleId;
   question: string;
+  /** Exact pilot PRD versions present in this stored turn’s shares. */
+  prdVersions?: readonly number[];
   status: TurnStatus;
   reply?: string;
   materials?: readonly MaterialReference[];
@@ -510,6 +512,11 @@ export function mount(
     you.textContent = T('你：', 'You: ');
     asked.append(you, turn.question);
     mine.append(asked);
+    for (const version of turn.prdVersions ?? []) {
+      const note = el('p', 'aipm-bubble-note');
+      note.textContent = T(`附上：试点 PRD · 第 ${version} 版`, `Attached: pilot PRD · version ${version}`);
+      mine.append(note);
+    }
     item.append(mine);
     const kind =
       turn.status === 'completed' && turn.reply !== undefined

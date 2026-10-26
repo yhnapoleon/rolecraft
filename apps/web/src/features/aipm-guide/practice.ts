@@ -28,6 +28,7 @@ import {
   orderGlyph,
 } from './sheets';
 import { guideSource, type GuideClient, type GuideTransport } from './source';
+import { screenFromHistory } from './screen-history';
 
 type Attempt = { id: string };
 export type MentorCard = { question: string; pointer?: string; materialId?: string };
@@ -61,7 +62,7 @@ export type PracticeDeps = {
   /** Whether that colleague has been shared this exact PRD version already. */
   prdSharedWith(colleague: AipmColleague, prd: { id: string; version: number }): boolean;
   /** The main screen lives on the board: go there first when elsewhere. */
-  showBoard(): void;
+  showBoard(screen: AipmScreen): void;
   /** Opens a work product in the existing editor (the whole PRD). */
   openProduct(productId: string): void;
   /** A material's page, for the column beside a worksheet. */
@@ -214,7 +215,7 @@ export function createAipmPractice(deps: PracticeDeps) {
       stale: false,
       busy: false,
       feature: null,
-      screen: { kind: 'workbench' },
+      screen: screenFromHistory(typeof history === 'undefined' ? null : history.state, a.id),
     };
     states.set(a.id, s);
     s.reading = true;
@@ -522,13 +523,11 @@ export function createAipmPractice(deps: PracticeDeps) {
     const a = deps.current(),
       s = a && stateOf(a);
     if (!s) return;
-    // Each main screen is a step in the browser's history, so Back returns to the one before.
-    if (!fromHistory && JSON.stringify(screen) !== JSON.stringify(s.screen))
-      history.pushState({ ...(history.state ?? {}), aipm: screen }, '', location.href);
+    if (fromHistory && JSON.stringify(screen) === JSON.stringify(s.screen)) return;
     s.screen = screen;
     reveal = screen.kind !== 'workbench';
-    if (screen.kind !== 'workbench') deps.showBoard();
-    deps.redraw();
+    // The existing route owner writes history and renders once. Popstate restores before render.
+    if (!fromHistory) deps.showBoard(screen);
   }
 
   async function choose(a: Attempt, step: StepId) {
@@ -699,7 +698,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     if (reveal) {
       reveal = false;
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      root.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
+      root.scrollIntoView({ block: 'start', behavior: still || document.documentElement.hasAttribute('data-aipm-flying') ? 'auto' : 'smooth' });
     }
     locateDraft(live.el);
   }
@@ -819,14 +818,10 @@ export function createAipmPractice(deps: PracticeDeps) {
     return nav;
   }
 
-  if (typeof window !== 'undefined')
-    window.addEventListener('popstate', (e) => {
-      const a = deps.current(),
-        s = a && stateOf(a);
-      if (s?.phase !== 'ready') return;
-      const screen = (e.state?.aipm as AipmScreen | undefined) ?? { kind: 'workbench' };
-      if (JSON.stringify(screen) !== JSON.stringify(s.screen)) show(screen, true);
-    });
+  function restoreHistory(value: unknown) {
+    const a = deps.current();
+    if (a) show(screenFromHistory(value, a.id), true);
+  }
 
   // Esc closes the open sheet or review back to the workbench, unless something else used it
   // (a dialog, an open pile, a field being typed in).
@@ -860,6 +855,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     stackProps,
     screenOf,
     screenName,
+    restoreHistory,
     mountMain,
     host,
     missing: () => missing,
