@@ -106,6 +106,7 @@ def analyze_support(package: EvidencePackageV2, language: str) -> dict[str, Any]
                     "expected_cost": round(choice.expected_cost, 3),
                     "top": [dict(t) for t in found.top[:3]],
                     "branches": found.branches,
+                    "retrieval": found.retrieval,
                 }
             )
     decided = [r for r in rows if r["decision"] == "decide"]

@@ -220,7 +220,7 @@ def substitution(a: str, b: str) -> float:
     return 0.5 if a.split(":")[0] == b.split(":")[0] else 1.0
 
 
-def dtw(a: list[str], b: list[str]) -> float:
+def _dtw_matrix(a: list[str], b: list[str]) -> np.ndarray:
     n, m = len(a), len(b)
     cost = np.full((n + 1, m + 1), np.inf)
     cost[0, 0] = 0.0
@@ -229,7 +229,38 @@ def dtw(a: list[str], b: list[str]) -> float:
             cost[i, j] = substitution(a[i - 1], b[j - 1]) + min(
                 cost[i - 1, j], cost[i, j - 1], cost[i - 1, j - 1]
             )
-    return float(cost[n, m])
+    return cost
+
+
+def dtw(a: list[str], b: list[str]) -> float:
+    return float(_dtw_matrix(a, b)[len(a), len(b)])
+
+
+def dtw_path(a: list[str], b: list[str]) -> tuple[float, list[dict[str, Any]]]:
+    """The DTW distance and its warping path, traced back through the cost matrix.
+
+    Each step is ``{"i", "j", "cost"}``: ``a[i]`` was matched to ``b[j]`` at that
+    substitution cost (0 same symbol, 0.5 same action on another object, 1 otherwise).
+    The path is monotone from (0, 0) to (len(a) - 1, len(b) - 1); a repeated ``i`` means
+    ``a`` did one thing where ``b`` did several, a repeated ``j`` the reverse. Ties prefer
+    the diagonal, then the step along ``a``. Empty inputs give an empty path.
+    """
+    n, m = len(a), len(b)
+    cost = _dtw_matrix(a, b)
+    if n == 0 or m == 0:
+        return float(cost[n, m]), []
+    steps: list[dict[str, Any]] = []
+    i, j = n, m
+    while i > 0 and j > 0:
+        steps.append({"i": i - 1, "j": j - 1, "cost": substitution(a[i - 1], b[j - 1])})
+        _, i, j = min(
+            (cost[i - 1, j - 1], i - 1, j - 1),
+            (cost[i - 1, j], i - 1, j),
+            (cost[i, j - 1], i, j - 1),
+            key=lambda option: option[0],
+        )
+    steps.reverse()
+    return float(cost[n, m]), steps
 
 
 def alignment(sequence: list[str], reference: list[str]) -> dict[str, Any]:
@@ -350,6 +381,11 @@ def analyze(view, auth, *, language: str = "zh") -> dict[str, Any]:
                         "strategy": nearest["strategy"],
                         "sequence": [str(s) for s in nearest["sequence"]],
                     },
+                    # Step-by-step alignment to that reference (request #2 of the product
+                    # side): which of this session's steps answers which reference step,
+                    # so the two trajectories can be drawn with their connecting lines.
+                    # Only the nearest reference carries it; the top-3 stay distances.
+                    "path": dtw_path(sequence, [str(s) for s in nearest["sequence"]])[1],
                 }
                 aligned = alignment(sequence, nearest["sequence"])
         else:
@@ -447,4 +483,28 @@ def learner_state(view, auth, *, language: str = "zh", intent_record=None) -> di
             "confidence": intent_record.score,
             "recognizer": f"{intent_record.recognizer_id}@{intent_record.revision}",
         }
+    brief = _aipm_brief(view, auth, language)
+    if brief:
+        state["aipm"] = brief
     return state
+
+
+def _aipm_brief(view, auth, language: str) -> dict[str, Any] | None:
+    """The AI PM colleague brief (request #4 of the product side): the step the learner is
+    on, the state of each sheet and the gaps of the latest review, in a few hundred
+    characters, produced by ``career_lab.aipm.colleague_brief(view, auth, language)`` when
+    the aipm module provides it. None outside an AI PM session, when the function does not
+    exist yet, or when it fails: the brief is an annotation, never a reason to fail."""
+    try:
+        from career_lab import aipm
+
+        brief = getattr(aipm, "colleague_brief", None)
+        if brief is None:
+            from career_lab.aipm import progress
+
+            brief = getattr(progress, "colleague_brief", None)
+        if brief is None:
+            return None
+        return dict(brief(view, auth, language) or {}) or None
+    except Exception:  # noqa: BLE001
+        return None

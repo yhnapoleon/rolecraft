@@ -97,6 +97,7 @@ def sentence_preview(packages, language: str, title_of=None) -> dict | None:
                         "decision",
                         "expected_cost",
                         "branches",
+                        "retrieval",
                     )
                 },
                 "evidence": _closest_sentence(row["quote"], source.text) if source else None,
@@ -127,6 +128,8 @@ def sentence_preview(packages, language: str, title_of=None) -> dict | None:
         "aggregate": analysis["aggregate"],
         "duration_ms": analysis["duration_ms"],
         "defer_cost": decision.costs().get("defer"),
+        # One retrieval method per pass (every sentence ranks its candidates the same way).
+        "retrieval": units[0]["retrieval"] if units else None,
         "units": units,
     }
     if len(_SENTENCES) >= 64:
