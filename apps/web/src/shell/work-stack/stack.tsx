@@ -91,7 +91,12 @@ export function WorkStack(p: StackProps) {
   const [active, setActive] = useState(-1);
   const reduce = useReducedMotion() ?? false;
   const { w, h } = useViewport();
-  const layout = stackLayout(p.items.length, h, w);
+  // The room above the pile, measured when it opens: a fan that would not fit becomes a grid,
+  // and a grid scrolls within it.
+  const [room, setRoom] = useState<number | null>(null);
+  const fits = room === null || room >= p.items.length * 62 + 64;
+  const auto = stackLayout(p.items.length, h, w);
+  const layout = auto === 'fan' && !fits ? 'grid' : auto;
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const pile = useRef<HTMLButtonElement>(null);
@@ -119,6 +124,12 @@ export function WorkStack(p: StackProps) {
     },
     [p.items, layout],
   );
+
+  useEffect(() => {
+    if (open === 'closed') return;
+    const top = root.current?.getBoundingClientRect().top;
+    if (typeof top === 'number') setRoom(Math.max(160, top - 72));
+  }, [open]);
 
   // Focus follows the roving index once the list exists.
   useEffect(() => {
@@ -231,6 +242,7 @@ export function WorkStack(p: StackProps) {
             key="panel"
             id={panelId}
             className={`ws-stack__panel ws-stack__panel--${layout}`}
+            style={room ? ({ '--room': `${room}px` } as React.CSSProperties) : undefined}
             initial={
               reduce ? { opacity: 0 } : layout === 'fan' ? { opacity: 1 } : { opacity: 0, y: 8 }
             }

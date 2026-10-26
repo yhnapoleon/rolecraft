@@ -446,6 +446,9 @@
   width: 360px;
 }
 .ws-stack__panel--grid .ws-stack__list {
+  max-height: calc(var(--room, 60vh) - 60px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;

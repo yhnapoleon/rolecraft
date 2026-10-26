@@ -240,3 +240,38 @@
   color: var(--ink-3);
   font-size: 13px;
 }
+.aipm-stack-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+/* An open pile rises above its neighbour. */
+.aipm-stack-slot .ws-stack {
+  z-index: 1;
+}
+.aipm-stack-slot .ws-stack:is([data-open="preview"], [data-open="pinned"]) {
+  z-index: 5;
+}
+/* Materials have no sheet state to show; on a phone only the sheets get a capsule. */
+.ws-stack[data-kind="materials"] .ws-stack__dot {
+  display: none;
+}
+@media (max-width: 767px) {
+  .ws-stack[data-kind="materials"] {
+    display: none;
+  }
+}
+/* One pile open at a time reads cleanly: the other steps aside. */
+.aipm-stack-slot .ws-stack {
+  transition: opacity var(--fast) var(--ease-out);
+}
+.aipm-stack-slot:has(.ws-stack:is([data-open="preview"], [data-open="pinned"]))
+  .ws-stack[data-open="closed"] {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-stack-slot .ws-stack {
+    transition: none;
+  }
+}

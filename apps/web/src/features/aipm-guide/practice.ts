@@ -60,6 +60,8 @@ export type PracticeDeps = {
   openProduct(productId: string): void;
   /** A material's page, for the column beside a worksheet. */
   materialHtml(materialId: string): string;
+  /** Reads a material the way opening it does (a counted read), then redraws. */
+  readMaterial(materialId: string): void;
   /** Picks passages of that material (the existing evidence picker) and quotes them into the
    * open worksheet, each with the exact reference the server returned. */
   quoteToSheet(materialId: string): void;
@@ -419,9 +421,10 @@ export function createAipmPractice(deps: PracticeDeps) {
     openMaterialSplit(materialId) {
       const a = deps.current(),
         s = a && stateOf(a);
-      if (s?.screen.kind === 'worksheet' && innerWidth >= 1200)
+      if (s?.screen.kind === 'worksheet' && innerWidth >= 1200) {
         show({ ...s.screen, material: materialId });
-      else deps.openMaterial(materialId);
+        deps.readMaterial(materialId);
+      } else deps.openMaterial(materialId);
     },
     openReview(step, reviewRef) {
       show({ kind: 'review', step, ...(reviewRef ? { reviewRef } : {}) });

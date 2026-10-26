@@ -22,6 +22,7 @@ const deps = (transport = vi.fn(async () => ({}))): PracticeDeps => ({
   openProduct: () => {},
   newFreeSheet: () => {},
   materialHtml: () => '',
+  readMaterial: () => {},
   quoteToSheet: () => {},
 });
 

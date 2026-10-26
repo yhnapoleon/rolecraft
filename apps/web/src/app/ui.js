@@ -1694,6 +1694,12 @@ const Aipm = createAipmPractice({
     const a = current();
     return a ? docBody(a, id, true) : '';
   },
+  readMaterial: async (id) => {
+    const a = current();
+    if (!a) return;
+    await recordRead(a, id);
+    if (current()?.id === a.id) refreshWS(['stage']);
+  },
   quoteToSheet: async (id) => {
     const a = current(),
       host = a && L.nativeWorkspace(a) ? L.v4Host(a) : null,
@@ -1707,6 +1713,45 @@ const Aipm = createAipmPractice({
   },
 });
 const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
+// The materials pile beside the sheets: the same component, every material, new ones counted.
+function materialPile(a) {
+  const rows = docRows(a);
+  if (!rows.length) return null;
+  const word = {
+    new: T('有新版本', 'New version'),
+    agent: T('你的 Agent 在读', 'Your agent is reading'),
+    unread: T('未读', 'Unread'),
+    cited: T('已引用', 'Cited'),
+    read: T('已读', 'Read'),
+  };
+  const fresh = rows.filter((r) => r.state === 'new').length;
+  const status = fresh
+    ? T(`${rows.length} 份 · ${fresh} 份更新`, `${rows.length} · ${fresh} updated`)
+    : T(`${rows.length} 份`, `${rows.length} documents`);
+  return {
+    kind: 'materials',
+    title: T('资料', 'Materials'),
+    status,
+    ariaLabel: T(`资料，${rows.length} 份`, `Materials, ${rows.length}`) + (fresh ? T(`，${fresh} 份有新版本`, `, ${fresh} with a new version`) : ''),
+    capsule: T('资料', 'Materials'),
+    items: rows.map((r) => ({
+      id: r.id,
+      order: null,
+      segment: 'material',
+      icon: 'FileText',
+      name: r.title,
+      purpose: `v${r.version}`,
+      status: 'not_started',
+      statusText: `v${r.version} · ${word[r.state]}`,
+      agentDraft: false,
+      suggested: false,
+      updated: r.state === 'new',
+    })),
+    words: { suggested: T('建议', 'Suggested'), close: T('收起', 'Close') },
+    onOpen: (id) =>
+      Aipm.screenOf(a) === 'worksheet' ? Aipm.host.openMaterialSplit(id) : openMaterial(id),
+  };
+}
 // A seven-step practice opens a sheet or a review in the main screen instead of the board.
 const aipmScreen = (a) => ui.route === 'work' && aipmHere(a) && Aipm.screenOf(a) !== 'workbench';
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every
@@ -1719,7 +1764,7 @@ const progressSlot = (a, sevenSteps = aipmHere(a)) =>
     : sevenSteps
       ? `<div class="rc-prog-wrap aipm-v2">${islandSlot('aipm-compass')}</div>${
           aipmScreen(a) ? '<div class="aipm-main" data-aipm-main></div>' : ''
-        }<div class="aipm-stack-slot">${islandSlot('aipm-stack')}</div>`
+        }<div class="aipm-stack-slot">${islandSlot('aipm-materials')}${islandSlot('aipm-stack')}</div>`
       : (hatHere(a) === 'pm'
           ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
           : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
@@ -1749,6 +1794,8 @@ function mountProgress(a) {
     keepIsland('aipm-compass', Compass, compass);
     const pile = Aipm.stackProps(a);
     if (pile) keepIsland('aipm-stack', WorkStack, pile);
+    const materials = materialPile(a);
+    if (materials) keepIsland('aipm-materials', WorkStack, materials);
     Aipm.mountMain(a, document.querySelector('[data-aipm-main]'));
     return;
   }
@@ -2632,11 +2679,12 @@ function findingsOf(a) {
   const unfiled = (a.artifacts || []).filter((w) => !w.taskId && !w.removedAt).map(workOf);
   return { docs, people, tests, tasks, unfiled };
 }
-function docGrid(a) {
-  const list = E.getMaterials(a);
+// Each material once, with what is new about it: a new version, your agent reading it, unread,
+// cited in your work, or read. The board's list and the materials pile say the same.
+function docRows(a) {
   const read = readSet(a);
   const cited = citedMaterials(a);
-  const rows = list.map((m) => {
+  return E.getMaterials(a).map((m) => {
     const fresh = m.version > 1 && !(a.acks || []).includes(`read-${m.id}-v${m.version}`);
     const state = fresh
       ? 'new'
@@ -2649,6 +2697,9 @@ function docGrid(a) {
             : 'read';
     return { id: m.id, title: materialTitle(m), version: m.version, state };
   });
+}
+function docGrid(a) {
+  const rows = docRows(a);
   const html = Board.documentsSection(rows, {
     all: Board.docsAll(a.id),
     loading: snap().connected
@@ -5432,6 +5483,21 @@ async function askColleague(a, person, question) {
   );
   return false;
 }
+// Reading is a counted business action on the server; record the first read of each version only.
+async function recordRead(a, id, m = E.getMaterials(a).find((x) => x.id === id)) {
+  if (m) a.acks = [...new Set([...(a.acks || []), `read-${id}-v${m.version}`])];
+  const readKey = id + '@' + (m ? m.version : 0);
+  a.readSent = Array.isArray(a.readSent) ? a.readSent : [];
+  if (!a.readSent.includes(readKey) || !m?.body) {
+    try {
+      await L.read(a, id);
+      a.readSent.push(readKey);
+      persist();
+    } catch (err) {
+      notify(errText(err));
+    }
+  }
+}
 // Inside a task a document opens beside the work; from the board it opens on its own page.
 async function openMaterial(id, compare = false) {
   const a = current();
@@ -5458,18 +5524,7 @@ async function openMaterial(id, compare = false) {
     ui.compare = false;
     refreshWS(['overlay', 'toolbar']);
   }
-  // Reading is a counted business action on the server; record the first read of each version only.
-  const readKey = id + '@' + (m ? m.version : 0);
-  a.readSent = Array.isArray(a.readSent) ? a.readSent : [];
-  if (!a.readSent.includes(readKey) || !m?.body) {
-    try {
-      await L.read(a, id);
-      a.readSent.push(readKey);
-      persist();
-    } catch (err) {
-      notify(errText(err));
-    }
-  }
+  await recordRead(a, id, m);
   if (m && m.version > 1 && !ui.previous[id]) {
     try {
       // The version before, read without recording a read (as the change band does).
