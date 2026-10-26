@@ -155,6 +155,7 @@ def test_focus_link_design_and_submission_shape_progress(enabled):
     assert by_id["business"]["work_status"] == "recorded"
     assert by_id["business"]["evidence_refs"] == [product]
     assert by_id["boundary"]["work_status"] == "recorded"
+    assert [r["kind"] for r in by_id["boundary"]["evidence_refs"]] == ["aipm_design"]
     page = result(get(enabled, "process-feedback?limit=1"))
     assert page["items"] and all(i["affects_formal_score"] is False for i in page["items"])
 
@@ -178,3 +179,55 @@ def test_limited_agent_sees_partial_projection_without_private_detail(enabled):
     blocked, _ = fixture.grant(enabled, allowed_actions=("submissions.list",))
     assert get(enabled, "progress", blocked["token"]).status_code == 403
     assert "grading" not in json.dumps(result(get(enabled, "guide", actor["token"])))
+
+
+def test_mcp_progress_resource_matches_http_and_hides_private_rules(enabled):
+    from fastapi.testclient import TestClient
+
+    from career_lab.mcp.protocol import CAPABILITIES, MODERN, VERSION
+    from career_lab.mcp.streamable_http import mount_mcp_http
+
+    mount_mcp_http(enabled["app"])
+    post(enabled, "enrollment", "aipm.enroll")
+    actor, _ = fixture.grant(enabled, allowed_actions=("observation",))
+    client = TestClient(enabled["app"], base_url="http://127.0.0.1")
+
+    def call(method, params, name):
+        response = client.post(
+            f"/sessions/{enabled['sid']}/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": {**params, "_meta": {VERSION: MODERN, CAPABILITIES: {}}},
+            },
+            headers={
+                "Authorization": "Bearer " + actor["token"],
+                "Accept": "application/json, text/event-stream",
+                "MCP-Protocol-Version": MODERN,
+                "Mcp-Method": method,
+                "Mcp-Name": name,
+            },
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["result"]
+
+    listed = call("resources/list", {}, "")
+    uris = {r["uri"] for r in listed["resources"]}
+    uri = f"rolecraft://sessions/{enabled['sid']}/aipm/progress"
+    assert uri in uris
+    value = json.loads(call("resources/read", {"uri": uri}, uri)["contents"][0]["text"])
+    assert value == result(get(enabled, "progress", actor["token"]))
+    assert value["projection"]["complete"] is False
+    tool = call(
+        "tools/call",
+        {"name": "aipm.context.read", "arguments": {"kind": "progress"}},
+        "aipm.context.read",
+    )
+    assert tool["structuredContent"] == value
+    prompt = call("prompts/get", {"name": "aipm-next-step", "arguments": {}}, "aipm-next-step")
+    dumped = json.dumps([value, prompt])
+    rules = json.loads((CONTENT / "private/grading/design.json").read_text())
+    assert "private/grading" not in dumped
+    assert all(r["predicate"] not in dumped for r in rules["rules"])
+    client.close()
