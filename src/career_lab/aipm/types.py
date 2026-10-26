@@ -18,6 +18,10 @@ StepId = Literal[
 STEP_IDS = ("business", "stakeholders", "need", "boundary", "solution", "assurance", "decision")
 EXPERIENCE_REVISION = "aipm-phase1-v1"
 WorkStatus = Literal["not_started", "working", "recorded", "recheck", "uncovered"]
+Segment = Literal["clarify", "design", "verify"]
+Decision = Literal["launch", "launch_narrow", "defer_with_conditions", "no_go"]
+SheetStatus = Literal["not_started", "draft", "based", "solid", "recheck"]
+Colleague = Literal["manager", "business", "tech"]
 SourceKind = Literal[
     "rule", "authored_guidance", "colleague_opinion", "model_suggestion", "learner_assessment"
 ]
@@ -110,6 +114,8 @@ class GuideStep(DTO):
     expected_outputs: tuple[str, ...] = ()
     suggested_questions: tuple[str, ...] = ()
     help: tuple[dict, ...] = ()
+    segment: Segment | None = None
+    icon: str | None = None  # lucide icon name from the authored guide
 
 
 class AipmGuide(DTO):
@@ -118,6 +124,18 @@ class AipmGuide(DTO):
     content_revision: str
     work_language: Literal["zh", "en"]
     steps: tuple[GuideStep, ...]
+
+
+class SheetState(DTO):
+    """The worksheet view of one step: latest section review against the current PRD."""
+
+    status: SheetStatus = "not_started"
+    recheck_reason: Literal["edited", "source_changed", "policy_changed"] | None = None
+    review_ref: ObjectRef | None = None
+    prd_version: int | None = None
+    edited_since_review: bool = False
+    gap_hint: str | None = None
+    agent_draft_pending: bool = False
 
 
 class ProgressStep(GuideStep):
@@ -131,6 +149,7 @@ class ProgressStep(GuideStep):
     )
     open_feedback: tuple[FeedbackSummary, ...] = ()
     next_actions: tuple[PublicAction, ...] = ()
+    sheet: SheetState = SheetState()
 
 
 class DraftSummary(DTO):
@@ -155,6 +174,7 @@ class AipmProgress(DTO):
     unresolved_business_items: tuple[PublicGap, ...] = ()
     # Agent drafts never count as step records until the owner adopts them.
     pending_agent_drafts: tuple[DraftSummary, ...] = ()
+    prd_ref: ObjectRef | None = None  # the pilot PRD's latest visible version
     next_cursor: str | None = None
 
 
@@ -291,6 +311,9 @@ class AipmDesign(V2):
     needs: tuple[NeedDeclaration, ...] = ()
     rows: tuple[TriageRow, ...] = ()
     solution: SolutionIntent | None = None
+    # Exact evidence copied from authorized reads, per PRD section; never rebased.
+    section_refs: dict[StepId, tuple[EvidenceRefV2, ...]] = Field(default_factory=dict)
+    intended_decision: Decision | None = None
 
 
 class MonitoringPlan(DTO):
@@ -358,6 +381,7 @@ class DraftContent(V2):
     rows: tuple[TriageRow, ...] = Field(default=(), max_length=40)
     solution: SolutionIntent | None = None
     prd_sections: dict[StepId, Annotated[str, Field(max_length=4000)]] = Field(default_factory=dict)
+    section_refs: dict[StepId, tuple[EvidenceRefV2, ...]] = Field(default_factory=dict)
     note: str | None = Field(default=None, max_length=1000)
 
 
@@ -386,3 +410,134 @@ class AipmDesignDraft(DraftContent):
     base_design_ref: ObjectRef | None = None
     resolved_by: str | None = None
     adopted_design_ref: ObjectRef | None = None
+
+
+# --- v2 section review (192-AIPM体验层v2 §6, §9.2) ---------------------------------------
+
+
+class ReviewStale(DTO):
+    reason: Literal["edited", "source_changed", "policy_changed"]
+    detail: str
+
+
+class ReviewDelta(DTO):
+    citations: tuple[int, int]
+    gaps: tuple[int, int]
+    wrong: tuple[int, int]
+
+
+class Pointer(DTO):
+    """Where to look again: a topic and its sources, never the correct statement."""
+
+    text: str
+    refs: tuple[EvidenceRefV2, ...] = ()
+
+
+CheckKind = Literal["choice", "citation", "rule", "rubric_rule", "sentence", "model", "self"]
+
+
+class CoverageMark(DTO):
+    id: str
+    label: str
+    check: CheckKind
+    severity: Literal["high", "medium", "low"]
+    mark: Literal["wrong", "missing", "to_check", "covered"]
+    pointer: Pointer | None = None
+    owner: Colleague
+    source: Literal[
+        "rule", "choice", "citation", "rubric_rule", "model_suggestion", "learner_assessment"
+    ]
+
+
+class RubricLine(DTO):
+    criterion: str
+    label: str
+    source: Literal["verified_rule", "pending"]
+    explanation: str
+    citations: tuple[EvidenceRefV2, ...] = ()
+
+
+class MentorPrompt(DTO):
+    colleague: Colleague
+    question: str
+    pointer: Pointer | None = None
+    trigger_id: str
+
+
+class SectionReview(V2):
+    """One learner-requested process review of one PRD section. Never a formal score."""
+
+    id: str
+    session_id: str
+    revision: Literal[1] = 1
+    step_id: StepId
+    prd_ref: ObjectRef
+    design_ref: ObjectRef | None = None
+    as_of: VersionPoint
+    created_at: datetime
+    status: Literal["draft", "based", "solid"]
+    stale: ReviewStale | None = None
+    previous_review_ref: ObjectRef | None = None
+    delta: ReviewDelta | None = None
+    misconceptions: tuple[ProcessFeedback, ...] = ()
+    coverage: tuple[CoverageMark, ...] = ()
+    rubric: tuple[RubricLine, ...] = ()
+    mentor_prompts: tuple[MentorPrompt, ...] = ()
+    decision_used: Decision | None = None  # the intended decision rubric checks ran with
+    # Inputs bound at review time (material versions, rule/content revisions) for staleness.
+    basis: dict[str, str] = Field(default_factory=dict)
+    sentence_labels: None = None  # first version: sentence marks are page-only (spec 7.4)
+    affects_formal_score: Literal[False] = False
+
+
+class SectionReviewInput(V2):
+    step_id: StepId
+    prd_ref: ObjectRef
+    design_ref: ObjectRef | None = None
+
+
+class SectionReviewRead(V2):
+    step_id: StepId | None = None
+    cursor: int = Field(default=0, ge=0)
+    limit: int = Field(default=10, ge=1, le=20)
+
+
+# Private authored grading files: server only. L2 writes the content, L4 reads it.
+
+
+class CoverageRule(DTO):
+    """One item of private/grading/coverage.json {"schema_version":1,"revision","items":[...]}.
+
+    predicate by check: choice {"field": "business.audience", "conflicts_with": [values]};
+    citation {"materials": [material ids]}; rule {"rule": design rule id};
+    rubric_rule {"criterion": "R3.capacity"}; sentence/model/self: {} (shown as to_check).
+    """
+
+    id: str
+    step_id: StepId
+    check: CheckKind
+    predicate: dict = Field(default_factory=dict)
+    severity: Literal["high", "medium", "low"]
+    owner: Colleague
+    label: dict[Literal["zh", "en"], str]
+    look_again: dict[Literal["zh", "en"], str]
+    look_again_materials: tuple[str, ...] = ()
+    false_positive_examples: tuple[dict, ...] = ()
+
+
+class MentorRule(DTO):
+    """One item of private/grading/mentor.json {"schema_version":1,"revision","prompts":[...]}.
+
+    Fires when any when_rule id produced a misconception in this review, or a coverage item
+    listed in when_coverage has one of the given marks.
+    """
+
+    id: str
+    step_id: StepId
+    when_rule: tuple[str, ...] = ()
+    when_coverage: dict[str, tuple[Literal["wrong", "missing", "to_check"], ...]] = Field(
+        default_factory=dict
+    )
+    colleague: Colleague
+    question: dict[Literal["zh", "en"], str]
+    materials: tuple[str, ...] = ()

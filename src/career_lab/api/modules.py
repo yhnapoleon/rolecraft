@@ -78,6 +78,8 @@ PUBLIC_OPERATIONS = {
     "aipm.design.draft",
     "aipm.design_drafts.resolve",
     "aipm.design_drafts.list",
+    "aipm.section_review.create",
+    "aipm.section_review.read",
     "configuration.apply",
     "workbench.read",
     "objects.read",
