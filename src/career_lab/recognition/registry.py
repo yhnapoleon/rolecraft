@@ -100,9 +100,12 @@ def load_all() -> dict[str, Entry | str]:
         )
     for rid, value in status.items():
         if value == "not_configured" and (base / rid).is_dir() and rid == "retrieval-e5":
-            # The embedder directory is a plain Hugging Face checkout; allow it unlisted.
+            # The embedder directory is a plain Hugging Face checkout; allow it unlisted,
+            # but still name the files it holds: the revision is the tree hash of the
+            # directory, the same value ``registry add`` would write into the manifest.
             path = (base / rid).resolve()
-            status[rid] = Entry(rid, "retrieval", path, "", "unhashed", ("zh", "en"))
+            actual = tree_sha256(path)
+            status[rid] = Entry(rid, "retrieval", path, actual, actual[:12], ("zh", "en"))
     return status
 
 

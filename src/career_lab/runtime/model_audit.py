@@ -1,6 +1,5 @@
 """Private append-only model accounting. Never stores prompts, replies or exception bodies."""
 
-import fcntl
 import json
 import os
 from contextlib import contextmanager
@@ -12,6 +11,7 @@ from time import monotonic
 from uuid import uuid4
 
 from career_lab.contracts.v2.core import ModelAttemptUsage, digest
+from career_lab.runtime.file_lock import flock
 from career_lab.runtime.model_adapter import ModelTransportTimeout
 
 _scope = ContextVar("model_audit_scope", default=None)
@@ -35,7 +35,7 @@ def emit(event, **fields):
     # One append under a process lock: API and multiple workers may share this journal.
     fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
     with os.fdopen(fd, "a", encoding="utf-8") as stream:
-        fcntl.flock(stream, fcntl.LOCK_EX)
+        flock(stream)
         stream.write(json.dumps(row, ensure_ascii=False) + "\n")
         stream.flush()
         os.fsync(stream.fileno())

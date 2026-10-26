@@ -83,6 +83,10 @@ class Judgement:
     fallback: bool = True
     reason: str = ""
     top: tuple[dict, ...] = field(default_factory=tuple)
+    # What each branch said before the final label: ``encoder`` (C1 alone), ``stack`` (the
+    # ensemble, when used), ``pairs`` (per-candidate pair score), ``rule`` (None when the
+    # rule had nothing to compare) and ``alpha`` (the late-fusion weight of the model).
+    branches: dict = field(default_factory=dict)
 
     @property
     def confidence(self) -> float:
@@ -167,11 +171,14 @@ def judge(
     """C2 picks the top-k candidates for the claim, then C1 (or the rule) judges them.
 
     Candidates are ``(id, text)`` or ``(id, text, observed, valid_from, valid_until)``.
+    The rule additionally reads every limit that came into force during the session
+    (``valid_from > 0``) in the claim's unit of measure, wherever retrieval ranked it.
     """
     if not candidates:
         return Judgement("insufficient", _distribution("insufficient", 0.6), reason="no_candidates")
     texts = [c[1] for c in candidates]
-    hits, method, _ = retrieval.search(claim, texts, k=k, method="rrf")
+    ranked, method, _ = retrieval.search(claim, texts, k=len(texts), method="rrf")
+    hits = ranked[:k]
     chosen = [candidates[h.index] for h in hits]
     top = tuple(
         {
@@ -183,13 +190,33 @@ def judge(
         }
         for h in hits
     )
+    # The rule also reads the limits that came into force during the session (a notice
+    # published mid-session: valid_from > 0) when they are stated in the claim's own unit
+    # of measure, wherever retrieval ranked them: a claim repeating the superseded figure
+    # is matched best by the older answers that repeat it, which push the new notice
+    # below the model's top-k. Limits in force from the start stay subject to retrieval,
+    # so an unrelated allowance (meals) does not reach a lodging claim.
+    rule_hits = hits + [
+        h
+        for h in ranked[k:]
+        if _fresh(candidates[h.index])
+        and h.bm25 >= 0.1
+        and _states_limit_for(claim, texts[h.index])
+    ]
     model = encoder_relation()
-    found = rule_judge(claim, chosen, [h.bm25 for h in hits])
+    found = rule_judge(claim, [candidates[h.index] for h in rule_hits], [h.bm25 for h in rule_hits])
     if model is not None:
         ensemble = stack_for(model)
         result = model.judge(claim, chosen, language=language, as_of=as_of, stack=ensemble)
         alpha = fusion_alpha() if ensemble is None else ensemble.alpha
-        if alpha is not None and alpha < 1 and found.reason != "no_comparable_evidence":
+        abstained = found.reason == "no_comparable_evidence"
+        branches = {
+            **result.branches,
+            "rule": None if abstained else found.probabilities,
+            "rule_window": len(rule_hits),
+            "alpha": alpha,
+        }
+        if alpha is not None and alpha < 1 and not abstained:
             # E10 late fusion: the learned model and the number-and-limit rule, weighted
             # by the dev-chosen alpha; the rule abstains when it has nothing to compare.
             fused = {
@@ -197,7 +224,18 @@ def judge(
                 for k in LABELS
             }
             label = max(fused, key=fused.get)
-            evidence = result.evidence_ids if label == result.label else found.evidence_ids
+            # Evidence of the fused label. When both sides agree, the candidate the rule
+            # compared against (the limit or figure it read, e.g. the current policy) comes
+            # first and the model's cited candidates follow in pair-score order; otherwise
+            # the evidence of the side the label came from.
+            if label == result.label == found.label:
+                evidence = found.evidence_ids + tuple(
+                    e for e in result.evidence_ids if e not in found.evidence_ids
+                )
+            elif label == result.label:
+                evidence = result.evidence_ids
+            else:
+                evidence = found.evidence_ids
             return Judgement(
                 label=label,
                 probabilities=fused,
@@ -207,9 +245,31 @@ def judge(
                 fallback=False,
                 reason=f"late_fusion:{alpha:g}|{found.reason}",
                 top=top,
+                branches=branches,
             )
-        return Judgement(**{**result.__dict__, "top": top})
-    return Judgement(**{**found.__dict__, "top": top})
+        return Judgement(**{**result.__dict__, "top": top, "branches": branches})
+    return Judgement(
+        **{
+            **found.__dict__,
+            "top": top,
+            "branches": {"rule": found.probabilities, "rule_window": len(rule_hits)},
+        }
+    )
+
+
+def _fresh(candidate: tuple) -> bool:
+    """Did the candidate come into force after the session started?"""
+    return len(candidate) >= 5 and (candidate[3] or 0) > 0
+
+
+def _states_limit_for(claim: str, text: str) -> bool:
+    """Does ``text`` state a limit in one of the claim's units of measure?"""
+    units = {unit for _, unit in quantities(claim) if unit != "day_index"}
+    return (
+        bool(units)
+        and bool(_LIMIT.search(text))
+        and any(unit in units for _, unit in quantities(text))
+    )
 
 
 def stack_for(model):

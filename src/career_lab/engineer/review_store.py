@@ -1,6 +1,5 @@
 """Private immutable review artifacts with exact byte validation."""
 
-import fcntl
 import json
 import os
 from collections.abc import Iterator
@@ -9,6 +8,7 @@ from pathlib import Path
 
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.engineer import EngineerRegressionReport, EngineerReviewInput
+from career_lab.runtime.file_lock import flock, funlock
 
 from .files import check_directory, encode, file_ref, publish
 
@@ -54,13 +54,14 @@ def review_lock(root: Path, identity: str) -> Iterator[None]:
     locks.mkdir(exist_ok=True, mode=0o700)
     if locks.is_symlink():
         raise C.ProtocolError("engineer_private_store_permissions", status=403)
-    fd = os.open(locks / (identity + ".lock"), os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(locks / (identity + ".lock"), flags, 0o600)
     with os.fdopen(fd, "w") as stream:
         try:
-            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            flock(stream, blocking=False)
         except BlockingIOError:
             raise C.ProtocolError("engineer_review_busy", status=409) from None
         try:
             yield
         finally:
-            fcntl.flock(stream, fcntl.LOCK_UN)
+            funlock(stream)

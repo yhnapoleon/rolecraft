@@ -1,6 +1,5 @@
 """Migrate the reference runner's locked, atomic intent checkpoint to current types."""
 
-import fcntl
 import json
 import os
 from collections.abc import Iterator
@@ -11,6 +10,7 @@ from typing import Protocol
 from pydantic import JsonValue
 
 from career_lab.contracts.v2.core import ProtocolError, canonical, digest
+from career_lab.runtime.file_lock import flock, funlock
 
 
 class CheckpointSink(Protocol):
@@ -28,13 +28,13 @@ class RunJournal:
         descriptor = os.open(self.root / "run.lock", os.O_CREAT | os.O_RDWR, 0o600)
         with os.fdopen(descriptor, "a") as lock:
             try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                flock(lock, blocking=False)
             except BlockingIOError:
                 raise ProtocolError("run_already_active", status=409) from None
             try:
                 yield
             finally:
-                fcntl.flock(lock, fcntl.LOCK_UN)
+                funlock(lock)
 
     def load(self) -> dict[str, JsonValue] | None:
         if not self.path.exists():
