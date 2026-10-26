@@ -359,6 +359,48 @@ export class EngineerReviewScreen {
         this.basisOpen = open;
       },
     });
+    // The code handed in with the signed draft, right after the hidden checks.
+    const code = review.code;
+    if (code) {
+      const part = el(
+        doc,
+        'section',
+        { class: 'er-section er-section--code', 'aria-labelledby': 'er-code-h' },
+        el(
+          doc,
+          'div',
+          { class: 'er-section__head' },
+          el(
+            doc,
+            'h3',
+            { class: 'er-section__title', id: 'er-code-h' },
+            T('附带代码', 'Code handed in'),
+          ),
+          el(
+            doc,
+            'span',
+            { class: 'er-section__aside' },
+            T(
+              `公开 ${code.counts.passed}/${code.counts.total} · 隐藏 ${code.hidden.passed}/${code.hidden.total}`,
+              `public ${code.counts.passed}/${code.counts.total} · hidden ${code.hidden.passed}/${code.hidden.total}`,
+            ),
+          ),
+        ),
+        el(
+          doc,
+          'p',
+          { class: 'er-note' },
+          T(
+            '金额由这段代码从现行条款里抽取；平台在隔离进程里重跑了公开和隐藏用例。代码指纹 ',
+            'The amount is extracted by this code from the clause in force; the platform re-ran the public and hidden cases in an isolated process. Code fingerprint ',
+          ),
+          el(doc, 'code', { lang: 'en' }, code.code_sha256.slice(0, 12)),
+        ),
+      );
+      const hidden = sheet.querySelector('.er-section--hidden');
+      if (hidden) hidden.after(part);
+      else sheet.append(part);
+    }
 
     const list =
       reviews.length > 1

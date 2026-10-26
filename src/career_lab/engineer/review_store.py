@@ -48,7 +48,9 @@ def load_report(root: Path, inputs: EngineerReviewInput) -> EngineerRegressionRe
 @contextmanager
 def review_lock(root: Path, identity: str) -> Iterator[None]:
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if root.is_symlink() or root.stat().st_mode & 0o077:
+    # Windows has no POSIX mode bits (directories always read 0o777), so only the link check
+    # applies there.
+    if root.is_symlink() or (os.name != "nt" and root.stat().st_mode & 0o077):
         raise C.ProtocolError("engineer_private_store_permissions", status=403)
     locks = root / ".locks"
     locks.mkdir(exist_ok=True, mode=0o700)

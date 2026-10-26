@@ -232,4 +232,13 @@ export interface EngineerReviewRecord {
   readonly retrieval?: EngineerRetrieval | null;
   readonly report: EngineerPublicReport;
   readonly evaluation?: EngineerRuleEvaluation | null;
+  /** The code run the signed draft handed in (engineer.code.run); absent without one. */
+  readonly code?: {
+    readonly id: string;
+    readonly code_sha256: string;
+    readonly status: string;
+    readonly counts: { readonly passed: number; readonly total: number };
+    readonly hidden: { readonly passed: number; readonly total: number };
+    readonly all_passed: boolean;
+  };
 }

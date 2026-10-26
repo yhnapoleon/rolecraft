@@ -8,6 +8,8 @@ import type { GatewayTransport } from '../../gateway-transport';
 import type { SettingsInput } from '../../v4-host-operations';
 import { engineerErrorText } from './copy';
 import type {
+  CodeRead,
+  CodeRun,
   DraftInput,
   DraftView,
   Experiment,
@@ -124,6 +126,15 @@ export function engineerApi(transport: GatewayTransport, sessionId: string) {
           changes,
         })
       ).trial,
+    /** The coding exercise: task, skeleton, public cases and the latest run. */
+    code: (id: string) => read<CodeRead>(`${ticketPath(id)}/code`),
+    codeRun: async (id: string, code: string) =>
+      (
+        await command<{ code_run: CodeRun }>(`${ticketPath(id)}/code-runs`, 'engineer.code.run', {
+          ticket_id: id,
+          code,
+        })
+      ).code_run,
     draft: async (id: string, input: DraftInput) =>
       (
         await command<{ draft: DraftView }>(

@@ -121,6 +121,24 @@ export function sheetBody(doc: Document, ticket: TicketDetail): HTMLElement {
     sheet.explanation
       ? el(doc, 'blockquote', { class: 'ed-sheet__explain', lang }, sheet.explanation)
       : null,
+    draft.code
+      ? el(
+          doc,
+          'p',
+          { class: 'ed-sheet__code' },
+          el(doc, 'span', { class: 'ed-label' }, T('附带代码', 'Code handed in')),
+          el(
+            doc,
+            'span',
+            {},
+            T(
+              `公开用例 ${draft.code.counts.passed}/${draft.code.counts.total}，隐藏用例 ${draft.code.hidden.passed}/${draft.code.hidden.total}（平台在隔离进程里实测）`,
+              `public cases ${draft.code.counts.passed}/${draft.code.counts.total}, hidden ${draft.code.hidden.passed}/${draft.code.hidden.total} (run by the platform in an isolated process)`,
+            ),
+          ),
+          el(doc, 'code', { class: 'ed-key', lang: 'en' }, draft.code.code_sha256.slice(0, 12)),
+        )
+      : null,
     el(
       doc,
       'p',

@@ -1,6 +1,6 @@
 """Engineer operations inside one practice session: the second hat.
 
-Seven session operations are installed in the ``ExtensionRegistry`` and routed by
+Nine session operations are installed in the ``ExtensionRegistry`` and routed by
 ``v2_routes`` like other module operations, behind the same session authentication:
 
 - ``engineer.tickets.create`` (act, person only): a scenario-supplied ticket
@@ -9,6 +9,9 @@ Seven session operations are installed in the ``ExtensionRegistry`` and routed b
 - ``engineer.tickets.read`` (read): the session's tickets, or one ticket's detail;
 - ``engineer.reproduce`` (act): re-run the ticket's target tests on their original snapshots;
 - ``engineer.trial`` (act): run a candidate on the target questions and the public probes;
+- ``engineer.code.read`` (read): the ticket's coding exercise and its runs;
+- ``engineer.code.run`` (act): run the ticket's coding exercise on submitted code
+  (``coding.py``; a child process, never this one);
 - ``engineer.submissions.draft`` (act): a candidate with its explanation and self-report;
 - ``engineer.submissions.sign`` (submit, person only): sign a draft and have it reviewed;
 - ``engineer.reviews.read`` (read): public review reports.
@@ -48,6 +51,7 @@ from career_lab.scenarios.v2.module import ScenarioModule, ref_for
 from career_lab.scenarios.v2.policy import effective_config
 from career_lab.storage.v2_store import TransactionView, V2Store
 
+from . import coding
 from .candidate import (
     EDITABLE_FIELDS,
     candidate_config,
@@ -86,6 +90,8 @@ OP_TRIAL = "engineer.trial"
 OP_DRAFT = "engineer.submissions.draft"
 OP_SIGN = "engineer.submissions.sign"
 OP_REVIEWS = "engineer.reviews.read"
+OP_CODE = "engineer.code.run"
+OP_CODE_READ = "engineer.code.read"
 
 ROLE = "engineer"
 REVIEW_LIMIT = 3
@@ -116,6 +122,8 @@ TARGET_QUOTE_SUMMARY = 60
 # the widest content would not fit; the budgets still count every record.
 LISTED_TRIALS = 10
 LISTED_DRAFTS = 10
+LISTED_CODE_RUNS = 5
+CODE_RUN_LIMIT = 50
 DETAIL_BUDGET = 19_500
 RETRIEVAL_NOTE = {
     "zh": "复现、试跑与复核固定使用规则版检索与原文抽取，保留原配置记录；不重放模型生成。",
@@ -224,6 +232,20 @@ class DraftInput(C.V2):
     change_statements: Annotated[tuple[ChangeStatement, ...], Field(max_length=20)] = ()
     claimed_results: dict[str, Literal["pass", "fail", "error"]] = {}
     unresolved: Annotated[tuple[UnresolvedInput, ...], Field(max_length=UNRESOLVED_LIMIT)] = ()
+    # A run of the coding exercise this draft hands in with the fix; optional.
+    code_run_id: C.Identifier | None = None
+
+
+class CodeQuery(C.V2):
+    ticket_id: C.Identifier
+    cursor: int = 0
+    limit: int = 50
+    since_seq: int | None = None
+
+
+class CodeRunInput(C.V2):
+    ticket_id: C.Identifier
+    code: Annotated[str, Field(max_length=coding.CODE_LIMIT)]
 
 
 class SignInput(C.V2):
@@ -291,7 +313,11 @@ def human_only(auth: C.AuthContext, code: str) -> None:
 
 
 def request_hash(payload: C.V2) -> str:
-    return C.digest(payload.model_dump(mode="json"))
+    value = payload.model_dump(mode="json")
+    # A draft without code keeps the identity it had before code runs existed.
+    if "code_run_id" in value and value["code_run_id"] is None:
+        del value["code_run_id"]
+    return C.digest(value)
 
 
 class EngineerService:
@@ -946,6 +972,7 @@ class EngineerService:
         language = ticket["work_language"]
         signoffs = self.signoffs(folder)
         trials, drafts = self.ordered(folder / "trials"), self.ordered(folder / "drafts")
+        code_runs = self.ordered(folder / "code_runs")
         baseline_settings = supported_settings(baseline)
         view = {
             **self.ticket_summary(ticket),
@@ -972,6 +999,12 @@ class EngineerService:
                 for row in trials[-LISTED_TRIALS:]
             ],
             "drafts": [self.draft_summary(row) for row in drafts[-LISTED_DRAFTS:]],
+            # The coding exercise in one line; engineer.code.read has the task, skeleton,
+            # public cases and the latest run (kept out of here for the size budget).
+            "code_exercise": coding.summary_view(language)
+            if coding.available(module.package)
+            else None,
+            "code_runs": [self.code_run_summary(row) for row in code_runs[-LISTED_CODE_RUNS:]],
             # The person signs what they can read: the latest draft in full.
             "latest_draft": self.draft_view(drafts[-1]) if drafts else None,
             "reviews": [self.review_summary(row) for row in signoffs],
@@ -1341,6 +1374,86 @@ class EngineerService:
             "result": result,
         }
 
+    # Coding exercise -----------------------------------------------------------------
+
+    def code_run(
+        self, store: V2Store, payload: CodeRunInput, auth: C.AuthContext, request_id: str
+    ) -> dict[str, Any]:
+        module = self.bound_module(store, auth, OP_CODE)
+        if not coding.available(module.package):
+            raise C.ProtocolError("engineer_code_exercise_unavailable", status=409)
+        sid = auth.session_id
+        folder, ticket = self.ticket(sid, payload.ticket_id)
+        identity = record_id("coderun", [folder.name, executor_view(auth.executor), request_id])
+        path = folder / "code_runs" / (identity + ".json")
+        with self.files.lock(sid, payload.ticket_id):
+            if path.is_file():
+                existing = read_json(path)
+                if existing["request_hash"] != request_hash(payload):
+                    raise C.ProtocolError("engineer_request_id_reused", status=409)
+                return {"code_run": self.code_run_view(existing)}
+            if len(records(folder / "code_runs")) >= CODE_RUN_LIMIT:
+                raise C.ProtocolError("engineer_code_run_limit_reached", status=409)
+            result = coding.run_code(payload.code, ticket["work_language"])
+            record = {
+                "id": identity,
+                "kind": "code_run",
+                "ticket_id": payload.ticket_id,
+                "request_hash": request_hash(payload),
+                "executor": executor_view(auth.executor),
+                "role": ROLE,
+                "created_at": now(),
+                "code": payload.code,
+                **result,
+            }
+            write_json(path, record)
+        return {"code_run": self.code_run_view(record)}
+
+    def read_code(
+        self, view: TransactionView, payload: CodeQuery, auth: C.AuthContext
+    ) -> dict[str, Any]:
+        module = self.module(view.bindings)
+        if not coding.available(module.package):
+            raise C.ProtocolError("engineer_code_exercise_unavailable", status=409)
+        folder, ticket = self.ticket(auth.session_id, payload.ticket_id)
+        runs = self.ordered(folder / "code_runs")
+        return {
+            "exercise": coding.public_view(ticket["work_language"]),
+            "code_runs": [self.code_run_summary(row) for row in runs[-LISTED_CODE_RUNS:]],
+            "latest_code_run": self.code_run_view(runs[-1]) if runs else None,
+        }
+
+    @staticmethod
+    def code_run_view(row: dict[str, Any], *, with_code: bool = True) -> dict[str, Any]:
+        hidden = {"request_hash"} | (set() if with_code else {"code", "printed"})
+        return {key: value for key, value in row.items() if key not in hidden}
+
+    @staticmethod
+    def code_run_summary(row: dict[str, Any]) -> dict[str, Any]:
+        keys = ("id", "executor", "created_at", "code_sha256", "status", "counts")
+        return {
+            **{key: row[key] for key in keys},
+            "hidden": row["hidden"],
+            "all_passed": row["all_passed"],
+        }
+
+    @staticmethod
+    def attached_code(folder: Path, code_run_id: str | None) -> dict[str, Any] | None:
+        """What a draft carries of a code run: its identity and results, not the code."""
+        if code_run_id is None:
+            return None
+        run_id = checked(code_run_id, "coderun", "engineer_code_run_not_found")
+        path = folder / "code_runs" / (run_id + ".json")
+        if not path.is_file():
+            raise C.ProtocolError("engineer_code_run_not_found", status=404)
+        row = read_json(path)
+        keys = ("id", "exercise", "executor", "code_sha256", "status", "counts")
+        return {
+            **{key: row[key] for key in keys},
+            "hidden": row["hidden"],
+            "all_passed": row["all_passed"],
+        }
+
     # Drafts and sign-off -----------------------------------------------------------------
 
     def draft(
@@ -1411,6 +1524,9 @@ class EngineerService:
                     for u in payload.unresolved
                 ],
             }
+            code = self.attached_code(folder, payload.code_run_id)
+            if code is not None:
+                record["code"] = code
             write_json(path, record)
         return {"draft": self.draft_view(record)}
 
@@ -1458,6 +1574,7 @@ class EngineerService:
                 "claimed_results": draft["claimed_results"],
                 "unresolved": draft["unresolved"],
                 "signer": signer,
+                **({"code": draft["code"]} if draft.get("code") else {}),
             }
         )
         signoff_id = "signoff-" + content_key
@@ -1483,6 +1600,8 @@ class EngineerService:
                 }
             record["impact_note"] = note
             record.setdefault("draft_executor", draft["executor"])
+            if draft.get("code"):
+                record["code"] = draft["code"]
             write_json(path, record)
             staged = folder / "submission-inputs" / signoff_id
             publish(staged, self.submission_files(folder, record, draft, module, auth))
@@ -1615,6 +1734,8 @@ class EngineerService:
             "impact_note": record["impact_note"],
             "retrieval": {"mode": "rule_based", "note": RETRIEVAL_NOTE[language]},
             "report": report.model_dump(mode="json"),
+            # The code run handed in with the draft, when there was one.
+            **({"code": record["code"]} if record.get("code") else {}),
             # Rule conclusions E1-E4 (E5 waits for a model), computed from the private store;
             # only public probe IDs and hidden counts appear in them.
             "evaluation": stored_evaluation(self.files.private_reviews(sid), review_id).model_dump(
@@ -1676,6 +1797,15 @@ def install_engineer_operations(
         act(OP_REPRODUCE, "act", TicketTarget, service.reproduce),
         act(OP_TRIAL, "act", TrialInput, service.trial),
         act(OP_DRAFT, "act", DraftInput, service.draft),
+        Operation(
+            OP_CODE_READ,
+            "read",
+            CodeQuery,
+            service.read_code,
+            mutates=False,
+            response_model=EngineerResult,
+        ),
+        act(OP_CODE, "act", CodeRunInput, service.code_run),
         act(OP_SIGN, "submit", SignInput, service.sign),
         Operation(
             OP_REVIEWS,

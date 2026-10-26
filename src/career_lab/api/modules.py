@@ -113,6 +113,8 @@ PUBLIC_OPERATIONS = {
     "engineer.tickets.read",
     "engineer.reproduce",
     "engineer.trial",
+    "engineer.code.read",
+    "engineer.code.run",
     "engineer.submissions.draft",
     "engineer.submissions.sign",
     "engineer.reviews.read",
@@ -123,6 +125,7 @@ ENGINEER_SERVICE_OPERATIONS = {
     "engineer.tickets.create",
     "engineer.reproduce",
     "engineer.trial",
+    "engineer.code.run",
     "engineer.submissions.draft",
     "engineer.submissions.sign",
 }

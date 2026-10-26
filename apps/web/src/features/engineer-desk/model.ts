@@ -123,6 +123,7 @@ export interface DraftView {
   readonly claimed_results: Readonly<Record<string, Outcome>>;
   readonly unresolved: readonly Unresolved[];
   readonly config_hash?: string | null;
+  readonly code?: CodeAttachment;
 }
 export interface DraftSummary {
   readonly id: string;
@@ -170,7 +171,65 @@ export interface TicketDetail {
     readonly test_ids: readonly string[];
   } | null;
   readonly handover?: Handover;
+  /** The coding exercise in one line (engineer/coding.py); null where a scenario has none. */
+  readonly code_exercise?: {
+    readonly id: string;
+    readonly function: string;
+    readonly title: string;
+    readonly public_cases: number;
+    readonly hidden_cases: number;
+  } | null;
+  readonly code_runs?: readonly CodeRunSummary[];
 }
+/** What `current_limit` returns, or should. */
+export interface CodeShape {
+  readonly status: unknown;
+  readonly value?: number | string | null;
+  readonly source?: string | null;
+  readonly version?: number | null;
+}
+export interface CodeCase {
+  readonly id: string;
+  readonly point: string;
+  readonly question: string;
+  readonly should_return: CodeShape;
+}
+export interface CodeRunSummary {
+  readonly id: string;
+  readonly executor: Executor;
+  readonly created_at: string;
+  readonly code_sha256: string;
+  readonly status: string;
+  readonly counts: { readonly passed: number; readonly total: number };
+  readonly hidden: { readonly passed: number; readonly total: number };
+  readonly all_passed: boolean;
+}
+export interface CodeRun extends CodeRunSummary {
+  readonly code?: string;
+  readonly printed?: string;
+  readonly public: readonly {
+    readonly id: string;
+    readonly result: 'pass' | 'fail' | 'error';
+    readonly actual: CodeShape | null;
+    readonly error: string | null;
+  }[];
+}
+export interface CodeRead {
+  readonly exercise: {
+    readonly title: string;
+    readonly task: string;
+    readonly skeleton: string;
+    readonly public_cases: readonly CodeCase[];
+    readonly hidden_cases: number;
+  };
+  readonly code_runs: readonly CodeRunSummary[];
+  readonly latest_code_run: CodeRun | null;
+}
+/** A code run as a draft carries it: identity and results, never the code. */
+export type CodeAttachment = Pick<
+  CodeRunSummary,
+  'id' | 'executor' | 'code_sha256' | 'status' | 'counts' | 'hidden' | 'all_passed'
+>;
 /** A colleague's run and what became of its report (engineer/session.py run_daniel, decide). */
 export interface Handover {
   readonly state:
@@ -218,6 +277,8 @@ export interface DraftInput {
   readonly change_statements: readonly Statement[];
   readonly claimed_results: Readonly<Record<string, Outcome>>;
   readonly unresolved: readonly Unresolved[];
+  /** The code run handed in with the draft (engineer.code.run). */
+  readonly code_run_id?: string;
 }
 
 const lang = () => T('zh', 'en') as 'zh' | 'en';

@@ -36,6 +36,7 @@ import {
   IMPACT_NOTE_LIMIT,
 } from './model';
 import { arrive, byKeyboard, light, move, reducedMotion } from './motion';
+import { CodePanel } from './steps/code';
 import { composeForm, draftInput, newDraftForm, type DraftForm } from './steps/compose';
 import { fieldRow, markField, releaseFieldIslands } from './steps/fields';
 import { Signature, sheetBody } from './steps/sign';
@@ -157,6 +158,8 @@ export class EngineerDesk {
   /** A redraw of the sheet held back while the key is held. */
   private sheetPending = false;
   private panel: AgentPanel | null = null;
+  /** The coding exercise under "fix & trial", where the scenario has one. */
+  private code: CodePanel | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private observer: IntersectionObserver | null = null;
   private sheetInView = false;
@@ -262,6 +265,7 @@ export class EngineerDesk {
       t.reviews,
       t.review_budget,
       t.experiment_budget,
+      t.code_runs,
     ]);
   }
 
@@ -293,6 +297,7 @@ export class EngineerDesk {
     this.drawTape();
     this.drawSign();
     this.panel?.update(this.ticket as TicketDetail);
+    this.code?.sync(this.ticket?.code_runs);
     this.readOutcomes();
     this.publish();
   }
@@ -999,6 +1004,12 @@ export class EngineerDesk {
       this.parts.trialNote,
       this.parts.tape,
     );
+    // g. the root fix in code, where the scenario has an exercise
+    if (t.code_exercise) {
+      this.code = new CodePanel(doc, this.ctx.api, t.id, t.code_exercise.title);
+      this.steps.fix.inner.append(this.code.element);
+      void this.code.load();
+    }
     this.drawFields();
     this.drawTape();
   }
@@ -1709,7 +1720,11 @@ export class EngineerDesk {
   private async saveDraft() {
     const t = this.ticket;
     if (!t || !this.compose || this.busy) return;
-    const input = draftInput(this.compose, this.changes());
+    const run = this.code?.runId;
+    const input = {
+      ...draftInput(this.compose, this.changes()),
+      ...(run ? { code_run_id: run } : {}),
+    };
     const problems = validateDraft(
       input,
       t.public_probes.map((p) => p.id),
