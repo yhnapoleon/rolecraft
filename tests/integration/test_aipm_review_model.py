@@ -274,3 +274,42 @@ def test_pending_rubric_criteria_go_through_the_installed_judge(tmp_path):
         assert judged and judged <= pending
         assert all(i["mark"] == "to_check" for i in done["model_items"])
         assert judge.calls >= len(judged)
+
+
+def test_learner_writes_around_the_background_model_write(base):
+    """The model step bumps workspace_revision. A learner command built before it lands is a
+    definite 409 version_conflict (never executed), and the same action rebuilt from the
+    current point succeeds; commands built after it succeed directly."""
+    judge = FakeJudge(REPLY)
+    configure(base, judge)
+    reviewer = base["app"].state.aipm_reviewer
+    queued = []
+
+    def hold(auth, ref):  # an in-flight model step that has not written yet
+        queued.append((auth, ref))
+        reviewer._running.add(ref.object_id)
+
+    reviewer.start = hold
+    first = prd(base, "Tickets take 429 minutes.")
+    review(base, first, design(base, first))
+    assert latest(base)["model_status"] == "running"
+
+    before = fixture.command(base, "aipm.focus.set", {"step_id": "need"})
+    # A learner write that completes before the model step: fine.
+    assert post(base, "focus", "aipm.focus.set", {"step_id": "business"}).status_code == 200
+    reviewer.run(*queued.pop())  # the model step writes revision 2 now
+    assert latest(base)["model_status"] == "done"
+
+    stale = base["client"].post(f"/sessions/{base['sid']}/aipm/focus", json=before)
+    assert stale.status_code == 409 and stale.json()["code"] == "version_conflict"
+    focus = [
+        r
+        for r in base["app"].state.v2_store.view(base["owner"]).objects
+        if r.ref.kind == "aipm_focus"
+    ]
+    assert max(r.ref.version for r in focus) == 1  # the rejected command did not execute
+    # Rebuilt from the current point (what the host does on retry): succeeds.
+    assert post(base, "focus", "aipm.focus.set", {"step_id": "need"}).status_code == 200
+    # A plain write after the model step, e.g. saving the next PRD version: succeeds.
+    prd(base, "Tickets take 429 minutes; handling unknown.", head=first)
+    assert judge.calls == 1
