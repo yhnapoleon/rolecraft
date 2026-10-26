@@ -1,15 +1,10 @@
-/** FIXTURE ONLY — fake data shaped like spec §9.2, for component tests and screenshots until
- * L4's `section-review.json` fixture lands. Not evidence that any server path works. */
+/** FIXTURE ONLY — fake data for component tests and screenshots: L4's shared synthetic review,
+ * plus a PRD text and sentence preview written to match it. Not evidence that any server path
+ * works. */
 import type { PreviewRecognition } from '../recognition-native/chain';
 import type { Language } from './model';
-import type { SectionReview, StepId } from './types';
-
-const ref = (kind: string, id: string, version: number) => ({
-  session_id: 'fixture',
-  kind,
-  object_id: id,
-  version,
-});
+import shared from '../../../../../tests/fixtures/aipm-phase1/section-review.json';
+import type { SectionReview, SectionReviewPage, StepId } from './types';
 
 export const FIXTURE_PRD: Record<Language, Record<StepId, string>> = {
   zh: {
@@ -78,155 +73,10 @@ export function fixturePreview(language: Language): PreviewRecognition {
   };
 }
 
+/** L4's shared fixture (`tests/fixtures/aipm-phase1/section-review.json`), read as is. */
 export function fixtureReview(language: Language): SectionReview {
-  const zh = language === 'zh';
-  const t = (a: string, b: string) => (zh ? a : b);
-  return {
-    schema_version: 1,
-    id: `fixture-review-${language}`,
-    session_id: 'fixture',
-    step_id: 'need',
-    prd_ref: ref('product', 'prd', 4),
-    design_ref: ref('aipm_design', 'design', 6),
-    as_of: {
-      business_seq: 12,
-      workspace_revision: 30,
-      storage_revision: 41,
-    } as SectionReview['as_of'],
-    created_at: '2026-10-26T10:58:00+08:00',
-    status: 'draft',
-    stale: null,
-    previous_review_ref: ref('aipm_section_review', 'r3', 1),
-    delta: { citations: [0, 2], gaps: [3, 2], wrong: [0, 1] },
-    misconceptions: [
-      {
-        id: 'metric_scope',
-        input_ref: ref('product', 'prd', 4),
-        step_id: 'need',
-        source: 'rule',
-        finding: 'violation',
-        message: t(
-          '把结单时长当成了人工工时（第 2 句）',
-          'Ticket elapsed time taken as staff hours (sentence 2)',
-        ),
-        basis_refs: [
-          {
-            session_id: 'fixture',
-            kind: 'material',
-            object_id: 'sd-120',
-            version: 1,
-            observed_at_seq: 3,
-            quote: t(
-              'elapsed_minutes = 从建单到结单的分钟数',
-              'elapsed_minutes = minutes from opening to closing a ticket',
-            ),
-          },
-        ],
-        checked_scope: t(
-          '只核对指标的来源字段与单位。',
-          'Only the metric’s source field and unit.',
-        ),
-        next_action: {
-          action: 'open_material',
-          label: t(
-            '同一份字段说明里，有没有记录「处理时长」的字段？',
-            'In the same field guide, is any field a handling time?',
-          ),
-        },
-        affects_formal_score: false,
-      },
-    ],
-    coverage: [
-      {
-        id: 'counter',
-        label: t('一个会让我们不做的事实或反证', 'A fact that would stop us, or counter-evidence'),
-        check: 'model',
-        severity: 'high',
-        mark: 'missing',
-        pointer: {
-          text: t(
-            '再看看：INT-03 访谈里新同事怎么找答案',
-            'Look again: how new hires find answers in INT-03',
-          ),
-          refs: [],
-        },
-        owner: 'business',
-        source: 'rule',
-      },
-      {
-        id: 'metric',
-        label: t('指标口径：数字的单位和统计范围', 'Metric definition: unit and scope'),
-        check: 'rule',
-        severity: 'high',
-        mark: 'wrong',
-        pointer: { text: t('见上一条', 'See above'), refs: [] },
-        owner: 'business',
-        source: 'rule',
-      },
-      {
-        id: 'willing',
-        label: t(
-          '首批用户愿不愿意先用助手（第 4 句）',
-          'Whether the first users will try the assistant (sentence 4)',
-        ),
-        check: 'model',
-        severity: 'medium',
-        mark: 'to_check',
-        owner: 'manager',
-        source: 'rule',
-      },
-      {
-        id: 'cited',
-        label: t(
-          '原始证据有出处（2 处引用）· 写了下一步验证办法',
-          'Raw evidence is cited (2) · next validation stated',
-        ),
-        check: 'citation',
-        severity: 'medium',
-        mark: 'covered',
-        owner: 'business',
-        source: 'citation',
-      },
-    ],
-    rubric: [
-      {
-        criterion: 'R1.metrics',
-        label: 'NOT_MET',
-        source: 'verified_rule',
-        explanation: t(
-          '指标与验收口径\n来源字段是结单时长，不是处理时长。',
-          'Metrics\nThe source field is elapsed time, not handling time.',
-        ),
-      },
-      { criterion: 'R2.support', label: 'INSUFFICIENT', source: 'pending', explanation: '' },
-    ],
-    mentor_prompts: [
-      {
-        colleague: 'manager',
-        question: t(
-          '这个收益能不能写进试点目标？写之前你想先确认什么？',
-          'Could this benefit go into the pilot goal? What would you confirm first?',
-        ),
-        trigger_id: 'metric_scope',
-      },
-      {
-        colleague: 'business',
-        question: t(
-          '429 分钟里，同事真正在处理这一单的有多少？',
-          'Of those 429 minutes, how many is someone actually working the ticket?',
-        ),
-        trigger_id: 'metric_scope',
-      },
-      {
-        colleague: 'tech',
-        question: t(
-          '这条假设，评测里哪一题能推翻它？',
-          'Which evaluation case could overturn this assumption?',
-        ),
-        trigger_id: 'counter',
-      },
-    ],
-    sentence_labels: null,
-    affects_formal_score: false,
-  };
+  return structuredClone(
+    shared[language === 'zh' ? 'review_zh' : 'review_en'],
+  ) as unknown as SectionReview;
 }
+export const fixturePage = () => structuredClone(shared.page) as unknown as SectionReviewPage;

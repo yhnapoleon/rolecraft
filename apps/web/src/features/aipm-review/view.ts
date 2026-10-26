@@ -14,6 +14,7 @@ import {
   coverageRow,
   deltaLine,
   groupSentences,
+  materialOf,
   type Language,
   nextStatusHint,
   orderCoverage,
@@ -48,8 +49,12 @@ export type ReviewViewInput = {
   previousVersion?: number | null;
   /** Whether a launch decision has been chosen on ⑦ (⑤⑥ rubric lines need it). */
   hasDecision?: boolean;
+  /** The progress sheet says the section changed after this review. */
+  edited?: boolean;
   onAsk?: (who: Colleague) => void;
   onBack?: () => void;
+  /** Opens a named material beside the sheet. */
+  onOpenMaterial?: (id: string) => void;
 };
 
 type Tag = keyof HTMLElementTagNameMap;
@@ -187,7 +192,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   );
   sheet.append(head);
 
-  const stale = staleNote(review, language, input.currentPrdVersion);
+  const stale = staleNote(review, language, input.currentPrdVersion, input.edited);
   if (stale) {
     const banner = el('p', stale.text, 'aipm-review__stale');
     banner.dataset.kind = stale.kind;
@@ -224,8 +229,8 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   };
 
   // Misconceptions: the first one is what to fix first.
-  if (review.misconceptions.length) {
-    const cards = review.misconceptions.map((item, index) => {
+  if ((review.misconceptions ?? []).length) {
+    const cards = (review.misconceptions ?? []).map((item, index) => {
       const card = el('div', '', 'aipm-review__mis');
       if (index === 0) card.dataset.first = '';
       card.dataset.finding = item.finding;
@@ -249,13 +254,15 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
           'aipm-review__mis-line',
         ),
       );
+      // The finding's own next step: a link to the material it names, or its words.
+      const material = materialOf(item.basis_refs);
       if (item.next_action?.label)
         card.append(
-          el(
-            'p',
-            t(`再看看：${item.next_action.label}`, `Look again: ${item.next_action.label}`),
-            'aipm-review__mis-line',
-          ),
+          material && input.onOpenMaterial
+            ? button(item.next_action.label, 'aipm-review__link', () =>
+                input.onOpenMaterial?.(material),
+              )
+            : el('p', item.next_action.label, 'aipm-review__mis-line'),
         );
       return card;
     });
@@ -266,22 +273,28 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   }
 
   // Coverage, worst first, as the result page's rows.
-  if (review.coverage.length) {
+  if ((review.coverage ?? []).length) {
     const list = el('ul', '', 'fb-list aipm-review__coverage');
-    for (const item of orderCoverage(review.coverage)) {
+    for (const item of orderCoverage(review.coverage ?? [])) {
       const row = coverageRow(item, language);
       const asked = row.mark === 'unknown' ? colleagueKey(item.owner) : null;
       list.append(
         renderItemRow(doc, row, language, {
           ...hooks,
-          action: () =>
-            asked
-              ? button(
-                  t(`问 ${COLLEAGUE_NAMES[asked]}`, `Ask ${COLLEAGUE_NAMES[asked]}`),
-                  'btn quiet small',
-                  () => ask(asked),
+          action: () => {
+            if (asked)
+              return button(
+                t(`问 ${COLLEAGUE_NAMES[asked]}`, `Ask ${COLLEAGUE_NAMES[asked]}`),
+                'btn quiet small',
+                () => ask(asked),
+              );
+            const material = materialOf(item.pointer?.refs);
+            return material && input.onOpenMaterial
+              ? button(t('看资料', 'Open source'), 'btn quiet small', () =>
+                  input.onOpenMaterial?.(material),
                 )
-              : null,
+              : null;
+          },
         }),
       );
     }
@@ -292,7 +305,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   }
 
   // The formal criteria this section answers to: rule findings now, the rest at delivery.
-  const items = review.rubric.map(
+  const items = (review.rubric ?? []).map(
     (line) =>
       ({
         criterion: line.criterion,
@@ -309,7 +322,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     ruleLines(verified, criterionLabels(language), language),
     language,
   );
-  const pending = review.rubric.filter((line) => line.source !== 'verified_rule');
+  const pending = (review.rubric ?? []).filter((line) => line.source !== 'verified_rule');
   const rubricNodes: Node[] = lines ? [lines] : [];
   if (pending.length)
     rubricNodes.push(
@@ -340,10 +353,10 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     section(t('对应的正式评价项', 'Formal criteria for this section'), ...rubricNodes);
 
   // What each colleague would ask: a preset question per person, then a way to really ask.
-  if (review.mentor_prompts.length) {
+  if ((review.mentor_prompts ?? []).length) {
     const columns = el('div', '', 'result-colleagues aipm-review__mentors');
     for (const who of ['manager', 'business', 'technical'] as Colleague[]) {
-      const prompt = review.mentor_prompts.find((p) => colleagueKey(p.colleague) === who);
+      const prompt = (review.mentor_prompts ?? []).find((p) => colleagueKey(p.colleague) === who);
       if (!prompt) continue;
       const box = el('section', '', 'result-colleague aipm-review__mentor');
       box.dataset.person = who;
@@ -365,7 +378,14 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
         'aipm-review__ask',
         () => ask(who),
       );
-      box.append(top, quote, go);
+      const hint = prompt.pointer?.text
+        ? el(
+            'p',
+            t(`再看看：${prompt.pointer.text}`, `Look again: ${prompt.pointer.text}`),
+            'aipm-review__muted',
+          )
+        : null;
+      box.append(top, quote, ...(hint ? [hint] : []), go);
       columns.append(box);
     }
     section(
@@ -394,7 +414,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     ),
   );
   const actions = el('div', '', 'aipm-review__actions');
-  const top = orderCoverage(review.coverage).find((c) => c.mark !== 'covered');
+  const top = orderCoverage(review.coverage ?? []).find((c) => c.mark !== 'covered');
   const first: Colleague = top ? colleagueKey(top.owner) : 'manager';
   actions.append(
     button(

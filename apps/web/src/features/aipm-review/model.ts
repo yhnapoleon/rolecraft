@@ -109,8 +109,8 @@ export function statusName(status: ReviewStatus, language: Language) {
 /** What would move the review one step up, from its own marks (spec §6.3). */
 export function nextStatusHint(review: SectionReview, language: Language) {
   const wrong =
-    review.coverage.some((c) => c.mark === 'wrong') ||
-    review.misconceptions.some((m) => m.finding === 'violation');
+    (review.coverage ?? []).some((c) => c.mark === 'wrong') ||
+    (review.misconceptions ?? []).some((m) => m.finding === 'violation');
   if (review.status === 'draft' && wrong)
     return text(language, '改掉「有误」后可到「有依据」', 'Fix what is wrong to reach Grounded');
   if (review.status === 'draft')
@@ -156,6 +156,8 @@ export function staleNote(
   review: SectionReview,
   language: Language,
   currentPrdVersion?: number | null,
+  /** The progress sheet's `edited_since_review`. */
+  edited = false,
 ) {
   const v = review.prd_ref.version;
   if (review.stale?.reason === 'source_changed' || review.stale?.reason === 'policy_changed')
@@ -167,7 +169,11 @@ export function staleNote(
         `This review predates a source or policy update (${review.stale.detail}); check it again.`,
       ),
     };
-  if (review.stale?.reason === 'edited' || (currentPrdVersion != null && currentPrdVersion !== v))
+  if (
+    edited ||
+    review.stale?.reason === 'edited' ||
+    (currentPrdVersion != null && currentPrdVersion !== v)
+  )
     return {
       kind: 'edited' as const,
       text: text(
@@ -210,7 +216,9 @@ export function coverageMarkName(mark: CoverageItem['mark'], language: Language)
 export function coverageRow(item: CoverageItem, language: Language): ItemRow {
   const mark = item.check === 'model' && item.mark !== 'covered' ? 'to_check' : item.mark;
   const line =
-    item.pointer?.text ??
+    (item.pointer?.text
+      ? text(language, `再看看：${item.pointer.text}`, `Look again: ${item.pointer.text}`)
+      : null) ??
     (mark === 'to_check'
       ? text(
           language,
@@ -224,7 +232,7 @@ export function coverageRow(item: CoverageItem, language: Language): ItemRow {
     mark: mark === 'covered' ? 'met' : mark === 'to_check' ? 'unknown' : 'unmet',
     tone: mark === 'wrong' ? 'bad' : mark === 'missing' ? 'warn' : undefined,
     line: `${coverageMarkName(mark, language)} · ${line}`.replace(/ · $/, ''),
-    found: item.pointer?.refs.map((ref) => ref.quote).filter((q): q is string => !!q) ?? [],
+    found: (item.pointer?.refs ?? []).map((ref) => ref.quote).filter((q): q is string => !!q) ?? [],
     // The view shows these rows only; the formal item is not consulted.
     item: { criterion: item.id, label: '', explanation: '' } as unknown as ItemRow['item'],
   };
@@ -243,8 +251,10 @@ export function reviewSummaryForColleague(
   const who: ReviewColleague = colleague === 'technical' ? 'tech' : colleague;
   const sheet = stepName(review.step_id, language);
   const version = review.prd_ref.version;
-  const points: string[] = review.misconceptions.slice(0, 1).map((m) => m.message);
-  const ordered = orderCoverage(review.coverage).filter((c) => c.mark !== 'covered');
+  const points: string[] = (review.misconceptions ?? [])
+    .slice(0, 1)
+    .map((m) => m.message.replace(/[。.！!]+$/, ''));
+  const ordered = orderCoverage(review.coverage ?? []).filter((c) => c.mark !== 'covered');
   // This colleague's own points first, then the rest; at most two lines in all.
   for (const item of [
     ...ordered.filter((c) => c.owner === who),
@@ -287,3 +297,7 @@ const CRITERION_SHEET: Readonly<Record<string, StepId>> = {
 };
 export const sheetOfCriterion = (criterion: string): StepId | null =>
   CRITERION_SHEET[criterion] ?? null;
+
+/** The material a pointer or finding names, to open beside the sheet. */
+export const materialOf = (refs?: readonly { kind: string; object_id: string }[] | null) =>
+  refs?.find((ref) => ref.kind === 'material')?.object_id ?? null;

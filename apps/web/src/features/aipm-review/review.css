@@ -158,7 +158,7 @@
   align-items: stretch;
 }
 .aipm-review__mentor {
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   padding: 12px;
   border-radius: var(--r-md);
   background: var(--surface);
@@ -208,4 +208,14 @@
   .aipm-review__sheet {
     padding: 18px 16px;
   }
+}
+.aipm-review__link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: 500 13px / 1.6 var(--sans);
+  text-align: start;
+  cursor: pointer;
 }

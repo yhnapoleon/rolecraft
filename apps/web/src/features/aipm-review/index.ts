@@ -1,11 +1,12 @@
-/** `installAipmReview(host)`: the section review screen, opened by L1's `host.openReview(step)`.
- * It reads the saved review (never recomputes it), the reviewed PRD version's text and, when
- * the recognition layer is on, the sentence marks through the existing read-only check. */
+/** `installAipmReview(host)`: the section review screen. L1 remounts it for each review target
+ * and says which through `host.currentScreen()`. It reads the saved review (never recomputes
+ * it), the reviewed PRD version's text and, when the recognition layer is on, the sentence
+ * marks through the existing read-only check. */
 import type { ObjectRef } from '../../aipm/types';
 import type { Colleague } from '../../screens/result/colleagues';
 import type { PreviewRecognition } from '../recognition-native/chain';
 import { type Language, reviewSummaryForColleague, sheetName, sheetOfCriterion } from './model';
-import type { Decision, SectionReview, StepId } from './types';
+import type { Decision, SectionReview, SectionReviewPage, StepId } from './types';
 import { renderReview, type Sentences } from './view';
 
 export { reviewSummaryForColleague } from './model';
@@ -20,31 +21,30 @@ type DataHost = {
   snapshot(): { state: string };
 };
 
-/** The read this screen needs from L4's client (spec §9.4 `GET /section-reviews?step_id=`). */
+/** The read this screen needs from L4's client (`GET /section-reviews?step_id=`). */
 export interface ReviewClient {
-  readSectionReviews<T>(stepId: StepId): Promise<T>;
+  sectionReviews(stepId?: StepId): Promise<SectionReviewPage>;
 }
-/** Structural subset of L1's `AipmHost` plus the v2 methods (spec §10 L1). */
+/** Structural subset of L1's v2 `AipmHost`. */
 export interface ReviewHost {
   getSessionContext(): Context | null;
   getClient(): unknown;
   getDataHost(): unknown;
   readProgress(): Promise<unknown>;
   registerFeature(id: 'review', feature: Feature): () => void;
-  /** v2: the colleague rail with a prefilled, editable message and the PRD version attached. */
-  askColleague?(input: {
+  currentScreen(): { kind: string; step?: StepId; reviewRef?: ObjectRef };
+  openWorksheet(sheet: StepId): void;
+  openMaterialSplit(materialId: string): void;
+  /** Prefills only; attachPrd defaults to "this colleague has not seen the latest PRD". */
+  askColleague(input: {
     colleague: Colleague;
     prefill: string;
-    attachPrd: ObjectRef | null;
+    attachPrd?: boolean;
   }): Promise<void>;
-  openColleague(role: Colleague, question?: string): Promise<void>;
-  /** v2: back to the sheet; older hosts open the design feature. */
-  openWorksheet?(step: StepId): Promise<void> | void;
-  openFeature(id: 'design'): void;
 }
 export type ReviewOptions = {
-  /** The launch decision the sentence check is asked with. Until L4 confirms the sentence marks
-   * do not depend on it (spec §6.6), the learner's proposed decision is preferred. */
+  /** The decision the sentence check is asked with. Until L4 confirms the sentence marks do not
+   * depend on it (spec §6.6), the learner's proposed decision, else the one the review used. */
   decision?: () => Decision | null;
 };
 
@@ -52,22 +52,22 @@ function dig<T>(value: unknown, pick: (v: Loose) => T | undefined, depth = 5): T
   if (!value || typeof value !== 'object' || depth < 0) return undefined;
   const found = pick(value as Loose);
   if (found !== undefined) return found;
-  for (const key of ['result', 'response', 'review', 'data']) {
+  for (const key of ['result', 'response', 'data']) {
     const inner = dig((value as Loose)[key], pick, depth - 1);
     if (inner !== undefined) return inner;
   }
   return undefined;
 }
-const isReview = (v: Loose) =>
-  v.schema_version === 1 && v.step_id && v.prd_ref ? (v as unknown as SectionReview) : undefined;
-/** The newest review in a page of reviews, or the single review returned. */
-export function latestReview(response: unknown): SectionReview | null {
-  const list = dig(response, (v) => (Array.isArray(v.items) ? (v.items as Loose[]) : undefined));
-  if (list) {
-    const reviews = list.map((item) => isReview(item)).filter((r): r is SectionReview => !!r);
-    return reviews.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
-  }
-  return dig(response, isReview) ?? null;
+const sameRef = (a: ObjectRef, b: ObjectRef) =>
+  a.object_id === b.object_id && a.version === b.version;
+
+/** The asked-for review in a page (newest first), or the newest one. */
+export function pickReview(
+  page: SectionReviewPage | null | undefined,
+  ref?: ObjectRef,
+): SectionReview | null {
+  const items = page?.items ?? [];
+  return (ref ? items.find((item) => sameRef(item.ref, ref)) : items[0])?.review ?? null;
 }
 
 const errorCode = (error: unknown) =>
@@ -83,6 +83,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     sections: Partial<Record<StepId, string>>;
     sentences: Sentences;
     currentPrdVersion: number | null;
+    edited: boolean;
     error: string | null;
     loading: boolean;
   } = {
@@ -91,6 +92,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     sections: {},
     sentences: { kind: 'off' },
     currentPrdVersion: null,
+    edited: false,
     error: null,
     loading: false,
   };
@@ -102,6 +104,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     if (!d) throw new Error('data_host_unavailable');
     return d.query(operation as never, input as never);
   };
+  const decision = () => options.decision?.() ?? state.review?.decision_used ?? null;
 
   function paint() {
     if (!root) return;
@@ -113,9 +116,11 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
           sections: state.sections,
           sentences: state.sentences,
           currentPrdVersion: state.currentPrdVersion,
-          hasDecision: !!options.decision?.(),
+          edited: state.edited,
+          hasDecision: !!decision(),
           onAsk: (who) => void ask(who),
-          onBack: () => void back(),
+          onBack: () => state.step && host.openWorksheet(state.step),
+          onOpenMaterial: (id) => host.openMaterialSplit(id),
         }),
       );
       return;
@@ -145,20 +150,17 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
 
   async function readSentences(ref: ObjectRef): Promise<Sentences> {
     if (data()?.snapshot().state === 'submitted') return { kind: 'submitted' };
-    const decision = options.decision?.() ?? null;
-    if (!decision) return { kind: 'no_decision' };
+    const chosen = decision();
+    if (!chosen) return { kind: 'no_decision' };
     try {
-      const found = (await query('submissions.rule_check.recognition', {
-        decision,
+      const found = await query('submissions.rule_check.recognition', {
+        decision: chosen,
         products: [ref],
-      })) as {
-        enabled?: boolean;
-        recognition?: PreviewRecognition | null;
-      };
-      const body =
-        dig(found, (v) => (typeof v.enabled === 'boolean' ? (v as typeof found) : undefined)) ??
-        found;
-      if (!body.enabled) return { kind: 'off' };
+      });
+      const body = dig(found, (v) => (typeof v.enabled === 'boolean' ? v : undefined)) as
+        | { enabled: boolean; recognition?: PreviewRecognition | null }
+        | undefined;
+      if (!body?.enabled) return { kind: 'off' };
       return body.recognition?.units?.length
         ? { kind: 'ready', preview: body.recognition }
         : { kind: 'failed' };
@@ -169,8 +171,22 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     }
   }
 
-  /** Shows the latest review of a sheet; the same version reads its saved result, never a rerun. */
-  async function open(step: StepId) {
+  /** Where the review stands in the progress projection: the latest PRD and whether it moved on. */
+  async function readSheet(step: StepId) {
+    const progress = await host.readProgress().catch(() => null);
+    const steps =
+      dig(progress, (v) => (Array.isArray(v.steps) ? (v.steps as Loose[]) : undefined)) ?? [];
+    const sheet = steps.find((s) => s.id === step)?.sheet as
+      | { edited_since_review?: boolean; prd_ref?: ObjectRef | null }
+      | undefined;
+    const top = dig(progress, (v) =>
+      v.prd_ref && typeof v.prd_ref === 'object' ? (v.prd_ref as ObjectRef) : undefined,
+    );
+    return { prd: sheet?.prd_ref ?? top ?? null, edited: !!sheet?.edited_since_review };
+  }
+
+  /** Shows a sheet's review; the same version reads its saved result, never a rerun. */
+  async function open(step: StepId, ref?: ObjectRef) {
     const mine = ++token;
     Object.assign(state, {
       step,
@@ -182,15 +198,13 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     paint();
     try {
       const client = host.getClient() as ReviewClient | null;
-      if (!client?.readSectionReviews) throw new Error('review_client_unavailable');
-      const review = latestReview(await client.readSectionReviews(step));
-      const progress = await host.readProgress().catch(() => null);
-      const prd = dig(progress, (v) =>
-        v.prd_ref && typeof v.prd_ref === 'object' ? (v.prd_ref as ObjectRef) : undefined,
-      );
+      if (!client?.sectionReviews) throw new Error('review_client_unavailable');
+      const review = pickReview(await client.sectionReviews(step), ref);
+      const sheet = await readSheet(step);
       if (mine !== token) return;
       state.review = review;
-      state.currentPrdVersion = prd?.version ?? null;
+      state.currentPrdVersion = sheet.prd?.version ?? null;
+      state.edited = sheet.edited;
       if (review) {
         state.sections = await readSections(review.prd_ref).catch(() => ({}));
         state.sentences = { kind: 'running' };
@@ -216,25 +230,23 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
   async function ask(who: Colleague) {
     const review = state.review;
     if (!review) return;
-    const prefill = reviewSummaryForColleague(review, who, { language });
-    if (host.askColleague)
-      await host.askColleague({ colleague: who, prefill, attachPrd: review.prd_ref });
-    else await host.openColleague(who, prefill);
-  }
-
-  async function back() {
-    if (!state.step) return;
-    if (host.openWorksheet) await host.openWorksheet(state.step);
-    else host.openFeature('design');
+    // attachPrd is left to the host: on when this colleague has not seen the latest version.
+    await host.askColleague({
+      colleague: who,
+      prefill: reviewSummaryForColleague(review, who, { language }),
+    });
   }
 
   const feature: Feature = {
     render: () => '',
     mount(element) {
       root = element;
-      paint();
+      const screen = host.currentScreen();
+      if (screen.kind === 'review' && screen.step) void open(screen.step, screen.reviewRef);
+      else paint();
       return () => {
         root = null;
+        token++;
       };
     },
   };
