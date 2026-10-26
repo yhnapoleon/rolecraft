@@ -67,6 +67,14 @@ export function SevenStepGuide(p: GuideProps) {
       ),
     ],
   };
+  // Agent drafts waiting for the person, counted on each step they cover.
+  const pending = (id: StepId) => p.progress.drafts.filter((d) => d.steps.includes(id)).length;
+  const draftText = (n: number) => t(`${n} 份待确认`, `${n} to review`);
+  const waiting = (id: StepId) => {
+    const n = pending(id);
+    return n > 0 ? <span className="aipm-draft-mark">{draftText(n)}</span> : null;
+  };
+  const elsewhere = p.progress.drafts.filter((d) => !d.steps.includes(current.id)).length;
   const status = {
     not_started: t('尚未开始', 'Not started'),
     working: t('正在处理', 'Working'),
@@ -98,7 +106,10 @@ export function SevenStepGuide(p: GuideProps) {
         </span>
         <div className="aipm-guide__location">
           <span>{t('正在处理', 'Working on')}</span>
-          <strong>{current.label}</strong>
+          <strong>
+            {current.label}
+            {waiting(current.id)}
+          </strong>
         </div>
         {p.fixture && (
           <span className="aipm-guide__fixture">
@@ -120,6 +131,7 @@ export function SevenStepGuide(p: GuideProps) {
           onClick={() => setMap(!map)}
         >
           {t('工作地图', 'Work map')}
+          {elsewhere > 0 && <span className="aipm-draft-mark">{draftText(elsewhere)}</span>}
         </button>
       </div>
       {map && (
@@ -146,7 +158,10 @@ export function SevenStepGuide(p: GuideProps) {
             >
               <span>{s.order}</span>
               <strong>{s.label}</strong>
-              <small>{status[s.status]}</small>
+              <small>
+                {status[s.status]}
+                {waiting(s.id)}
+              </small>
             </button>
           ))}
         </nav>

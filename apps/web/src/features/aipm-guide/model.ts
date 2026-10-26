@@ -50,6 +50,8 @@ export type ProgressView = {
     storage_revision: number;
   };
   complete: boolean;
+  /** Drafts an agent wrote that wait for the person (never step records until adopted). */
+  drafts: { id: string; key: string; steps: StepId[] }[];
   steps: {
     id: StepId;
     label: string;
@@ -149,6 +151,16 @@ export function progressView(value: unknown): ProgressView {
       storage_revision: Number(at.storage_revision),
     },
     complete: object(p.projection ?? {}).complete === true,
+    drafts: Array.isArray(p.pending_agent_drafts)
+      ? p.pending_agent_drafts.map((d) => {
+          const row = object(d),
+            ref = object(row.ref);
+          const steps = Array.isArray(row.steps)
+            ? row.steps.filter((s): s is StepId => IDS.includes(s as StepId))
+            : [];
+          return { id: text(ref.object_id), key: `${text(ref.object_id)}@${ref.version}`, steps };
+        })
+      : [],
     steps: rows(p.steps).map((s) => {
       if (
         !['not_started', 'working', 'recorded', 'recheck', 'uncovered'].includes(
