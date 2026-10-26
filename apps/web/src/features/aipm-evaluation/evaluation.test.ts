@@ -139,7 +139,6 @@ const desk = (over: Partial<DeskState> = {}): DeskState => ({
   drafts: [],
   view: null,
   monitoring: [],
-  canSendPrepared: false,
   running: false,
   busy: false,
   notice: null,
@@ -207,13 +206,13 @@ describe('run, judgement and plan-only cases stay apart', () => {
     expect(lines[2].note).toContain('判定人：你本人');
   });
 
-  it('disables running without the verbatim transport instead of sending a new command', () => {
-    const html = renderDesk(desk({ tab: 'run', view }));
-    expect(html).toMatch(/data-eval-action="run" disabled/);
-    expect(html).toContain('运行还没接入');
-    expect(renderDesk(desk({ tab: 'run', view, canSendPrepared: true }))).not.toMatch(
+  it('offers the run while cases wait, and not when none remain or read-only', () => {
+    expect(renderDesk(desk({ tab: 'run', view }))).not.toMatch(/data-eval-action="run" disabled/);
+    expect(renderDesk(desk({ tab: 'run', view, readOnly: true }))).toMatch(
       /data-eval-action="run" disabled/,
     );
+    const done = { ...view, batch: { ...view.batch, cases: view.batch.cases.slice(0, 3) } };
+    expect(renderDesk(desk({ tab: 'run', view: done }))).toMatch(/data-eval-action="run" disabled/);
   });
 
   it('renders each language without the other', () => {
@@ -251,13 +250,82 @@ describe('installAipmEvaluation', () => {
       command: vi.fn(),
       createWorkVersion: vi.fn(),
       registerFeature: register,
+      sendPreparedTest: vi.fn(),
+      readContent: async () => content.en,
     };
-    const installed = installAipmEvaluation(host, { content });
+    const installed = installAipmEvaluation(host);
     expect(register).toHaveBeenCalledWith('evaluation', installed.feature);
     await installed.load();
     expect(installed.state.design?.revision).toBe(2);
     expect(installed.state.view?.batch.id).toBe('batch');
-    expect(installed.state.canSendPrepared).toBe(false);
     expect(installed.feature.render()).toContain('Evaluation, monitoring and rollback');
   });
+
+  it('refuses content in the other language', async () => {
+    const host = fakeHost({ readContent: async () => content.zh });
+    const installed = installAipmEvaluation(host);
+    await installed.load();
+    expect(installed.state.content).toBeNull();
+    expect(installed.state.notice?.kind).toBe('error');
+  });
+
+  it('runs through the host: the saved original command is sent once, verbatim', async () => {
+    let batch = structuredClone(view.batch);
+    batch.cases = [evalCase('x', 'retrieval_generation', 'pending')];
+    const original = {
+      schema_version: 2,
+      request_id: 'req-x',
+      operation: 'tests.create',
+      expected_version: 3,
+      expected_workspace_revision: 9,
+      payload: { query: 'FIXTURE q', config_version: 1 },
+    };
+    const sent: unknown[] = [];
+    const host = fakeHost({
+      getClient: () => ({
+        readDesign: async () => ({ design }),
+        readBatch: async () => ({ result: { result: { ...view, batch } } }),
+      }),
+      readProgress: async () => ({ steps: [{ evidence_refs: [ref('aipm_batch', 'batch', 4)] }] }),
+      command: async (operation: string, payload: Record<string, unknown>) => {
+        expect(operation).toBe('aipm.batch.update');
+        expect(payload.expected_revision).toBe(batch.revision);
+        const row = batch.cases[0];
+        if (payload.action === 'prepare') row.original_command = structuredClone(original);
+        if (payload.action === 'reconcile') row.status = 'completed';
+        batch = { ...batch, revision: batch.revision + 1 };
+        return {
+          status: 'confirmed',
+          result: {
+            result: { batch, ...(payload.action === 'prepare' ? { command: original } : {}) },
+          },
+        };
+      },
+      sendPreparedTest: async (command: Record<string, unknown>) => {
+        sent.push(command);
+        throw new Error('FIXTURE response lost');
+      },
+    });
+    const installed = installAipmEvaluation(host);
+    await installed.load();
+    await installed.run();
+    expect(sent).toEqual([original]);
+    expect(installed.state.view?.batch.cases[0].status).toBe('completed');
+    await installed.run();
+    expect(sent).toHaveLength(1);
+  });
 });
+
+function fakeHost(over: Partial<EvaluationHost> = {}): EvaluationHost {
+  return {
+    getSessionContext: () => ({ sessionId: 's', workLanguage: 'en', readOnly: false }),
+    getClient: () => null,
+    readProgress: async () => ({ steps: [] }),
+    command: vi.fn(),
+    createWorkVersion: vi.fn(),
+    registerFeature: () => () => undefined,
+    sendPreparedTest: vi.fn(),
+    readContent: async () => content.en,
+    ...over,
+  };
+}

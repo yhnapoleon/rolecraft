@@ -31,8 +31,6 @@ export type DeskState = {
   drafts: CaseDraft[];
   view: BatchView | null;
   monitoring: MonitoringPlan[];
-  /** Whether the host can send the saved original command verbatim. */
-  canSendPrepared: boolean;
   running: boolean;
   busy: boolean;
   notice: { kind: 'status' | 'error'; message: string } | null;
@@ -225,11 +223,10 @@ function runScreen(state: DeskState) {
     view.batch.pause_reason,
     state.content as EvaluationContent,
   );
-  const blocked = !state.canSendPrepared;
   const runLabel = state.running
     ? t('停止发起新题', 'Stop starting new cases')
     : t(`逐题运行剩余 ${remaining} 题`, `Run the remaining ${remaining} one by one`);
-  const disabled = state.readOnly || blocked || (!state.running && !remaining) ? ' disabled' : '';
+  const disabled = state.readOnly || (!state.running && !remaining) ? ' disabled' : '';
   const latest = latestAssessments(view.assessments);
   const list = (
     title: string,
@@ -245,7 +242,6 @@ function runScreen(state: DeskState) {
   <p class="aipm-eval__muted">${esc(state.content?.run.explain)}</p></div>
   <button type="button" class="btn primary" data-eval-action="${state.running ? 'stop' : 'run'}"${disabled}>${esc(runLabel)}</button>
 </div>
-${blocked ? `<p class="aipm-eval__notice" data-kind="status">${esc(t('运行还没接入：页面暂时不能原样发送已保存的请求，所以不运行，以免重复调用。', 'Running is not connected yet: this page cannot resend the saved request exactly, so it will not run rather than risk a duplicate call.'))}</p>` : ''}
 ${paused ? `<p class="aipm-eval__notice" data-kind="status">${esc(paused)}${view.batch.pause_reason === 'user_paused' || view.batch.pause_reason === 'conditions_changed' ? ` <button type="button" class="aipm-eval__link" data-eval-action="resume"${state.readOnly ? ' disabled' : ''}>${esc(t('核对后继续', 'Checked; continue'))}</button>` : ''}</p>` : ''}
 ${list(t('待判定', 'To judge'), b.awaitingJudgement, (row) => caseLine(state, row, judgeForm(state, row)), t('运行完成只说明有结果，满足与否由你对照预期判断。', 'A finished run only means there is a result; you judge it against your expectation.'))}
 ${list(t('待运行', 'Waiting to run'), b.waiting, (row) => caseLine(state, row))}

@@ -1,6 +1,6 @@
 /** `installAipmEvaluation(host)`: the evaluation desk registered into L1's AIPM host.
  * Writes go through explicit host commands; the server owns batches, results and counts.
- * Running needs `sendPreparedTest`, which sends the saved original command verbatim. */
+ * Running uses the host's `sendPreparedTest`, which sends the saved original command verbatim. */
 import type { AipmDesign, MonitoringPlan, ObjectRef } from '../../aipm/types';
 import {
   type BatchView,
@@ -32,7 +32,7 @@ export interface EvaluationClient {
   readBatch<T>(id: string): Promise<T>;
   readDesign<T>(id: string): Promise<T>;
 }
-/** Structural subset of L1's `AipmHost`; extra members are the wiring requests in 256 progress. */
+/** Structural subset of L1's `AipmHost`, so this feature compiles without importing its file. */
 export interface EvaluationHost {
   getSessionContext(): Context | null;
   getClient(): unknown;
@@ -41,10 +41,10 @@ export interface EvaluationHost {
   createWorkVersion(input: never): Promise<unknown>;
   registerFeature(id: 'evaluation', feature: Feature): () => void;
   getDataHost?(): { openReference(ref: ObjectRef): Promise<void> } | null;
-  /** Requested from L1: send a stored Command unchanged, without a new request_id. */
-  sendPreparedTest?(command: TestCommand): Promise<unknown>;
-  /** Requested from L1/L4: the bound package's `public/evaluation.{lang}.json`. */
-  readContent?(id: 'evaluation'): Promise<EvaluationContent>;
+  /** Sends a stored `tests.create` Command unchanged: same request_id, no journal, no retry. */
+  sendPreparedTest(command: Record<string, unknown>): Promise<unknown>;
+  /** The bound package's `public/evaluation.<work language>.json`. */
+  readContent(id: 'evaluation'): Promise<unknown>;
 }
 export type InstallOptions = { content?: Partial<Record<Language, EvaluationContent>> };
 
@@ -67,6 +67,18 @@ const failure = (value: unknown) =>
     1,
   );
 
+/** Accept only this desk's content in the practice's work language; never the other language. */
+function asContent(value: unknown, language: Language): EvaluationContent {
+  const content = value as EvaluationContent | null;
+  if (
+    content?.schema_version !== 1 ||
+    content.language !== language ||
+    !Array.isArray(content.routes)
+  )
+    throw new Error('evaluation_content_unavailable');
+  return content;
+}
+
 function latestRef(progress: unknown, kind: string): ObjectRef | null {
   const steps =
     dig(progress, (v) => (Array.isArray(v.steps) ? (v.steps as Loose[]) : undefined)) ?? [];
@@ -88,7 +100,6 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
     drafts: [],
     view: null,
     monitoring: [],
-    canSendPrepared: typeof host.sendPreparedTest === 'function',
     running: false,
     busy: false,
     notice: null,
@@ -124,7 +135,7 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
     state.busy = true;
     paint();
     try {
-      if (!state.content && host.readContent) state.content = await host.readContent('evaluation');
+      if (!state.content) state.content = asContent(await host.readContent('evaluation'), language);
       const progress = await host.readProgress();
       const designRef = latestRef(progress, 'aipm_design');
       const c = client();
@@ -196,7 +207,6 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
       return { batch, command: command ?? (null as unknown as TestCommand) };
     },
     submit: (command) => {
-      if (!host.sendPreparedTest) throw new Error('prepared_test_transport_unavailable');
       return host.sendPreparedTest(command);
     },
     reconcile: async (id, revision, caseId) => {
@@ -214,7 +224,7 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
   const runner = new SerialEvaluationRunner(port);
 
   async function run() {
-    if (!state.view || !state.canSendPrepared) return;
+    if (!state.view) return;
     state.running = true;
     state.notice = null;
     paint();
@@ -487,5 +497,5 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
     },
   };
   const unregister = host.registerFeature('evaluation', feature);
-  return { feature, state, unregister, load };
+  return { feature, state, unregister, load, run };
 }
