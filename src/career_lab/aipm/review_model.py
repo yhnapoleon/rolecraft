@@ -9,6 +9,7 @@ Judge nothing runs and the review keeps model_status=not_configured.
 """
 
 import json
+import re
 import threading
 from types import SimpleNamespace
 from uuid import uuid4
@@ -47,7 +48,9 @@ SYSTEM = {
         "对每个要点判断这一节的文字是否做到：covered（做到了）、missing（缺了）、"
         "wrong（写错或与依据矛盾）、"
         "to_check（无法判断）。note 用一句话说明哪一句或哪个选择有问题、应再看哪份资料的哪部分；"
-        "不要写正确说法，不要替作者改写，不要给完整方案。citation_ids 只能填提供的引用 id。"
+        "不要写正确说法，不要替作者改写，不要给完整方案。"
+        "citation_ids 只填直接支持本条 note 的原文段落 id，不要用无关引用；没有合适原文就留空。"
+        "note 中只使用资料显示名，不得输出 c1 等引用别名或内部资料 id。"
         '仅输出 JSON：{"items":[{"id","mark","note","citation_ids"}]}。'
     ),
     "en": (
@@ -58,7 +61,9 @@ SYSTEM = {
         "sources) or to_check (cannot tell). note is one sentence naming which sentence or "
         "choice has the problem and which source to look at again; never state the correct "
         "answer, never rewrite the "
-        "author's text, never give a full solution. citation_ids may only use the given ids. "
+        "author's text, never give a full solution. citation_ids must identify passages that "
+        "directly support this note; use an empty list if none fits, never an unrelated quote. "
+        "In note use material display names only, never aliases like c1 or internal material ids. "
         'Output JSON only: {"items":[{"id","mark","note","citation_ids"}]}.'
     ),
 }
@@ -76,7 +81,7 @@ class CoverageJudge:
         self.model = model
 
     @audited("JUDGE")
-    def evaluate(self, package, messages, allowed, ids):
+    def evaluate(self, package, messages, allowed, ids, names=None):
         record = {"attempt": 1, "input_hash": package.input_hash}
         try:
             reply = complete(self.model, messages, [])
@@ -98,6 +103,10 @@ class CoverageJudge:
                 note = row.get("note")
                 if not isinstance(note, str) or not note.strip():
                     raise ValueError("advice_scope_mismatch")
+                for alias, name in (names or {}).items():
+                    note = re.sub(r"(?<![\w-])" + re.escape(alias) + r"(?![\w-])", name, note)
+                if re.search(r"\bc[0-9]+\b", note):
+                    raise ValueError("citation_alias_in_note")
                 found[row["id"]] = (row["mark"], note[:NOTE_LIMIT], [allowed[c] for c in cited])
             record["status"] = "accepted"
             return _CoverageOutcome(found, (record,))
@@ -290,7 +299,9 @@ class ModelReviewer:
         refs = [
             C.EvidenceRefV2.model_validate(r) for r in design.get("section_refs", {}).get(step, ())
         ]
-        allowed = {f"c{i + 1}": ref for i, ref in enumerate(refs)}
+        allowed, names, citations, point_sources = self.coverage_sources(
+            view, auth, stored, points, refs, language
+        )
         payload = {
             "section": step,
             "text": text,
@@ -300,13 +311,11 @@ class ModelReviewer:
                     "label": p.label[language],
                     "check": (p.model_check or p.label)[language],
                     "where_to_look": p.look_again[language],
+                    "source_ids": point_sources[p.id],
                 }
                 for p in points
             ],
-            "citations": [
-                {"id": key, "material": ref.object_id, "quote": ref.quote}
-                for key, ref in allowed.items()
-            ],
+            "citations": citations,
         }
         messages = [
             {"role": "system", "content": SYSTEM[language]},
@@ -320,7 +329,7 @@ class ModelReviewer:
         from career_lab.api.evaluation_runtime import OncePerInputModel
 
         outcome = CoverageJudge(OncePerInputModel(judge)).evaluate(
-            package, messages, allowed, {p.id for p in points}
+            package, messages, allowed, {p.id for p in points}, names
         )
         if outcome.items is None:
             raise RuntimeError("coverage_advice_rejected")
@@ -336,6 +345,86 @@ class ModelReviewer:
             )
             for key, (mark, note, cited) in outcome.items.items()
         )
+
+    def coverage_sources(self, view, auth, stored, points, refs, language):
+        """Exact learner quotes plus visible passages from each point's authored sources.
+
+        Use the review's pinned versions/window, not a later material head. The public
+        projection and reference check also exclude undisclosed or unauthorized passages.
+        """
+        registry = self.app.state.gateway.registry
+        checks = registry.rule_checks.get(C.canonical(view.bindings))
+        package = checks.module.package if checks else None
+        allowed, names, citations = {}, {}, []
+        seen = {}
+        remaining = 40000
+
+        def add(ref, origin):
+            nonlocal remaining
+            scope = getattr(auth, "allowed_objects", None)
+            if scope is not None and ref.object_id not in scope:
+                return None
+            if callable(view.reference_allowed) and not view.reference_allowed(ref):
+                return None
+            key = C.canonical(ref)
+            if key in seen:
+                return seen[key]
+            if len(ref.quote or "") > remaining:
+                return None
+            title = (
+                package.material(ref.object_id, ref.version).title
+                if package and ref.kind == "material"
+                else ("资料" if language == "zh" else "Source")
+            )
+            alias = f"c{len(allowed) + 1}"
+            allowed[alias], names[alias], seen[key] = ref, title, alias
+            names[ref.object_id] = title
+            citations.append({"id": alias, "material": title, "quote": ref.quote, "origin": origin})
+            remaining -= len(ref.quote or "")
+            return alias
+
+        for ref in refs:
+            add(ref, "learner_quote")
+        sources = {}
+        for point in points:
+            ids = []
+            for mid in point.look_again_materials:
+                version = stored.get("basis", {}).get("material:" + mid)
+                if package is None or version is None:
+                    continue
+                try:
+                    fragments = package.project(
+                        mid,
+                        int(version),
+                        auth.actor_id,
+                        stored["as_of"]["business_seq"],
+                        auth.session_id,
+                    )
+                    for fragment in fragments:
+                        for passage in re.finditer(r"[^\n]+(?:\n(?!\s*\n)[^\n]+)*", fragment.text):
+                            quote = passage.group().strip()
+                            if not quote or quote.startswith("#") and "\n" not in quote:
+                                continue
+                            offset = (
+                                passage.start()
+                                + len(passage.group())
+                                - len(passage.group().lstrip())
+                            )
+                            begin = (fragment.ref.span_start or 0) + offset
+                            ref = fragment.ref.model_copy(
+                                update={
+                                    "span_start": begin,
+                                    "span_end": begin + len(quote),
+                                    "quote": quote,
+                                }
+                            )
+                            alias = add(ref, "coverage_source")
+                            if alias:
+                                ids.append(alias)
+                except C.ProtocolError:
+                    continue
+            sources[point.id] = list(dict.fromkeys(ids))
+        return allowed, names, citations, sources
 
     def write(self, auth, ref, items, status, reason):
         store = self.app.state.v2_store

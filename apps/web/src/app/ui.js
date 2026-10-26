@@ -1386,6 +1386,10 @@ function wsToolbar(a) {
 // centre takes them back: "Workbench › where you are". The workbench itself shows none.
 function awayFrom(a) {
   if (!a || hatHere(a) !== 'pm') return null;
+  if (ui.docSheet) {
+    const m = E.getMaterials(a).find((x) => x.id === ui.docSheet);
+    return m ? materialTitle(m) : T('资料', 'Material');
+  }
   if (ui.route === 'work') return aipmHere(a) ? Aipm.screenName(a) : null;
   const t = routeTask(a);
   if (t) return taskTitle(t);
@@ -1408,6 +1412,11 @@ function homePill(a) {
 }
 function toWorkbench() {
   const a = current();
+  if (ui.docSheet) {
+    ui.docSheet = null;
+    ui.compare = false;
+    refreshWS(['overlay', 'toolbar']);
+  }
   if (a && aipmHere(a)) Aipm.host.openWorkbench();
   if (ui.route !== 'work') go('work', { transition: true });
 }
@@ -8745,7 +8754,7 @@ Board.installBoard({
       Board.noteBriefRead(a.id);
       Board.captureBoard();
     }
-    refreshWS(['overlay', 'stage']);
+    refreshWS(['overlay', 'stage', 'toolbar']);
     if (rolls) Board.playBoard();
   },
   openRecords: () => boardSettle(),

@@ -76,11 +76,11 @@ describe('review content (L4 shared fixture)', () => {
 
   it('writes a colleague summary as questions to discuss, in one language', () => {
     expect(reviewSummaryForColleague(fixtureReview('zh'), 'business', { language: 'zh' })).toBe(
-      '我在写「验证真需求」第 4 版。批改标出：指标口径（有误）、下一步怎么验证（缺了）。从业务口径看，你觉得我最该先核对哪一处？',
+      '我在写「验证真需求」第 4 版，批改标出：指标口径（有误）、下一步怎么验证（缺了）。从业务口径看，你觉得我最该先核对哪一处？',
     );
     const en = reviewSummaryForColleague(fixtureReview('en'), 'technical', { language: 'en' });
     expect(en).toBe(
-      'I’m writing “Validate the need”, version 4. The review marks Metric definition (wrong), How to validate next (missing). From the system and test evidence, which part do you think I should check first?',
+      'I’m writing “Validate the need”, version 4; the review marks Metric definition (wrong), How to validate next (missing). From the system and test evidence, which part do you think I should check first?',
     );
     expect(en).not.toMatch(CJK);
   });
@@ -440,9 +440,44 @@ describe('installAipmReview', () => {
     await installed.ask('technical');
     expect(askColleague).toHaveBeenCalledWith({
       colleague: 'technical',
-      prefill: expect.stringMatching(/^I’m writing “Validate the need”, version 4\./),
+      prefill: expect.stringMatching(/^I’m writing “Validate the need”, version 4;/),
       // The review's own words travel separately, for the learner to add or leave out.
       detail: expect.stringContaining('(rule check)'),
     });
   });
+});
+
+
+describe('review across session languages', () => {
+  for (const first of ['zh', 'en'] as const) {
+    it(`uses the current session after ${first} without reinstalling`, async () => {
+      let language: 'zh' | 'en' = first;
+      const askColleague = vi.fn();
+      const host = {
+        getSessionContext: () => ({ sessionId: language, workLanguage: language, readOnly: false }),
+        getClient: () => ({ sectionReviews: async () => ({ items: [{ ref: fixtureReview(language).prd_ref, review: fixtureReview(language) }], next_cursor: null }) }),
+        getDataHost: () => null,
+        readProgress: async () => ({}),
+        registerFeature: () => () => undefined,
+        currentScreen: () => ({ kind: 'review' }),
+        openWorksheet: vi.fn(), openMaterialSplit: vi.fn(), askColleague,
+      } as ReviewHost;
+      const installed = installAipmReview(host);
+      const doc = fakeDocument();
+      const root = Object.assign(doc.createElement('div'), { ownerDocument: doc, replaceChildren(...nodes: unknown[]) { (this as unknown as { children: unknown[] }).children = nodes; } });
+      installed.feature.mount?.(root);
+      await installed.open('need');
+      language = first === 'zh' ? 'en' : 'zh';
+      await installed.open('need');
+      await installed.ask('business');
+      const reviewed = installed.state.review;
+      if (!reviewed) throw new Error('Review was not loaded');
+      expect(askColleague.mock.calls[0][0].prefill).toBe(
+        reviewSummaryForColleague(reviewed, 'business', { language }),
+      );
+      expect(root.textContent).toContain(language === 'zh' ? '批改' : 'Review');
+      expect(root.textContent).not.toContain(language === 'zh' ? 'Ask Chen' : '问 Chen');
+      installed.unregister();
+    });
+  }
 });

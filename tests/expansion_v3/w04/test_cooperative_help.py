@@ -527,3 +527,73 @@ def test_help_audit_distinguishes_normal_multi_part_facts_and_unsafe_replies(
         assert len(model.calls) == 2
     finally:
         dialogue.close()
+
+
+@pytest.mark.parametrize("recognition_on", [False, True])
+@pytest.mark.parametrize("coaching,one_question", [(False, True), (True, False)])
+def test_shared_work_coaching_gate_applies_with_recognition(
+    monkeypatch, recognition_on, coaching, one_question
+):
+    from types import SimpleNamespace
+
+    from career_lab.contracts.v2 import ProtocolError
+    from career_lab.recognition import roles
+    from career_lab.runtime.roles_v2 import CooperativeHelpVerifier
+
+    monkeypatch.setattr(roles, "active", lambda: object() if recognition_on else None)
+    context = {
+        "sources": [{"display_name": "Shared PRD", "channel": "received_share", "text": "Draft"}],
+        "current_stance": {},
+        "omissions": [],
+    }
+    snapshot = SimpleNamespace(
+        work_language="en",
+        source_titles=(("brief", 1, "Manager brief"),),
+        prompt_text=lambda t: t,
+        build_prompt=lambda *a, **kw: (
+            [{"content": "policy\nCONTEXT\n" + json.dumps(context)}],
+            None,
+            None,
+        ),
+    )
+    model = ScriptedModel(
+        [
+            assessment(
+                kinds=("business_judgment",),
+                no_complete_solution=coaching,
+                one_main_question=one_question,
+            )
+        ]
+    )
+    verifier = CooperativeHelpVerifier(model)
+    request = SimpleNamespace(
+        id="test",
+        session_id="s",
+        input=SimpleNamespace(role_id="business_owner", text="Is my attached PRD right?"),
+    )
+    with pytest.raises(ProtocolError) as error:
+        verifier.check(
+            snapshot,
+            None,
+            request,
+            "Consider the duration definition. What would you check?",
+            record_attempt=lambda *a: None,
+            begin_call=lambda *a: None,
+        )
+    assert error.value.code == "role_help_unverified"
+    assert len(model.calls) == 1 and verifier.retries == 0
+    assert "artifact-review-v1" in verifier.revision
+    prompt = model.calls[0][0]["content"]
+    assert "gives an action instruction" in prompt and "more than one problem" in prompt
+
+
+def test_material_internal_ids_are_held_but_display_titles_are_allowed():
+    from types import SimpleNamespace
+
+    from career_lab.runtime.roles_v2 import _material_identifier_in_reply
+
+    snapshot = SimpleNamespace(
+        source_titles=(("brief", 1, "Manager brief"), ("business_case", 1, "Business case"))
+    )
+    assert _material_identifier_in_reply(snapshot, "See brief and business_case.")
+    assert not _material_identifier_in_reply(snapshot, "See Manager brief and Business case.")

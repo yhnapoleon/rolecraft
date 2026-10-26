@@ -212,8 +212,8 @@ export function noticeText(
   const name = personName(roleId);
   if (kind === 'held' && errorCode && HELP_REVIEW.has(errorCode))
     return T(
-      `这次没有生成 ${name} 的实时回复：生成的回复超出了同事帮助的边界（给了整套做法或不止一个追问），没有发出。不影响你的评价，可以请对方重新回答。`,
-      `No live reply from ${name} this time: the generated reply went beyond a colleague's help (a full solution or more than one question) and was not sent. It does not count against you; you can ask again.`,
+      `这次没有生成 ${name} 的实时回复：生成的回复超出了同事帮助的边界（给出结论或操作指令、指出多处问题等），没有发出。不影响你的评价，可以请对方重新回答。`,
+      `No live reply from ${name} this time: the generated reply went beyond a colleague's help (such as giving conclusions or instructions, or raising several problems) and was not sent. It does not count against you; you can ask again.`,
     );
   return {
     held: T(

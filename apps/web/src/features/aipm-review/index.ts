@@ -90,8 +90,7 @@ const errorCode = (error: unknown) =>
   (error as { code?: string } | null)?.code ?? (error instanceof Error ? error.message : '');
 
 export function installAipmReview(host: ReviewHost, options: ReviewOptions = {}) {
-  const context = host.getSessionContext();
-  const language: Language = context?.workLanguage ?? 'zh';
+  let language: Language = host.getSessionContext()?.workLanguage ?? 'zh';
   const t = (zh: string, en: string) => (language === 'zh' ? zh : en);
   const state: {
     step: StepId | null;
@@ -215,7 +214,10 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
   /** Shows a sheet's review; the same version reads its saved result, never a rerun. */
   async function open(step: StepId, ref?: ObjectRef) {
     const mine = ++token;
+    language = host.getSessionContext()?.workLanguage ?? 'zh';
+    shown = null;
     Object.assign(state, {
+      sections: {},
       step,
       review: null,
       modelTimedOut: false,
@@ -234,7 +236,9 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
       state.currentPrdVersion = sheet.prd?.version ?? null;
       state.edited = sheet.edited;
       if (review) {
-        state.sections = await readSections(review.prd_ref).catch(() => ({}));
+        const sections = await readSections(review.prd_ref).catch(() => ({}));
+        if (mine !== token) return;
+        state.sections = sections;
         state.sentences = { kind: 'running' };
         paint();
         const sentences = await readSentences(review.prd_ref);

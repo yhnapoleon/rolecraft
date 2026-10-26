@@ -397,12 +397,12 @@ export function reviewSummaryForColleague(
   const ask = ASK_DIRECTION[who][language === 'zh' ? 0 : 1];
   if (language === 'zh') {
     const said = points.length ? `批改标出：${points.join('、')}。` : `批改结果是「${status}」。`;
-    return `我在写「${sheet}」第 ${version} 版。${said}${ask}`;
+    return `我在写「${sheet}」第 ${version} 版，${said}${ask}`;
   }
   const said = points.length
-    ? `The review marks ${points.join(', ')}.`
-    : `The review marks it “${status}”.`;
-  return `I’m writing “${sheet}”, version ${version}. ${said} ${ask}`;
+    ? `the review marks ${points.join(', ')}.`
+    : `the review marks it “${status}”.`;
+  return `I’m writing “${sheet}”, version ${version}; ${said} ${ask}`;
 }
 
 /** The longer text behind “Attach the review summary”: each finding in its own words, where to

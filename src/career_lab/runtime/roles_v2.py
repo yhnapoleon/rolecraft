@@ -1461,6 +1461,18 @@ class HelpAssessment(BaseModel):
         )
 
 
+def _material_identifier_in_reply(snapshot, text):
+    # Titles are learner-facing; bare source ids and material:id@version are not.
+    visible = text
+    for _, _, title in sorted(snapshot.source_titles, key=lambda row: len(row[2]), reverse=True):
+        visible = visible.replace(title, "")
+    return any(
+        re.search(r"(?<![\w-])" + re.escape(mid) + r"(?![\w-])", visible)
+        for mid, _, title in snapshot.source_titles
+        if mid != title
+    )
+
+
 class RuleReplyVerifier:
     """Injectable mechanical verifier, disabled by default; never semantic quality.
 
@@ -1522,7 +1534,7 @@ class CooperativeHelpVerifier:
     """
 
     retries = 0
-    revision = HELP_POLICY_REVISION
+    revision = HELP_POLICY_REVISION + ":artifact-review-v1"
 
     def __init__(self, model: ModelAdapter, *, max_context_chars: int = 24000) -> None:
         self.model = model
@@ -1558,9 +1570,15 @@ class CooperativeHelpVerifier:
             ]
             if any(label not in labels for label in citations):
                 raise ProtocolError("role_help_citation_invalid", status=422)
+        if _material_identifier_in_reply(snapshot, text):
+            raise ProtocolError("role_help_unverified", status=409)
+        shared_work = any(
+            source.get("channel") in {"received_share", "attachment"}
+            for source in context["sources"]
+        )
         begin_call("role_help_review", self.revision + ":" + self.model.revision)
         inputs = {
-            "policy_revision": HELP_POLICY_REVISION,
+            "policy_revision": self.revision,
             "work_language": snapshot.work_language,
             "question": snapshot.prompt_text(request.input.text),
             "reply": text,
@@ -1587,6 +1605,16 @@ class CooperativeHelpVerifier:
                     "how one existing tool works is allowed. Preserve all conditions and at most "
                     "one main question. The first paragraph must preserve relevant conditions; "
                     "later details cannot repair a misleading first paragraph. "
+                    "When the learner brings their own work to ask whether it is right, "
+                    "no_complete_solution must be false if the reply supplies the conclusion "
+                    "the learner should reach (even a correct definition or conclusion before a "
+                    "question), gives an action instruction, rewrites their work, or points out "
+                    "more than one problem. A single observation identifying one uncertainty and "
+                    "one question that lets the learner check it themselves is allowed. Do not "
+                    "waive this for a grounded or factually correct reply. For other requests "
+                    "the original no_complete_solution definition applies. "
+                    "Material references must use display names, "
+                    "never internal object ids. "
                     "Check response language, allowing exact quotations, names "
                     "and natural dates. Unsupported/uncertain statements require unsupported/"
                     "undetermined; never repair the reply. This review is not scoring."
@@ -1612,12 +1640,15 @@ class CooperativeHelpVerifier:
         except ValidationError:
             audit.validation("technical_failure", "role_help_review_invalid")
             raise ProtocolError("role_help_review_invalid", status=409) from None
+        permitted = review.permits_publication(relaxed) and (
+            not shared_work or (review.no_complete_solution and review.one_main_question)
+        )
         audit.validation(
-            "permitted" if review.permits_publication(relaxed) else "withheld",
+            "permitted" if permitted else "withheld",
             assessment=review.model_dump(mode="json"),
             failed_checks=[key for key, value in review.model_dump().items() if value is False],
         )
-        if not review.permits_publication(relaxed):
+        if not permitted:
             raise ProtocolError("role_help_unverified", status=409)
         if not relaxed and "fact" in review.request_kinds and not citations:
             raise ProtocolError("role_help_citation_invalid", status=422)

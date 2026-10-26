@@ -374,3 +374,100 @@ def test_free_text_metric_is_never_marked_covered(base, with_judge):
     assert text in json.dumps(judge.messages[0])
     # The Judge is asked the exact question for this point, not just its label.
     assert "elapsed time from ticket creation to closure" in json.dumps(judge.messages[0])
+
+
+def test_coverage_adds_pinned_visible_passages_and_keeps_model_selected_quote():
+    from career_lab.aipm.review_model import CoverageJudge, ModelReviewer
+    from career_lab.contracts import v2 as C
+
+    ref = C.EvidenceRefV2(
+        session_id="s",
+        kind="material",
+        object_id="sd120",
+        version=1,
+        observed_at_seq=0,
+        valid_from_seq=0,
+    )
+    text = "Owner / export batch / contact.\n\nDuration is elapsed time, not measured labour."
+    fragment = SimpleNamespace(ref=ref.model_copy(update={"span_start": 0}), text=text)
+    calls = []
+
+    def project(mid, version, actor, seq, session):
+        calls.append((mid, version, actor, seq, session))
+        return [fragment]
+
+    package = SimpleNamespace(
+        project=project, material=lambda *args: SimpleNamespace(title="SD-120 field dictionary")
+    )
+    view = SimpleNamespace(bindings={}, reference_allowed=lambda r: r.object_id == "sd120")
+    registry = SimpleNamespace(
+        rule_checks={C.canonical({}): SimpleNamespace(module=SimpleNamespace(package=package))}
+    )
+    app = SimpleNamespace(state=SimpleNamespace(gateway=SimpleNamespace(registry=registry)))
+    reviewer = ModelReviewer(app, {})
+    point = SimpleNamespace(id="need.metric", look_again_materials=("sd120",))
+    learner = ref.model_copy(
+        update={"quote": "Owner / export batch / contact.", "span_start": 0, "span_end": 30}
+    )
+    allowed, names, citations, sources = reviewer.coverage_sources(
+        view,
+        SimpleNamespace(actor_id="learner", session_id="s"),
+        {"basis": {"material:sd120": "1"}, "as_of": {"business_seq": 4}},
+        [point],
+        [learner],
+        "en",
+    )
+    match = next(c for c in citations if c["quote"].startswith("Duration"))
+    assert match["id"] in sources[point.id]
+    assert calls == [("sd120", 1, "learner", 4, "s")]
+    selected = allowed[match["id"]]
+    assert text[selected.span_start : selected.span_end] == selected.quote
+    assert all(c["material"] == "SD-120 field dictionary" for c in citations)
+    fake = FakeJudge(
+        {
+            "items": [
+                {
+                    "id": point.id,
+                    "mark": "wrong",
+                    "note": f"Check {match['id']}.",
+                    "citation_ids": [match["id"]],
+                }
+            ]
+        }
+    )
+    outcome = CoverageJudge(fake).evaluate(
+        SimpleNamespace(input_hash="x", subjects=(ref,), criterion="aipm.coverage.need"),
+        [],
+        allowed,
+        {point.id},
+        names,
+    )
+    mark, note, refs = outcome.items[point.id]
+    assert mark == "wrong" and note == "Check SD-120 field dictionary."
+    assert refs == [selected] and "Owner" not in refs[0].quote
+    # No relevant citation means no displayed original, with no unrelated fallback.
+    fake.reply["items"][0]["citation_ids"] = []
+    assert (
+        CoverageJudge(fake)
+        .evaluate(
+            SimpleNamespace(input_hash="x", subjects=(ref,), criterion="aipm.coverage.need"),
+            [],
+            allowed,
+            {point.id},
+            names,
+        )
+        .items[point.id][2]
+        == []
+    )
+    view.reference_allowed = lambda r: False
+    assert (
+        reviewer.coverage_sources(
+            view,
+            SimpleNamespace(actor_id="learner", session_id="s"),
+            {"basis": {"material:sd120": "1"}, "as_of": {"business_seq": 4}},
+            [point],
+            [learner],
+            "en",
+        )[0]
+        == {}
+    )
