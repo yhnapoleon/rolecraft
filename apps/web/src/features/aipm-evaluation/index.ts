@@ -330,6 +330,29 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
     }
   }
 
+  /** One explicit send of the same saved original, only if a fresh read still allows it. */
+  function sendAgain(caseId: string) {
+    const id = state.view?.batch.id;
+    if (!id) return;
+    void guarded(
+      async () => {
+        const view = await readView(id);
+        const row = view.batch.cases.find((c) => c.id === caseId);
+        if (view.recovery?.[caseId] !== 'send_again' || !row?.original_command) {
+          throw new Error('evaluation_resend_not_allowed');
+        }
+        try {
+          await host.sendPreparedTest(row.original_command);
+        } catch {
+          // An unknown outcome stays unknown; the next read decides, never another send.
+        }
+        await updateBatch(view.batch, 'reconcile', { case_id: caseId });
+        await readView(id);
+      },
+      t('已用原请求重新发送一次。', 'Sent once more with the original request.'),
+    );
+  }
+
   function judge(caseId: string, result: string) {
     const view = state.view;
     const reason = state.judging[caseId]?.trim();
@@ -410,6 +433,23 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
             t(
               '已核对。条件仍有变化时会继续暂停。',
               'Checked. It stays paused if conditions still differ.',
+            ),
+          );
+        }
+        return;
+      case 'send-again':
+        return sendAgain(target.dataset.case ?? '');
+      case 'reprepare':
+        if (state.view) {
+          const view = state.view;
+          void guarded(
+            async () => {
+              await updateBatch(view.batch, 'reprepare', { case_id: target.dataset.case });
+              await readView(view.batch.id);
+            },
+            t(
+              '旧请求已放弃并保留在记录里。点运行会用新请求重做这一题。',
+              'The old request is set aside on record. Run to redo this case with a new request.',
             ),
           );
         }
@@ -497,5 +537,5 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
     },
   };
   const unregister = host.registerFeature('evaluation', feature);
-  return { feature, state, unregister, load, run };
+  return { feature, state, unregister, load, run, sendAgain };
 }
