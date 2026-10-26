@@ -327,8 +327,8 @@ def test_agent_draft_waits_for_owner_and_only_adoption_counts(enabled):
         },
     )
     assert resolved.status_code == 200, resolved.text
-    draft = resolved.json()["result"]["draft"]
-    assert draft["adopted_prd_ref"] == prd_ref and draft["author"]["kind"] == "external_agent"
+    record = resolved.json()["result"]["draft"]
+    assert record["adopted_prd_ref"] == prd_ref and record["author"]["kind"] == "external_agent"
     progress = result(get(enabled, "progress"))
     assert steps(progress)["boundary"]["work_status"] == "recorded"
     assert progress["pending_agent_drafts"] == []
