@@ -328,18 +328,27 @@ export function Worksheet({
     run(async () => {
       if (!design) return;
       const text = item.draft.prd_sections?.[step] ?? '';
-      const state = { blocks: text ? fromText(text) : sheet.blocks, choice: sheet.choice };
-      const out = await saveVersion(state, mergeDraft(design, item.draft) as SheetDesign);
+      const blocks = text ? fromText(text, item.draft.section_refs?.[step] ?? []) : sheet.blocks;
+      const out = await saveVersion(
+        { blocks, choice: sheet.choice },
+        mergeDraft(design, item.draft) as SheetDesign,
+      );
+      // The PRD keeps the learner as author; the draft record carries the agent's part (L4).
       const resolved = await host.command('aipm.design_drafts.resolve', {
         draft_id: item.draft.id,
         expected_revision: item.draft.revision,
         status: 'adopted',
         adopted_design_ref: out?.designRef,
+        adopted_prd_ref: out?.prdRef,
       });
-      if (failure(resolved))
-        setNote(
-          c.t('已采用，但草稿状态没更新。', 'Adopted, but the draft status was not updated.'),
-        );
+      setNote(
+        failure(resolved)
+          ? c.t('已采用，但草稿状态没更新。', 'Adopted, but the draft status was not updated.')
+          : c.t(
+              `采用自你的 Agent 草稿，已存为第 ${out?.prdRef.version} 版。`,
+              `Adopted from your agent's draft as version ${out?.prdRef.version}.`,
+            ),
+      );
     });
   const decline = (item: DraftItem) =>
     run(async () => {
