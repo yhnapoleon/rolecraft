@@ -539,7 +539,7 @@ export function mount(
                 () => adapter.refreshContext?.(turn.id) ?? Promise.resolve(),
               )
             : undefined;
-      item.append(noticeRow(doc, kind, turn.explanation || noticeText(kind, selected), action));
+      item.append(noticeRow(doc, kind, turn.explanation || noticeText(kind, selected, turn.errorCode), action));
       return { item, kind };
     }
     const reply = turn.reply ?? '';
