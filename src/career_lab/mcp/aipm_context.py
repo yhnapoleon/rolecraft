@@ -90,7 +90,12 @@ def enabled_guide(backend):
     try:
         return backend.aipm_read("guide")
     except RemoteFailure as error:
-        if error.code in {"aipm_not_enabled", "action_forbidden", "capability_forbidden"}:
+        if error.code in {
+            "aipm_not_enabled",
+            "aipm_not_enrolled",
+            "action_forbidden",
+            "capability_forbidden",
+        }:
             return None
         raise
 

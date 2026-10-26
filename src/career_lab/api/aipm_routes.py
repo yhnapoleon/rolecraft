@@ -10,8 +10,8 @@ READS = (
     ("/progress", "aipm.progress.read"),
     ("/process-feedback", "aipm.process_feedback.read"),
     ("/submissions/{submission_id}/versions/{version}/feedback", "aipm.submission_feedback.read"),
-    ("/designs/{id}", "aipm.design.read"),
-    ("/batches/{id}", "aipm.batch.read"),
+    ("/designs/{design_id}", "aipm.design.read"),
+    ("/batches/{batch_id}", "aipm.batch.read"),
 )
 WRITES = (
     ("/enrollment", "aipm.enroll"),
@@ -19,7 +19,7 @@ WRITES = (
     ("/step-links", "aipm.step_links.save"),
     ("/designs", "aipm.design.save"),
     ("/batches", "aipm.batch.create"),
-    ("/batches/{id}/state", "aipm.batch.update"),
+    ("/batches/{batch_id}/state", "aipm.batch.update"),
     ("/assessments", "aipm.assessment.record"),
 )
 
