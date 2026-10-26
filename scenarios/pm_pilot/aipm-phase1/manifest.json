@@ -4,8 +4,14 @@
   "content_revision": "aipm-phase1-draft-1",
   "company_approval": "pending_user_confirmation",
   "files": {
+    "private/grading/design.json": "9f125ca98a8ec4e12b4d3fb8c9b855374cbf3b0f3256def5bd003432cb3ca095",
+    "private/grading/evaluation.json": "0ed824a0d2299e88af3f1fa474ec129c6e3c93f32005e447e4881a7a475792df",
     "public/company.en.json": "92753f037267326868667cec0f8b010f1879d7c88f8c40a5ed623ecf71a65a92",
     "public/company.zh.json": "c7e15631bd0159d63e59113a6de1cb67ddc84d0b5aaf43574cb93a3f51f1b218",
+    "public/design.en.json": "b39ce24c5e2d6e75ef9f2939d5b3e2ce7480784e54bb3a3ebc0790fa55a89607",
+    "public/design.zh.json": "4e2b01b6ed75f539ddd4a72176ee8b6816b7671dbbae58af66b5e4a856351ed2",
+    "public/evaluation.en.json": "14dd949345cf590846a190135e47eb3c3caa06d7cd0580b58d10b74d6462b602",
+    "public/evaluation.zh.json": "836af263946c158fe382b59c73a55f9f496466fbfb240f5605c7c9fc1b609767",
     "public/guide.en.json": "8e4aa3321ee4366f0d3f74e37acc5c14df4b3734506ebd15794557f73644d3b7",
     "public/guide.zh.json": "3069c1ee9aaad0d575c40460a5a2bc1fe5413c0e96cf1e1f0aa01119971e0adb",
     "public/patterns.en.json": "5d4631638da4b1e6aa20ddb5135272dcc92e17485d736ae5ef1c5b5372062d00",
@@ -14,9 +20,6 @@
   "public_prefix": "public/",
   "private_prefix": "private/grading/",
   "base_installation": "scenarios/pm_pilot/v2/installed/current.json",
-  "completion": "g0_l1_only",
-  "missing_owners": [
-    "L2",
-    "L3"
-  ]
+  "completion": "all_lines_integrated",
+  "missing_owners": []
 }

@@ -38,7 +38,10 @@ const blank = (sessionId: string): AipmDesign => ({
   revision: 0,
   rows: [],
 });
+// The gateway transport keeps the server's code and status on the error, not in its message.
 const notFound = (error: unknown) =>
+  (error as { code?: string })?.code === 'object_not_found' ||
+  (error as { status?: number })?.status === 404 ||
   /object_not_found|404/.test(String((error as Error)?.message ?? error));
 
 export function DesignDesk({
