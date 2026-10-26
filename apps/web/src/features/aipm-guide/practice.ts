@@ -483,12 +483,11 @@ export function createAipmPractice(deps: PracticeDeps) {
           }
         | undefined;
       const items = page?.items ?? [];
+      // The model's look writes the same review again as a later version: take its newest.
       const hit = screen.reviewRef
-        ? items.find(
-            (i) =>
-              i.ref.object_id === screen.reviewRef?.object_id &&
-              i.ref.version === screen.reviewRef?.version,
-          )
+        ? items
+            .filter((i) => i.ref.object_id === screen.reviewRef?.object_id)
+            .sort((x, y) => y.ref.version - x.ref.version)[0]
         : items[0];
       const wire = colleague === 'technical' ? 'tech' : colleague;
       const prompts = ((hit?.review.mentor_prompts as Record<string, unknown>[]) ?? [])
