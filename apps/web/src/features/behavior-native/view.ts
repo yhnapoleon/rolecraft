@@ -136,10 +136,10 @@ const en: Record<keyof typeof zh, string> = {
   sym_approved: 'approved',
   sym_denied: 'denied',
   sym_counter: 'counter-offer',
-  sym_configure: 'configure',
-  sym_refresh_index: 'refresh index',
+  sym_configure: 'Configured the pilot',
+  sym_refresh_index: 'Refreshed the index',
   sym_submit: 'Submitted',
-  sym_revise: 'revise',
+  sym_revise: 'Started a revision',
   sym_event: 'notice',
   t_normal: 'a regular question',
   t_policy: 'a policy question',
@@ -389,15 +389,16 @@ export function behaviorHtml(
       last.symbols.push(s);
     else groups.push({ symbols: [s], start: i });
   });
-  const headline = groups
-    .slice(0, 6)
-    .map((g) =>
-      g.symbols.length > 1
-        ? say(`读了 ${g.symbols.length} 份资料`, `Read ${g.symbols.length} sources`)
-        : label(g.symbols[0]),
-    )
-    .join(say('，', ' → '));
-  const head = `<header class="br-head"><div><p class="br-kicker">${say('回看这次工作 · 当前可见记录', 'REVIEW THIS WORK · CURRENT VISIBLE RECORD')}</p><h2>${say('工作回放', 'Work review')}</h2><p>${esc(headline || say('本次读取还没有动作。', 'No actions were returned.'))}${groups.length > 6 ? ' …' : ''}</p></div><span class="br-total">${symbols.length}<small>${say('个可见动作', 'recorded actions')}</small></span></header>`;
+  const actionKinds: [string, string, string, string][] = [
+    ['read', '阅读', 'read', 'reads'], ['ask', '提问', 'question', 'questions'], ['test', '测试', 'test', 'tests'],
+    ['request', '申请', 'request', 'requests'], ['configure', '配置', 'configuration', 'configurations'],
+    ['submit', '提交', 'submission', 'submissions'], ['revise', '修订', 'revision', 'revisions'],
+  ];
+  const headline = actionKinds.map(([kind, zh, singular, plural]) => {
+    const n = symbols.filter(s => s.split(':')[0] === kind).length;
+    return n ? say(`${zh} ${n} 次`, `${n} ${n === 1 ? singular : plural}`) : '';
+  }).filter(Boolean).join(' · ');
+  const head = `<header class="br-head"><div><h2>${say('工作回放', 'Work review')}</h2><p>${esc(headline || say('本次读取还没有已命名的动作。', 'No named actions were returned.'))}</p></div><span class="br-total">${symbols.length}<small>${say('个可见动作', symbols.length === 1 ? 'visible action' : 'visible actions')}</small></span></header>`;
   if (!symbols.length) return head;
   const bar = `<rc-phase-timeline><div class="rc-phasebar" aria-hidden="true">${view.phases.map((p) => `<span class="rc-phase" data-style="${p.style}" style="flex:${p.steps}"></span>`).join('')}</div><div class="rc-phase-labels">${view.phases.map((p, i) => `<button type="button" class="rc-phase-label" style="--phase-steps:${p.steps}" data-from="${p.from}" data-to="${p.to}" data-style="${p.style}" aria-pressed="false" aria-label="${i + 1}. ${esc(p.name)}"><span class="rc-phase-name">${esc(p.name)}</span><span class="rc-phase-number" aria-hidden="true">${i + 1}</span></button>`).join('')}</div></rc-phase-timeline>`;
   const legend = `<div class="rc-phase-legend">${view.phases.map((p, i) => `<span><i data-style="${p.style}" aria-hidden="true"></i>${i + 1} · ${esc(p.name)}</span>`).join('')}</div>`;
@@ -406,7 +407,7 @@ export function behaviorHtml(
       .map((s, i) => {
         const pos = i + start,
           row = data.sequence[pos];
-        return `<li><details class="br-action"${ref ? '' : ` data-seq="${pos}" data-phase="${PHASE_ORDER[row.phase ?? ''] ?? ''}"`}><summary><span class="br-step-no">${String(pos + 1).padStart(2, '0')}</span><span>${esc(label(s))}</span><span class="br-action-plus" aria-hidden="true">+</span></summary><p>${ref ? say('参考做法里的动作', 'Action in the reference approach') : say(`记录序号 ${row.seq} · ${row.phase ? phaseName(row.phase, l) : '阶段未记录'}`, `Record sequence ${row.seq} · ${row.phase ? phaseName(row.phase, l) : 'Phase not recorded'}`)}</p>${!ref && row.question ? `<blockquote>${esc(row.question)}</blockquote>` : ''}</details></li>`;
+        return `<li><details class="br-action"${ref ? '' : ` data-seq="${pos}" data-phase="${PHASE_ORDER[row.phase ?? ''] ?? ''}"`}><summary><span class="br-step-no">${String(pos + 1).padStart(2, '0')}</span><span>${esc(label(s))}</span><span class="br-action-plus" aria-hidden="true">+</span></summary><p>${ref ? say('参考做法里的动作', 'Action in the reference approach') : (row.phase ? phaseName(row.phase, l) : say('阶段未记录', 'Phase not recorded'))}</p>${!ref && row.question ? `<blockquote>${esc(row.question)}</blockquote>` : ''}</details></li>`;
       })
       .join('')}</ol>`;
   const own = groups
@@ -416,16 +417,17 @@ export function behaviorHtml(
         : steps(g.symbols, false, g.start),
     )
     .join('');
-  const delta = (items: string[], more: boolean) =>
-    counts(items).map(([s, n]) =>
-      say(
-        `${label(s)}：${more ? '参考' : '本次'}多 ${n} 次`,
-        `${label(s)}: ${n} more in ${more ? 'the reference' : 'this record'}`,
-      ),
-    );
+  const ownCounts = new Map(counts(symbols));
+  const refCounts = reference ? new Map(counts(reference.sequence)) : null;
   const differences = [
-    ...delta(data.alignment.missing, true),
-    ...delta(data.alignment.extra, false),
+    ...[...new Set([...data.alignment.missing, ...data.alignment.extra])].map(s => {
+      const ownCount = ownCounts.get(s) ?? 0;
+      const refCount = refCounts?.get(s) ?? 0;
+      const object = s === 'test:normal' ? say('日常问题测试', 'Everyday-question tests') : label(s);
+      return refCounts
+        ? say(`${object}：本次 ${ownCount} 次，参考 ${refCount} 次`, `${object}: this record ${ownCount} ${ownCount === 1 ? 'time' : 'times'}, reference ${refCount} ${refCount === 1 ? 'time' : 'times'}`)
+        : say(`${object}：本次 ${ownCount} 次；参考动作记录未提供，无法核对次数。`, `${object}: this record ${ownCount} ${ownCount === 1 ? 'time' : 'times'}; reference actions were not provided, so their count cannot be checked.`);
+    }),
     ...data.alignment.swapped.map(([a, b]) =>
       say(
         `这两类动作的首次出现顺序不同：${label(a)}／${label(b)}`,
@@ -434,18 +436,24 @@ export function behaviorHtml(
     ),
   ];
   const referenceHtml = `<details class="br-reference"><summary>${say('查看参考做法与全部差异', 'Explore the reference and all differences')}</summary><p>${esc(view.nearest ?? say('这次没有可对照的参考做法。', 'No reference approach is available for this record.'))}</p>${reference ? steps(reference.sequence, true) : `<p>${say('这次没有可对照的参考做法。', 'No reference approach is available for this record.')}</p>`}${!valid && reference ? `<p>${say('差异记录待核对', 'Difference records need checking')}</p>` : ''}<ul>${differences.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>`;
-  const ideas = `<section class="br-ideas"><h3>${say('换个做法看看', 'Something to try next time')}</h3><p class="br-method">${say('参考做法来自预设脚本，供你挑选，不代表最佳路线。', 'These scripted examples offer ideas to try. They are not a best-practice benchmark.')}</p>${suggestions.map((s) => `<article class="br-idea"><h4>${esc(s.title)}</h4><p>${esc(s.observation)}</p><p class="br-basis">${esc(s.basis)}</p><p>${esc(s.practice)}</p>${s.action === 'test' ? `<a class="ec-tech" href="#/bench">${esc(s.label ?? '')} →</a>` : s.action ? `<button type="button" class="ec-tech" data-action="chat" data-role="${s.action}">${esc(s.label ?? '')} →</button>` : ''}</article>`).join('')}${!suggestions.length ? `<p>${say(!data.window ? '本次未记录起止范围，先保留动作事实。' : !valid && reference ? '差异记录待核对，先保留两份动作记录。' : !reference ? '这次没有可对照的参考做法。' : '当前没有可展示的重点练法。', !data.window ? 'No read window was recorded; the actions remain available.' : !valid && reference ? 'Difference records need checking; both action lists remain available.' : !reference ? 'No reference approach is available for this record.' : 'There are no highlighted suggestions for this record.')}</p>` : ''}${referenceHtml}</section>`;
+  const ideas = `<section class="br-ideas"><h3>${say('换个做法看看', 'Something to try next time')}</h3><p class="br-method">${say('参考做法来自预设脚本，供你挑选，不代表最佳路线。', 'These scripted examples offer ideas to try. They are not a best-practice benchmark.')}</p>${suggestions.map((s) => `<article class="br-idea"><h4>${esc(s.title)}</h4><p>${esc(s.observation)}</p><p>${esc(s.practice)}</p>${s.action === 'test' ? `<a class="ec-tech" href="#/bench">${esc(s.label ?? '')} →</a>` : s.action ? `<button type="button" class="ec-tech" data-action="chat" data-role="${s.action}">${esc(s.label ?? '')} →</button>` : ''}</article>`).join('')}${!suggestions.length ? `<p>${say(!data.window ? '本次未记录起止范围，先保留动作事实。' : !valid && reference ? '差异记录待核对，先保留两份动作记录。' : !reference ? '这次没有可对照的参考做法。' : '当前没有可展示的重点练法。', !data.window ? 'The covered range was not recorded; the actions remain available.' : !valid && reference ? 'Difference records need checking; both action lists remain available.' : !reference ? 'No reference approach is available for this record.' : 'There are no highlighted suggestions for this record.')}</p>` : ''}${referenceHtml}</section>`;
   const window = data.window
     ? say(
         `读取范围：记录 ${data.window.from_seq}–${data.window.to_seq}${typeof data.window.events === 'number' ? `，${data.window.events} 条事件` : ''}${typeof data.window.turns === 'number' ? `，${data.window.turns} 次提问` : ''}。`,
-        `Read window: records ${data.window.from_seq}–${data.window.to_seq}${typeof data.window.events === 'number' ? `, ${data.window.events} events` : ''}${typeof data.window.turns === 'number' ? `, ${data.window.turns} questions` : ''}.`,
+        `Read window: records ${data.window.from_seq}–${data.window.to_seq}${typeof data.window.events === 'number' ? `, ${data.window.events} ${data.window.events === 1 ? 'event' : 'events'}` : ''}${typeof data.window.turns === 'number' ? `, ${data.window.turns} ${data.window.turns === 1 ? 'question' : 'questions'}` : ''}.`,
       )
     : say(
         '本次读取的动作；起止范围未记录。',
         'Actions in this response; the read window was not recorded.',
       );
-  const record = `<p>${fallback ? say('阶段按动作类型整理；本次为规则回退。', 'Phases were grouped by action type using a rule fallback.') : data.recognizer ? say('本次用 HMM 解码工作阶段，用 DTW 匹配参考做法。', 'HMM decoded work phases; DTW matched reference approaches.') : say('实际方法未记录。', 'The actual method was not recorded.')}</p><p>${say('阶段是模型对上下文的划分，动作名称保持原样。', 'Phases interpret the action context; action names stay unchanged.')}</p><table class="jc-table"><caption>${say('返回的参考记录', 'Returned reference records')}</caption><tbody>${(data.strategy?.top3 ?? []).map((s) => `<tr><th>${esc(strategyName(s.strategy, l))}</th><td>${esc(String(s.distance))}</td></tr>`).join('')}</tbody></table><p>${say('距离越小，动作序列越接近；距离不是概率。', 'A smaller distance means a closer action sequence; it is not a probability.')}</p><p>${say('只记录了动作数量和首次顺序差异，没有逐步对应记录。', 'Only action counts and first-occurrence differences were recorded, not a step-by-step alignment.')}</p><p>${window}</p><p>${say('执行来源声明', 'Declared execution source')}：${esc(({human:say('本人','the learner'),own_agent:say('本人 Agent','own Agent'),reference_agent:say('参考 Agent','reference Agent')} as Record<string,string>)[data.executor.declared] ?? say('未说明','not recorded'))}</p><details><summary>${say('查看原始动作记录','View recorded action symbols')}</summary><ol>${data.sequence.map(row=>`<li>${row.seq} · ${esc(row.symbol)}${row.question?`<blockquote>${esc(row.question)}</blockquote>`:''}</li>`).join('')}</ol></details>${data.anomalies.length ? `<details><summary>${say('查看规则记录', 'View rule records')}</summary><ul>${data.anomalies.map((a) => `<li>${esc(a.rule)} · ${a.at_seq} · ${a.score}</li>`).join('')}</ul></details>` : ''}`;
-  return `${head}<details class="rc-behavior__steps"${options.stepsOpen ? ' open' : ''}><summary>${say('展开工作回放', 'Explore the work review')}</summary><div class="br-content"><section class="br-phases"><h3>${fallback ? say('按动作类型整理的阶段', 'Phases grouped by action type') : say('识别出的工作阶段', 'Recognised work phases')}</h3><p class="br-method">${say('按动作顺序，不表示耗时。点阶段查看对应动作。', 'Action order, not time spent. Select a phase to see its actions.')}</p>${bar}${legend}</section><div class="br-layout">${ideas}<section class="br-own"><h3>${say('这次做过的事', 'Your recorded actions')}</h3>${own}</section></div><footer><p class="rc-behavior__origin">${window} ${say('范围之外做过什么，单凭这份记录无法判断。', 'This record cannot tell us what happened outside this window.')}</p>${inspectorEntryHtml(say('阶段来自识别，练法来自参考对照', 'Recognised phases, suggestions from reference comparisons'), record, methodsHtml(l, 'behavior'), l)}</footer></div></details>`;
+  const eventCount = data.window?.events;
+  const turnCount = data.window?.turns;
+  const origin = say(`本次可见的 ${symbols.length} 个动作`, `${symbols.length} visible ${symbols.length === 1 ? 'action' : 'actions'} in this record`) +
+    (typeof eventCount === 'number' && typeof turnCount === 'number'
+      ? say(`，来自 ${eventCount} 条操作记录和 ${turnCount} 次提问。`, `, from ${eventCount} operation ${eventCount === 1 ? 'record' : 'records'} and ${turnCount} ${turnCount === 1 ? 'question' : 'questions'}.`)
+      : say('；操作记录和提问的数量未完整记录。', '; operation and question counts were not fully recorded.'));
+  const record = `<p>${fallback ? say('阶段按动作类型整理；本次为规则回退。', 'Phases were grouped by action type using a rule fallback.') : data.recognizer ? say('本次用 HMM 解码工作阶段，用 DTW 匹配参考做法。', 'HMM decoded work phases; DTW matched reference approaches.') : say('实际方法未记录。', 'The actual method was not recorded.')}</p><p>${say('阶段是模型对上下文的划分，动作名称保持原样。', 'Phases interpret the action context; action names stay unchanged.')}</p><table class="jc-table"><caption>${say('返回的参考记录', 'Returned reference records')}</caption><tbody>${(data.strategy?.top3 ?? []).map((s) => `<tr><th>${esc(strategyName(s.strategy, l))}</th><td>${Number.isFinite(s.distance) ? s.distance.toFixed(3) : esc(String(s.distance))}</td></tr>`).join('')}</tbody></table><details><summary>${say('查看距离完整精度', 'View full distance precision')}</summary><ol>${(data.strategy?.top3 ?? []).map(s => `<li>${esc(strategyName(s.strategy, l))} · ${esc(String(s.distance))}</li>`).join('')}</ol></details><p>${say('距离越小，动作序列越接近；距离不是概率。', 'A smaller distance means a closer action sequence; it is not a probability.')}</p><p>${say('只记录了动作数量和首次顺序差异，没有逐步对应记录。', 'Only action counts and first-occurrence differences were recorded, not a step-by-step alignment.')}</p><p>${window}</p><p>${say('执行来源声明', 'Declared execution source')}：${esc(({human:say('本人','the learner'),own_agent:say('本人 Agent','own Agent'),reference_agent:say('参考 Agent','reference Agent')} as Record<string,string>)[data.executor.declared] ?? say('未说明','not recorded'))}</p><details><summary>${say('查看原始差异记录', 'View raw difference records')}</summary><pre>${esc(JSON.stringify(data.alignment, null, 2))}</pre></details><details><summary>${say('查看原始动作记录','View recorded action symbols')}</summary><ol>${data.sequence.map(row=>`<li>${say('记录序号', 'Record sequence')} ${row.seq} · ${esc(row.symbol)}${row.question?`<blockquote>${esc(row.question)}</blockquote>`:''}</li>`).join('')}</ol></details>${data.anomalies.length ? `<details><summary>${say('查看规则记录', 'View rule records')}</summary><ul>${data.anomalies.map((a) => `<li>${esc(a.rule)} · ${a.at_seq} · ${a.score}</li>`).join('')}</ul></details>` : ''}`;
+  return `${head}<details class="rc-behavior__steps"${options.stepsOpen ? ' open' : ''}><summary>${say('展开工作回放', 'Explore the work review')}</summary><div class="br-content"><section class="br-phases" aria-label="${fallback ? say('按动作类型整理的阶段', 'Phases grouped by action type') : say('识别出的工作阶段', 'Recognised work phases')}"><p class="br-method">${say('按动作顺序，不表示耗时；点阶段查看动作。', 'Action order, not duration. Select a phase.')}</p>${bar}${legend}</section><div class="br-layout">${ideas}<section class="br-own"><h3>${say('这次做过的事', 'Your recorded actions')}</h3>${own}</section></div><footer><p class="rc-behavior__origin">${origin} ${say('范围之外做过什么，单凭这份记录无法判断。', 'This record cannot tell us what happened beyond the visible actions.')}</p>${inspectorEntryHtml(say('阶段来自识别，练法来自参考对照', 'Recognised phases, suggestions from reference comparisons'), record, methodsHtml(l, 'behavior'), l)}</footer></div></details>`;
 }
 
 if (typeof customElements !== 'undefined' && !customElements.get('rc-phase-timeline')) {

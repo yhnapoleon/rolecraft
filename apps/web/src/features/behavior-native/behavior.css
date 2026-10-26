@@ -395,3 +395,19 @@ rc-phase-timeline[data-compact="true"] .rc-phase-label {
     font-size: 13px;
   }
 }
+
+/* Keep the first observation and action together without shrinking text or controls. */
+@media (max-width: 700px) {
+  .br-head { gap: 12px; }
+  .br-head h2 { margin-top: 0; }
+  .br-head p { margin: 4px 0 0; }
+  .rc-behavior__steps { margin-top: 8px; }
+  .br-content { padding-top: 4px; }
+  .br-phases { padding: 10px; margin-bottom: 12px; }
+  .br-phases .br-method { margin-bottom: 8px; }
+  .br-content .rc-phase-legend { gap: 4px 12px; margin-top: 8px; }
+  .br-ideas > .br-method { margin: 4px 0 8px; }
+  .br-idea { padding: 12px 0; }
+  .br-idea h4 { margin-bottom: 8px; }
+  .br-content .br-idea p { margin: 8px 0; }
+}

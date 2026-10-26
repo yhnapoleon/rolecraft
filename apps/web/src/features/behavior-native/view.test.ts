@@ -187,10 +187,54 @@ it('summarises repeated differences before phases and preserves the full referen
     },
   };
   const h = behaviorHtml(d, 'zh');
-  expect(h).toContain('测试普通问题：参考多 2 次');
-  expect(h.indexOf('<rc-phase-timeline>')).toBeLessThan(h.indexOf('测试普通问题：参考多 2 次'));
+  expect(h).toContain('日常问题测试：本次 0 次，参考 2 次');
+  expect(h.indexOf('<rc-phase-timeline>')).toBeLessThan(h.indexOf('日常问题测试：本次 0 次，参考 2 次'));
   expect(h).toContain('差异记录待核对');
-  expect((h.match(/测试密集/g) || []).length).toBe(2);
+  expect((h.match(/<th>测试密集<\/th>/g) || []).length).toBe(2);
+  expect(h).toContain('测试密集 · 0.2');
+  expect(h).toContain('测试密集 · 0.3');
   expect(h).toContain('查看参考做法与全部差异');
   expect(h).toContain('没有逐步对应记录');
+});
+
+const productOnly = (html: string) => html.replace(/<template[\s\S]*?<\/template>/g, '');
+it.each(['zh', 'en'] as const)('uses explicit actual counts and keeps original duplicate sequence IDs technical in %s', language => {
+  const sample: Behavior = {
+    ...data, window: { from_seq: 1, to_seq: 3, events: 3, turns: 1 },
+    sequence: [...data.sequence, { seq: 3, symbol: 'configure' }],
+    alignment: { missing: ['test:normal', 'test:normal'], extra: ['configure'], swapped: [] },
+    strategy: { nearest: 'thorough', distance: 0.1, top3: [], reference: {
+      id: 'ref', index: 0, strategy: 'thorough', sequence: [...data.sequence.map(r => r.symbol), 'test:normal', 'test:normal'],
+    } },
+  };
+  const html = behaviorHtml(sample, language, { stepsOpen: true });
+  const product = productOnly(html);
+  expect(product).toContain(language === 'zh' ? '日常问题测试：本次 0 次，参考 2 次' : 'Everyday-question tests: this record 0 times, reference 2 times');
+  expect(product).toContain(language === 'zh' ? '配置：本次 1 次，参考 0 次' : 'Configured the pilot: this record 1 time, reference 0 times');
+  expect(product).toContain(language === 'zh' ? '本次可见的 5 个动作，来自 3 条操作记录和 1 次提问' : '5 visible actions in this record, from 3 operation records and 1 question');
+  expect(product).not.toMatch(/参考多|本次多|more in the reference|more in this record|configure|1 questions|1 times|记录序号|Record sequence|Read window/);
+  expect((html.match(language === 'zh' ? /记录序号 1 ·/g : /Record sequence 1 ·/g) ?? []).length).toBe(2);
+  expect(html).toContain('&quot;missing&quot;');
+  expect(html).toContain('&quot;extra&quot;');
+});
+it('formats distance to three decimals without merging references or treating rounded values as ties', () => {
+  const sample: Behavior = { ...data, strategy: {
+    nearest: 'thorough', distance: 0.3076923076923077,
+    top3: [{strategy:'thorough', distance:0.3076923076923077}, {strategy:'test_heavy',distance:0.3077}, {strategy:'test_heavy',distance:0.3078}],
+  } };
+  const html = behaviorHtml(sample, 'en');
+  const table = html.match(/<table class="jc-table">[\s\S]*?<\/table>/)?.[0] ?? '';
+  expect((table.match(/<td>0.308<\/td>/g) ?? []).length).toBe(3);
+  expect((table.match(/<th>Test-heavy<\/th>/g) ?? []).length).toBe(2);
+  expect(html).toContain('View full distance precision');
+  expect(html).toContain('0.3076923076923077');
+  expect(html).toContain('0.3077');
+  expect(html).toContain('0.3078');
+  expect(behaviorView(sample, 'en')?.nearest).toBe('Selected reference approach: Read, ask, then test');
+  expect(behaviorView(sample, 'en')?.runnersUp).toContain('Test-heavy (2 references)');
+});
+it('does not invent reference counts from missing/extra when the reference is unavailable', () => {
+  const html = productOnly(behaviorHtml(data, 'en'));
+  expect(html).toContain('reference actions were not provided, so their count cannot be checked');
+  expect(html).not.toContain('reference 1 time');
 });

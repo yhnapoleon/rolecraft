@@ -452,3 +452,13 @@ rc-evidence-list.rc-business-reading {
 .aipm-evidence-summary__compact{width:100%;display:flex;align-items:baseline;gap:16px;text-align:left;padding:12px 0;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink);font:400 14px/1.6 var(--sans);cursor:pointer;min-height:44px}.aipm-evidence-summary__compact span{flex:1}.aipm-evidence-summary__compact small{font-size:12px;color:var(--ink-2)}.aipm-review .aipm-evidence-summary .aipm-evidence-summary__item blockquote{font:400 16px/1.65 var(--serif);margin:10px 0;border-left:1px solid var(--line-2);padding-left:12px}
 
 @media(max-width:600px){.ec-sentence[open]>summary .rc-business-quote,.ec-sentence[open]>summary .ec-index,.ec-sentence[open]>summary .ec-hint{display:none}.ec-sentence[open]>summary .ec-status{margin-left:0}.ec-sentence[open]>summary{padding:14px 0}.evidence-check .ec-comparison>div:first-child>.ec-caption:last-child{display:none}.evidence-check .ec-checks{margin-top:16px}.evidence-check .ec-relation{margin-block:8px}.evidence-check .ec-next{margin-top:14px}}
+
+.rc-inspector .ri-method-table { width: 100%; border-collapse: collapse; text-align: left; }
+.rc-inspector .ri-method-table th, .rc-inspector .ri-method-table td { padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.rc-inspector .ri-method-table th[scope="row"] { width: 28%; font-weight: 500; }
+@media (max-width: 700px) {
+  .rc-inspector .ri-method-table th, .rc-inspector .ri-method-table td { padding: 10px 6px; }
+  .rc-inspector .ri-method-table th[scope="row"] { width: 30%; }
+}
+
+.ri-identities code { overflow-wrap: anywhere; }

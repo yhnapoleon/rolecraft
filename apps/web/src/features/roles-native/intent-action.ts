@@ -9,6 +9,7 @@ export function intentAction(
   records: readonly RecognitionRecord[] | undefined,
   materials: readonly MaterialReference[] | undefined,
   language: Language,
+  readOnly = false,
 ) {
   const record = [...(records ?? [])].reverse().find((r) => r.task === 'intent');
   if (
@@ -24,8 +25,9 @@ export function intentAction(
     return {
       kind: 'request' as const,
       label: t('打开申请表', 'Open the request form'),
-      reason:
-        record.label === 'seek_approval'
+      reason: readOnly
+        ? t('先查看要求；开始修订后才能填写申请。', 'Read the requirements first; start a revision before filling in a request.')
+        : record.label === 'seek_approval'
           ? t(
               '这次提问看起来在询问批准。你可以从申请表继续，内容由你决定。',
               'It looks like you’re asking for approval. Use the form to make a request in your own words.',

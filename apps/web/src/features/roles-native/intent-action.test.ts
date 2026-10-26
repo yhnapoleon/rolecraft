@@ -35,3 +35,12 @@ it('opens only a process source cited in the same reply', () => {
 it('uses the latest intent on this reply without reclassifying text', () => {
   expect(intentAction([record('seek_approval', 0.9), record('other', 0.9)], [], 'zh')).toBeNull();
 });
+
+it.each(['zh', 'en'] as const)('explains read-only request entry consistently in %s for approval and resources', language => {
+  for (const label of ['seek_approval', 'ask_resource']) {
+    const readonly = intentAction([record(label, 0.85)], [], language, true);
+    expect(readonly?.kind).toBe('request');
+    expect(readonly?.reason).toBe(language === 'zh' ? '先查看要求；开始修订后才能填写申请。' : 'Read the requirements first; start a revision before filling in a request.');
+    expect(readonly?.reason).not.toBe(intentAction([record(label, 0.85)], [], language, false)?.reason);
+  }
+});

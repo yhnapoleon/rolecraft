@@ -736,7 +736,8 @@ export function mount(
       line.textContent = note;
       extra.append(line);
     }
-    const related = intentAction(turn.recognition, turn.materials, locale());
+    const readOnly = !!view?.restriction;
+    const related = intentAction(turn.recognition, turn.materials, locale(), readOnly);
     if (
       turn.status === 'completed' &&
       turn.reply &&
@@ -745,7 +746,6 @@ export function mount(
         (related.kind === 'material' && adapter.openMaterial))
     ) {
       const action = button('rc-intent-action');
-      const readOnly = !!view?.restriction;
       const requestSource = turn.materials?.find(m => m.id === 'approvals');
       const actionLabel = readOnly && related.kind === 'request' ? T('查看申请要求', 'Read the request requirements') : related.label;
       action.textContent = `${actionLabel} →`;

@@ -75,6 +75,8 @@ import { modelPartsHtml, modelPopoverHtml, modelStatus, modelWaitHtml } from './
 import { awaitingRoles, isLocalReply, previewLine } from '../features/roles-native/chat-model';
 import { requestRefs } from '../features/roles-native/v4-data';
 import { aboutFacts } from './about-facts';
+import { modalOwnsEscape } from './modal-keyboard';
+import { loadModelIdentities } from '../features/recognition-native/model-identities';
 import { canonicalPurpose } from '../features/workspace/native-v4/form-values';
 import { workspaceActionMessage } from '../features/workspace/native-v4/messages';
 import { pendingTurnRole, serverText } from '../store';
@@ -6413,6 +6415,16 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     case 'about':
       sheetAbout();
+      if (el.hasAttribute('data-ri-about')) {
+        const model = sheet.querySelector('[data-about="model"]');
+        const identities = document.createElement('section');
+        identities.dataset.modelIdentities = '';
+        identities.tabIndex = -1;
+        model?.prepend(identities);
+        identities.focus();
+        identities.scrollIntoView({ block: 'start' });
+        loadModelIdentities(identities, () => L.recognition(a), locale());
+      }
       break;
     case 'review-menu':
       toggleReviewMenu();
@@ -8230,7 +8242,7 @@ document.addEventListener('keydown', (e) => {
     dismissToasts();
     notify(T('已撤销', 'Undone'));
   }
-  if (e.key === 'Escape' && !sheet.open) {
+  if (e.key === 'Escape' && !modalOwnsEscape(e, document)) {
     if (ui.menu) {
       ui.menu = null;
       if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
