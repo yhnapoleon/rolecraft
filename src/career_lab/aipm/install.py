@@ -9,12 +9,17 @@ from career_lab.api.aipm_routes import mount_aipm_routes
 from career_lab.api.modules import Operation, V2Response
 from career_lab.contracts import v2 as C
 
+from .drafts import handlers as draft_handlers
 from .feedback_discovery import discover
 from .progress import default_contents, design_facts, enrolled, handlers
 from .types import (
+    AipmDesignDraft,
     AipmFocus,
     AipmProfile,
     AipmStepLink,
+    DraftInput,
+    DraftList,
+    DraftResolve,
     EmptyRead,
     EnrollInput,
     FeedbackRead,
@@ -27,6 +32,7 @@ OBJECT_MODELS = {
     "aipm_profile": AipmProfile,
     "aipm_focus": AipmFocus,
     "aipm_step_link": AipmStepLink,
+    "aipm_design_draft": AipmDesignDraft,
     **DESIGN_MODELS,
     **EVALUATION_MODELS,
 }
@@ -95,6 +101,24 @@ def install_aipm(app, contents=None):
         ("aipm.step_links.save", StepLinkInput),
     ):
         registry.register(Operation(name, "act", model, own[name]))
+
+    drafts = draft_handlers(catalog, registry)
+    registry.register(
+        Operation("aipm.design.draft", "act", DraftInput, drafts["aipm.design.draft"])
+    )
+    registry.register(
+        Operation(
+            "aipm.design_drafts.resolve",
+            "act",
+            DraftResolve,
+            drafts["aipm.design_drafts.resolve"],
+        )
+    )
+    registry.register(
+        _read(
+            "aipm.design_drafts.list", DraftList, drafts["aipm.design_drafts.list"], "observation"
+        )
+    )
 
     # L2 rules come from the enrolled package only; one operation set per rules file.
     built = {}

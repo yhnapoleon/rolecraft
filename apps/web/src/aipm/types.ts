@@ -19,7 +19,7 @@ export type ObjectRef = {
 };
 
 export type PublicAction = {
-  action: "open_step" | "open_work" | "open_material" | "ask_colleague" | "request_review" | "open_settings" | "open_feedback";
+  action: "open_step" | "open_work" | "open_material" | "ask_colleague" | "request_review" | "open_settings" | "open_feedback" | "review_agent_draft";
   label: string;
   target?: ObjectRef | null;
   step_id?: "business" | "stakeholders" | "need" | "boundary" | "solution" | "assurance" | "decision" | null;
@@ -165,7 +165,16 @@ export type AipmProgress = {
   steps: (ProgressStep)[];
   submission_feedback?: (FeedbackDiscovery)[];
   unresolved_business_items?: (PublicGap)[];
+  /** Agent drafts never count as step records until the owner adopts them. */
+  pending_agent_drafts?: (DraftSummary)[];
   next_cursor?: string | null;
+};
+
+export type DraftSummary = {
+  ref: ObjectRef;
+  author_kind: "human" | "external_agent" | "reference_agent" | "system";
+  steps: StepId[];
+  status?: "pending_owner_review";
 };
 
 export type AipmProfile = {
@@ -361,3 +370,37 @@ export type AipmAssessment = {
   reason: string;
   evidence_refs?: (EvidenceRefV2)[];
 };
+
+export const DRAFT_PRECHECK = "draft_precheck_pending_owner" as const;
+
+/** What an Agent proposed; shown to the owner as "from your Agent · awaiting you". */
+export type AipmDesignDraft = {
+  schema_version?: 2;
+  id: string;
+  session_id: string;
+  revision: number;
+  author: { id: string; kind: "human" | "external_agent" | "reference_agent" | "system"; delegation_id?: string | null };
+  status: "pending_owner_review" | "adopted" | "dismissed";
+  base_design_ref?: ObjectRef | null;
+  business?: BusinessDeclaration | null;
+  stakeholders?: (StakeholderDeclaration)[];
+  needs?: (NeedDeclaration)[];
+  rows?: (TriageRow)[];
+  solution?: SolutionIntent | null;
+  prd_sections?: Partial<Record<StepId, string>>;
+  note?: string | null;
+  resolved_by?: string | null;
+  adopted_design_ref?: ObjectRef | null;
+};
+
+export type DraftResolve = {
+  schema_version?: 2;
+  draft_id: string;
+  expected_revision: number;
+  status: "adopted" | "dismissed";
+  adopted_design_ref?: ObjectRef | null;
+};
+
+/** Rule output on the draft only, recomputed on read; not formal process feedback. */
+export type DraftPrecheck = { label: typeof DRAFT_PRECHECK; findings: ProcessFeedback[] };
+export type DraftPage = { items: { ref: ObjectRef; draft: AipmDesignDraft; precheck: DraftPrecheck }[] };

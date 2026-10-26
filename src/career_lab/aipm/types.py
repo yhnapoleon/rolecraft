@@ -6,11 +6,11 @@ may write. L2/L3 handlers return Mutation; their registration is owned by L4.
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from career_lab.contracts.v2 import V2, EvidenceRefV2, ObjectRef, VersionPoint
+from career_lab.contracts.v2 import V2, EvidenceRefV2, Executor, ObjectRef, VersionPoint
 
 StepId = Literal[
     "business", "stakeholders", "need", "boundary", "solution", "assurance", "decision"
@@ -41,6 +41,7 @@ class PublicAction(DTO):
         "request_review",
         "open_settings",
         "open_feedback",
+        "review_agent_draft",
     ]
     label: str
     target: ObjectRef | None = None
@@ -132,6 +133,13 @@ class ProgressStep(GuideStep):
     next_actions: tuple[PublicAction, ...] = ()
 
 
+class DraftSummary(DTO):
+    ref: ObjectRef
+    author_kind: Literal["human", "external_agent", "reference_agent", "system"]
+    steps: tuple[StepId, ...]
+    status: Literal["pending_owner_review"] = "pending_owner_review"
+
+
 class AipmProgress(DTO):
     schema_version: Literal[1] = 1
     session_id: str
@@ -145,6 +153,8 @@ class AipmProgress(DTO):
     steps: tuple[ProgressStep, ...]
     submission_feedback: tuple[FeedbackDiscovery, ...] = ()
     unresolved_business_items: tuple[PublicGap, ...] = ()
+    # Agent drafts never count as step records until the owner adopts them.
+    pending_agent_drafts: tuple[DraftSummary, ...] = ()
     next_cursor: str | None = None
 
 
@@ -334,3 +344,45 @@ class AipmAssessment(V2):
     result: Literal["satisfied", "not_satisfied", "unknown", "unsupported"]
     reason: str
     evidence_refs: tuple[EvidenceRefV2, ...] = ()
+
+
+DRAFT_PRECHECK = "draft_precheck_pending_owner"
+
+
+class DraftContent(V2):
+    """What an Agent may propose. Same shapes as the owner's AipmDesign plus PRD text."""
+
+    business: BusinessDeclaration | None = None
+    stakeholders: tuple[StakeholderDeclaration, ...] = Field(default=(), max_length=20)
+    needs: tuple[NeedDeclaration, ...] = Field(default=(), max_length=20)
+    rows: tuple[TriageRow, ...] = Field(default=(), max_length=40)
+    solution: SolutionIntent | None = None
+    prd_sections: dict[StepId, Annotated[str, Field(max_length=4000)]] = Field(default_factory=dict)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class DraftInput(DraftContent):
+    draft_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    expected_revision: int = Field(ge=0)
+
+
+class DraftResolve(V2):
+    draft_id: str
+    expected_revision: int = Field(ge=1)
+    status: Literal["adopted", "dismissed"]
+    adopted_design_ref: ObjectRef | None = None
+
+
+class DraftList(V2):
+    status: Literal["pending_owner_review", "all"] = "pending_owner_review"
+
+
+class AipmDesignDraft(DraftContent):
+    id: str
+    session_id: str
+    revision: int = Field(ge=1)
+    author: Executor
+    status: Literal["pending_owner_review", "adopted", "dismissed"] = "pending_owner_review"
+    base_design_ref: ObjectRef | None = None
+    resolved_by: str | None = None
+    adopted_design_ref: ObjectRef | None = None

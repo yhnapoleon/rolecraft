@@ -200,6 +200,28 @@ class HttpAgentClient:
         except (KeyError, TypeError):
             raise RemoteFailure("aipm_contract_invalid", 503) from None
 
+    def aipm_draft(self, arguments):
+        """The one extension write: an Agent draft awaiting the owner's review."""
+        if not isinstance(arguments, dict) or set(arguments) - {"session_id", "command"}:
+            raise RemoteFailure("tool_arguments_invalid", 422)
+        credentials = self._credentials()
+        if arguments.get("session_id", credentials.session_id) != credentials.session_id:
+            raise RemoteFailure("session_route_mismatch", 404)
+        try:
+            command = C.Command.model_validate(arguments["command"])
+        except (KeyError, ValidationError):
+            raise RemoteFailure("tool_arguments_invalid", 422) from None
+        if command.operation != "aipm.design.draft":
+            raise RemoteFailure("operation_route_mismatch", 403)
+        value = self._request(credentials, "POST", "/aipm/drafts", command.model_dump(mode="json"))
+        try:
+            result = value["result"]
+            if not isinstance(result, dict):
+                raise TypeError
+            return {"request_id": command.request_id, **result}
+        except (KeyError, TypeError):
+            raise RemoteFailure("aipm_contract_invalid", 503) from None
+
     def _editable_head(self, credentials, observation, payload, deadline=None):
         product_id = payload.get("product_id")
         head = next((p for p in observation.products if p.object_id == product_id), None)
