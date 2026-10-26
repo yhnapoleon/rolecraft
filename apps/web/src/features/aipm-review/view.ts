@@ -353,9 +353,10 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
             'The model is looking… Rule results are listed first; the model’s judgement follows.',
           )
         : model.status === 'failed'
-          ? t(
-              `模型细看没有完成：${model.error ?? '原因未返回'}。下面只有规则判定。`,
-              `The model look did not finish: ${model.error ?? 'no reason returned'}. Only rule results are below.`,
+          ? // The server's reason is its own sentence (an interrupted look says to send it again).
+            t(
+              `模型细看没有完成。${sentence(model.error ?? '原因未返回', '。')}下面是规则判定。`,
+              `The model look did not finish. ${sentence(model.error ?? 'No reason was returned', '.')} Rule results are below.`,
             )
           : null;
   if (coverage.length || modelLine) {
@@ -558,6 +559,10 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   root.append(grid);
   return root;
 }
+
+/** A reason as one sentence, ending with exactly one full stop. */
+const sentence = (text: string, stop: string) =>
+  `${text.trim().replace(/[。.！!；;]+$/, '')}${stop}`;
 
 /** The first descendant with this class, in the page's DOM or the tests' text DOM. */
 function findClass(node: Element, name: string): Element | null {
