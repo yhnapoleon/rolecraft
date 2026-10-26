@@ -1,0 +1,263 @@
+/** FIXTURE ONLY: the design, batch and host below are fake data for component tests.
+ * They are not evidence that the normal entry or L1/L4 wiring works. */
+import { describe, expect, it, vi } from 'vitest';
+import en from '../../../../../scenarios/pm_pilot/aipm-phase1/public/evaluation.en.json';
+import zh from '../../../../../scenarios/pm_pilot/aipm-phase1/public/evaluation.zh.json';
+import type { AipmDesign, ObjectRef } from '../../aipm/types';
+import { type EvaluationHost, installAipmEvaluation } from './index';
+import {
+  type BatchView,
+  buckets,
+  coverageOf,
+  type EvaluationContent,
+  type EvaluationCase,
+  planPayload,
+  ratio,
+  regressionDraft,
+  selections,
+  starterDraft,
+  summaryLines,
+} from './model';
+import { type DeskState, renderDesk } from './view';
+
+const content = { zh: zh as EvaluationContent, en: en as EvaluationContent };
+const ref = (kind: string, id: string, version = 1): ObjectRef => ({
+  session_id: 's',
+  kind,
+  object_id: id,
+  version,
+});
+const row = (
+  id: string,
+  route: AipmDesign['rows'] extends (infer R)[] | undefined
+    ? R extends { route: infer X }
+      ? X
+      : never
+    : never,
+) => ({
+  id,
+  revision: 1,
+  need_ref: `need-${id}`,
+  user_request: `FIXTURE request ${id}`,
+  target_action: 'explain' as const,
+  route,
+  rationale: '',
+  final_authority: 'named_human_role' as const,
+});
+const design: AipmDesign = {
+  id: 'design',
+  session_id: 's',
+  revision: 2,
+  rows: [
+    row('r1', 'retrieval_generation'),
+    row('r2', 'deterministic'),
+    row('r3', 'agent_confirmation'),
+    row('r4', 'human'),
+  ],
+};
+const rows = design.rows ?? [];
+const evalCase = (
+  id: string,
+  route: EvaluationCase['route'],
+  status: EvaluationCase['status'],
+): EvaluationCase => ({
+  id,
+  need_ref: 'n',
+  triage_row_id: 'r1',
+  triage_row_revision: 1,
+  request_id: `req-${id}`,
+  test_case_ref: ref('product', 'plan'),
+  expected_ref: ref('product', 'plan'),
+  status,
+  case_revision: 1,
+  route,
+  coverage: status === 'unsupported' ? 'plan_only' : 'assistant_answer',
+  run_ref: status === 'completed' ? ref('test', `t-${id}`) : null,
+});
+const count = (over: Partial<BatchView['summary']['all']> = {}) => ({
+  total: 0,
+  runnable: 0,
+  completed: 0,
+  assessed: 0,
+  satisfied: 0,
+  unknown: 0,
+  unsupported: 0,
+  execution_failed: 0,
+  completion_rate: null,
+  assessment_rate: null,
+  satisfaction_rate: null,
+  judge: 'learner_assessment' as const,
+  ...over,
+});
+const view: BatchView = {
+  batch: {
+    id: 'batch',
+    session_id: 's',
+    revision: 4,
+    design_ref: ref('aipm_design', 'design', 2),
+    plan_ref: ref('product', 'plan'),
+    config_ref: ref('config', 'c'),
+    execution_mode: 'extractive',
+    pause_reason: null,
+    cases: [
+      evalCase('a', 'retrieval_generation', 'completed'),
+      evalCase('b', 'retrieval_generation', 'completed'),
+      evalCase('c', 'deterministic', 'unsupported'),
+      evalCase('d', 'retrieval_generation', 'pending'),
+    ],
+  },
+  assessments: [{ case_id: 'a', result: 'satisfied', reason: 'FIXTURE', assessed_by: 'learner' }],
+  summary: {
+    all: count({
+      total: 4,
+      runnable: 3,
+      completed: 2,
+      assessed: 1,
+      satisfied: 1,
+      unknown: 1,
+      unsupported: 1,
+    }),
+    deterministic: count({ total: 1, unsupported: 1 }),
+    retrieval_generation: count({
+      total: 3,
+      runnable: 3,
+      completed: 2,
+      assessed: 1,
+      satisfied: 1,
+      unknown: 1,
+    }),
+    agent_confirmation: count(),
+    human: count(),
+  },
+};
+const desk = (over: Partial<DeskState> = {}): DeskState => ({
+  language: 'zh',
+  readOnly: false,
+  tab: 'cases',
+  content: content.zh,
+  design,
+  drafts: [],
+  view: null,
+  monitoring: [],
+  canSendPrepared: false,
+  running: false,
+  busy: false,
+  notice: null,
+  judging: {},
+  ...over,
+});
+
+describe('evaluation content', () => {
+  it('keeps both languages structurally identical and separate', () => {
+    const shape = (c: EvaluationContent) => [
+      c.routes.map((r) => [r.id, r.case_types.map((t) => t.id)]),
+      c.monitoring.fields.map((f) => f.id),
+      c.regression.id,
+    ];
+    expect(shape(content.en)).toEqual(shape(content.zh));
+    expect(JSON.stringify(en)).not.toMatch(/[一-鿿]/);
+    expect(content.zh.regression.expected_hint).toMatch(/500.*400/);
+  });
+});
+
+describe('cases and expectations', () => {
+  it('starts each case empty: a suggestion, never a filled-in expectation', () => {
+    const draft = starterDraft(rows[0], content.zh, 'k');
+    expect(draft.query).toBe('');
+    expect(draft.expected).toBe('');
+    expect(regressionDraft(design, content.zh, 'k2')?.expected).toBe('');
+  });
+
+  it('runs only answer coverage and never deterministic rows', () => {
+    const base = starterDraft(rows[0], content.zh, 'k');
+    expect(coverageOf(base)).toBe('assistant_answer');
+    expect(coverageOf({ ...base, route: 'deterministic', answerOnly: true })).toBe('plan_only');
+    expect(coverageOf(starterDraft(rows[2], content.zh, 'k'))).toBe('plan_only');
+  });
+
+  it('saves only cases with an expectation and maps saved ids in order', () => {
+    const drafts = [
+      { ...starterDraft(rows[0], content.zh, 'a'), query: 'q1', expected: 'e1' },
+      { ...starterDraft(rows[1], content.zh, 'b'), query: 'q2', expected: '' },
+      { ...starterDraft(rows[3], content.zh, 'c'), query: 'q3', expected: 'e3' },
+    ];
+    expect(planPayload(drafts).cases.map((c) => c.query)).toEqual(['q1', 'q3']);
+    expect(selections(drafts, ['s1', 's3'])).toEqual([
+      { case_id: 's1', triage_row_id: 'r1', coverage: 'assistant_answer' },
+      { case_id: 's3', triage_row_id: 'r4', coverage: 'assistant_answer' },
+    ]);
+    expect(() => selections(drafts, ['s1'])).toThrow('evaluation_plan_mismatch');
+  });
+});
+
+describe('run, judgement and plan-only cases stay apart', () => {
+  it('separates a finished run from a judged case', () => {
+    const b = buckets(view);
+    expect(b.judged.map((c) => c.id)).toEqual(['a']);
+    expect(b.awaitingJudgement.map((c) => c.id)).toEqual(['b']);
+    expect(b.unsupported.map((c) => c.id)).toEqual(['c']);
+    expect(b.waiting.map((c) => c.id)).toEqual(['d']);
+  });
+
+  it('writes every rate with its denominator and the judge', () => {
+    expect(ratio('zh', 0, 0)).toBe('暂无可计算的分母');
+    const lines = summaryLines('zh', view.summary.all);
+    expect(lines.map((l) => l.value)).toEqual(['2 / 3（67%）', '1 / 2（50%）', '1 / 1（100%）']);
+    expect(lines[0].note).toContain('1 道计划用例不计入');
+    expect(lines[2].note).toContain('判定人：你本人');
+  });
+
+  it('disables running without the verbatim transport instead of sending a new command', () => {
+    const html = renderDesk(desk({ tab: 'run', view }));
+    expect(html).toMatch(/data-eval-action="run" disabled/);
+    expect(html).toContain('运行还没接入');
+    expect(renderDesk(desk({ tab: 'run', view, canSendPrepared: true }))).not.toMatch(
+      /data-eval-action="run" disabled/,
+    );
+  });
+
+  it('renders each language without the other', () => {
+    for (const tab of ['cases', 'run', 'monitoring'] as const) {
+      const english = renderDesk(
+        desk({ tab, view, language: 'en', content: content.en, monitoring: [] }),
+      );
+      expect(english.replace(/FIXTURE[^<"]*/g, '')).not.toMatch(/[一-鿿]/);
+      expect(renderDesk(desk({ tab, view }))).not.toMatch(/Run the remaining|Judged by|Plan only/);
+    }
+  });
+
+  it('marks monitoring as a plan, not deployed', () => {
+    const html = renderDesk(desk({ tab: 'monitoring', view }));
+    expect(html).toContain('不代表监控已经部署');
+    expect(html).toMatch(/data-eval-action="save-monitoring"[^>]*disabled/);
+  });
+});
+
+describe('installAipmEvaluation', () => {
+  it('registers the evaluation feature and loads the saved design and batch', async () => {
+    const register = vi.fn(() => () => undefined);
+    const host: EvaluationHost = {
+      getSessionContext: () => ({ sessionId: 's', workLanguage: 'en', readOnly: false }),
+      getClient: () => ({
+        readDesign: async () => ({ result: { design } }),
+        readBatch: async () => ({ result: { result: view } }),
+      }),
+      readProgress: async () => ({
+        steps: [
+          { evidence_refs: [ref('aipm_design', 'design', 1), ref('aipm_design', 'design', 2)] },
+          { evidence_refs: [ref('aipm_batch', 'batch', 4)] },
+        ],
+      }),
+      command: vi.fn(),
+      createWorkVersion: vi.fn(),
+      registerFeature: register,
+    };
+    const installed = installAipmEvaluation(host, { content });
+    expect(register).toHaveBeenCalledWith('evaluation', installed.feature);
+    await installed.load();
+    expect(installed.state.design?.revision).toBe(2);
+    expect(installed.state.view?.batch.id).toBe('batch');
+    expect(installed.state.canSendPrepared).toBe(false);
+    expect(installed.feature.render()).toContain('Evaluation, monitoring and rollback');
+  });
+});

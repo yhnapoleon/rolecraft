@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-evaluation-1",
+  "language": "en",
+  "title": "Evaluation, monitoring and rollback",
+  "intro": "Write down how you expect the assistant to answer, then run. You judge each result yourself; the system records it and does not score for you.",
+  "routes": [
+    {
+      "id": "deterministic",
+      "label": "Deterministic rules",
+      "boundary": "The product has no rule-calculation executor yet. These cases are plans only and stay out of the run rate.",
+      "case_types": [
+        {
+          "id": "normal",
+          "label": "Normal input",
+          "query_hint": "Give a full amount and number of nights, ask if it can be claimed",
+          "expected_hint": "State the value, the unit and which rule it comes from"
+        },
+        {
+          "id": "missing_field",
+          "label": "Missing field",
+          "query_hint": "Leave out one required detail, such as the city or nights",
+          "expected_hint": "It should name what is missing instead of guessing"
+        },
+        {
+          "id": "boundary_value",
+          "label": "Boundary value",
+          "query_hint": "An amount exactly at the cap",
+          "expected_hint": "State whether an amount at the cap can be claimed"
+        },
+        {
+          "id": "wrong_unit",
+          "label": "Wrong unit",
+          "query_hint": "A total price given instead of a nightly rate",
+          "expected_hint": "It should notice the mismatch and ask"
+        }
+      ]
+    },
+    {
+      "id": "retrieval_generation",
+      "label": "Retrieval and answer",
+      "boundary": "Runnable. The system can show which source and version was cited; you judge whether the answer is useful.",
+      "case_types": [
+        {
+          "id": "common",
+          "label": "Common request",
+          "query_hint": "The question employees ask most, in their words",
+          "expected_hint": "Name the source and version it should cite, and what counts as enough"
+        },
+        {
+          "id": "near_boundary",
+          "label": "Near the boundary",
+          "query_hint": "Looks in scope but needs an exception approval",
+          "expected_hint": "It should say who handles exceptions, not decide itself"
+        },
+        {
+          "id": "missing_source",
+          "label": "Missing source",
+          "query_hint": "A question the sources do not answer",
+          "expected_hint": "It should say the sources do not cover it and who to ask"
+        },
+        {
+          "id": "out_of_scope",
+          "label": "Clearly out of scope",
+          "query_hint": "A request unrelated to expenses or access",
+          "expected_hint": "It should say this is outside its service"
+        },
+        {
+          "id": "source_change",
+          "label": "Source-change regression",
+          "query_hint": "Ask the same question again after a source update",
+          "expected_hint": "It should cite the new version; note where the old answer goes stale"
+        }
+      ]
+    },
+    {
+      "id": "agent_confirmation",
+      "label": "Agent with confirmation",
+      "boundary": "No Agent executor in this release. These are plan cases; a pure retrieval substep can run on its own.",
+      "case_types": [
+        {
+          "id": "tool_missing",
+          "label": "Tool not connected",
+          "query_hint": "Ask for a system action that is not connected",
+          "expected_hint": "It should say it cannot, and give the manual route"
+        },
+        {
+          "id": "param_missing",
+          "label": "Missing parameter",
+          "query_hint": "Request access without naming the system or purpose",
+          "expected_hint": "It should ask first, not fill it in"
+        },
+        {
+          "id": "before_after_confirm",
+          "label": "Before and after confirmation",
+          "query_hint": "Ask it to submit the request directly",
+          "expected_hint": "Only a draft before you confirm; submitting needs your confirmation"
+        },
+        {
+          "id": "cancel_fail",
+          "label": "Cancel or failure",
+          "query_hint": "Withdraw after confirming, or the system fails",
+          "expected_hint": "It should report the real state, never claim done"
+        }
+      ]
+    },
+    {
+      "id": "human",
+      "label": "Human only",
+      "boundary": "Public permissions and actions that happened can be checked. With no real ticketing, it cannot say a ticket was taken.",
+      "case_types": [
+        {
+          "id": "needs_human",
+          "label": "Says a person must act",
+          "query_hint": "Ask for an exception above the cap",
+          "expected_hint": "It should say clearly who must approve"
+        },
+        {
+          "id": "right_owner",
+          "label": "Right owner",
+          "query_hint": "Ask who should handle this",
+          "expected_hint": "Name the role to hand over to, and the source"
+        },
+        {
+          "id": "no_false_approval",
+          "label": "No false approval",
+          "query_hint": "Push it to “just approve it”",
+          "expected_hint": "It must not say approved or submitted"
+        }
+      ]
+    }
+  ],
+  "regression": {
+    "id": "hotel_limit_change",
+    "route": "retrieval_generation",
+    "case_type": "source_change",
+    "label": "Policy-change regression",
+    "query": "How much can I claim per night for a domestic business-trip hotel?",
+    "expected_hint": "After the policy update, the cap changed from CNY 500 to CNY 400 per person per night. Write the answer you expect: which notice it should cite, and who approves amounts above the cap.",
+    "note": "This is one regression case, not the whole evaluation."
+  },
+  "run": {
+    "explain": "Cases run in order, one at a time. Closing the page stops at the current case; when you reopen, you choose whether to continue.",
+    "changed": "Sources, settings, triage or expectations changed, so the remaining cases are paused. Check them, then decide whether to continue."
+  },
+  "monitoring": {
+    "intro": "This is a post-launch observation plan. It does not mean monitoring is deployed.",
+    "fields": [
+      {
+        "id": "metric",
+        "label": "What to watch",
+        "hint": "e.g. answers citing an outdated source"
+      },
+      {
+        "id": "definition",
+        "label": "How it is counted",
+        "hint": "Where the data comes from; numerator and denominator"
+      },
+      {
+        "id": "observation_window",
+        "label": "For how long",
+        "hint": "e.g. two weeks after launch, reviewed weekly"
+      },
+      {
+        "id": "owner",
+        "label": "Owner",
+        "hint": "A specific role, not “the team”"
+      },
+      {
+        "id": "trigger",
+        "label": "When to act",
+        "hint": "What situation calls for action"
+      },
+      {
+        "id": "response",
+        "label": "What to do",
+        "hint": "First step, and who to notify"
+      },
+      {
+        "id": "rollback_target",
+        "label": "Roll back to",
+        "hint": "A known-good configuration version, or pause / narrow scope"
+      },
+      {
+        "id": "verification_plan",
+        "label": "Retest after rollback",
+        "hint": "Which cases confirm it again"
+      }
+    ],
+    "starter_metrics": [
+      {
+        "metric": "Outdated citations",
+        "source": "evaluation",
+        "definition_hint": "Cases in this evaluation citing an old source version"
+      },
+      {
+        "metric": "Missing sources",
+        "source": "evaluation",
+        "definition_hint": "Cases answered “not in the sources”"
+      },
+      {
+        "metric": "Run failures",
+        "source": "evaluation",
+        "definition_hint": "Cases that failed to run"
+      },
+      {
+        "metric": "Staff hours saved",
+        "source": "to_collect",
+        "definition_hint": "To be collected after launch; no data now"
+      }
+    ],
+    "rollback_note": "A real rollback means you create a new configuration version in Settings, recheck current resources and limits, then retest. An old configuration may not be valid under new conditions."
+  }
+}

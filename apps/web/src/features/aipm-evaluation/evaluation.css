@@ -1,0 +1,315 @@
+/* AIPM evaluation desk. Every selector is under .aipm-eval so older practices are untouched. */
+.aipm-eval {
+  display: grid;
+  gap: 14px;
+  color: var(--ink);
+}
+.aipm-eval h3 {
+  margin: 0;
+  font: 600 17px / 1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+.aipm-eval h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 4px;
+  font: 600 14px / 1.35 var(--sans);
+}
+.aipm-eval h4 span {
+  color: var(--ink-3);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.aipm-eval__head {
+  display: grid;
+  gap: 4px;
+}
+.aipm-eval__muted {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.aipm-eval__tabs {
+  display: inline-flex;
+  gap: 2px;
+  justify-self: start;
+  padding: 2px;
+  border-radius: var(--r-seg);
+  background: var(--seg-track);
+}
+.aipm-eval__tab {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: calc(var(--r-seg) - 2px);
+  background: transparent;
+  color: var(--ink-2);
+  font: 500 13px / 1.3 var(--sans);
+  cursor: pointer;
+  transition:
+    background var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+.aipm-eval__tab[aria-selected="true"] {
+  background: var(--seg-thumb);
+  color: var(--ink);
+  box-shadow: var(--shadow-thumb);
+}
+.aipm-eval__body {
+  display: grid;
+  gap: 14px;
+}
+.aipm-eval__notice {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.aipm-eval__notice[data-kind="error"] {
+  background: var(--bad-tint);
+  color: var(--ink);
+}
+.aipm-eval__empty {
+  padding: 18px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-lg);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.aipm-eval__empty p {
+  margin: 0;
+}
+.aipm-eval__group,
+.aipm-eval__bucket {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.aipm-eval__boundary {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.aipm-eval__row {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.aipm-eval__row-head,
+.aipm-eval__draft-head,
+.aipm-eval__case-head,
+.aipm-eval__meta,
+.aipm-eval__foot,
+.aipm-eval__runbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.aipm-eval__need {
+  font-size: 14px;
+  font-weight: 500;
+}
+.aipm-eval__drafts,
+.aipm-eval__bucket ol,
+.aipm-eval__plans,
+.aipm-eval__routes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-eval__draft,
+.aipm-eval__plan {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+}
+.aipm-eval__draft[data-ready="false"] {
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+.aipm-eval__draft-head select {
+  font: 500 13px / 1.3 var(--sans);
+}
+.aipm-eval__field {
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.aipm-eval__field input,
+.aipm-eval__field textarea,
+.aipm-eval__judge textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--input-bg);
+  color: var(--ink);
+  font: 400 14px / 1.45 var(--sans);
+  resize: vertical;
+}
+.aipm-eval__field input:focus,
+.aipm-eval__field textarea:focus,
+.aipm-eval__judge textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.aipm-eval__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.aipm-eval__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: 500 13px / 1.3 var(--sans);
+  cursor: pointer;
+}
+.aipm-eval__link:disabled {
+  color: var(--ink-4);
+  cursor: default;
+}
+.aipm-eval__tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: 12px;
+}
+.aipm-eval__mode {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.aipm-eval__case {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+}
+.aipm-eval__q {
+  font-size: 14px;
+}
+.aipm-eval__state {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.aipm-eval__case[data-status="execution_failed"] .aipm-eval__state {
+  color: var(--bad);
+}
+.aipm-eval__meta {
+  justify-content: flex-start;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.aipm-eval__judge {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+.aipm-eval__judge-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.aipm-eval__verdict {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.aipm-eval__verdict[data-result="satisfied"] {
+  color: var(--good);
+}
+.aipm-eval__verdict[data-result="not_satisfied"] {
+  color: var(--bad);
+}
+.aipm-eval__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.aipm-eval__stat {
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.aipm-eval__stat dt {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.aipm-eval__stat dd {
+  margin: 4px 0;
+  font: 600 16px / 1.3 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.aipm-eval__stat p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.aipm-eval__routes li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.aipm-eval__chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.aipm-eval__chip {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font: 500 12.5px / 1.3 var(--sans);
+  cursor: pointer;
+}
+.aipm-eval__chip[data-source="to_collect"] {
+  border-style: dashed;
+}
+.aipm-eval__chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.aipm-eval__plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 560px) {
+  .aipm-eval__stats,
+  .aipm-eval__plan-grid {
+    grid-template-columns: 1fr;
+  }
+}
