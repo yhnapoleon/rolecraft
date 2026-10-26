@@ -19,6 +19,7 @@ from .types import (
     STEP_IDS,
     CoverageMark,
     MentorPrompt,
+    ModelJudgement,
     Pointer,
     ProcessFeedback,
     ReviewDelta,
@@ -233,8 +234,9 @@ def _rubric(content, step, rule_check):
     return tuple(lines), items
 
 
-def _mentor(view, auth, content, step, fired, coverage):
-    marks = {m.id: m.mark for m in coverage}
+def _mentor(view, auth, content, step, fired, coverage, extra_marks=None):
+    """Authored follow-up questions triggered by rules, coverage or model-judged marks."""
+    marks = {m.id: m.mark for m in coverage} | (extra_marks or {})
     prompts = []
     for rule in content.mentor_rules:
         if rule.step_id != step:
@@ -256,8 +258,8 @@ def _mentor(view, auth, content, step, fired, coverage):
     return tuple(prompts)
 
 
-def _status(coverage, misconceptions):
-    if misconceptions or any(m.mark == "wrong" for m in coverage):
+def _status(coverage, misconceptions, model_wrong=False):
+    if misconceptions or model_wrong or any(m.mark == "wrong" for m in coverage):
         return "draft"
     cited = any(m.check == "citation" and m.mark == "covered" for m in coverage)
     if not cited or any(m.mark == "missing" and m.severity == "high" for m in coverage):
@@ -325,7 +327,49 @@ def stale(view, review, latest):
     return None
 
 
-def create(view, auth, content, body: SectionReviewInput, rule_check, registry=None):
+def with_model(view, auth, content, stored, items, status, reason, revision=None):
+    """The review with model-judged items merged in: a model "wrong" counts as wrong, and
+    authored follow-up questions are re-picked from the merged marks."""
+    out = dict(stored, model_status=status, model_reason=reason)
+    out["model_items"] = [i.model_dump(mode="json") for i in items]
+    if revision is not None:
+        out["revision"] = revision
+    judged = {i.id: i for i in items if i.target == "coverage"}
+    coverage = []
+    for mark in stored.get("coverage") or ():
+        item = judged.get(mark["id"])
+        if item is not None and mark["check"] == "model":
+            pointer = {
+                "text": item.note,
+                "refs": [r.model_dump(mode="json") for r in item.citations],
+            }
+            mark = dict(mark, mark=item.mark, source="model_suggestion", pointer=pointer)
+        coverage.append(CoverageMark.model_validate(mark))
+    coverage.sort(key=lambda m: (MARK[m.mark], SEVERITY[m.severity], m.id))
+    out["coverage"] = [m.model_dump(mode="json") for m in coverage]
+    feedback = tuple(ProcessFeedback.model_validate(f) for f in stored.get("misconceptions") or ())
+    rubric_marks = {i.id: i.mark for i in items if i.target == "rubric"}
+    out["status"] = _status(coverage, feedback, "wrong" in rubric_marks.values())
+    fired = {_rule_id(f, f["input_ref"]) for f in stored.get("misconceptions") or ()}
+    prompts = _mentor(view, auth, content, stored["step_id"], fired, coverage, rubric_marks)
+    out["mentor_prompts"] = [p.model_dump(mode="json") for p in prompts]
+    return SectionReview.model_validate(out).model_dump(mode="json")
+
+
+def cached_model(objects, step, prd_ref, decision):
+    """Model items already judged for this exact PRD version and decision, if any."""
+    for row in reviews_of(objects, step):
+        review = row.content
+        if (
+            review.get("model_status") == "done"
+            and review["prd_ref"] == prd_ref
+            and review.get("decision_used") == decision
+        ):
+            return tuple(ModelJudgement.model_validate(i) for i in review.get("model_items") or ())
+    return None
+
+
+def create(view, auth, content, body: SectionReviewInput, rule_check, model="not_configured"):
     step = body.step_id
     prd = view.get(body.prd_ref)  # exact visible version
     if prd.ref.kind != "product":
@@ -380,6 +424,14 @@ def create(view, auth, content, body: SectionReviewInput, rule_check, registry=N
         basis=basis,
     )
     stored = review.model_dump(mode="json")
+    if model == "running":
+        decision_used = stored["decision_used"]
+        cached = cached_model(view.objects, step, stored["prd_ref"], decision_used)
+        stored = (
+            with_model(view, auth, content, stored, cached, "done", None)
+            if cached is not None
+            else dict(stored, model_status="running")
+        )
     if previous is not None:
         before, after = counts(previous.content), counts(stored)
         stored["delta"] = ReviewDelta(

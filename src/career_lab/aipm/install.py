@@ -15,6 +15,7 @@ from . import review
 from .drafts import handlers as draft_handlers
 from .feedback_discovery import discover
 from .progress import default_contents, design_facts, enrolled, handlers, require_owner
+from .review_model import ModelReviewer
 from .types import (
     AipmDesignDraft,
     AipmFocus,
@@ -135,11 +136,34 @@ def install_aipm(app, contents=None):
         if view.state.status == "submitted":
             raise C.ProtocolError("session_submitted", status=409)
         body = SectionReviewInput.model_validate(command.payload)
-        return review.create(view, auth, content, body, review.RULE_CHECK.get())
+        model = "running" if reviewer.configured() else "not_configured"
+        return review.create(view, auth, content, body, review.RULE_CHECK.get(), model)
 
     def review_read(view, query, auth):
         enrolled(view, auth, catalog)
-        return V2Response(result=review.page(view, auth, query.step_id, query.cursor, query.limit))
+        page = review.page(view, auth, query.step_id, query.cursor, query.limit)
+        for item in page["items"]:
+            stored = item["review"]
+            if stored.get("model_status") == "running" and not reviewer.in_flight(stored["id"]):
+                # Interrupted (e.g. a restart). Asking for the same review again resumes it.
+                item["review"] = dict(
+                    stored,
+                    model_status="failed",
+                    model_reason=reviewer.interrupted(content_of(view)),
+                )
+        return V2Response(result=page)
+
+    def content_of(view):
+        return catalog[view.bindings.scenario.sha256]
+
+    reviewer = ModelReviewer(app, catalog)
+    app.state.aipm_reviewer = reviewer
+
+    def start_model(auth, result):
+        body = (result or {}).get("result") or {}
+        stored = body.get("review") or {}
+        if stored.get("model_status") == "running":
+            reviewer.start(auth, C.ObjectRef.model_validate(body["ref"]))
 
     @contextmanager
     def prepare_review(auth, command):
@@ -186,6 +210,7 @@ def install_aipm(app, contents=None):
         )
     )
     app.state.aipm_prepare = {"aipm.section_review.create": prepare_review}
+    app.state.aipm_after = {"aipm.section_review.create": start_model}
 
     # L2 rules come from the enrolled package only; one operation set per rules file.
     built = {}
