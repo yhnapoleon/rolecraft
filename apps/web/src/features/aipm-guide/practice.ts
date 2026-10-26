@@ -44,6 +44,8 @@ type State = {
   busy: boolean;
   error?: string;
   feature: AipmFeatureId | null;
+  /** Enrollment was asked for once; a refusal leaves the practice on its original page. */
+  enrolled?: boolean;
 };
 
 const OPEN = 'rolecraft.aipm.open.v1';
@@ -119,7 +121,20 @@ export function createAipmPractice(deps: PracticeDeps) {
         }),
       });
       if (missing === null) missing = await installAipmFeatures(host);
-    } catch (e) {
+    } catch (failure) {
+      let e = failure;
+      // A new practice bound to the seven-step package: the person started it as a product
+      // manager, so enrol it once (idempotent on the server) and read again. A restored practice
+      // that is already enrolled never reaches this; an old one answers aipm_not_enabled.
+      if ((e as { code?: string })?.code === 'aipm_not_enrolled' && !s.enrolled && !s.fixture) {
+        s.enrolled = true;
+        try {
+          await command('aipm.enroll', {});
+          return load(a);
+        } catch (err) {
+          e = err;
+        }
+      }
       if (s.phase === 'ready') s.stale = true;
       else s.phase = 'off';
       if (!absent(e)) s.error = reason(e);
@@ -166,6 +181,8 @@ export function createAipmPractice(deps: PracticeDeps) {
     };
     const c = s.client;
     switch (operation) {
+      case 'aipm.enroll':
+        return c.enroll(cmd);
       case 'aipm.focus.set':
         return c.setFocus(cmd);
       case 'aipm.step_links.save':
@@ -216,7 +233,7 @@ export function createAipmPractice(deps: PracticeDeps) {
       const a = deps.current(),
         g = a && stateOf(a)?.guide;
       if (!g) throw new Error('AIPM guide unavailable');
-      return publishedContent(id, g.language, g.revision);
+      return publishedContent(id, g.language);
     },
     async readGuide() {
       const a = deps.current();

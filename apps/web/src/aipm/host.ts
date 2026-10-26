@@ -29,8 +29,8 @@ export interface AipmHost<TProgress = unknown, TClient = unknown> {
   getClient(): TClient | null;
   readProgress(): Promise<TProgress>;
   readGuide(): Promise<unknown>;
-  /** The bound content revision's published `public/<id>.<work language>.json`; rejects when this
-   * build does not carry it or its revision differs from the practice's guide. */
+  /** The published `public/<id>.<work language>.json` of this experience; rejects when this
+   * build does not carry it. */
   readContent(id: AipmContentId): Promise<unknown>;
   /** Explicit writes. The host journals the exact Command before calling the L4 client. */
   command(operation: string, payload: Record<string, unknown>): Promise<unknown>;

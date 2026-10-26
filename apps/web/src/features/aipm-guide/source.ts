@@ -11,6 +11,7 @@ type Writer = (command: Record<string, unknown>) => Promise<unknown>;
 export type GuideClient = {
   guide(): Promise<unknown>;
   progress(): Promise<unknown>;
+  enroll: Writer;
   setFocus: Writer;
   saveStepLink: Writer;
   saveDesign: Writer;
@@ -75,6 +76,7 @@ function fixtureClient(sessionId: string, language: Language): GuideClient {
         open_feedback: [],
       })),
     }),
+    enroll: async () => ({}),
     setFocus: async (command) => {
       focus = (command.payload as { step_id: StepId }).step_id;
       seq += 1;

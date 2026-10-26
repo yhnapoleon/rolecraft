@@ -11,15 +11,16 @@ const published = import.meta.glob<unknown>(
   '../../../../../scenarios/pm_pilot/aipm-phase1/public/*.json',
   { import: 'default' },
 );
-/** One published content file in one language, only if it belongs to the given revision. */
-export async function publishedContent(id: string, language: Language, revision: string) {
+/** One published content file in one language, only if it belongs to this experience. Each
+ * line versions its own file; the package manifest binds them to one scenario hash. */
+export async function publishedContent(id: string, language: Language) {
   const load = Object.entries(published).find(([path]) =>
     path.endsWith(`/public/${id}.${language}.json`),
   )?.[1];
   if (!load) throw new Error(`AIPM content not in this build: ${id}`);
-  const value = (await load()) as { content_revision?: string };
-  if (value.content_revision !== undefined && value.content_revision !== revision)
-    throw new Error(`AIPM content revision differs: ${id}`);
+  const value = (await load()) as { experience_revision?: string };
+  if (value.experience_revision !== undefined && value.experience_revision !== 'aipm-phase1-v1')
+    throw new Error(`AIPM content is for another experience: ${id}`);
   return value;
 }
 
