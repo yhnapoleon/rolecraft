@@ -145,3 +145,55 @@ def test_unreviewed_predicate_is_rejected(tmp_path):
     path.write_text(json.dumps(data))
     with pytest.raises(ValueError):
         load_rules(path)
+
+
+@pytest.mark.parametrize(
+    "request_text,action,authority,violation",
+    [
+        ("报销最终批准交给 AI", "approve", "ai", True),
+        ("Let the AI give final expense approval", "approve", "ai", True),
+        ("解释怎样申请报销", "explain", "ai", False),
+        ("报销审批交给 AI", "explain", "named_human_role", False),
+        ("解释怎样申请报销", "approve", "named_human_role", False),
+    ],
+)
+def test_structured_choice_decides_and_request_words_never_do(
+    request_text, action, authority, violation
+):
+    _, findings = assess(
+        {"user_request": request_text, "target_action": action, "final_authority": authority}
+    )
+    assert any(f["finding"] == "violation" for f in findings) is violation
+
+
+def test_private_rule_false_positive_examples_hold():
+    rules = {rule["id"]: rule for rule in load_rules(RULES)}
+    for rule_id in ("authority", "tool_capability"):
+        for example in rules[rule_id]["false_positive_examples"]:
+            fields = {k: v for k, v in example.items() if k != "expected"}
+            route = "agent_confirmation" if rule_id == "tool_capability" else "retrieval_generation"
+            rows, findings = assess({"route": route, **fields})
+            assert all(f["finding"] != "violation" for f in findings), example
+            if example["expected"] == "plan_only_not_violation":
+                assert rows[0]["execution_support"] == "plan_only"
+
+
+def test_shared_fixture_boundary_cases():
+    shared = Path(__file__).resolve().parents[2] / "fixtures/aipm-phase1/shared.json"
+    import json
+
+    cases = {c["id"]: c for c in json.loads(shared.read_text())["cases"]}
+    expected = {
+        "approval-by-ai": ("approve", "agent_confirmation", "violation"),
+        "explain-policy": ("explain", "retrieval_generation", "not_a_violation"),
+        "draft-with-confirmation": ("prepare_draft", "agent_confirmation", "plan_only"),
+    }
+    for case_id, (action, route, outcome) in expected.items():
+        case = cases[case_id]
+        assert (case["target_action"], case["expected"]) == (action, outcome)
+        rows, findings = assess(
+            {"target_action": action, "route": route, "final_authority": case["final_authority"]}
+        )
+        assert any(f["finding"] == "violation" for f in findings) is (outcome == "violation")
+        if outcome == "plan_only":
+            assert rows[0]["execution_support"] == "plan_only"
