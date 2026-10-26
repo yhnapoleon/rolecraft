@@ -226,6 +226,28 @@ describe('the model look', () => {
     );
   });
 
+  it('never presents a model misconception as a rule check', () => {
+    const base = fixtureModelReview('zh', 'done');
+    const rule = (base.misconceptions ?? [])[0];
+    const model = {
+      ...rule,
+      id: 'model-next',
+      source: 'model_suggestion' as const,
+      message: '下一步验证写得不对。',
+    };
+    const both = draw({ ...base, misconceptions: [model, rule] });
+    expect(both.textContent).toContain('先改这一条 · 常见误区（规则判定与模型建议）');
+    const cards = both.byClass('aipm-review__mis');
+    expect(cards.map((c) => c.dataset.source ?? 'rule')).toEqual(['rule', 'model']);
+    expect(cards[1].textContent).toContain('模型判断 · 建议');
+    const only = draw({ ...base, misconceptions: [model] });
+    expect(only.textContent).toContain('先改这一条 · 常见误区（模型建议）');
+    expect(only.textContent).not.toContain('（规则判定）');
+    expect(
+      draw({ ...fixtureModelReview('zh', 'not_configured'), misconceptions: [model] }).textContent,
+    ).toContain('模型的判断只是建议');
+  });
+
   it('says why the model look failed, and keeps the rule results', () => {
     const root = draw(fixtureModelReview('zh', 'failed'));
     expect(root.byClass('aipm-review__model-status')[0].textContent).toBe(

@@ -291,13 +291,27 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     return box;
   };
 
-  // Misconceptions: the first one is what to fix first.
-  if ((review.misconceptions ?? []).length) {
-    const cards = (review.misconceptions ?? []).map((item, index) => {
+  const tag = () =>
+    el('span', t('模型判断 · 建议', 'Model judgement · advice'), 'aipm-review__model-tag');
+
+  // Misconceptions: the first one is what to fix first. Rule findings come before the model's,
+  // and a model finding is never presented as a rule check.
+  const byModel = (item: { source: string }) => item.source === 'model_suggestion';
+  const misconceptions = [
+    ...(review.misconceptions ?? []).filter((m) => !byModel(m)),
+    ...(review.misconceptions ?? []).filter(byModel),
+  ];
+  if (misconceptions.length) {
+    const cards = misconceptions.map((item, index) => {
       const card = el('div', '', 'aipm-review__mis');
       if (index === 0) card.dataset.first = '';
       card.dataset.finding = item.finding;
-      card.append(el('p', item.message, 'aipm-review__mis-title'));
+      const title = el('p', item.message, 'aipm-review__mis-title');
+      if (byModel(item)) {
+        card.dataset.source = 'model';
+        title.append(tag());
+      }
+      card.append(title);
       for (const ref of item.basis_refs ?? [])
         if (ref.quote)
           card.append(
@@ -330,7 +344,11 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
       return card;
     });
     section(
-      t('先改这一条 · 常见误区（规则判定）', 'Fix this first · common misconception (rule check)'),
+      misconceptionTitle(
+        misconceptions.some((m) => !byModel(m)),
+        misconceptions.some(byModel),
+        language,
+      ),
       ...cards,
     );
   }
@@ -338,8 +356,6 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   // Coverage, worst first, as the result page's rows. Rule results show at once; the model's
   // look fills in the points only it can judge, marked as advice, without holding the rest.
   const model = modelPart(review);
-  const tag = () =>
-    el('span', t('模型判断 · 建议', 'Model judgement · advice'), 'aipm-review__model-tag');
   const coverage = mergedCoverage(review);
   const modelLine =
     model.status === 'running' && input.modelTimedOut
@@ -529,7 +545,8 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   foot.append(
     el(
       'p',
-      model.status === 'done' && (model.coverage.length || model.rubric.length)
+      misconceptions.some(byModel) ||
+        (model.status === 'done' && (model.coverage.length || model.rubric.length))
         ? t(
             '规则核对、识别标注与模型建议 · 模型的判断只是建议 · 不计入正式评分',
             'Rule checks, recognition marks and model advice · the model’s judgements are advice · not part of the formal score',
@@ -558,6 +575,18 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   grid.append(paper, sheet);
   root.append(grid);
   return root;
+}
+
+/** The "fix this first" heading names where its findings come from. */
+function misconceptionTitle(rule: boolean, model: boolean, language: Language) {
+  const t = (zh: string, en: string) => text(language, zh, en);
+  const from =
+    rule && model
+      ? t('规则判定与模型建议', 'rule check and model advice')
+      : model
+        ? t('模型建议', 'model advice')
+        : t('规则判定', 'rule check');
+  return t(`先改这一条 · 常见误区（${from}）`, `Fix this first · common misconception (${from})`);
 }
 
 /** A reason as one sentence, ending with exactly one full stop. */
