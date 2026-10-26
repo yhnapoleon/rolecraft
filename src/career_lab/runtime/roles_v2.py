@@ -12,7 +12,7 @@ from typing import Literal
 from uuid import uuid4
 
 import httpx
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from career_lab.api.modules import Operation
 from career_lab.contracts.v2 import (
@@ -1426,7 +1426,15 @@ class HelpAssessment(BaseModel):
     citations_supported: bool
     within_knowledge: bool
     preserves_stance: bool
-    no_complete_solution: bool
+    no_complete_solution: bool = Field(
+        description=(
+            "For correctness coaching on shared learner work: false if even ONE corrective "
+            "answer, source definition that resolves the learner's uncertainty, action "
+            "instruction, rewrite, or second problem is supplied. A grounded answer followed "
+            "by a question is still false. Only one unresolved observation and one question "
+            "is true. For other requests: no complete case solution."
+        )
+    )
     no_resource_approval: bool
     one_main_question: bool
     conditions_preserved: bool
@@ -1534,7 +1542,7 @@ class CooperativeHelpVerifier:
     """
 
     retries = 0
-    revision = HELP_POLICY_REVISION + ":artifact-review-v1"
+    revision = HELP_POLICY_REVISION + ":artifact-review-v2"
 
     def __init__(self, model: ModelAdapter, *, max_context_chars: int = 24000) -> None:
         self.model = model
@@ -1579,6 +1587,7 @@ class CooperativeHelpVerifier:
         begin_call("role_help_review", self.revision + ":" + self.model.revision)
         inputs = {
             "policy_revision": self.revision,
+            "shared_work_present": shared_work,
             "work_language": snapshot.work_language,
             "question": snapshot.prompt_text(request.input.text),
             "reply": text,
@@ -1611,7 +1620,16 @@ class CooperativeHelpVerifier:
                     "question), gives an action instruction, rewrites their work, or points out "
                     "more than one problem. A single observation identifying one uncertainty and "
                     "one question that lets the learner check it themselves is allowed. Do not "
-                    "waive this for a grounded or factually correct reply. For other requests "
+                    "waive this for a grounded or factually correct reply. In this coaching case, "
+                    "do not use the broad 'not a complete solution' interpretation: a single "
+                    "corrective fact can already give away the answer. REJECT examples: "
+                    "'SD-120 has no field for minutes of active staff work. Which field would "
+                    "you point to?' and '等待时间不能全算成可释放工时，你会核对哪一项？'. "
+                    "Both have only one question but already settle the student's uncertainty. "
+                    "An acceptable example is 'You treat the 429 minutes as labour saved; "
+                    "which definition in SD-120 supports that interpretation?' It identifies "
+                    "one assumption without supplying the definition or the verdict. "
+                    "For other requests "
                     "the original no_complete_solution definition applies. "
                     "Material references must use display names, "
                     "never internal object ids. "
@@ -1641,7 +1659,12 @@ class CooperativeHelpVerifier:
             audit.validation("technical_failure", "role_help_review_invalid")
             raise ProtocolError("role_help_review_invalid", status=409) from None
         permitted = review.permits_publication(relaxed) and (
-            not shared_work or (review.no_complete_solution and review.one_main_question)
+            not shared_work
+            or (
+                review.no_complete_solution
+                and review.one_main_question
+                and review.decision == "supported"
+            )
         )
         audit.validation(
             "permitted" if permitted else "withheld",

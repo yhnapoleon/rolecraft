@@ -582,9 +582,12 @@ def test_shared_work_coaching_gate_applies_with_recognition(
         )
     assert error.value.code == "role_help_unverified"
     assert len(model.calls) == 1 and verifier.retries == 0
-    assert "artifact-review-v1" in verifier.revision
+    assert "artifact-review-v2" in verifier.revision
     prompt = model.calls[0][0]["content"]
     assert "gives an action instruction" in prompt and "more than one problem" in prompt
+    assert "SD-120 has no field for minutes of active staff work" in prompt
+    assert "a single corrective fact can already give away the answer" in prompt
+    assert json.loads(model.calls[0][1]["content"])["shared_work_present"] is True
 
 
 def test_material_internal_ids_are_held_but_display_titles_are_allowed():
