@@ -1,7 +1,7 @@
 """MCP 2026-07-28 stateless tools, plus explicit 2025-11-25 compatibility.
 
-Only tools/discovery/ping are advertised. No sampling, execution, roots, resource
-fetch, tasks extension or server-initiated requests. Business identity is never
+Tools, read-only resources and prompts are advertised. No sampling, execution, roots,
+tasks extension or server-initiated requests. Business identity is never
 inferred from clientInfo or JSON-RPC IDs.
 """
 
@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from career_lab.delegations.http_client import RemoteFailure
 
+from . import aipm_context
 from .results import agent_view
 
 MODERN = "2026-07-28"
@@ -26,7 +27,9 @@ INSTRUCTIONS = (
     "RoleCraft workspace tools for one delegated practice session. Only the listed tools are "
     "authorized; server permissions and business rules still apply. session_id is optional "
     "and defaults to the session this connection is authorized for; if given, it must match. "
-    "Start with observation; tools shows which tools are available now. "
+    "Start with observation; tools shows which business tools are available now. "
+    "AIPM resources and prompts provide read-only context; aipm.context.read is an MCP-only "
+    "compatibility tool, separate from the business tools catalogue. "
     "The JSON-RPC id is not the business request_id: after an unknown "
     "result keep command.request_id unchanged and read requests.read; re-execution requires "
     "an explicit user decision. Engineer writes (engineer.reproduce, engineer.trial, "
@@ -160,7 +163,7 @@ class Protocol:
             self.legacy_version = LEGACY
             return {
                 "protocolVersion": LEGACY,
-                "capabilities": {"tools": {}},
+                "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
                 "serverInfo": server_info(),
                 "instructions": INSTRUCTIONS,
             }
@@ -171,7 +174,7 @@ class Protocol:
             return self._result(
                 {
                     "supportedVersions": [MODERN, LEGACY],
-                    "capabilities": {"tools": {}},
+                    "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
                     "instructions": INSTRUCTIONS,
                 },
                 version,
@@ -179,6 +182,21 @@ class Protocol:
             )
         if method == "ping":
             return self._result({}, version)
+        if method in {
+            "resources/list",
+            "resources/templates/list",
+            "resources/read",
+            "prompts/list",
+            "prompts/get",
+        }:
+            try:
+                return self._result(
+                    aipm_context.dispatch(self.backend, method, params),
+                    version,
+                    cache=method.endswith("/list"),
+                )
+            except ValueError as error:
+                raise RpcFailure(-32602, str(error)) from None
         if method == "tools/list":
             if set(params) - {"cursor"}:
                 raise RpcFailure(-32602, "Invalid tool-list params")
@@ -186,8 +204,9 @@ class Protocol:
             if not isinstance(cursor, str) or not re.fullmatch(r"0|[1-9][0-9]{0,5}", cursor):
                 raise RpcFailure(-32602, "Invalid cursor")
             tools = sorted((t for t in self.backend.tools() if t.available), key=lambda t: t.name)
+            extra = [aipm_context.TOOL] if aipm_context.available(self.backend) else []
             start = int(cursor)
-            if start > len(tools):
+            if start > len(tools) + len(extra):
                 raise RpcFailure(-32602, "Invalid cursor")
             bound = self._bound_session()
             result = {
@@ -207,10 +226,13 @@ class Protocol:
                             "openWorldHint": False,
                         },
                     }
-                    for t in tools[start : start + 50]
+                    for t in tools
                 ]
             }
-            if start + 50 < len(tools):
+            result["tools"] = sorted(result["tools"] + extra, key=lambda t: t["name"])[
+                start : start + 50
+            ]
+            if start + 50 < len(tools) + len(extra):
                 result["nextCursor"] = str(start + 50)
             return self._result(result, version, cache=True)
         if method == "tools/call":
@@ -221,16 +243,30 @@ class Protocol:
             ):
                 raise RpcFailure(-32602, "Invalid tool-call params")
             name = params["name"]
-            known = {t.name for t in self.backend.tools()}
+            known = (
+                set() if name == aipm_context.TOOL_NAME else {t.name for t in self.backend.tools()}
+            )
+            if aipm_context.available(self.backend):
+                known.add(aipm_context.TOOL_NAME)
             if name not in known:
                 raise RpcFailure(-32602, "Unknown tool")
             arguments = params.get("arguments", {})
             bound = self._bound_session()
-            if bound is not None and "session_id" not in arguments:
+            if (
+                name != aipm_context.TOOL_NAME
+                and bound is not None
+                and "session_id" not in arguments
+            ):
                 # An explicit session is passed through for the backend's own match check.
                 arguments = {**arguments, "session_id": bound}
             try:
-                result = agent_view(name, arguments, self.backend.call(name, arguments))
+                if name == aipm_context.TOOL_NAME:
+                    try:
+                        result = aipm_context.read_tool(self.backend, arguments)
+                    except ValueError:
+                        raise RemoteFailure("tool_arguments_invalid", 422) from None
+                else:
+                    result = agent_view(name, arguments, self.backend.call(name, arguments))
                 return self._result(
                     {
                         "content": [

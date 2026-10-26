@@ -36,6 +36,9 @@ def mount_delegations(app, *, history_reader=stored_history, synchronous=None):
 
         mount_v4_extensions(app)
         app.state.v4_extensions = True
+    from career_lab.aipm.install import install_aipm
+
+    install_aipm(app)
     return app.state.w06
 
 

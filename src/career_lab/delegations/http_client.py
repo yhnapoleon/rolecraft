@@ -172,6 +172,34 @@ class HttpAgentClient:
             credentials, route.method, suffix, body, query, deadline, operation=name
         )
 
+    def aipm_read(self, kind, *, submission_id=None, version=None):
+        """Fixed extension reads only; never an arbitrary URI or filesystem proxy."""
+        credentials = self._credentials()
+        if kind in {"guide", "progress"}:
+            if submission_id is not None or version is not None:
+                raise RemoteFailure("tool_arguments_invalid", 422)
+            suffix = "/aipm/" + kind
+        elif kind == "submission_feedback":
+            if type(version) is not int or version < 1:
+                raise RemoteFailure("tool_arguments_invalid", 422)
+            suffix = (
+                "/aipm/submissions/"
+                + safe_id(submission_id)
+                + "/versions/"
+                + str(version)
+                + "/feedback"
+            )
+        else:
+            raise RemoteFailure("tool_arguments_invalid", 422)
+        value = self._request(credentials, "GET", suffix)
+        try:
+            result = value["result"]["result"]
+            if not isinstance(result, dict):
+                raise TypeError
+            return result
+        except (KeyError, TypeError):
+            raise RemoteFailure("aipm_contract_invalid", 503) from None
+
     def _editable_head(self, credentials, observation, payload, deadline=None):
         product_id = payload.get("product_id")
         head = next((p for p in observation.products if p.object_id == product_id), None)

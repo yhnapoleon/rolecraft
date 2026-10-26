@@ -1,0 +1,332 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-phase1-draft-1",
+  "work_language": "en",
+  "steps": [
+    {
+      "id": "business",
+      "order": 1,
+      "label": "Understand the business",
+      "goal": "Separate the company’s business from this internal-tool assignment.",
+      "expected_outputs": [
+        "Business explanation and sources"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Separate the company’s business from this internal-tool assignment.",
+          "summary": "Read the company brief, then Grace’s assignment. This pilot directly serves internal staff. Explain the external business and the assistant’s responsibility separately.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "What services does the company sell?"
+            },
+            {
+              "role": "business",
+              "text": "Who does this pilot directly help?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Record your business understanding"
+          }
+        },
+        {
+          "level": "explanation",
+          "text": "Use two sentences for the company’s services and this assistant’s users; mark uncertain background as unconfirmed."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "What services does the company sell?",
+        "Who does this pilot directly help?"
+      ]
+    },
+    {
+      "id": "stakeholders",
+      "order": 2,
+      "label": "Users and stakeholders",
+      "goal": "Distinguish users, approvers and people affected.",
+      "expected_outputs": [
+        "Users and responsibilities"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Distinguish users, approvers and people affected.",
+          "summary": "Candidates are not invited users. Ask who uses the assistant, who approves and who handles exceptions. Keep opinions separate from approvals.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "Who has this problem, and who takes on extra work?"
+            },
+            {
+              "role": "manager",
+              "text": "Who approves the scope and resources?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Record users and responsibilities"
+          }
+        },
+        {
+          "level": "explanation",
+          "text": "One person may hold several roles. Record one responsibility to verify, then find its source."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "user_groups",
+            "interviews",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Who has this problem, and who takes on extra work?",
+        "Who approves the scope and resources?"
+      ]
+    },
+    {
+      "id": "need",
+      "order": 3,
+      "label": "Validate the need",
+      "goal": "Make the need hypothesis open to disproof.",
+      "expected_outputs": [
+        "Need hypothesis, counterevidence and validation"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Make the need hypothesis open to disproof.",
+          "summary": "Start with one problem, supporting evidence and a possible counterexample or unknown. Check time definitions: elapsed case time is not automatically labour saved.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "business",
+              "text": "How was time measured in this benefit estimate?"
+            },
+            {
+              "role": "business",
+              "text": "What evidence would make us stop?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Record a hypothesis and validation"
+          }
+        },
+        {
+          "level": "explanation",
+          "text": "Ask about the metric’s unit, population and window. Keep unsupported benefits as hypotheses."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "demand",
+            "business_case",
+            "interviews"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "How was time measured in this benefit estimate?",
+        "What evidence would make us stop?"
+      ]
+    },
+    {
+      "id": "boundary",
+      "order": 4,
+      "label": "Set AI boundaries",
+      "goal": "Specify the answer, the action and who can approve it.",
+      "expected_outputs": [
+        "Versioned request triage"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Specify the answer, the action and who can approve it.",
+          "summary": "Split a request into an answer, calculation, draft or real action. Establish human authority and available tools before choosing an approach.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "Which actions follow rules and which need retrieval?"
+            },
+            {
+              "role": "manager",
+              "text": "Who has final approval authority?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Split and triage requests"
+          }
+        },
+        {
+          "level": "explanation",
+          "text": "A request can be split: retrieving a process, preparing a draft and approving it may belong to different actors."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "policy",
+            "approvals",
+            "faq"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Which actions follow rules and which need retrieval?",
+        "Who has final approval authority?"
+      ]
+    },
+    {
+      "id": "solution",
+      "order": 5,
+      "label": "Solution and reference patterns",
+      "goal": "Compare feasible approaches; separate plans from applied settings.",
+      "expected_outputs": [
+        "Approach comparison and dependencies"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Compare feasible approaches; separate plans from applied settings.",
+          "summary": "Compare at least two substantive approaches using your triage. Reference cards describe public methods. Saving a plan does not apply settings or request resources.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "Which development work does this approach depend on?"
+            },
+            {
+              "role": "manager",
+              "text": "What trade-offs are available if resources are insufficient?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_design",
+            "label": "Compare and save approaches"
+          }
+        },
+        {
+          "level": "explanation",
+          "text": "Compare costs, data updates and human responsibility. Unavailable tools belong only in proposed designs."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "technical",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Which development work does this approach depend on?",
+        "What trade-offs are available if resources are insufficient?"
+      ]
+    },
+    {
+      "id": "assurance",
+      "order": 6,
+      "label": "Evaluation, monitoring and rollback",
+      "goal": "Test risks against expectations and plan observation and recovery.",
+      "expected_outputs": [
+        "Expectations, tests and monitoring / rollback plan"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Test risks against expectations and plan observation and recovery.",
+          "summary": "Save each expectation and its basis before running supported tests. Separate execution, quality assessments and unsupported cases. Name monitoring owners and rollback triggers.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "technical",
+              "text": "Which test is most likely to disprove this approach?"
+            },
+            {
+              "role": "business",
+              "text": "Who takes responsibility when something goes wrong?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_evaluation",
+            "label": "Open the evaluation plan"
+          }
+        },
+        {
+          "level": "explanation",
+          "text": "Keep the basis for each expectation and name an owner for exceptions. Planned alerts are not deployed monitoring."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "failures",
+            "technical"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "Which test is most likely to disprove this approach?",
+        "Who takes responsibility when something goes wrong?"
+      ]
+    },
+    {
+      "id": "decision",
+      "order": 7,
+      "label": "Launch decision",
+      "goal": "Decide on exact versions and the conditions you commit to.",
+      "expected_outputs": [
+        "Exact-version submission and linked revision"
+      ],
+      "help": [
+        {
+          "level": "direction",
+          "text": "Decide on exact versions and the conditions you commit to.",
+          "summary": "Check the exact work versions, evidence and unresolved conditions. Proceed, narrow the scope or pause; link a revision when formal feedback is ready.",
+          "source": "authored_guidance",
+          "questions": [
+            {
+              "role": "manager",
+              "text": "What can I commit to under these conditions?"
+            },
+            {
+              "role": "technical",
+              "text": "Which changes since last time need another check?"
+            }
+          ],
+          "primary_action": {
+            "id": "open_submission",
+            "label": "Check and submit"
+          }
+        },
+        {
+          "level": "explanation",
+          "text": "Leave uncovered work visible. A submission record does not mean every judgement has been verified."
+        },
+        {
+          "level": "source",
+          "material_ids": [
+            "brief",
+            "approvals"
+          ]
+        }
+      ],
+      "suggested_questions": [
+        "What can I commit to under these conditions?",
+        "Which changes since last time need another check?"
+      ]
+    }
+  ]
+}
