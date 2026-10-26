@@ -25,6 +25,8 @@ from .types import (
     FeedbackRead,
     FocusInput,
     PageRead,
+    SectionReviewInput,
+    SectionReviewRead,
     StepLinkInput,
 )
 
@@ -119,6 +121,23 @@ def install_aipm(app, contents=None):
             "aipm.design_drafts.list", DraftList, drafts["aipm.design_drafts.list"], "observation"
         )
     )
+
+    for name, model, mutates in (
+        ("aipm.section_review.create", SectionReviewInput, True),
+        ("aipm.section_review.read", SectionReviewRead, False),
+    ):
+        registry.register(
+            Operation(
+                name,
+                "act" if mutates else "read",
+                model,
+                None,
+                mutates=mutates,
+                response_model=None if mutates else V2Response,
+                ready=False,
+                unavailable_code="aipm_section_review_unavailable",
+            )
+        )
 
     # L2 rules come from the enrolled package only; one operation set per rules file.
     built = {}
