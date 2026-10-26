@@ -84,7 +84,7 @@ describe('worksheet', () => {
     const page = html(<Worksheet host={host()} step="solution" preload={preload('zh', { prd })} />);
     expect(page).toContain('先做规则问答');
     expect(page).toContain('接入排班系统');
-    expect(page).toContain('已存 · 第 3 版');
+    expect(page).toContain('已存第 3 版');
   });
   it('shows an agent section draft as awaiting the learner, with its id', () => {
     const drafts = [

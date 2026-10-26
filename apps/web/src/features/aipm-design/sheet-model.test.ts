@@ -81,6 +81,12 @@ describe('worksheet choice', () => {
     expect(readChoice(step, d)).toBe(value);
     expect(readChoice(step, writeChoice(step, d, value))).toBe(value);
   });
+  it.each(['business', 'stakeholders', 'need', 'solution', 'decision'] as const)(
+    'leaves the %s design untouched when nothing is chosen',
+    (step) => {
+      expect(writeChoice(step, base, '')).toBe(base);
+    },
+  );
   it('marks the chosen decision-maker as the approver, once', () => {
     const d = writeChoice('stakeholders', writeChoice('stakeholders', base, 'chen'), 'grace');
     expect(d.stakeholders).toEqual([
