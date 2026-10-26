@@ -53,6 +53,9 @@ type State = {
   feature: AipmFeatureId | null;
   /** Enrollment was asked for once; a refusal leaves the practice on its original page. */
   enrolled?: boolean;
+  /** A read is under way; changes meanwhile are picked up by one more read after it. */
+  reading?: boolean;
+  again?: boolean;
 };
 
 const OPEN = 'rolecraft.aipm.open.v1';
@@ -158,8 +161,13 @@ export function createAipmPractice(deps: PracticeDeps) {
   const stateOf = (a: Attempt) => states.get(a.id);
   const asOfKey = (a: Attempt) => JSON.stringify(deps.dataHost(a)?.snapshot().asOf ?? null);
 
-  async function load(a: Attempt) {
-    const s: State = states.get(a.id) ?? {
+  async function load(a: Attempt): Promise<void> {
+    const prior = states.get(a.id);
+    if (prior?.reading) {
+      prior.again = true;
+      return;
+    }
+    const s: State = prior ?? {
       phase: 'loading',
       fixture: false,
       stale: false,
@@ -167,6 +175,7 @@ export function createAipmPractice(deps: PracticeDeps) {
       feature: null,
     };
     states.set(a.id, s);
+    s.reading = true;
     const seen = signature(s);
     try {
       if (!s.client) {
@@ -176,6 +185,11 @@ export function createAipmPractice(deps: PracticeDeps) {
           return;
         }
         s.client = source.client;
+        // The page polls the session; when its version point moves (a colleague, a run, an
+        // agent's draft), read progress again without waiting for the stage to redraw.
+        deps.dataHost(a)?.subscribe(() => {
+          if (s.phase === 'ready' && !s.busy && s.asOf !== asOfKey(a)) void load(a);
+        });
         s.fixture = source.fixture;
       }
       s.asOf = asOfKey(a);
@@ -218,7 +232,12 @@ export function createAipmPractice(deps: PracticeDeps) {
     } finally {
       // Redraw only for a real change: a read that returns the same snapshot leaves the page
       // (and any feature mounted in it) alone.
+      s.reading = false;
       if (deps.current()?.id === a.id && signature(s) !== seen) deps.redraw();
+      if (s.again) {
+        s.again = false;
+        void load(a);
+      }
     }
   }
 
