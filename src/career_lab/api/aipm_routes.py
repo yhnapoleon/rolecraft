@@ -69,7 +69,13 @@ def mount_aipm_routes(app):
             if not (human or agent):
                 raise C.ProtocolError("human_required", status=403)
             params = {k: v for k, v in request.path_params.items() if k != "session_id"}
-            return gateway.dispatch(auth, operation, body.model_dump(mode="json"), params)
+            command = body.model_dump(mode="json")
+            # Read-only preparation outside the write transaction (e.g. rule checks).
+            prepare = getattr(app.state, "aipm_prepare", {}).get(operation)
+            if prepare is None:
+                return gateway.dispatch(auth, operation, command, params)
+            with prepare(auth, command):
+                return gateway.dispatch(auth, operation, command, params)
 
         return endpoint
 
