@@ -1,0 +1,37 @@
+/* Unread colleague messages: system red, breathing slowly like the agent connection light but
+ * quieter, so it is noticed without pulling the eye. Steady when motion is reduced. */
+:root {
+  --unread-light: #ff3b30;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --unread-light: #ff453a;
+  }
+}
+:root[data-theme="dark"] {
+  --unread-light: #ff453a;
+}
+:is(.rail-board .person .unread-mark, .team-compact .unread-mark, .team-btn .av-dot):not([hidden]) {
+  background: var(--unread-light);
+  animation: rc-unread-breathe 3s ease-in-out infinite;
+}
+@keyframes rc-unread-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.rail-board .person .unread-mark, .team-compact .unread-mark, .team-btn .av-dot):not(
+    [hidden]
+  ) {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -180,6 +180,7 @@ import { ProgressBand } from '../shell/progress-band';
 import { SevenStepGuide } from '../features/aipm-guide/guide';
 import { createAipmPractice } from '../features/aipm-guide/practice';
 import '../shell/progress.css';
+import '../shell/unread-light.css';
 import { agentLine } from '../screens/board/agent-line';
 import * as Board from '../screens/board';
 import { dossierHtml, installDossier } from '../screens/investigate';
@@ -1646,6 +1647,10 @@ const Aipm = createAipmPractice({
   redraw: () => refreshWS(['stage', 'toolbar']),
   openMaterial: (id) => openMaterial(id),
   openChat: (role, text) => openChat(role, text),
+  ask: (role, text) => {
+    const a = current();
+    if (a) void askColleague(a, role, text);
+  },
   openWork: () => go('work'),
   openSettings: () => {
     closeSheet(true);
@@ -5153,6 +5158,101 @@ function openChat(role, prefill = '') {
     input.focus();
   }
 }
+// Opens a colleague's conversation and sends the question through its bound composer, the same
+// path a typed question takes (pending requests, retries and the real reply stay with it). A draft
+// or attachment already there is kept and nothing is sent. Resolves whether it was accepted.
+async function askColleague(a, person, question) {
+  const attemptId = a.id;
+  openChat(person);
+  // Let the existing native slot bind its permissions and composer. It owns submission,
+  // pending requests, retries and the eventual real reply; no alternate send API is added.
+  for (let i = 0; i < 100; i += 1) {
+    if (current()?.id !== attemptId || ui.chatRole !== person) return false;
+    const form = document.querySelector('.composer');
+    const input = document.getElementById('chat-input');
+    const send = form?.querySelector('button[type="submit"]');
+    if (
+      form &&
+      input &&
+      send &&
+      !send.disabled &&
+      form.dataset.rolesBound === ROLE_ID[person]
+    ) {
+      if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
+        notify(
+          T(
+            '你的草稿和引用已保留。先处理它们，再点建议问题。',
+            'Your draft and attachment are safe. Send or clear them before choosing a suggested question.',
+          ),
+        );
+        return false;
+      }
+      // Submit synchronously through the bound owner. Its send method saves the draft;
+      // a synthetic input event here could remount the form before submit.
+      input.value = question;
+      return await new Promise((resolve) => {
+        const token = crypto.randomUUID();
+        let revised = false;
+        const changed = (event) => {
+          if (
+            current()?.id === attemptId &&
+            ui.chatRole === person &&
+            event.target.id === 'chat-input'
+          )
+            revised = true;
+        };
+        const cleanup = () => {
+          clearTimeout(timeout);
+          document.removeEventListener('input', changed, true);
+          form.removeEventListener('rolecraft:greeting-result', settled);
+        };
+        const settled = async (event) => {
+          if (event.detail?.token !== token) return;
+          clearTimeout(timeout);
+          form.removeEventListener('rolecraft:greeting-result', settled);
+          try {
+            if (event.detail.accepted && !revised) {
+              const host = L.v4Host(a);
+              const key = `question:${ROLE_ID[person]}`;
+              if (host?.draft('roles', key) === question)
+                await host.keepDraft('roles', key, '');
+              const liveInput = document.getElementById('chat-input');
+              if (
+                !revised &&
+                current()?.id === attemptId &&
+                ui.chatRole === person &&
+                liveInput?.value === question
+              )
+                liveInput.value = '';
+            }
+            resolve(!!event.detail.accepted);
+          } catch (error) {
+            notify(errText(error));
+            resolve(false);
+          } finally {
+            cleanup();
+          }
+        };
+        const timeout = setTimeout(() => {
+          cleanup();
+          resolve(false);
+        }, 25000);
+        document.addEventListener('input', changed, true);
+        form.addEventListener('rolecraft:greeting-result', settled);
+        form.dataset.greetingRequest = token;
+        form.requestSubmit(send);
+      });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  notify(
+    T(
+      '对话还没就绪，请稍后再点这个问题。',
+      'The conversation is not ready yet. Try the question again shortly.',
+    ),
+  );
+  return false;
+}
 // Inside a task a document opens beside the work; from the board it opens on its own page.
 async function openMaterial(id, compare = false) {
   const a = current();
@@ -6856,104 +6956,13 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     case 'greet-ask': {
       const person = el.dataset.role;
-      const attemptId = a.id;
       await Greetings.askGreeting(
         a.id,
         hatHere(a) === 'engineer' ? 'engineer' : 'pm',
         person,
         Number(el.dataset.question),
         locale(),
-        async (question) => {
-          openChat(person);
-          // Let the existing native slot bind its permissions and composer. It owns submission,
-          // pending requests, retries and the eventual real reply; no alternate send API is added.
-          for (let i = 0; i < 100; i += 1) {
-            if (current()?.id !== attemptId || ui.chatRole !== person) return false;
-            const form = document.querySelector('.composer');
-            const input = document.getElementById('chat-input');
-            const send = form?.querySelector('button[type="submit"]');
-            if (
-              form &&
-              input &&
-              send &&
-              !send.disabled &&
-              form.dataset.rolesBound === ROLE_ID[person]
-            ) {
-              if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
-                notify(
-                  T(
-                    '你的草稿和引用已保留。先处理它们，再点建议问题。',
-                    'Your draft and attachment are safe. Send or clear them before choosing a suggested question.',
-                  ),
-                );
-                return false;
-              }
-              // Submit synchronously through the bound owner. Its send method saves the draft;
-              // a synthetic input event here could remount the form before submit.
-              input.value = question;
-              return await new Promise((resolve) => {
-                const token = crypto.randomUUID();
-                let revised = false;
-                const changed = (event) => {
-                  if (
-                    current()?.id === attemptId &&
-                    ui.chatRole === person &&
-                    event.target.id === 'chat-input'
-                  )
-                    revised = true;
-                };
-                const cleanup = () => {
-                  clearTimeout(timeout);
-                  document.removeEventListener('input', changed, true);
-                  form.removeEventListener('rolecraft:greeting-result', settled);
-                };
-                const settled = async (event) => {
-                  if (event.detail?.token !== token) return;
-                  clearTimeout(timeout);
-                  form.removeEventListener('rolecraft:greeting-result', settled);
-                  try {
-                    if (event.detail.accepted && !revised) {
-                      const host = L.v4Host(a);
-                      const key = `question:${ROLE_ID[person]}`;
-                      if (host?.draft('roles', key) === question)
-                        await host.keepDraft('roles', key, '');
-                      const liveInput = document.getElementById('chat-input');
-                      if (
-                        !revised &&
-                        current()?.id === attemptId &&
-                        ui.chatRole === person &&
-                        liveInput?.value === question
-                      )
-                        liveInput.value = '';
-                    }
-                    resolve(!!event.detail.accepted);
-                  } catch (error) {
-                    notify(errText(error));
-                    resolve(false);
-                  } finally {
-                    cleanup();
-                  }
-                };
-                const timeout = setTimeout(() => {
-                  cleanup();
-                  resolve(false);
-                }, 25000);
-                document.addEventListener('input', changed, true);
-                form.addEventListener('rolecraft:greeting-result', settled);
-                form.dataset.greetingRequest = token;
-                form.requestSubmit(send);
-              });
-            }
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-          notify(
-            T(
-              '对话还没就绪，请稍后再点这个问题。',
-              'The conversation is not ready yet. Try the question again shortly.',
-            ),
-          );
-          return false;
-        },
+        (question) => askColleague(a, person, question),
       );
       break;
     }
