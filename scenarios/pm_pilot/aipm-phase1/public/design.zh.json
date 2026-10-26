@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "experience_revision": "aipm-phase1-v1",
+  "content_revision": "aipm-design-1",
+  "language": "zh",
+  "title": "需求与方案",
+  "intro": "先选一项需求，拆清动作和最终责任。保存方案不会执行工具或应用设置。",
+  "routes": [
+    {
+      "id": "deterministic",
+      "label": "确定性规则",
+      "description": "按确认的输入和规则计算或校验。"
+    },
+    {
+      "id": "retrieval_generation",
+      "label": "检索与回答",
+      "description": "找资料、解释流程，并说明出处与未知。"
+    },
+    {
+      "id": "agent_confirmation",
+      "label": "Agent 加确认",
+      "description": "组织多步工作，重要动作前由本人或指定角色确认。"
+    },
+    {
+      "id": "human",
+      "label": "必须人工",
+      "description": "将批准、例外裁量或未授权动作交给有权限的人。"
+    }
+  ],
+  "starter_needs": [
+    {
+      "id": "expenses",
+      "scope": "expense",
+      "request": "解释报销流程"
+    },
+    {
+      "id": "access",
+      "scope": "access",
+      "request": "准备权限申请草稿"
+    }
+  ],
+  "source_requirements": {
+    "assistant_authority": "assistant_scope",
+    "elapsed_definition": "service_desk_sample",
+    "configuration_dependencies": "technical_brief"
+  },
+  "solution_prompts": [
+    "方案理由",
+    "实质替代方案",
+    "依赖和资源"
+  ]
+}
