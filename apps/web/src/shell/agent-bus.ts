@@ -22,7 +22,13 @@ export type AgentConnection = {
   state: 'none' | 'waiting' | 'connected' | 'idle';
   client?: string;
   lastSeen?: string;
+  /** Connected only: false while just the handshake arrived (setup written, no tool call yet). */
+  working?: boolean;
 };
+
+/** The light's drawn state: a handshake without any tool call is reachable, not yet working. */
+export const lightState = (c: AgentConnection) =>
+  c.state === 'connected' && c.working === false ? 'reachable' : c.state;
 
 const listeners = new Set<(e: AgentEvent) => void>();
 const connectionListeners = new Set<(c: AgentConnection) => void>();
@@ -67,7 +73,8 @@ export function setAgentConnection(next: AgentConnection): void {
   if (
     next.state === connection.state &&
     next.client === connection.client &&
-    next.lastSeen === connection.lastSeen
+    next.lastSeen === connection.lastSeen &&
+    next.working === connection.working
   )
     return;
   connection = { ...next };

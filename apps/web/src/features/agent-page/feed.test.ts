@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { setPreference } from '../../app/i18n';
 import type { AgentActivity } from '../../contracts-v2';
-import { createAgentFeed, toEvent } from './feed';
+import { createAgentFeed, sessionGone, toEvent } from './feed';
 import { accessInput } from './grant';
 import { engineerCall, foldEvents } from './stream';
 import { NEVER_GRANTED, refusal } from './verbs';
@@ -122,10 +122,28 @@ describe('agent activity feed', () => {
     );
     expect(titled.object?.title).toBe('住宿上限委托');
     setPreference('en');
-    expect(toEvent(row(8, { tool: 'engineer.tickets.read', objects: [{ kind: 'ticket', id: 't1', version: null, title: '住宿上限委托' }] })).object?.title).toBe('the hotel-limit ticket');
-    expect(toEvent(row(9, { tool: 'engineer.trial', objects: [{ kind: 'ticket', id: 't2', version: null, title: 'An unknown backend title' }] })).object?.title).toBe('the ticket');
-    expect(toEvent(row(10, { tool: 'engineer.tickets.read', objects: [] })).object?.title).toBe('the ticket');
-    expect(toEvent(row(11, { tool: 'engineer.reviews.read', objects: [] })).object?.title).toBe('the review');
+    expect(
+      toEvent(
+        row(8, {
+          tool: 'engineer.tickets.read',
+          objects: [{ kind: 'ticket', id: 't1', version: null, title: '住宿上限委托' }],
+        }),
+      ).object?.title,
+    ).toBe('the hotel-limit ticket');
+    expect(
+      toEvent(
+        row(9, {
+          tool: 'engineer.trial',
+          objects: [{ kind: 'ticket', id: 't2', version: null, title: 'An unknown backend title' }],
+        }),
+      ).object?.title,
+    ).toBe('the ticket');
+    expect(toEvent(row(10, { tool: 'engineer.tickets.read', objects: [] })).object?.title).toBe(
+      'the ticket',
+    );
+    expect(toEvent(row(11, { tool: 'engineer.reviews.read', objects: [] })).object?.title).toBe(
+      'the review',
+    );
     setPreference('zh');
     const review = toEvent(
       row(7, {
@@ -137,5 +155,88 @@ describe('agent activity feed', () => {
     expect([toEvent(row(4)), trial].filter(engineerCall).map((e) => e.tool)).toEqual([
       'engineer.trial',
     ]);
+  });
+});
+
+describe('a session that no longer exists', () => {
+  it('stops polling instead of retrying the same refusal', async () => {
+    let reads = 0;
+    const tasks: (() => void)[] = [];
+    const feed = createAgentFeed({
+      read: async () => {
+        reads++;
+        throw Object.assign(new Error('gone'), { status: 409, code: 'v2_session_required' });
+      },
+      emit: () => {},
+      changed: () => {},
+      schedule: (task) => {
+        tasks.push(task);
+        return tasks.length;
+      },
+      cancel: () => {},
+    });
+    feed.start();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(reads).toBe(1);
+    expect(tasks).toHaveLength(0);
+    expect(sessionGone({ status: 409, code: 'version_conflict' })).toBe(false);
+    expect(sessionGone({ status: 503 })).toBe(false);
+    expect(sessionGone({ status: 404 })).toBe(true);
+  });
+});
+
+describe('handshake versus work', () => {
+  it('reports a connected feed as not yet working until a tool call row arrives', async () => {
+    const pages = [
+      {
+        items: [
+          {
+            seq: 1,
+            at: '2026-10-26T08:00:00Z',
+            delegation_id: 'd',
+            kind: 'connected',
+            status: 'ok',
+          },
+        ],
+        connection: {
+          state: 'connected',
+          client: 'claude-code',
+          last_seen: '2026-10-26T08:00:00Z',
+        },
+        complete: true,
+        next_cursor: 1,
+      },
+      {
+        items: [
+          {
+            seq: 2,
+            at: '2026-10-26T08:00:05Z',
+            delegation_id: 'd',
+            kind: 'tool_call',
+            tool: 'observation',
+            status: 'ok',
+          },
+        ],
+        connection: {
+          state: 'connected',
+          client: 'claude-code',
+          last_seen: '2026-10-26T08:00:05Z',
+        },
+        complete: true,
+        next_cursor: 2,
+      },
+    ];
+    let i = 0;
+    const feed = createAgentFeed({
+      read: async () => pages[Math.min(i++, 1)] as never,
+      emit: () => {},
+      changed: () => {},
+      schedule: () => 0,
+      cancel: () => {},
+    });
+    await feed.poll();
+    expect(feed.state()).toMatchObject({ state: 'connected', working: false });
+    await feed.poll();
+    expect(feed.state()).toMatchObject({ state: 'connected', working: true });
   });
 });

@@ -153,6 +153,7 @@ import {
   installShell,
   lastTicket,
   onAgentConnection,
+  lightState,
   setHat,
   setLastTicket,
   stageOf,
@@ -1418,17 +1419,8 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
     ? ''
     : `<button type="button" class="btn quiet back narrow-only" data-action="to-entry" aria-label="${esc(T('离开练习', 'Leave the practice'))}">${icon('back')}</button>`;
   const c = agentConnection();
-  const lampLabel =
-    c.state === 'none'
-      ? T('连接 Agent', 'Connect agent')
-      : c.state === 'waiting'
-        ? T('等待 Agent', 'Waiting for agent')
-        : c.client || T('我的 Agent', 'My agent');
-  const lampTitle =
-    c.state === 'idle' && c.lastSeen
-      ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`)
-      : T('我的 Agent', 'My agent');
-  const lamp = `<button type="button" class="agent-lamp" data-action="open-agent" data-state="${c.state}" title="${esc(lampTitle)}" aria-label="${esc(`${lampTitle}: ${lampLabel}`)}"><span class="lamp rc-agent-light" data-state="${c.state}" aria-hidden="true"><span class="lamp-ring"></span></span><span class="lamp-label">${esc(lampLabel)}</span></button>`;
+  const { label: lampLabel, title: lampTitle, state: lampState } = lampText(c);
+  const lamp = `<button type="button" class="agent-lamp" data-action="open-agent" data-state="${lampState}" title="${esc(lampTitle)}" aria-label="${esc(`${lampTitle}: ${lampLabel}`)}"><span class="lamp rc-agent-light" data-state="${lampState}" aria-hidden="true"><span class="lamp-ring"></span></span><span class="lamp-label">${esc(lampLabel)}</span></button>`;
   const record = `<button type="button" class="btn quiet icon icon-key record-btn" data-action="records" aria-label="${esc(T('记录', 'Record'))}" title="${esc(T('记录', 'Record'))}">${icon('hours', 'i-sm')}</button>`;
   const moreWrap =
     more ||
@@ -8535,23 +8527,44 @@ installEngineer({
   notify,
   download,
 });
+// The topbar lamp's words and drawn state, from the one connection the agent line reports.
+function lampText(c) {
+  const state = lightState(c);
+  const label =
+    c.state === 'none'
+      ? T('连接 Agent', 'Connect agent')
+      : c.state === 'waiting'
+        ? T('等待 Agent', 'Waiting for agent')
+        : state === 'reachable'
+          ? T('已连通', 'Reachable')
+          : c.client || T('我的 Agent', 'My agent');
+  const title =
+    state === 'reachable'
+      ? T(
+          '我的 Agent · 配置已写好；已经开着的会话要重启或在 /mcp 里重连才能用上',
+          'My agent · Setup written; a session that was already open must restart or reconnect in /mcp',
+        )
+      : c.state === 'idle' && c.lastSeen
+        ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`)
+        : T('我的 Agent', 'My agent');
+  return { label, title, state };
+}
 onAgentConnection(() => {
   if (inPractice()) {
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'rail']);
     else {
       const c = agentConnection();
       const lamp = document.querySelector('.agent-lamp');
-      const label = c.state === 'none' ? T('连接 Agent', 'Connect agent') : c.state === 'waiting' ? T('等待 Agent', 'Waiting for agent') : c.client || T('我的 Agent', 'My agent');
-      const title = c.state === 'idle' && c.lastSeen ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`) : T('我的 Agent', 'My agent');
+      const { label, title, state } = lampText(c);
       if (lamp) {
-        lamp.dataset.state = c.state;
+        lamp.dataset.state = state;
         lamp.title = title;
         lamp.setAttribute('aria-label', `${title}: ${label}`);
         const text = lamp.querySelector('.lamp-label');
         if (text) text.textContent = label;
       }
       for (const light of document.querySelectorAll('.agent-lamp .rc-agent-light, .person.mine .rc-agent-light')) {
-        light.dataset.state = c.state;
+        light.dataset.state = state;
         if (light.getAttribute('role') === 'img') light.setAttribute('aria-label', c.state === 'connected' ? T('已连接', 'Connected') : T('未连接或空闲', 'Not connected or idle'));
       }
     }

@@ -58,6 +58,7 @@ export function rowsHit(e: AgentEvent): WorkspaceRow['key'][] {
 
 export function Rig({
   phase,
+  reachable = false,
   client,
   lastSeen,
   workspace,
@@ -69,6 +70,8 @@ export function Rig({
   /** False until the first read: the state the page opens on is never drawn as an event. */
   settled?: boolean;
   phase: Phase;
+  /** Connected by a handshake only, before any tool call. */
+  reachable?: boolean;
   client: string;
   lastSeen?: string;
   workspace: WorkspaceRow[];
@@ -192,17 +195,19 @@ export function Rig({
   const agentName =
     phase === 'none' || phase === 'waiting' ? t(lang, '你的 Agent', 'Your agent') : client;
   const state =
-    phase === 'connected'
-      ? t(lang, '已连接', 'Connected')
-      : phase === 'idle'
-        ? t(
-            lang,
-            `最近一次 ${clockShort(lastSeen, lang)}`,
-            `Last seen ${clockShort(lastSeen, lang)}`,
-          )
-        : phase === 'waiting'
-          ? t(lang, '等待中', 'Waiting')
-          : t(lang, '还没连接', 'Not connected');
+    phase === 'connected' && reachable
+      ? t(lang, '已连通 · 配置已写好', 'Reachable · setup written')
+      : phase === 'connected'
+        ? t(lang, '已连接', 'Connected')
+        : phase === 'idle'
+          ? t(
+              lang,
+              `最近一次 ${clockShort(lastSeen, lang)}`,
+              `Last seen ${clockShort(lastSeen, lang)}`,
+            )
+          : phase === 'waiting'
+            ? t(lang, '等待中', 'Waiting')
+            : t(lang, '还没连接', 'Not connected');
 
   return (
     <section
@@ -275,7 +280,12 @@ export function Rig({
           <div className="ag-agent-text">
             <p className="ag-agent-name">{agentName}</p>
             <p className="ag-agent-state">
-              <span className="ag-lamp rc-agent-light" data-state={phase} ref={lamp} aria-hidden="true" />
+              <span
+                className="ag-lamp rc-agent-light"
+                data-state={phase}
+                ref={lamp}
+                aria-hidden="true"
+              />
               <span>{state}</span>
             </p>
           </div>

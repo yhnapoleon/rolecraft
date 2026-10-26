@@ -56,7 +56,10 @@ export const VERBS: Record<string, Verb> = {
   'work_items.update': handBack('改了一件事', 'Updated a task'),
   'work_items.batch': handBack('整理了事项', 'Rearranged tasks'),
   'engineer.submissions.draft': handBack('起草了签字', 'Drafted a sign-off for'),
-  'aipm.design.draft': handBack('交回了需求与分拣草稿，等你确认', 'Handed back a design draft for you to confirm'),
+  'aipm.design.draft': handBack(
+    '交回了需求与分拣草稿，等你确认',
+    'Handed back a design draft for you to confirm',
+  ),
 };
 
 /** Tools a connection is granted: everything above, nothing a person must do themselves. */
