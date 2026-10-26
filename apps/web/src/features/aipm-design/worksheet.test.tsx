@@ -68,13 +68,13 @@ describe('worksheet', () => {
         expect(page).toContain(label);
     },
   );
-  it('shows structure blocks only on boundary, solution and assurance', () => {
+  it('shows structure blocks only on need (metric), boundary, solution and assurance', () => {
     const with_ = STEPS.filter((s) =>
       html(<Worksheet host={host()} step={s} preload={preload('zh')} />).includes(
         'aipm-sheet__structure',
       ),
     );
-    expect(with_).toEqual(['boundary', 'solution', 'assurance']);
+    expect(with_).toEqual(['need', 'boundary', 'solution', 'assurance']);
   });
   it('lists the solution choice from the learner’s own subheadings', () => {
     const prd = {

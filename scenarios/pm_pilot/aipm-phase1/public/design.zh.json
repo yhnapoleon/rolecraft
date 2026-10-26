@@ -249,7 +249,8 @@
             "label": "还说不准"
           }
         ]
-      }
+      },
+      "structure": "metric"
     },
     "boundary": {
       "order": 4,

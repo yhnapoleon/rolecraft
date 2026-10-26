@@ -7,9 +7,11 @@ import {
   insertAt,
   quoteRefs,
   readChoice,
+  readMetric,
   type SheetDesign,
   toText,
   writeChoice,
+  writeMetric,
 } from './sheet-model';
 
 const ref: EvidenceRefV2 = {
@@ -100,5 +102,19 @@ describe('worksheet choice', () => {
       'internal',
     );
     expect(d.business).toEqual({ audience: 'internal', offering_explanation: 'x', task_goal: 'y' });
+  });
+});
+
+describe('worksheet metric block', () => {
+  it('writes nothing until the need status is chosen', () => {
+    expect(writeMetric(base, '', { kind: 'labor_time' })).toBe(base);
+  });
+  it('stores the metric on the main need the metric_scope rule reads', () => {
+    const d = writeMetric(writeMetric(base, 'supported', { kind: 'labor_time' }), 'supported', {
+      source_field: 'elapsed_minutes',
+    });
+    expect(readMetric(d)).toMatchObject({ kind: 'labor_time', source_field: 'elapsed_minutes' });
+    expect(readChoice('need', d)).toBe('supported');
+    expect(d.needs).toHaveLength(1);
   });
 });

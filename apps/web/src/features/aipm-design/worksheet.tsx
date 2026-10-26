@@ -4,7 +4,14 @@ import { Sparkle } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { AipmClient } from '../../aipm/client';
 import type { AipmHost } from '../../aipm/host';
-import type { AipmProgress, EvidenceRefV2, ObjectRef, SheetState, StepId } from '../../aipm/types';
+import type {
+  AipmProgress,
+  EvidenceRefV2,
+  MetricDeclaration,
+  ObjectRef,
+  SheetState,
+  StepId,
+} from '../../aipm/types';
 import { copy } from './copy';
 import { DESIGN_ID, type DesignRead, DiagramBlock, type DraftItem, Triage } from './desk';
 import { type AgentDraft, type Language, failure, findRef, mergeDraft, nextDesign } from './model';
@@ -22,8 +29,11 @@ import {
   type SheetDraft,
   sheetKey,
   toText,
+  metricKey,
+  readMetric,
   wordCount,
   writeChoice,
+  writeMetric,
 } from './sheet-model';
 import './worksheet.css';
 
@@ -215,7 +225,10 @@ export function Worksheet({
 
   const content = loaded?.content.sheets[step];
   const prd = loaded?.prd ?? null;
-  const dirty = loaded ? sheetKey(sheet) !== sheetKey(savedSheet(loaded, step)) : false;
+  const dirty = loaded
+    ? sheetKey(sheet) !== sheetKey(savedSheet(loaded, step)) ||
+      metricKey(design) !== metricKey(loaded.saved?.design)
+    : false;
   const sheetName = c.section(step);
   const version = prd?.ref.version;
 
@@ -552,7 +565,19 @@ export function Worksheet({
         }
       />
 
-      {content.structure && (
+      {content.structure === 'metric' && (
+        <MetricBlock
+          c={c}
+          design={design}
+          claim={sheet.choice}
+          readOnly={readOnly}
+          onChange={(patch) => {
+            setDesign(writeMetric(design, sheet.choice, patch));
+            setNote('');
+          }}
+        />
+      )}
+      {content.structure && content.structure !== 'metric' && (
         <Structure
           kind={content.structure}
           open={structureOpen}
@@ -919,5 +944,95 @@ function AgentHelp({ c, host, step }: { c: Copy; host: WorksheetHost; step: Step
         </span>
       )}
     </span>
+  );
+}
+
+const METRIC_KINDS: Record<MetricDeclaration['kind'], readonly [string, string]> = {
+  elapsed_time: ['结单历时', 'Elapsed time'],
+  labor_time: ['人工处理工时', 'Hands-on labour time'],
+  case_count: ['工单数量', 'Case count'],
+  other: ['其他', 'Other'],
+};
+/** Optional: what the success metric measures and which field it comes from. */
+function MetricBlock({
+  c,
+  design,
+  claim,
+  readOnly,
+  onChange,
+}: {
+  c: Copy;
+  design: SheetDesign;
+  claim: string;
+  readOnly: boolean;
+  onChange: (patch: Partial<MetricDeclaration>) => void;
+}) {
+  const metric = readMetric(design);
+  const [open, setOpen] = useState(false);
+  const summary = metric
+    ? [c.t(...METRIC_KINDS[metric.kind]), metric.source_field, metric.unit]
+        .filter(Boolean)
+        .join(' · ')
+    : c.t('未填', 'Not filled');
+  return (
+    <div className="aipm-sheet__structure">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <strong>
+          {c.t('指标小块（可选）', 'Metric (optional)')} · {summary}
+        </strong>
+        <small>{open ? c.t('收起', 'Collapse') : c.t('展开编辑', 'Expand')}</small>
+      </button>
+      {open && (
+        <fieldset
+          className="aipm-sheet__structure-body aipm-sheet__metric"
+          disabled={readOnly || !claim}
+        >
+          {!claim && (
+            <p className="aipm-sheet__muted">
+              {c.t(
+                '先在上面选这个需求现在是什么，再填指标。',
+                'Choose where this need stands above first.',
+              )}
+            </p>
+          )}
+          <div className="aipm-sheet__choice">
+            <span className="aipm-sheet__choice-label">
+              {c.t('指标衡量的是：', 'The metric measures:')}
+            </span>
+            <div className="aipm-sheet__segmented">
+              {(Object.keys(METRIC_KINDS) as MetricDeclaration['kind'][]).map((k) => (
+                <label key={k}>
+                  <input
+                    type="radio"
+                    name="metric-kind"
+                    checked={metric?.kind === k}
+                    onChange={() => onChange({ kind: k })}
+                  />
+                  {c.t(...METRIC_KINDS[k])}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="aipm-sheet__metric-fields">
+            <label>
+              <span>{c.t('来源字段', 'Source field')}</span>
+              <input
+                value={metric?.source_field ?? ''}
+                placeholder="elapsed_minutes"
+                onChange={(e) => onChange({ source_field: e.target.value.trim() })}
+              />
+            </label>
+            <label>
+              <span>{c.t('单位', 'Unit')}</span>
+              <input
+                value={metric?.unit ?? ''}
+                placeholder={c.t('分钟', 'minutes')}
+                onChange={(e) => onChange({ unit: e.target.value })}
+              />
+            </label>
+          </div>
+        </fieldset>
+      )}
+    </div>
   );
 }

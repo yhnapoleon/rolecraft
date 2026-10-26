@@ -134,6 +134,9 @@ def test_coverage_items_use_reviewed_checks_and_known_references():
         predicate = item["predicate"]
         if item["check"] == "rule":
             assert predicate["rule"] in rule_ids
+            # A rule point must name the structured fields its rule reads; without them it is
+            # never "covered" just because the rule had nothing to judge.
+            assert predicate["requires"], item["id"]
         if item["check"] == "choice":
             assert predicate["field"] and predicate["conflicts_with"] == []
         if item["check"] == "rubric_rule":
