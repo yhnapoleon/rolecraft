@@ -346,7 +346,7 @@ export function Worksheet({
           ? c.t('已采用，但草稿状态没更新。', 'Adopted, but the draft status was not updated.')
           : c.t(
               `采用自你的 Agent 草稿，已存为第 ${out?.prdRef.version} 版。`,
-              `Adopted from your agent's draft as version ${out?.prdRef.version}.`,
+              `Adopted from your agent's draft and saved as version ${out?.prdRef.version}.`,
             ),
       );
     });
@@ -836,7 +836,7 @@ export function AgentDraftCard({
   return (
     <article className="aipm-sheet__draft" data-draft-id={item.id}>
       <p className="aipm-sheet__eyebrow">
-        {c.t('来自你的 Agent · 待你确认', 'From your agent · awaiting you')}
+        {c.t('来自你的 Agent · 待你确认', 'From your agent · awaiting your confirmation')}
       </p>
       {item.note && <p className="aipm-sheet__muted">{item.note}</p>}
       <details>
@@ -855,7 +855,7 @@ export function AgentDraftCard({
       <p className="aipm-sheet__muted">
         {c.t(
           '采用后才存成 PRD 新版本；不用时草稿记录会保留。',
-          'Adopting saves a new PRD version; declining keeps the draft on record.',
+          'Only adopting saves a new PRD version; if you decline, the draft stays on record.',
         )}
       </p>
       <div className="aipm-sheet__actions">
