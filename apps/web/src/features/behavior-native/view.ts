@@ -209,9 +209,8 @@ export type BehaviorView = {
   categories: { text: string; fallback: boolean }[];
   empty: string | null;
   phasesLabel: string;
-  /** Each run of one phase: its share of the bar, its neutral style, and whether its name fits
-   * inside it (narrow runs stay unlabelled; the legend under the bar names every phase). */
-  phases: { name: string; steps: number; style: number; labelled: boolean }[];
+  /** Recorded phase runs; label fitting happens after layout using the actual font. */
+  phases: { name: string; steps: number; style: number; from: number; to: number }[];
   legend: { name: string; style: number }[];
   stepsLabel: string;
   steps: string[];
@@ -236,12 +235,25 @@ const PHASE_ORDER: Record<string, number> = {
   decide: 2,
   adjust: 3,
 };
-/** Width the bar can count on in the review side column (narrowest layout, inside padding). */
-const BAR_WIDTH = 280;
-const labelWidth = (name: string, l: Language) => name.length * (l === 'zh' ? 11 : 6.4) + 12;
+const phaseName = (name: string, l: Language) => {
+  const index = PHASE_ORDER[name];
+  return (
+    (l === 'zh'
+      ? ['探索', '测试', '决策', '调整']
+      : ['Exploration', 'Testing', 'Decision', 'Revision'])[index] ?? name
+  );
+};
+/** Measure the actual font outside this pure fitting decision. */
+export const phaseLabelFits = (segmentWidth: number, textWidth: number) =>
+  segmentWidth >= textWidth + 12;
+const counts = (symbols: string[]) => [
+  ...symbols.reduce(
+    (map, symbol) => map.set(symbol, (map.get(symbol) ?? 0) + 1),
+    new Map<string, number>(),
+  ),
+];
 
 function phaseRuns(data: Behavior, l: Language) {
-  const total = Math.max(1, data.sequence.length);
   const seen: string[] = [];
   const styleOf = (name: string) => {
     if (name in PHASE_ORDER) return PHASE_ORDER[name];
@@ -253,10 +265,11 @@ function phaseRuns(data: Behavior, l: Language) {
       data.sequence.filter((r) => r.seq >= p.from_seq && r.seq <= p.to_seq && r.phase === p.name)
         .length || 1;
     return {
-      name: p.name,
+      name: phaseName(p.name, l),
       steps,
       style: styleOf(p.name),
-      labelled: (steps / total) * BAR_WIDTH >= labelWidth(p.name, l),
+      from: p.from_seq,
+      to: p.to_seq,
     };
   });
   const legend = [
@@ -309,15 +322,18 @@ export function behaviorView(
             .join(l === 'zh' ? '、' : ', ')
         : t(l, 'nearest', { name: strategyName(strategy.nearest, l) })
       : null,
-    runnersUp:
-      strategy && strategy.top3.length > 1
-        ? t(l, 'runnersUp', {
-            names: strategy.top3
-              .filter((s) => s.distance > strategy.distance)
-              .map((s) => strategyName(s.strategy, l))
-              .join(l === 'zh' ? '、' : ', '),
-          })
-        : null,
+    runnersUp: strategy?.top3.some((s) => s.distance > strategy.distance)
+      ? t(l, 'runnersUp', {
+          names: counts(
+            strategy.top3.filter((s) => s.distance > strategy.distance).map((s) => s.strategy),
+          )
+            .map(
+              ([name, count]) =>
+                `${strategyName(name, l)}${count > 1 ? (l === 'zh' ? `（${count} 条参考）` : ` (${count} references)`) : ''}`,
+            )
+            .join(l === 'zh' ? '、' : ', '),
+        })
+      : null,
     noStrategy: strategy ? null : t(l, 'noStrategy'),
     alignment: [
       { label: t(l, 'missing'), items: data.alignment.missing.map(label) },
@@ -358,60 +374,129 @@ export function behaviorHtml(
     .join('');
   const head = `<header class="br-head"><div><p class="br-kicker">${say('这次工作的记录', 'THE WORK BEHIND THE DELIVERY')}</p><h2>${esc(view.title)}</h2><p>${esc(view.lead)}</p></div><span class="br-total">${data.sequence.length}<small>${say('个可见动作', 'visible actions')}</small></span></header>`;
   if (view.empty) return `${head}<p>${esc(view.empty)}</p>`;
-  const phaseDescription = (name: string) =>
+  const phaseDescription = (style: number) =>
     [
-      say(
-        '查资料、问同事，建立对问题的理解。',
-        'Read sources and ask colleagues to understand the problem.',
-      ),
-      say(
-        '通过测试和配置，检查想法是否成立。',
-        'Test and configure to check whether an idea holds up.',
-      ),
-      say(
-        '权衡限制，提出申请或交付决定。',
-        'Weigh constraints, request resources or deliver a decision.',
-      ),
-      say('回到已做过的工作，继续修订和验证。', 'Return to earlier work to revise and verify it.'),
-    ][PHASE_ORDER[name]] ??
-    say('记录识别出的一个工作阶段。', 'A phase identified in this work record.');
-  const bar = view.phases
+      say('查资料、问同事，理解问题。', 'Read sources and ask colleagues.'),
+      say('通过测试和配置验证想法。', 'Check ideas through tests and configuration.'),
+      say('权衡限制，申请或交付决定。', 'Weigh constraints and make a decision.'),
+      say('回到已有工作，修订和验证。', 'Revisit, revise and verify earlier work.'),
+    ][style];
+  const bar = `<rc-phase-timeline><div class="rc-phasebar" aria-hidden="true">${view.phases.map((p) => `<span class="rc-phase" data-style="${p.style}" style="flex:${p.steps}"></span>`).join('')}</div><div class="rc-phase-labels">${view.phases.map((p, i) => `<button type="button" class="rc-phase-label" style="--phase-steps:${p.steps}" data-from="${p.from}" data-to="${p.to}" data-style="${p.style}" aria-pressed="false" aria-label="${i + 1}. ${esc(p.name)}"><span class="rc-phase-name">${esc(p.name)}</span><span class="rc-phase-number" aria-hidden="true">${i + 1}</span></button>`).join('')}</div></rc-phase-timeline>`;
+  const legend = `<div class="rc-phase-legend">${view.legend
     .map(
       (p) =>
-        `<span class="rc-phase" data-style="${p.style}" style="flex:${p.steps}" title="${esc(p.name)}">${p.labelled ? esc(p.name) : ''}</span>`,
+        `<p><i data-style="${p.style}" aria-hidden="true"></i><b><span class="rc-legend-numbers">${view.phases
+          .map((run, i) => (run.name === p.name ? i + 1 : null))
+          .filter(Boolean)
+          .join(' / ')} · </span>${esc(p.name)}</b><span>${phaseDescription(p.style)}</span></p>`,
     )
-    .join('');
-  const legend = `<div class="rc-phase-legend">${view.legend.map((p) => `<p><i data-style="${p.style}" aria-hidden="true"></i><b>${esc(p.name)}</b><span>${phaseDescription(p.name)}</span></p>`).join('')}</div>`;
+    .join('')}</div>`;
   const steps = (symbols: string[], reference = false) =>
-    `<ol class="br-track">${symbols.map((symbol, i) => `<li><details class="br-action" data-phase="${reference ? '' : (PHASE_ORDER[data.sequence[i].phase ?? ''] ?? '')}"><summary><span class="br-step-no">${String(i + 1).padStart(2, '0')}</span><span>${esc(label(symbol))}</span></summary><p>${reference ? say('参考轨迹里的动作', 'Action in the reference trajectory') : `${esc(data.sequence[i].phase ?? say('阶段未记录', 'Phase not recorded'))} · ${say(`记录序号 ${data.sequence[i].seq}`, `Record sequence ${data.sequence[i].seq}`)}`}</p>${!reference && data.sequence[i].question ? `<blockquote>${esc(data.sequence[i].question ?? '')}</blockquote>` : ''}</details></li>`).join('')}</ol>`;
+    `<ol class="br-track">${symbols
+      .map((symbol, i) => {
+        const row = data.sequence[i];
+        const phase = !reference && row.phase ? phaseName(row.phase, l) : '';
+        return `<li><details class="br-action"${reference ? '' : ` data-seq="${row.seq}" data-phase="${PHASE_ORDER[row.phase ?? ''] ?? ''}"`}><summary><span class="br-step-no">${String(i + 1).padStart(2, '0')}</span><span>${esc(label(symbol))}</span><span class="br-action-plus" aria-hidden="true">+</span></summary><p>${reference ? say('参考轨迹里的动作', 'Action in the reference trajectory') : `${esc(phase || say('阶段未记录', 'Phase not recorded'))} · ${say(`记录序号 ${row.seq}`, `Record sequence ${row.seq}`)}`}</p>${!reference && row.question ? `<blockquote>${esc(row.question)}</blockquote>` : ''}</details></li>`;
+      })
+      .join('')}</ol>`;
   const reference = data.strategy?.reference;
-  const refTrack = reference?.sequence?.length
-    ? `<section class="br-band br-band--reference"><h3>${say('最近参考轨迹', 'Nearest reference trajectory')} · ${esc(strategyName(reference.strategy, l))}</h3>${steps(reference.sequence, true)}</section>`
-    : `<p class="br-unavailable">${say('这次没有可展示的参考轨迹。', 'No reference trajectory was returned for this session.')}</p>`;
-  const difference = view.alignment.length
-    ? view.alignment
-        .map(
-          (g) =>
-            `<section><h4>${esc(g.label)}</h4><ul>${g.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></section>`,
-        )
-        .join('')
-    : `<p>${say('记录没有列出动作数量或首次出现次序的差异。', 'No differences in action counts or first-occurrence order were recorded.')}</p>`;
+  const delta = (symbols: string[], referenceMore: boolean) =>
+    counts(symbols)
+      .sort((a, b) => b[1] - a[1])
+      .map(([symbol, n]) => {
+        const action =
+          symbol === 'test:normal' ? say('普通问题测试', 'Regular-question tests') : label(symbol);
+        return say(
+          `${action}：${referenceMore ? '参考' : '你'}多 ${n} 次`,
+          `${action}: ${n} more in ${referenceMore ? 'the reference' : 'your record'}`,
+        );
+      });
+  const differences = [
+    ...delta(data.alignment.missing, true),
+    ...delta(data.alignment.extra, false),
+    ...data.alignment.swapped.map(([a, b]) =>
+      say(
+        `${label(a)}与${label(b)}的首次顺序相反`,
+        `First-occurrence order differs: ${label(a)} / ${label(b)}`,
+      ),
+    ),
+  ];
+  const differenceList = (items: string[]) =>
+    `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  const summary = `<section class="br-overview"><p class="rc-behavior__nearest">${esc(view.nearest ?? view.noStrategy ?? '')}</p>${data.strategy ? `<div class="br-differences">${differences.length ? differenceList(differences.slice(0, 3)) : `<p>${say('没有记录动作数量或首次顺序的差异。', 'No differences in counts or first-occurrence order were recorded.')}</p>`}</div>` : ''}</section>`;
+  const refTrack = `<details class="br-reference"><summary>${say('展开完整参考与差异', 'Explore the full reference and differences')}</summary>${reference?.sequence?.length ? `<section class="br-band br-band--reference"><h3>${say('最近参考轨迹', 'Nearest reference trajectory')} · ${esc(strategyName(reference.strategy, l))}</h3>${steps(reference.sequence, true)}</section>` : `<p class="br-unavailable">${say('这次没有可展示的参考轨迹。', 'No reference trajectory was returned for this session.')}</p>`}${view.runnersUp ? `<p>${esc(view.runnersUp)}</p>` : ''}${differences.length > 3 ? differenceList(differences.slice(3)) : ''}${data.strategy?.top3.length ? `<details><summary>${say('查看各参考的匹配记录', 'View individual reference matches')}</summary><ol>${data.strategy.top3.map((s) => `<li>${esc(strategyName(s.strategy, l))} · ${say('匹配距离', 'Match distance')} ${s.distance}</li>`).join('')}</ol></details>` : ''}</details>`;
   const window = data.window
     ? say(
-        `本次读取范围：记录 ${data.window.from_seq}–${data.window.to_seq}。`,
-        `This read covers records ${data.window.from_seq}–${data.window.to_seq}.`,
+        `读取范围：记录 ${data.window.from_seq}–${data.window.to_seq}。`,
+        `Read window: records ${data.window.from_seq}–${data.window.to_seq}.`,
       )
     : say('本次响应没有记录起止范围。', 'This response did not record its window.');
   return `${head}<details class="rc-behavior__steps"${options.stepsOpen ? ' open' : ''}><summary>${say('展开过程与参考对照', 'Explore the process and reference')}</summary><div class="br-content">
-    <p class="rc-behavior__origin">${say('本次可见动作 · 截至本次读取，含同事对话。', 'Visible actions up to this read, including colleague questions.')} ${window}</p>
-    <h3>${say('工作怎样展开', 'How the work unfolded')} <small> · ${fallback ? say('按规则分阶段', 'Rule-based phases') : say('HMM 识别阶段', 'Phases identified by HMM')}</small></h3>
-    <div class="rc-phasebar" aria-hidden="true">${bar}</div>${legend}
+    ${summary}
+    <h3>${say('识别出的工作阶段', 'Recognised work phases')}<small> · ${fallback ? say('按规则划分', 'Rule-based') : 'HMM'}</small></h3>
+    ${bar}${legend}
+    <p class="br-method">${say('动作顺序，不表示耗时。点阶段查看对应动作。', 'Action order, not elapsed time. Select a phase to highlight its actions.')}</p>
     <div class="br-bands"><section class="br-band"><h3>${esc(view.stepsLabel)}</h3>${steps(data.sequence.map((r) => r.symbol))}</section>${refTrack}</div>
-    <p class="br-method">${fallback ? esc(view.noStrategy ?? '') : say('DTW 按动作序列寻找最近参考。两条时间带各按自身顺序排列；接口没有提供逐点对齐路径。', 'DTW finds the nearest reference by action sequence. Each track keeps its own order; no point-by-point alignment path was returned.')}</p>
-    <p class="rc-behavior__nearest">${esc(view.nearest ?? view.noStrategy ?? '')}</p>
-    ${data.strategy?.top3.some((s) => s.distance > (data.strategy?.distance ?? Infinity)) && view.runnersUp ? `<p>${esc(view.runnersUp)}</p>` : ''}
-    ${data.strategy ? `<div class="br-differences">${difference}</div><p class="br-method">${say('差异按动作数量和首次出现的先后比较。参考轨迹来自预设脚本，不代表最佳路线。', 'Differences compare action counts and first-occurrence order. References are scripted examples, not a best route.')}</p>` : ''}
+    <p class="br-method">${fallback ? esc(view.noStrategy ?? '') : say('DTW 按动作序列寻找最近参考；接口没有提供逐点对齐路径。参考来自预设脚本，不代表最佳路线。', 'DTW finds the nearest reference by action sequence; no point-by-point alignment path was returned. References are scripted examples, not a best route.')}</p>
+    <p class="rc-behavior__origin">${window} ${esc(view.executor)}</p>
     ${view.order.length ? `<details class="br-order"><summary>${esc(view.orderLabel)}</summary><ul>${view.order.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
     ${options.lens ? `<p class="rc-behavior__cats">${cats}</p>` : ''}
-    <p class="meta">${esc(view.executor)}</p></div></details>`;
+    </div></details>`;
+}
+
+if (typeof customElements !== 'undefined' && !customElements.get('rc-phase-timeline')) {
+  customElements.define(
+    'rc-phase-timeline',
+    class extends HTMLElement {
+      resize?: ResizeObserver;
+      connectedCallback() {
+        queueMicrotask(() => {
+          if (!this.isConnected) return;
+          const buttons = [...this.querySelectorAll<HTMLButtonElement>('.rc-phase-label')];
+          const segments = [...this.querySelectorAll<HTMLElement>('.rc-phase')];
+          const measureLayout = () => {
+            if (!this.clientWidth) return;
+            const compact = segments.some((e) => e.getBoundingClientRect().width < 44);
+            this.dataset.compact = String(compact);
+            buttons.forEach((button, i) => {
+              const name = button.querySelector<HTMLElement>('.rc-phase-name');
+              if (!name) return;
+              button.dataset.labelled = String(
+                !compact &&
+                  phaseLabelFits(segments[i].getBoundingClientRect().width, name.scrollWidth),
+              );
+            });
+          };
+          for (const button of buttons)
+            button.onclick = () => {
+              const selected = button.getAttribute('aria-pressed') !== 'true';
+              buttons.forEach((b) => {
+                b.setAttribute('aria-pressed', String(selected && b === button));
+              });
+              const scope = this.closest('.br-content');
+              scope?.querySelectorAll<HTMLElement>('.br-action[data-seq]').forEach((action) => {
+                const seq = Number(action.dataset.seq);
+                action.dataset.selected = String(
+                  selected &&
+                    seq >= Number(button.dataset.from) &&
+                    seq <= Number(button.dataset.to) &&
+                    action.dataset.phase === button.dataset.style,
+                );
+              });
+            };
+          measureLayout();
+          this.ownerDocument.fonts?.ready.then(() => {
+            if (this.isConnected) measureLayout();
+          });
+          if (typeof ResizeObserver !== 'undefined') {
+            this.resize = new ResizeObserver(measureLayout);
+            this.resize.observe(this);
+          }
+        });
+      }
+      disconnectedCallback() {
+        this.resize?.disconnect();
+      }
+    },
+  );
 }

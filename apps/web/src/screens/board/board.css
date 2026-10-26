@@ -693,8 +693,6 @@
   margin-top: 0.5em;
 }
 
-
-
 .mat-foot {
   grid-area: 2 / 1;
   align-self: end;
@@ -1394,11 +1392,11 @@ button.rec-open {
   }
 }
 
-/* The phone rail covers text, unlike the desktop rail over ambient light. Keep it
-   translucent without blur, but provide enough backing for 4.5:1 labels over that text. */
+/* The drawer covers text. Keep its entire reading surface opaque in both themes. */
 @media (max-width: 1279px) {
   .ws.rail-open .rail {
-    background: var(--rail-drawer-bg);
+    background: var(--surface);
+    box-shadow: var(--shadow-float);
   }
 }
 

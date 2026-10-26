@@ -31,7 +31,7 @@ describe('recorded judgment chain', () => {
       'Retrieval method not recorded',
     ])
       expect(h).toContain(v);
-    expect(h).toContain('The stacked model favours contradicted');
+    expect(h).toContain('The stacked model finds a contradiction');
     expect(h).not.toContain('RRF');
     expect(h).not.toMatch(/[\u4e00-\u9fff]/);
   });
@@ -90,4 +90,23 @@ describe('recorded judgment chain', () => {
     expect(p?.units?.[0].retrieval_method).toBeUndefined();
     expect(recordedSentencePreview([])).toBeNull();
   });
+});
+
+it('states the recorded outcome and only uses real alpha for branch weights', () => {
+  const h = judgmentChainHtml(
+    { ...unit, decision: 'defer', expected_cost: 0.582 },
+    { defer_cost: 0.5 },
+    'en',
+  );
+  expect(h).toContain('Model path');
+  expect(h).toContain('Rule path');
+  expect(h).toContain('Fusion');
+  expect(h).toContain('40%');
+  expect(h).toContain('60%');
+  expect(h).toContain('Automatic judgement costs more. Deferred for a human check.');
+  expect(h).not.toContain('number-flow');
+  for (const alpha of [undefined, NaN, -1, 2]) {
+    const missing = judgmentChainHtml({ ...unit, branches: { ...unit.branches, alpha } }, {}, 'en');
+    expect(missing).not.toContain('%');
+  }
 });

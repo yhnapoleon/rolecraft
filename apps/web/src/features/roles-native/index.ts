@@ -516,7 +516,10 @@ export function mount(
     mine.append(asked);
     for (const version of turn.prdVersions ?? []) {
       const note = el('p', 'aipm-bubble-note');
-      note.textContent = T(`附上：试点 PRD · 第 ${version} 版`, `Attached: pilot PRD · version ${version}`);
+      note.textContent = T(
+        `附上：试点 PRD · 第 ${version} 版`,
+        `Attached: pilot PRD · version ${version}`,
+      );
       mine.append(note);
     }
     item.append(mine);
@@ -548,7 +551,14 @@ export function mount(
                 () => adapter.refreshContext?.(turn.id) ?? Promise.resolve(),
               )
             : undefined;
-      item.append(noticeRow(doc, kind, turn.explanation || noticeText(kind, selected, turn.errorCode), action));
+      item.append(
+        noticeRow(
+          doc,
+          kind,
+          turn.explanation || noticeText(kind, selected, turn.errorCode),
+          action,
+        ),
+      );
       return { item, kind };
     }
     const reply = turn.reply ?? '';
@@ -725,10 +735,15 @@ export function mount(
       extra.append(line);
     }
     const related = intentAction(turn.recognition, turn.materials, locale());
-    if (turn.status === 'completed' && turn.reply && related &&
-        ((related.kind === 'request' && adapter.openRequests) || (related.kind === 'material' && adapter.openMaterial))) {
+    if (
+      turn.status === 'completed' &&
+      turn.reply &&
+      related &&
+      ((related.kind === 'request' && adapter.openRequests) ||
+        (related.kind === 'material' && adapter.openMaterial))
+    ) {
       const action = button('rc-intent-action');
-      action.textContent = `${related.label} ↗`;
+      action.textContent = `${related.label} →`;
       action.title = related.reason;
       action.setAttribute('aria-label', `${related.label}. ${related.reason}`);
       action.addEventListener('click', async () => {
@@ -736,10 +751,24 @@ export function mount(
         try {
           if (related.kind === 'request') await adapter.openRequests?.();
           else await adapter.openMaterial?.(related.material);
-        } catch { action.title = T('暂时打不开，请稍后重试。', 'Could not open this yet. Please try again.'); }
-        finally { action.disabled = false; }
+        } catch {
+          action.title = T(
+            '暂时打不开，请稍后重试。',
+            'Could not open this yet. Please try again.',
+          );
+        } finally {
+          action.disabled = false;
+        }
       });
-      extra.append(action);
+      const relatedBox = el('div', 'rc-intent-related');
+      const why = el('details', 'rc-intent-why');
+      const whyLabel = el('summary');
+      whyLabel.textContent = T('为什么显示这个动作', 'Why this action?');
+      const reason = el('p');
+      reason.textContent = related.reason;
+      why.append(whyLabel, reason);
+      relatedBox.append(action, why);
+      extra.append(relatedBox);
     }
     const signals = renderSignals(doc, turn.recognition, locale(), {
       context: 'reply',

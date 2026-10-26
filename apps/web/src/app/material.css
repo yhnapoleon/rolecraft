@@ -145,6 +145,15 @@ html.scrolled body:not([data-view="work"]) .topbar:not(.shell-bar)::before,
   backdrop-filter: none;
 }
 
+/* Drawer text sits on an opaque instrument surface, including after a resize. */
+@media (max-width: 1279px) {
+  .rail {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 /* ---------- recesses ---------- */
 .col {
   border-radius: var(--r-panel);

@@ -140,7 +140,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
       const mark = el('span', String(index + 1), 'aipm-review__n');
       mark.setAttribute('aria-hidden', 'true');
       const source = el('div', '', 'aipm-review__src');
-      source.hidden = true;
+
       const where = [
         unit.source?.title,
         typeof unit.source?.version === 'number' ? `v${unit.source.version}` : '',
@@ -153,7 +153,15 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
           ? el('p', unit.evidence, 'aipm-review__src-quote')
           : el(
               'p',
-              unit.top?.length ? t('未记录选定原文；候选原文见下方。', 'No selected passage was recorded; see the candidates below.') : t('这次没有返回可展示的原文。', 'No source passage was returned for this sentence.'),
+              unit.top?.length
+                ? t(
+                    '未记录选定原文；候选原文见下方。',
+                    'No selected passage was recorded; see the candidates below.',
+                  )
+                : t(
+                    '这次没有返回可展示的原文。',
+                    'No source passage was returned for this sentence.',
+                  ),
               'aipm-review__muted',
             ),
         el('p', toneName[tone], 'aipm-review__src-tone'),
@@ -161,17 +169,59 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
       const material = unit.source?.kind === 'material' ? unit.source.object_id : null;
       if (material && input.onOpenMaterial)
         source.append(
-          button(t('打开这份资料', 'Open this source'), 'aipm-review__link', () =>
-            input.onOpenMaterial?.(material),
-          ),
+          button(t('打开这份资料', 'Open this source'), 'aipm-review__link', () => {
+            inspector.close();
+            input.onOpenMaterial?.(material);
+          }),
         );
-      if (input.sentences.kind === 'ready') source.append(renderJudgmentChain(doc, unit, input.sentences.preview, language));
-      words.setAttribute('aria-expanded', 'false');
-      words.addEventListener('click', () => {
-        source.hidden = !source.hidden;
-        words.setAttribute('aria-expanded', String(!source.hidden));
+      const inspector = el('dialog', '', 'aipm-inspector');
+      const heading = el('header', '', 'aipm-inspector__head');
+      const meta = el('div', '', 'aipm-inspector__meta');
+      const title = el('h3', unit.quote, 'aipm-inspector__quote');
+      title.id = `inspect-${review.id}-${unit.index}-${index}`;
+      inspector.setAttribute('aria-labelledby', title.id);
+      const close = button(
+        t('收起判断过程', 'Close judgement details'),
+        'aipm-inspector__close',
+        () => inspector.close(),
+      );
+      meta.append(
+        el('span', t(`第 ${review.prd_ref.version} 版`, `Version ${review.prd_ref.version}`)),
+        el('span', toneName[tone]),
+        close,
+      );
+      heading.append(meta, title);
+      const body = el('div', '', 'aipm-inspector__body');
+      if (input.sentences.kind === 'ready')
+        body.append(renderJudgmentChain(doc, unit, input.sentences.preview, language));
+      const sources = el('details');
+      sources.append(el('summary', t('查看选定依据', 'View the selected evidence')), source);
+      body.append(sources);
+      inspector.append(heading, body);
+      inspector.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') event.stopPropagation();
       });
-      row.append(words, mark, source);
+      words.setAttribute('aria-haspopup', 'dialog');
+      words.setAttribute('aria-expanded', 'false');
+      let scroll: { node: Element; top: number; left: number }[] = [];
+      inspector.addEventListener('close', () => {
+        words.setAttribute('aria-expanded', 'false');
+        words.focus({ preventScroll: true });
+        for (const { node, top, left } of scroll) {
+          node.scrollTop = top;
+          node.scrollLeft = left;
+        }
+      });
+      words.addEventListener('click', () => {
+        scroll = [];
+        for (let node = words.parentElement; node; node = node.parentElement) {
+          scroll.push({ node, top: node.scrollTop, left: node.scrollLeft });
+        }
+        inspector.showModal();
+        words.setAttribute('aria-expanded', 'true');
+        close.focus({ preventScroll: true });
+      });
+      row.append(words, mark, inspector);
       list.append(row);
     });
     return list;

@@ -2,7 +2,9 @@
   display: block;
   container-type: inline-size;
   margin-block: 18px 6px;
-  padding: 20px 0 6px;
+  padding: 20px;
+  background: var(--surface);
+  border-radius: var(--r-md);
   border-top: 1px solid var(--line);
   color: var(--ink);
   font-size: 13px;
@@ -14,7 +16,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .judgment-chain h4 {
   margin: 0;
@@ -27,10 +29,10 @@
   font-size: 12px;
 }
 .jc-explanation {
-  padding: 12px 16px;
-  border-left: 2px solid var(--ink-2);
-  background: var(--surface);
-  margin: 0 0 20px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
 }
 .judgment-chain .jc-track {
   list-style: none;
@@ -50,6 +52,7 @@
   border-radius: 0;
 }
 .jc-step::before {
+  display: none;
   content: "";
   position: absolute;
   top: 15px;
@@ -64,10 +67,10 @@
 .jc-dot {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 24px;
   border: 1px solid var(--ink-3);
-  border-radius: 50%;
+  border-radius: 6px;
   background: var(--paper);
   color: var(--ink-2);
   font: 500 11px / 1 var(--sans);
@@ -85,6 +88,8 @@
 }
 .jc-step p {
   margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
 }
 .jc-step blockquote {
   margin: 8px 0;
@@ -149,61 +154,186 @@
   font-weight: 600;
 }
 .jc-source-scores {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-2);
 }
-@container (max-width: 700px) {
+
+/* The route diagram expresses two inputs and one merge, independent of the detail grid. */
+.jc-routes {
+  display: flex;
+  align-items: center;
+  max-width: 480px;
+  margin: 16px 0;
+}
+.jc-route-inputs {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+}
+.jc-route {
+  border-left: 2px solid var(--ink-3);
+  padding: 4px 12px;
+}
+.jc-route b,
+.jc-route-final b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.jc-route small,
+.jc-route-final small {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.jc-route-final {
+  min-width: 96px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--paper);
+}
+.jc-merge {
+  position: relative;
+  width: 48px;
+  align-self: stretch;
+  margin-block: 20px;
+  flex-shrink: 0;
+}
+.jc-merge i {
+  position: absolute;
+  left: 0;
+  width: 24px;
+  height: 50%;
+  border-right: 1px solid var(--ink-3);
+}
+.jc-merge i:first-child {
+  top: 0;
+  border-top: 1px solid var(--ink-3);
+  border-top-right-radius: 10px;
+}
+.jc-merge i:last-child {
+  bottom: 0;
+  border-bottom: 1px solid var(--ink-3);
+  border-bottom-right-radius: 10px;
+}
+.jc-merge::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--ink-3);
+}
+.jc-outcome {
+  margin: 0 0 12px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.jc-details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.jc-details > summary::after {
+  content: "+";
+  margin-left: auto;
+  font-size: 18px;
+}
+.jc-details[open] > summary::after {
+  content: "−";
+}
+.jc-details:not([open]) .jc-hide,
+.jc-details[open] .jc-show {
+  display: none;
+}
+.jc-details > summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+@container (max-width: 919px) {
   .judgment-chain .jc-track {
-    display: block;
-  }
-  .judgment-chain .jc-step {
-    padding: 0 0 20px 44px;
-    min-height: 64px;
-  }
-  .jc-dot {
-    position: absolute;
-    top: 0;
-    left: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
   }
   .jc-step::before {
-    top: 30px;
-    bottom: 0;
-    left: 14px;
-    width: 1px;
-    height: auto;
+    display: none;
   }
-  .jc-step h5 {
-    margin: 0 0 3px;
-    padding-top: 3px;
+  .judgment-chain .jc-step {
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+  }
+  .jc-step[data-step="retrieval"],
+  .jc-step[data-step="rule"] {
+    grid-column: 1 / -1;
   }
   .jc-step small {
     min-height: 0;
   }
-  .jc-step[data-step="decision"] {
-    padding: 12px 12px 16px 44px;
+}
+@container (max-width: 519px) {
+  .judgment-chain .jc-track {
+    display: block;
   }
-  .jc-step[data-step="decision"] .jc-dot {
+  .judgment-chain .jc-step {
+    padding: 12px 0 16px 40px;
+  }
+  .jc-dot {
+    position: absolute;
+    left: 0;
     top: 12px;
   }
-}
-.jc-enter .jc-step {
-  animation: jc-arrive 280ms var(--spring, cubic-bezier(0.32, 0.72, 0, 1)) both;
-  animation-delay: calc(var(--jc-order) * 160ms);
-}
-@keyframes jc-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
+  .jc-step h5 {
+    margin: 0 0 3px;
   }
-  to {
-    opacity: 1;
-    transform: none;
+  .jc-routes {
+    margin: 8px 0;
+  }
+  .jc-route {
+    padding: 0 8px;
+  }
+  .jc-route-inputs {
+    gap: 8px;
+  }
+  .jc-merge {
+    width: 28px;
+    margin-block: 14px;
+  }
+  .jc-merge i {
+    width: 14px;
+  }
+  .jc-merge::after {
+    left: 14px;
+  }
+  .jc-route-final {
+    min-width: 0;
+    max-width: 110px;
+    padding: 8px;
+  }
+  .jc-details > summary {
+    margin-bottom: 0;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .jc-enter .jc-step {
-    animation: none;
-  }
+.jc-step .jc-candidate {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  padding: 0 0 0 8px;
 }
 
-.jc-step .jc-candidate { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; padding:0 0 0 8px; }
+/* The overview carries the branching structure; details are numbered readings, not a serial pipeline. */
+.jc-routes[data-paths="1"] .jc-merge i {
+  display: none;
+}
+.jc-routes[data-paths="1"] .jc-merge::after {
+  left: 0;
+}
+.jc-details .jc-track {
+  padding-top: 8px;
+}
