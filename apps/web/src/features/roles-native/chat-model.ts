@@ -327,3 +327,23 @@ export function previewLine(reply: string): string {
 /** The workbench's Markdown has bold but no italics; a reply's `*word*` reads as the word. */
 export const dropEmphasis = (text: string) =>
   text.replace(/(^|[^*\w])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![*\w])/gm, '$1$2');
+
+/** What a local reply says first: one or two sentences from the most relevant passage (the first
+ * one quoted), as plain text. The passages themselves stay available as its evidence. */
+export function localGist(rows: LocalRow[], limit = 90): string {
+  const first = rows.find((r) => r.kind !== 'others');
+  if (!first || !('text' in first)) return '';
+  const plain = first.text
+    .replace(/[*_`#>|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sentences = plain.match(/[^。！？.!?]+[。！？.!?]?\s*/g) ?? [plain];
+  let out = '';
+  for (const sentence of sentences) {
+    if (out && (out + sentence).length > limit) break;
+    out += sentence;
+    if (out.length >= limit / 2) break;
+  }
+  out = out.trim();
+  return out.length > limit ? `${out.slice(0, limit - 1)}…` : out;
+}

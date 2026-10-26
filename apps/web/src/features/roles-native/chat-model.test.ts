@@ -3,6 +3,7 @@ import {
   NAME_CLOSE,
   NAME_OPEN,
   awaitingRoles,
+  localGist,
   dropEmphasis,
   evidenceBySource,
   isLocalReply,
@@ -356,4 +357,17 @@ describe('CHAT-09 single-asterisk emphasis reads as plain words', () => {
     expect(dropEmphasis('* a bullet\n* another')).toBe('* a bullet\n* another');
     expect(dropEmphasis('55% * 780 minutes')).toBe('55% * 780 minutes');
   });
+});
+
+describe('localGist', () => {
+  it('opens with the first passage’s first sentences, as plain text', () => {
+    const rows = localRows(
+      '[经理委托 · v1] **试点**先给行政同事开放。范围只含办公 FAQ。之后再看费用。\n[政策 · v2] 其他内容。',
+    );
+    const gist = localGist(rows);
+    expect(gist.startsWith('试点 先给行政同事开放。')).toBe(true);
+    expect(gist).not.toContain('其他内容');
+    expect(gist.length).toBeLessThanOrEqual(90);
+  });
+  it('is empty when nothing was quoted', () => expect(localGist([])).toBe(''));
 });

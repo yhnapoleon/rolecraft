@@ -31,6 +31,7 @@ describe('AIPM presentation preserves authoritative meaning', () => {
     expect(g.steps[0].questions).toHaveLength(2);
     expect(g.steps[6].id).toBe('decision');
     expect(g.steps[0].label).toBe(input.steps[0].label);
+    expect(g.steps.every((s) => s.why && s.feedback && s.example && s.agentBrief)).toBe(true);
   });
   it('keeps chosen focus separate from suggestion and work from quality', () => {
     const p = progressView(fixture());

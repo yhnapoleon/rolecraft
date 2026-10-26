@@ -26,6 +26,12 @@ export type GuideStepView = {
   materialIds: string[];
   primary: { id: string; label: string };
   outputs: string[];
+  /** Why this step matters, what saving gives back, a worked example, and a brief the
+   * learner can hand to their own agent. Empty when the content does not say. */
+  why: string;
+  feedback: string;
+  example: string;
+  agentBrief: string;
 };
 export type GuideView = {
   language: Language;
@@ -63,6 +69,7 @@ const text = (v: unknown) => {
   if (typeof v !== 'string') throw new Error('Invalid AIPM text');
   return v;
 };
+const optional = (v: unknown) => (typeof v === 'string' ? v : '');
 const strings = (v: unknown) => (Array.isArray(v) ? v.map(text) : []);
 const stepId = (v: unknown): StepId => {
   if (!IDS.includes(v as StepId)) throw new Error('Invalid AIPM step');
@@ -112,6 +119,10 @@ export function guideView(value: unknown): GuideView {
         materialIds: strings(help.find((h) => h.level === 'source')?.material_ids),
         primary: { id: text(action.id), label: text(action.label) },
         outputs: strings(s.expected_outputs),
+        why: optional(direction.why),
+        feedback: optional(direction.feedback),
+        example: optional(direction.example),
+        agentBrief: optional(direction.agent_brief),
       };
     }),
   };

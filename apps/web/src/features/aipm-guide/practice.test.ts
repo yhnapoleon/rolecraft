@@ -10,6 +10,7 @@ const deps = (transport = vi.fn(async () => ({}))): PracticeDeps => ({
   redraw: () => {},
   openMaterial: () => {},
   openChat: () => {},
+  ask: () => {},
   openWork: () => {},
   openSettings: () => {},
   submit: () => {},

@@ -28,6 +28,8 @@ export type PracticeDeps = {
   redraw(): void;
   openMaterial(id: string): void;
   openChat(role: Role, text: string): void;
+  /** Sends the question to that colleague at once, through the normal conversation. */
+  ask(role: Role, text: string): void;
   openWork(ref?: ObjectRef): void;
   openSettings(): void;
   submit(): void;
@@ -323,7 +325,7 @@ export function createAipmPractice(deps: PracticeDeps) {
         deps.redraw();
       },
       onChoose: (id) => void choose(a, id),
-      onQuestion: (role, text) => deps.openChat(role, text),
+      onQuestion: (role, text) => deps.ask(role, text),
       onMaterial: (id) => deps.openMaterial(id),
       onPrimary: (step) => {
         if (step.primary.id === 'open_design') host.openFeature('design');
