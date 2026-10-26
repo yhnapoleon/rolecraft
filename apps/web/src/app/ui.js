@@ -1660,10 +1660,11 @@ const Aipm = createAipmPractice({
 const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every
 // product manager's screen of the practice.
-const progressSlot = (a) =>
+// The seven steps start loading while Grace's brief is still open, so the walk-through finds them.
+const progressSlot = (a, sevenSteps = aipmHere(a)) =>
   ['work', 'engineer'].includes(ui.route) && Board.entryPending(a)
     ? ''
-    : aipmHere(a)
+    : sevenSteps
       ? `<div class="rc-prog-wrap">${islandSlot('aipm-guide')}<div class="aipm-feature" data-aipm-feature></div></div>`
       : (hatHere(a) === 'pm'
           ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`

@@ -29,6 +29,9 @@ export function SevenStepGuide(p: GuideProps) {
   const current = p.guide.steps[IDS.indexOf(p.progress.focus)];
   const record = p.progress.steps[IDS.indexOf(p.progress.focus)];
   const suggestion = p.guide.steps[IDS.indexOf(p.progress.suggested)];
+  // Step 1's company card already carries its two questions; never show the same one twice.
+  const asked = current.id === 'business' ? companyBrief(p.guide.language).questions : [];
+  const questions = current.questions.filter((q) => !asked.some((c) => c.text === q.text));
   const status = {
     not_started: t('尚未开始', 'Not started'),
     working: t('正在处理', 'Working'),
@@ -151,15 +154,17 @@ export function SevenStepGuide(p: GuideProps) {
             />
           )}
           {current.id === 'solution' && <Patterns guide={p.guide} />}
-          <div className="aipm-guide__questions">
-            {current.questions.map((q) => (
-              <button type="button" key={q.text} onClick={() => p.onQuestion(q.role, q.text)}>
-                <span>{role[q.role]}</span>
-                {q.text}
-                <small>{t('放入提问框', 'Draft a question')} ↗</small>
-              </button>
-            ))}
-          </div>
+          {questions.length > 0 && (
+            <div className="aipm-guide__questions">
+              {questions.map((q) => (
+                <button type="button" key={q.text} onClick={() => p.onQuestion(q.role, q.text)}>
+                  <span>{role[q.role]}</span>
+                  {q.text}
+                  <small>{t('放入提问框', 'Draft a question')} ↗</small>
+                </button>
+              ))}
+            </div>
+          )}
           {(record.missing.length > 0 || record.feedback.length > 0) && (
             <div className="aipm-guide__findings">
               {record.feedback.slice(0, 1).map((f) => (
