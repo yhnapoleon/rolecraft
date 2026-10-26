@@ -21,6 +21,7 @@ const deps = (transport = vi.fn(async () => ({}))): PracticeDeps => ({
   openProduct: () => {},
   newFreeSheet: () => {},
   materialHtml: () => '',
+  quoteToSheet: () => {},
 });
 
 describe('AIPM practice host', () => {

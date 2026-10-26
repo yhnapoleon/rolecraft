@@ -179,6 +179,7 @@ import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
 import { Compass } from '../features/aipm-guide/compass';
 import { WorkStack } from '../shell/work-stack/stack';
+import { quoteToWorksheet } from '../features/aipm-design/install';
 import { createAipmPractice } from '../features/aipm-guide/practice';
 import { showDraftToast } from '../features/aipm-guide/draft-toast';
 import '../shell/progress.css';
@@ -1664,8 +1665,13 @@ const Aipm = createAipmPractice({
     sheetDeliver();
   },
   notifyDraft: (text, label, dismiss, open) => showDraftToast(text, label, dismiss, open),
-  prefillColleague: (role, text) => openChat(role, text),
-  prdSharedWith: () => false,
+  prefillColleague: (role, text, attach) => {
+    const a = current(),
+      prd = Aipm.prdOf(a);
+    if (a && prd) prdChoice.set(`${a.id}:${role}:${prd.version}`, attach);
+    openChat(role, text);
+  },
+  prdSharedWith: (role, prd) => prdShared(current(), role, prd) === true,
   showBoard: () => {
     if (ui.route !== 'work') go('work');
   },
@@ -1681,6 +1687,17 @@ const Aipm = createAipmPractice({
   materialHtml: (id) => {
     const a = current();
     return a ? docBody(a, id, true) : '';
+  },
+  quoteToSheet: async (id) => {
+    const a = current(),
+      host = a && L.nativeWorkspace(a) ? L.v4Host(a) : null,
+      m = a && E.getMaterials(a).find((x) => x.id === id);
+    if (!host || !m) return;
+    const refs = await host.chooseEvidence({
+      focus: { session_id: a.id, kind: 'material', object_id: m.id, version: m.version },
+    });
+    for (const ref of refs.filter((r) => r.kind === 'material'))
+      quoteToWorksheet(ref, T(`《${materialTitle(m)}》v${ref.version}`, `“${materialTitle(m)}” v${ref.version}`));
   },
 });
 const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
@@ -3544,6 +3561,112 @@ function replyingRoles(a) {
     return new Set();
   }
 }
+/* ---------- the pilot PRD travels with a question (AIPM v2, Q5) ---------- */
+// Which PRD versions each colleague has been shared, read from the share projection. A colleague
+// who has not seen the latest version gets it attached by default; the person can take it off.
+const prdShares = new Map(); // `${session}:${role}` → Set of `${product}@${version}`
+const prdSharesAt = new Map(); // session → version point the shares were read at
+const prdChoice = new Map(); // `${session}:${role}:${version}` → attach (true/false) chosen
+function prdShared(a, role, prd) {
+  if (!a || !prd) return undefined;
+  const set = prdShares.get(`${a.id}:${ROLE_ID[role]}`);
+  return set ? set.has(`${prd.id}@${prd.version}`) : undefined;
+}
+async function readPrdShares(a) {
+  const host = L.v4Host(a);
+  const at = JSON.stringify(host?.snapshot().asOf ?? null);
+  if (!host || prdSharesAt.get(a.id) === at) return;
+  prdSharesAt.set(a.id, at);
+  try {
+    const found = new Map();
+    let cursor = 0;
+    for (;;) {
+      const page = await host.query('work_products.list', { cursor, limit: 100 });
+      const data = page?.result ?? page;
+      for (const share of data.shares || []) {
+        if (share.revoked_at != null || !share.product) continue;
+        const key = `${a.id}:${share.recipient_role}`;
+        if (!found.has(key)) found.set(key, new Set());
+        found.get(key).add(`${share.product.object_id}@${share.product.version}`);
+      }
+      if (data.next_cursor == null || data.next_cursor <= cursor) break;
+      cursor = data.next_cursor;
+    }
+    for (const r of ROLES) prdShares.set(`${a.id}:${ROLE_ID[r]}`, found.get(`${a.id}:${ROLE_ID[r]}`) || new Set());
+    if (current()?.id === a.id && ui.rail === 'chat') refreshWS(['rail']);
+  } catch (_) {
+    prdSharesAt.delete(a.id);
+  }
+}
+const prdAttached = (a, role, prd) =>
+  prdChoice.get(`${a.id}:${role}:${prd.version}`) ?? prdShared(a, role, prd) === false;
+// The chip above the composer, and what this colleague can see, in one line at the top.
+function prdChip(a, role) {
+  const prd = aipmHere(a) ? Aipm.prdOf(a) : null;
+  if (!prd) return '';
+  void readPrdShares(a);
+  const seen = prdShared(a, role, prd);
+  if (seen === undefined) return '';
+  if (seen)
+    return `<p class="aipm-prd-note">${T(`${PEOPLE[role].name} 已看过试点 PRD 第 ${prd.version} 版`, `${PEOPLE[role].ref} has seen pilot PRD version ${prd.version}`)}</p>`;
+  const on = prdAttached(a, role, prd);
+  return `<button type="button" class="aipm-prd-chip" data-action="aipm-prd-toggle" data-role="${role}" aria-pressed="${on}">${on ? icon('check', 'i-xs') : ''}${T(`附上 PRD 第 ${prd.version} 版`, `Attach PRD version ${prd.version}`)}</button>`;
+}
+function prdSees(a, role) {
+  const prd = aipmHere(a) ? Aipm.prdOf(a) : null;
+  if (!prd) return '';
+  const set = prdShares.get(`${a.id}:${ROLE_ID[role]}`);
+  const versions = set
+    ? [...set].filter((k) => k.startsWith(`${prd.id}@`)).map((k) => Number(k.split('@')[1]))
+    : [];
+  const latest = versions.length ? Math.max(...versions) : 0;
+  const name = PEOPLE[role].name;
+  return `<p class="aipm-sees"><b>${T(`${name} 能看到：`, `${PEOPLE[role].ref} can see: `)}</b>${
+    latest
+      ? T(`试点 PRD 第 ${latest} 版（你附上过）`, `pilot PRD version ${latest} (you attached it)`)
+      : T('还没有你附上的 PRD', 'no PRD you attached yet')
+  }${T('、你消息里写的内容', ', and what your messages say')}<br><span>${T('看不到：没附上的版本、你的 Agent 对话、批改单里的其余内容', 'Cannot see: versions you did not attach, your agent’s conversation, the rest of a review')}</span></p>`;
+}
+// Sending with the chip on: share that exact PRD version first, then let the message go as usual
+// (a native turn carries every share its colleague has).
+document.addEventListener(
+  'submit',
+  async (e) => {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement) || form.dataset.form !== 'chat') return;
+    if (form.dataset.prdReady === '1') {
+      delete form.dataset.prdReady;
+      return;
+    }
+    const a = current(),
+      role = ui.chatRole,
+      prd = a && aipmHere(a) ? Aipm.prdOf(a) : null;
+    if (!a || !prd || !role || !prdAttached(a, role, prd) || prdShared(a, role, prd) !== false) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const submitter = e.submitter;
+    try {
+      const result = await L.v4Host(a).command('work_products.shares.create', {
+        product_id: prd.id,
+        product_version: prd.version,
+        recipient_role: ROLE_ID[role],
+      });
+      if (result.status !== 'confirmed') throw new Error(result.result?.message || result.status);
+      prdShares.get(`${a.id}:${ROLE_ID[role]}`)?.add(`${prd.id}@${prd.version}`);
+    } catch (err) {
+      notify(
+        T(
+          `PRD 没有附上，消息还没发：${err?.message || err}`,
+          `The PRD was not attached, so nothing was sent: ${err?.message || err}`,
+        ),
+      );
+      return;
+    }
+    form.dataset.prdReady = '1';
+    form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
+  },
+  true,
+);
 function railChat(a, role) {
   const msgs = a.conversations[role] || [];
   const t = routeTask(a);
@@ -3559,12 +3682,13 @@ function railChat(a, role) {
   const failed = s?.failedTurn && ROLE_OF[s.failedTurn.body.role_id] === role;
   const quote = ui.chatQuotes[quoteKey(a, role)];
   // What travels with the next message sits on the composer as a card you can take off again.
-  const attached = quote
+  const attached = (quote
     ? `<div class="chat-quote" data-quote="${esc(quote)}">${icon('flask', 'i-sm chat-quote-i')}<span class="chat-quote-body"><span class="chat-quote-label">${T('测试记录 · 随这条消息发出', 'Test run · sent with your message')}</span><span class="chat-quote-text">${esc(quote)}</span></span><button type="button" class="btn icon quiet small" data-action="drop-quote" aria-label="${esc(T('移除这段引用', 'Remove this quote'))}">${icon('x', 'i-xs')}</button></div>`
-    : '';
+    : '') + prdChip(a, role);
   const tools = `${a.tests.length ? `<button type="button" class="composer-tool${quote ? ' on' : ''}" data-action="prefill-run" aria-label="${esc(T('附上最近一次测试', 'Attach the latest test run'))}" title="${esc(T('附上最近一次测试', 'Attach the latest test run'))}">${icon('flask', 'i-sm')}</button>` : ''}${x ? `<button type="button" class="composer-tool" data-action="prefill-artifact" aria-label="${esc(T('分享这份作品', 'Share this work'))}" title="${esc(T('分享这份作品', 'Share this work'))}">${icon('doc', 'i-sm')}</button>` : ''}`;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
+    ${prdSees(a, role)}
     <div data-chat-greeting>${Greetings.hasArrived(a.id, role) ? Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a)) : ''}</div>
     <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? messageRows(msgs).map(({ message, key }) => msgHtml(a, message, key)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
     ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
@@ -7037,6 +7161,13 @@ async function act(el, ev = new Event('rc-action')) {
     case 'practice-continue':
       await choosePractice(a, 'continue_revision', null);
       break;
+    case 'aipm-prd-toggle': {
+      const prd = Aipm.prdOf(a),
+        role = el.dataset.role;
+      if (prd) prdChoice.set(`${a.id}:${role}:${prd.version}`, !prdAttached(a, role, prd));
+      refreshWS(['rail']);
+      break;
+    }
     case 'drop-quote': {
       if (ui.chatRole) delete ui.chatQuotes[quoteKey(a, ui.chatRole)];
       refreshWS(['rail']);

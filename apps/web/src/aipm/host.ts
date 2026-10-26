@@ -31,9 +31,9 @@ export type AipmSheetId = AipmStepId | `free:${string}`;
 export type AipmColleague = 'manager' | 'business' | 'technical';
 /** What the main screen shows (v2 §3.2). The workbench is the practice's board. */
 export type AipmScreen =
-  | { kind: 'workbench' }
-  | { kind: 'worksheet'; sheet: AipmSheetId; material?: string }
-  | { kind: 'review'; step: AipmStepId; reviewRef?: ObjectRef };
+  | { kind: 'workbench'; sheet?: undefined; step?: undefined }
+  | { kind: 'worksheet'; sheet: AipmSheetId; material?: string; step?: undefined }
+  | { kind: 'review'; step: AipmStepId; reviewRef?: ObjectRef; sheet?: undefined };
 export type AipmContentId = 'company' | 'guide' | 'patterns' | 'design' | 'evaluation';
 export type AipmFeature = {
   render(): string;

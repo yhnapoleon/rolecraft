@@ -20,6 +20,8 @@ export type GuideClient = {
   recordAssessment: Writer;
   /** Adopt or dismiss an agent's design draft (L4); absent until that client is built in. */
   resolveDraft?(id: string, command: Record<string, unknown>): Promise<unknown>;
+  /** A section review of one PRD version (L4, v2). */
+  createSectionReview?(command: Record<string, unknown>): Promise<unknown>;
 };
 export type GuideSource = { client: GuideClient; fixture: boolean };
 

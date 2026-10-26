@@ -89,6 +89,23 @@
   justify-content: flex-end;
   margin-bottom: 4px;
 }
+.aipm-main__aside-head {
+  gap: 8px;
+  align-items: center;
+}
+.aipm-main__aside-quote {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--fill);
+  color: var(--ink);
+  font: 500 13px var(--sans);
+  cursor: pointer;
+}
+.aipm-main__aside-quote:hover {
+  background: var(--fill-2);
+}
 .aipm-main__aside-close {
   width: 32px;
   height: 32px;
@@ -110,5 +127,61 @@
   .aipm-stack-slot {
     left: 12px;
     bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The colleague side: what this colleague can see, and the PRD chip on the composer. */
+.aipm-sees {
+  margin: 8px 12px 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.aipm-sees b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.aipm-sees span {
+  color: var(--ink-3);
+}
+.aipm-prd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  margin: 0 0 8px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  color: var(--ink);
+  font: 600 13px var(--sans);
+  cursor: pointer;
+  transition:
+    background var(--fast) var(--ease-out),
+    color var(--fast) var(--ease-out);
+}
+.aipm-prd-chip[aria-pressed="true"] {
+  background: var(--primary);
+  box-shadow: none;
+  color: var(--on-primary);
+}
+.aipm-prd-chip:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.aipm-prd-note {
+  margin: 0 0 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-prd-chip {
+    transition: none;
   }
 }

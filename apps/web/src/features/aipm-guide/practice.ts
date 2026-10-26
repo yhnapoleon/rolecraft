@@ -56,6 +56,9 @@ export type PracticeDeps = {
   openProduct(productId: string): void;
   /** A material's page, for the column beside a worksheet. */
   materialHtml(materialId: string): string;
+  /** Picks passages of that material (the existing evidence picker) and quotes them into the
+   * open worksheet, each with the exact reference the server returned. */
+  quoteToSheet(materialId: string): void;
   /** Starts a new free work product (a free sheet). */
   newFreeSheet(): void;
 };
@@ -307,6 +310,9 @@ export function createAipmPractice(deps: PracticeDeps) {
         return c.updateBatch(String(payload.batch_id), cmd);
       case 'aipm.assessment.record':
         return c.recordAssessment(cmd);
+      case 'aipm.section_review.create':
+        if (!c.createSectionReview) throw new Error('AIPM section reviews are not connected');
+        return c.createSectionReview(cmd);
       case 'aipm.design_drafts.resolve':
         if (!c.resolveDraft) throw new Error('AIPM agent drafts are not connected');
         return c.resolveDraft(String(payload.draft_id), cmd);
@@ -574,9 +580,14 @@ export function createAipmPractice(deps: PracticeDeps) {
     if (material) {
       const aside = document.createElement('aside');
       aside.className = 'aipm-main__aside';
-      aside.innerHTML = `<div class="aipm-main__aside-head"><button type="button" class="aipm-main__aside-close" data-aipm-close-split aria-label="${
+      aside.innerHTML = `<div class="aipm-main__aside-head"><button type="button" class="aipm-main__aside-quote" data-aipm-quote>${
+        en ? 'Quote into the sheet' : '引用到工作纸'
+      }</button><button type="button" class="aipm-main__aside-close" data-aipm-close-split aria-label="${
         en ? 'Close the side material' : '关闭并排资料'
       }">✕</button></div>${deps.materialHtml(material)}`;
+      aside
+        .querySelector('[data-aipm-quote]')
+        ?.addEventListener('click', () => deps.quoteToSheet(material));
       aside.querySelector('[data-aipm-close-split]')?.addEventListener('click', () => {
         if (s.screen.kind === 'worksheet') show({ kind: 'worksheet', sheet: s.screen.sheet });
       });
@@ -654,8 +665,12 @@ export function createAipmPractice(deps: PracticeDeps) {
       host.openWorkbench();
     });
 
+  /** The pilot PRD's latest version, once the practice has one. */
+  const prdOf = (a: Attempt | null) => (a && stateOf(a)?.progress?.prd) || null;
+
   return {
     ready,
+    prdOf,
     compassProps,
     stackProps,
     screenOf,
