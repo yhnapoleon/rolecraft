@@ -22,8 +22,10 @@ from .types import (
     AipmGuide,
     AipmProfile,
     AipmStepLink,
+    CoverageRule,
     EnrollInput,
     FocusInput,
+    MentorRule,
     StepLinkInput,
 )
 
@@ -41,6 +43,20 @@ class AipmContent:
     root: Path | None = None
     design_public: dict | None = None
     design_rules: Path | None = None
+    coverage_rules: tuple[CoverageRule, ...] = ()
+    coverage_revision: str | None = None
+    mentor_rules: tuple[MentorRule, ...] = ()
+    mentor_revision: str | None = None
+
+
+def authored(raw, key, model):
+    """(revision, items) of a private coverage/mentor file; absent means none."""
+    if raw is None:
+        return None, ()
+    data = json.loads(raw)
+    if data.get("schema_version") != 1:
+        raise C.ProtocolError("aipm_grading_file_invalid", status=503)
+    return str(data.get("revision")), tuple(model.model_validate(i) for i in data.get(key, ()))
 
 
 def _member(root, files, path, expected):
@@ -83,6 +99,12 @@ def load_content(root):
         return None
     design = _member(root, files, f"aipm/public/design.{language}.json", expected)
     rules = "aipm/private/grading/design.json"
+    coverage = authored(
+        _member(root, files, "aipm/private/grading/coverage.json", expected), "items", CoverageRule
+    )
+    mentor = authored(
+        _member(root, files, "aipm/private/grading/mentor.json", expected), "prompts", MentorRule
+    )
     return AipmContent(
         scenario_hash=package.content_hash,
         content_revision=manifest["content_revision"],
@@ -91,6 +113,10 @@ def load_content(root):
         root=root,
         design_public=json.loads(design) if design else None,
         design_rules=root / rules if _member(root, files, rules, expected) else None,
+        coverage_revision=coverage[0],
+        coverage_rules=coverage[1],
+        mentor_revision=mentor[0],
+        mentor_rules=mentor[1],
     )
 
 
@@ -122,6 +148,9 @@ def enrolled(view, auth, catalog):
     if content is None:
         raise C.ProtocolError("aipm_not_enabled", status=409)
     profile = profile_of(view, auth)
+    if profile is None and auth.allowed_objects is not None:
+        # An object-narrowed grant cannot see the enrollment; say so instead of guessing.
+        raise C.ProtocolError("aipm_scope_incomplete", status=403)
     if profile is None:
         raise C.ProtocolError("aipm_not_enrolled", status=409)
     if profile.scenario_hash != view.bindings.scenario.sha256 or (
