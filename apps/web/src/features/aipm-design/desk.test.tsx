@@ -3,9 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AipmClient } from '../../aipm/client';
 import type { AipmHost } from '../../aipm/host';
 import type { AipmDesign, ProcessFeedback } from '../../aipm/types';
-import { DesignDesk, type DesignRead } from './desk';
+import { copy } from './copy';
+import { CheckCard, DesignDesk, type DesignRead } from './desk';
 import { installAipmDesign } from './install';
-import { newRow } from './model';
+import { type AgentDraft, newRow, sectionCheck } from './model';
 
 const html = (node: React.ReactElement) => renderToString(node).replaceAll('<!-- -->', '');
 
@@ -22,7 +23,7 @@ function fakeHost(language: 'zh' | 'en' = 'zh') {
     }),
     getDataHost: () => null,
     getClient: () => null,
-    readProgress: vi.fn(),
+    readProgress: vi.fn(() => Promise.resolve(null)),
     readGuide: vi.fn(),
     command: vi.fn(),
     recover: vi.fn(),
@@ -75,46 +76,87 @@ const violation: ProcessFeedback = {
   stale: false,
 };
 const read: DesignRead = { ref, design, feedback: [violation] };
+const agentDraft: AgentDraft = {
+  id: 'd1',
+  revision: 1,
+  status: 'pending_owner_review',
+  note: '按公司一页纸整理',
+  business: { audience: 'internal', offering_explanation: 'x', task_goal: 'y' },
+};
 
-describe('AIPM design desk', () => {
+describe('AIPM design panel', () => {
   it('registers one design feature through the L1 host seam', () => {
     const host = fakeHost();
     installAipmDesign(host);
     expect(host.registerFeature).toHaveBeenCalledWith(
       'design',
-      expect.objectContaining({ render: expect.any(Function), mount: expect.any(Function) }),
+      expect.objectContaining({ mount: expect.any(Function) }),
     );
     expect(host.features.design.render()).toContain('aipm-design-root');
   });
-  it('shows the saved row with its rule feedback, label and quoted basis', () => {
-    const page = html(<DesignDesk host={fakeHost()} initial={read} />);
-    expect(page).toContain('规则核实 · 越过当前权限');
-    expect(page).toContain('当前助手没有审批权限');
-    expect(page).toContain('Assistant has no approval authority');
-    expect(page).toContain('仅方案：本局没有执行能力');
-    expect(page).not.toContain('已修改，保存后重新核对');
+  it('opens only the current section: why, a labelled example, then a few choices', () => {
+    const page = html(<DesignDesk host={fakeHost()} initial={null} step="business" />);
+    expect(page.match(/aipm-design__open/g)).toHaveLength(1);
+    const order = ['为什么写', '示例，不是标准答案', '这个助手服务谁'].map((t) => page.indexOf(t));
+    expect(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1]))).toBe(true);
+    expect(page).toContain('后面几步再填');
+    expect(page).not.toContain('最后谁说了算');
   });
-  it('draws the saved version as proposed and keeps actual settings separate (en)', () => {
+  it('shows an agent draft as awaiting the learner with adopt, edit and decline', () => {
     const page = html(
-      <DesignDesk host={fakeHost('en')} initial={{ ...read, feedback: [] }} initialTab="diagram" />,
+      <DesignDesk
+        host={fakeHost()}
+        initial={null}
+        step="business"
+        drafts={[{ ref, draft: agentDraft }]}
+      />,
     );
-    expect(page).toContain('Drawn from saved version 1');
-    expect(page).toContain('Proposal only; execution unavailable');
+    for (const t of [
+      '来自你的 Agent · 待你确认',
+      '采用',
+      '修改后再用',
+      '不采用',
+      '按公司一页纸整理',
+    ])
+      expect(page).toContain(t);
+  });
+  it('walks triage one row at a time and keeps later choices hidden until an action is chosen', () => {
+    const fresh = {
+      ...read,
+      design: { ...design, rows: [{ ...newRow('r2'), user_request: '解释怎样申请报销' }] },
+      feedback: [],
+    };
+    const page = html(<DesignDesk host={fakeHost()} initial={fresh} step="boundary" />);
+    expect(page).toContain('1 · 这项请求要做什么？');
+    expect(page).not.toContain('2 · 交给哪种方式处理？');
+    const chosen = html(<DesignDesk host={fakeHost()} initial={read} step="boundary" />);
+    expect(chosen).toContain('2 · 交给哪种方式处理？');
+    expect(chosen).toContain('有越权');
+    expect(chosen).toContain('错的');
+    expect(chosen).toContain('下一步：准备权限申请草稿');
+  });
+  it('keeps the English panel free of Chinese', () => {
+    const page = html(
+      <DesignDesk host={fakeHost('en')} initial={{ ...read, feedback: [] }} step="solution" />,
+    );
+    expect(page).toContain('Proposed design');
     expect(page).toContain('Open actual settings');
     expect(/[一-鿿]/.test(page.replace('报销最终批准', ''))).toBe(false);
   });
-  it('lists all seven PRD sections in order', () => {
-    const all = html(<DesignDesk host={fakeHost()} initial={null} initialTab="prd" />);
-    const page = all.slice(all.indexOf('aipm-design__prd'));
-    const order = [
-      '看懂业务',
-      '用户与相关方',
-      '验证真需求',
-      'AI 边界',
-      '系统方案',
-      '评测、监控与回退',
-      '上线决策',
-    ].map((t) => page.indexOf(t));
-    expect(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1]))).toBe(true);
+  it('renders the post-save card: wrong with its quote, never pretending a semantic verdict', () => {
+    const c = copy('zh');
+    const page = html(
+      <CheckCard
+        c={c}
+        host={fakeHost()}
+        check={sectionCheck('boundary', design, [violation], 'zh', 'r1')}
+        next={{ label: '系统方案', go: () => {} }}
+      />,
+    );
+    expect(page).toContain('错的');
+    expect(page).toContain('Assistant has no approval authority');
+    expect(page).not.toContain('对的');
+    expect(page).toContain('语义待核对');
+    expect(page).toContain('下一步：系统方案');
   });
 });

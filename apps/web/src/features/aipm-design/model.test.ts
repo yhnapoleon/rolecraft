@@ -95,3 +95,57 @@ describe('AIPM design edits', () => {
     expect(failure({ status: 'confirmed' })).toBeNull();
   });
 });
+import { mergeDraft, sectionCheck } from './model';
+describe('AIPM section checks', () => {
+  const explain = {
+    ...newRow('e'),
+    need_ref: 'expenses',
+    target_action: 'explain' as const,
+    final_authority: 'named_human_role' as const,
+    execution_support: 'supported' as const,
+  };
+  it('only server rules say right or wrong; the rest is pending', () => {
+    const ok = sectionCheck('boundary', { ...design, rows: [explain] }, [], 'zh', 'e');
+    expect(ok.right).toEqual(['按当前权限，没有发现越权。']);
+    expect(ok.wrong).toEqual([]);
+    expect(ok.pending).toContain('语义待核对');
+    const free = sectionCheck(
+      'boundary',
+      { ...design, rows: [{ ...explain, execution_support: 'unknown' }] },
+      [],
+      'en',
+      'e',
+    );
+    expect(free.right).toEqual([]);
+    expect(free.missing.join(' ')).toContain('No verified basis');
+  });
+  it('lists plain missing fields for a business section', () => {
+    const check = sectionCheck(
+      'business',
+      { ...design, business: { audience: 'unknown', offering_explanation: 'x', task_goal: '' } },
+      [],
+      'zh',
+    );
+    expect(check.missing).toEqual([
+      '还没选这个助手服务谁。',
+      '还没写这次要帮谁解决什么。',
+      '还没引用原文；有人问起时不好核对。',
+    ]);
+    expect(check.right).toEqual([]);
+  });
+  it('adopting a draft upserts by id and leaves execution support to the server', () => {
+    const merged = mergeDraft(
+      { ...design, rows: [row0] },
+      {
+        id: 'd',
+        revision: 1,
+        status: 'pending_owner_review',
+        rows: [{ ...row0, target_action: 'approve' }, newRow('new')],
+      },
+    );
+    expect(merged.rows?.map((r) => [r.id, r.target_action, r.execution_support])).toEqual([
+      ['row', 'approve', 'unknown'],
+      ['new', 'unknown', 'unknown'],
+    ]);
+  });
+});
