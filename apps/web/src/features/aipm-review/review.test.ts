@@ -145,6 +145,7 @@ describe('review screen', () => {
 describe('installAipmReview', () => {
   it('reads the review the screen asks for and asks colleagues through the host', async () => {
     const page = fixturePage();
+    const asked: unknown[] = [];
     const askColleague = vi.fn(async () => undefined);
     const register = vi.fn(() => () => undefined);
     const host: ReviewHost = {
@@ -154,7 +155,13 @@ describe('installAipmReview', () => {
         readOnly: false,
       }),
       getClient: () => ({ sectionReviews: async () => page }),
-      getDataHost: () => null,
+      getDataHost: () => ({
+        snapshot: () => ({ state: 'active' }),
+        query: async (_operation: never, input: never) => {
+          asked.push(input);
+          return { enabled: false, recognition: null };
+        },
+      }),
       readProgress: async () => ({ steps: [{ id: 'need', sheet: { edited_since_review: true } }] }),
       registerFeature: register,
       currentScreen: () => ({ kind: 'review', step: 'need' }),
@@ -167,8 +174,12 @@ describe('installAipmReview', () => {
     await installed.open('need');
     expect(installed.state.review?.id).toBe('review-need-4-en');
     expect(installed.state.edited).toBe(true);
-    // No decision chosen and none used by the review: the sentence step says so.
-    expect(installed.state.sentences.kind).toBe('no_decision');
+    // No decision chosen: the sentence check still runs, with the fixed placeholder.
+    expect(installed.state.sentences.kind).toBe('off');
+    expect(asked).toContainEqual({
+      decision: 'defer_with_conditions',
+      products: [installed.state.review?.prd_ref],
+    });
     await installed.ask('technical');
     expect(askColleague).toHaveBeenCalledWith({
       colleague: 'technical',

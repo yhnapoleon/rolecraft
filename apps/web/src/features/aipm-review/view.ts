@@ -36,8 +36,7 @@ export type Sentences =
   | { kind: 'running' }
   | { kind: 'ready'; preview: PreviewRecognition }
   | { kind: 'failed' }
-  | { kind: 'submitted' }
-  | { kind: 'no_decision' };
+  | { kind: 'submitted' };
 
 export type ReviewViewInput = {
   review: SectionReview;
@@ -221,10 +220,6 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     submitted: t(
       '这一局已交付。先在结果页开始修订，才能逐句对照。',
       'This practice is delivered. Start a revision on the result page to check sentences.',
-    ),
-    no_decision: t(
-      '到 ⑦ 选一个拟定决定后，才能逐句对照。',
-      'Choose a proposed decision on ⑦ to check sentences.',
     ),
   };
   paper.append(el('p', sentenceNote[pass.kind], 'aipm-review__note'));

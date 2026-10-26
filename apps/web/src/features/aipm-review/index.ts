@@ -43,10 +43,12 @@ export interface ReviewHost {
   }): Promise<void>;
 }
 export type ReviewOptions = {
-  /** The decision the sentence check is asked with. Until L4 confirms the sentence marks do not
-   * depend on it (spec §6.6), the learner's proposed decision, else the one the review used. */
+  /** The learner's proposed decision on ⑦; ⑤⑥'s capacity and resource lines need one. */
   decision?: () => Decision | null;
 };
+/** Sentence marks are the same under all four decisions (L4's test, spec §6.6), so the sentence
+ * check is asked with this fixed placeholder and never waits for a choice on ⑦. */
+const SENTENCE_DECISION: Decision = 'defer_with_conditions';
 
 function dig<T>(value: unknown, pick: (v: Loose) => T | undefined, depth = 5): T | undefined {
   if (!value || typeof value !== 'object' || depth < 0) return undefined;
@@ -150,11 +152,9 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
 
   async function readSentences(ref: ObjectRef): Promise<Sentences> {
     if (data()?.snapshot().state === 'submitted') return { kind: 'submitted' };
-    const chosen = decision();
-    if (!chosen) return { kind: 'no_decision' };
     try {
       const found = await query('submissions.rule_check.recognition', {
-        decision: chosen,
+        decision: SENTENCE_DECISION,
         products: [ref],
       });
       const body = dig(found, (v) => (typeof v.enabled === 'boolean' ? v : undefined)) as
