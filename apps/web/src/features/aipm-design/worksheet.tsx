@@ -1,9 +1,10 @@
 /** A worksheet: one goal, angle hints, at most one choice and one big box. No sub-questions.
  * Writing only keeps a local draft; saving stores a new version of the pilot PRD (kind plan). */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Sparkle } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { AipmClient } from '../../aipm/client';
 import type { AipmHost } from '../../aipm/host';
-import type { EvidenceRefV2, ObjectRef, StepId } from '../../aipm/types';
+import type { AipmProgress, EvidenceRefV2, ObjectRef, SheetState, StepId } from '../../aipm/types';
 import { copy } from './copy';
 import { DESIGN_ID, type DesignRead, DiagramBlock, type DraftItem, Triage } from './desk';
 import { type AgentDraft, type Language, failure, findRef, mergeDraft, nextDesign } from './model';
@@ -47,6 +48,9 @@ type Loaded = {
   prd: Prd | null;
   drafts: DraftItem[];
   titles: Record<string, string>;
+  /** Server view of this sheet and its latest review; absent until the host provides them. */
+  sheetState?: SheetState | null;
+  lastReview?: { at: string; version: number } | null;
 };
 const ROLE: Record<'manager' | 'business' | 'tech', Role> = {
   manager: 'manager',
@@ -54,6 +58,9 @@ const ROLE: Record<'manager' | 'business' | 'tech', Role> = {
   tech: 'technical',
 };
 const NAME: Record<Role, string> = { manager: 'Grace', business: 'Chen', technical: 'Daniel' };
+/** Attribution in the sheet's language: 《title》v1 in Chinese, "title" v1 in English. */
+export const sourceLabel = (language: Language, title: string, version: number) =>
+  language === 'zh' ? `《${title}》v${version}` : `“${title}” v${version}`;
 const draftKey = (step: StepId) => `aipm-sheet:${step}`;
 const notFound = (e: unknown) =>
   (e as { code?: string })?.code === 'object_not_found' ||
@@ -66,7 +73,7 @@ export function sendQuote(ref: EvidenceRefV2, label: string) {
   quotes.dispatchEvent(new CustomEvent('quote', { detail: { ref, label } }));
 }
 
-async function loadSheet(host: WorksheetHost): Promise<Loaded> {
+async function loadSheet(host: WorksheetHost, step: StepId): Promise<Loaded> {
   const client = host.getClient();
   const content = (await host.readContent('design')) as DesignContent;
   let saved: DesignRead | null = null;
@@ -106,7 +113,18 @@ async function loadSheet(host: WorksheetHost): Promise<Loaded> {
   } catch {
     // Titles only label buttons; ids remain usable.
   }
-  return { content, saved, prd, drafts, titles };
+  let sheetState: SheetState | null = null;
+  let lastReview: Loaded['lastReview'] = null;
+  try {
+    const progress = (await host.readProgress()) as AipmProgress | null;
+    sheetState = progress?.steps?.find((s) => s.id === step)?.sheet ?? null;
+    const page = await client?.sectionReviews?.(step, 0, 1);
+    const latest = page?.items?.[0]?.review;
+    if (latest) lastReview = { at: latest.created_at, version: latest.prd_ref.version };
+  } catch {
+    // Status is a label only; the sheet stays usable without it.
+  }
+  return { content, saved, prd, drafts, titles, sheetState, lastReview };
 }
 
 const savedSheet = (l: Loaded, step: StepId): SheetDraft => {
@@ -167,11 +185,11 @@ export function Worksheet({
   );
   const reload = useCallback(async () => {
     try {
-      apply(await loadSheet(host));
+      apply(await loadSheet(host, step));
     } catch {
       setLoadFailed(true);
     }
-  }, [host, apply]);
+  }, [host, apply, step]);
   useEffect(() => {
     if (preload) apply(preload);
     else void reload();
@@ -343,11 +361,30 @@ export function Worksheet({
       </section>
     );
   const drafts = loaded.drafts.filter((d) => d.draft.prd_sections?.[step]);
-  const status = dirty
-    ? c.t('草稿', 'Draft')
+  const STATUS = {
+    not_started: c.t('未开始', 'Not started'),
+    draft: c.t('草稿', 'Draft'),
+    based: c.t('有依据', 'Grounded'),
+    solid: c.t('站得住', 'Holds up'),
+    recheck: c.t('需重新核对', 'Recheck'),
+  };
+  const serverStatus = loaded.sheetState?.status ?? (version ? 'draft' : 'not_started');
+  const status = STATUS[dirty ? 'draft' : serverStatus];
+  const last = loaded.lastReview;
+  const time = last
+    ? new Date(last.at).toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+  const versionNote = last
+    ? c.t(
+        `上次批改 ${time} · 第 ${last.version} 版`,
+        `Last reviewed ${time} · version ${last.version}`,
+      )
     : version
-      ? c.t(`已存 · 第 ${version} 版`, `Saved · version ${version}`)
-      : c.t('未开始', 'Not started');
+      ? c.t(`已存第 ${version} 版`, `Saved version ${version}`)
+      : '';
   const segment = {
     clarify: c.t('弄清问题', 'Clarify the problem'),
     design: c.t('设计方案', 'Design the solution'),
@@ -364,8 +401,11 @@ export function Worksheet({
   return (
     <section className="aipm-sheet" lang={language} aria-label={sheetName}>
       <p className="aipm-sheet__eyebrow">
-        {segment} · {c.t(`第 ${content.order} 张`, `Sheet ${content.order}`)}{' '}
-        <span className="aipm-sheet__tag">{status}</span>
+        <span>
+          {segment} · {c.t(`第 ${content.order} 张`, `Sheet ${content.order}`)}
+        </span>
+        <span className={`aipm-sheet__tag is-${dirty ? 'draft' : serverStatus}`}>{status}</span>
+        {versionNote && <span>{versionNote}</span>}
       </p>
       <h1>{sheetName}</h1>
       <p className="aipm-sheet__goal">{content.goal}</p>
@@ -449,7 +489,7 @@ export function Worksheet({
 
       {content.choice && (
         <fieldset className="aipm-sheet__choice" disabled={readOnly}>
-          <legend>{content.choice.label}</legend>
+          <legend>{c.t(`${content.choice.label}：`, `${content.choice.label}:`)}</legend>
           {choiceOptions.length ? (
             <div className="aipm-sheet__segmented">
               {choiceOptions.map((o) => (
@@ -485,7 +525,11 @@ export function Worksheet({
               id: blockId(),
               type: 'quote',
               text: ref.quote ?? '',
-              label: `《${loaded.titles[ref.object_id] ?? ref.object_id}》v${ref.version}`,
+              label: sourceLabel(
+                language,
+                loaded.titles[ref.object_id] ?? ref.object_id,
+                ref.version,
+              ),
               ref,
             });
         }}
@@ -532,19 +576,14 @@ export function Worksheet({
         </span>
         <button
           type="button"
-          className="btn quiet"
+          className="btn"
           disabled={readOnly || busy || !dirty}
           onClick={() => void save()}
         >
-          {c.t('保存这一版', 'Save this version')}
+          {c.t('保存这一版', 'Save version')}
         </button>
         <span className="aipm-sheet__menu">
-          <button
-            type="button"
-            className="btn quiet"
-            aria-expanded={menu}
-            onClick={() => setMenu(!menu)}
-          >
+          <button type="button" className="btn" aria-expanded={menu} onClick={() => setMenu(!menu)}>
             {c.t('请同事看看', 'Ask a colleague')} ▾
           </button>
           {menu && (
@@ -564,7 +603,7 @@ export function Worksheet({
           disabled={readOnly || busy}
           onClick={() => void review()}
         >
-          {c.t('交给批改', 'Hand in for review')}
+          {c.t('交给批改', 'Get reviewed')}
         </button>
       </footer>
     </section>
@@ -573,9 +612,12 @@ export function Worksheet({
 
 type Copy = ReturnType<typeof copy>;
 
-// About 38 wide characters per line at the sheet's measure; an estimate, the box still scrolls.
-const lineCount = (text: string) =>
-  text.split('\n').reduce((n, line) => n + Math.max(1, Math.ceil(line.length / 38)), 0);
+/** Grows a textarea with its text: CSS field-sizing where supported, scrollHeight otherwise. */
+function growToText(el: HTMLTextAreaElement | null) {
+  if (!el || CSS.supports?.('field-sizing', 'content')) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
 
 /** The big box: serif paragraphs, sans subheadings, quotes only from materials. */
 function Paper({
@@ -608,13 +650,16 @@ function Paper({
     if (before) requestAnimationFrame(() => refs.current.get(before.id)?.focus());
   };
   const onlyEmpty = blocks.length === 1 && blocks[0].type === 'p' && !blocks[0].text;
+  useLayoutEffect(() => {
+    for (const el of refs.current.values()) if (el instanceof HTMLTextAreaElement) growToText(el);
+  });
   return (
     <div className="aipm-sheet__paper">
       {blocks.map((b) =>
         b.type === 'quote' ? (
           <blockquote key={b.id} className="aipm-sheet__quote">
             <p>{b.text}</p>
-            <cite>{c.t(`引自 ${b.label}`, `From ${b.label}`)}</cite>
+            <cite>{c.t(`引自${b.label}`, `From ${b.label}`)}</cite>
             {!readOnly && (
               <button
                 type="button"
@@ -649,7 +694,8 @@ function Paper({
             value={b.text}
             readOnly={readOnly}
             placeholder={onlyEmpty ? placeholder : undefined}
-            rows={onlyEmpty ? 6 : lineCount(b.text)}
+            rows={1}
+            data-only={onlyEmpty || undefined}
             ref={(el) => {
               if (el) refs.current.set(b.id, el);
             }}
@@ -669,11 +715,11 @@ function Paper({
       )}
       <div className="aipm-sheet__paper-foot">
         {!readOnly && (
-          <button type="button" className="btn quiet small" onClick={onCite}>
+          <button type="button" className="aipm-sheet__cite" onClick={onCite}>
             {c.t('引用资料原句', 'Quote a source')}
           </button>
         )}
-        <span>{footer}</span>
+        <span className="aipm-sheet__count">{footer}</span>
       </div>
     </div>
   );
@@ -843,11 +889,12 @@ function AgentHelp({ c, host, step }: { c: Copy; host: WorksheetHost; step: Step
     <span className="aipm-sheet__menu">
       <button
         type="button"
-        className="aipm-sheet__agent"
+        className="btn quiet"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        ✦ {c.t('让我的 Agent 帮我写', 'Let my agent draft this')}
+        <Sparkle size={15} aria-hidden="true" />
+        {c.t('让我的 Agent 帮我写', 'Ask my agent')}
       </button>
       {open && (
         <span className="aipm-sheet__pop aipm-sheet__pop--up aipm-sheet__pop--wide" role="dialog">
