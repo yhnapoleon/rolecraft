@@ -306,6 +306,14 @@ def test_agent_draft_waits_for_owner_and_only_adoption_counts(enabled):
     )
     assert saved.status_code == 200, saved.text
     adopted = saved.json()["result"]["ref"]
+    body = fixture.command(enabled, "work_products.create", {"kind": "text", "content": "PRD"})
+    made = enabled["app"].state.w06.call(
+        enabled["sid"],
+        enabled["token"],
+        "work_products.create",
+        {"session_id": enabled["sid"], "command": body},
+    )
+    prd_ref = next(r for r in made["objects"] if r["kind"] == "product")
     resolved = post(
         enabled,
         "drafts/agent-1/state",
@@ -315,9 +323,12 @@ def test_agent_draft_waits_for_owner_and_only_adoption_counts(enabled):
             "expected_revision": 1,
             "status": "adopted",
             "adopted_design_ref": adopted,
+            "adopted_prd_ref": prd_ref,
         },
     )
     assert resolved.status_code == 200, resolved.text
+    record = resolved.json()["result"]["draft"]
+    assert record["adopted_prd_ref"] == prd_ref and record["author"]["kind"] == "external_agent"
     progress = result(get(enabled, "progress"))
     assert steps(progress)["boundary"]["work_status"] == "recorded"
     assert progress["pending_agent_drafts"] == []

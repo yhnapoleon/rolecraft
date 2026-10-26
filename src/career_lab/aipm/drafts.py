@@ -155,7 +155,11 @@ def handlers(catalog, registry):
             if adopted is None or adopted.kind != "aipm_design":
                 raise C.ProtocolError("aipm_adopted_design_required")
             view.get(adopted)  # the owner's own saved design, exact version
-        elif adopted is not None:
+            if body.adopted_prd_ref is not None:
+                if body.adopted_prd_ref.kind != "product":
+                    raise C.ProtocolError("aipm_prd_product_required")
+                view.get(body.adopted_prd_ref)  # exact visible version
+        elif adopted is not None or body.adopted_prd_ref is not None:
             raise C.ProtocolError("aipm_adopted_design_unexpected")
         record = AipmDesignDraft.model_validate(head.content).model_copy(
             update={
@@ -163,6 +167,7 @@ def handlers(catalog, registry):
                 "status": body.status,
                 "resolved_by": auth.executor.id,
                 "adopted_design_ref": adopted,
+                "adopted_prd_ref": body.adopted_prd_ref,
             }
         )
         stored = record.model_dump(mode="json")
