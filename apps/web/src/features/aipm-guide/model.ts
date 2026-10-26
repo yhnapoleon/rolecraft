@@ -11,7 +11,10 @@ export const IDS = [
 ] as const;
 export type StepId = (typeof IDS)[number];
 export type Language = 'zh' | 'en';
-export type GuideQuestion = { role: 'manager' | 'business' | 'technical'; text: string };
+export type GuideQuestion = {
+  role: 'manager' | 'business' | 'technical';
+  text: string;
+};
 export type GuideStepView = {
   id: StepId;
   order: number;
@@ -24,14 +27,22 @@ export type GuideStepView = {
   primary: { id: string; label: string };
   outputs: string[];
 };
-export type GuideView = { language: Language; revision: string; steps: GuideStepView[] };
+export type GuideView = {
+  language: Language;
+  revision: string;
+  steps: GuideStepView[];
+};
 export type ProgressView = {
   sessionId: string;
   revision: string;
   language: Language;
   focus: StepId;
   suggested: StepId;
-  point: { business_seq: number; workspace_revision: number; storage_revision: number };
+  point: {
+    business_seq: number;
+    workspace_revision: number;
+    storage_revision: number;
+  };
   complete: boolean;
   steps: {
     id: StepId;
@@ -83,7 +94,10 @@ export function guideView(value: unknown): GuideView {
             const r = object(q);
             if (!['manager', 'business', 'technical'].includes(text(r.role)))
               throw new Error('Invalid colleague');
-            return { role: r.role as GuideQuestion['role'], text: text(r.text) };
+            return {
+              role: r.role as GuideQuestion['role'],
+              text: text(r.text),
+            };
           })
         : [];
       if (questions.length !== 2) throw new Error('Missing guide questions');

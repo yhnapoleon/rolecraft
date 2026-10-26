@@ -56,7 +56,10 @@ describe('AIPM presentation preserves authoritative meaning', () => {
     const p = fixture();
     expect(() => progressView({ ...p, steps: p.steps.slice(0, 6) })).toThrow();
     expect(() =>
-      progressView({ ...p, steps: p.steps.map((s) => ({ ...s, completed: true })) }),
+      progressView({
+        ...p,
+        steps: p.steps.map((s) => ({ ...s, completed: true })),
+      }),
     ).toThrow();
   });
   it('marks limited projection incomplete', () =>
@@ -64,7 +67,9 @@ describe('AIPM presentation preserves authoritative meaning', () => {
   it('registry is empty until installed and refuses duplicate owners', () => {
     const r = createAipmRegistry();
     expect(r.get('design')).toBeUndefined();
-    const remove = r.register('design', { render: () => '<p>real feature</p>' });
+    const remove = r.register('design', {
+      render: () => '<p>real feature</p>',
+    });
     expect(() => r.register('design', { render: () => '' })).toThrow();
     remove();
     expect(r.get('design')).toBeUndefined();

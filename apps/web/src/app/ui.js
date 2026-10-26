@@ -177,6 +177,8 @@ import * as Greetings from '../features/colleague-greetings';
 import { messageRows, noteKey } from '../features/colleague-greetings/unread';
 import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
+import { SevenStepGuide } from '../features/aipm-guide/guide';
+import { createAipmPractice } from '../features/aipm-guide/practice';
 import '../shell/progress.css';
 import { agentLine } from '../screens/board/agent-line';
 import * as Board from '../screens/board';
@@ -1634,14 +1636,38 @@ function passedNow(a, p) {
   const seen = new Set(all[a.id]);
   return { arrived: done.filter((id) => !seen.has(id)).at(-1), all };
 }
+// A product manager's practice the server enrolled in the seven steps (AIPM phase 1): one guide,
+// one numbering, read from the server's progress. Every other practice keeps the six layers.
+const Aipm = createAipmPractice({
+  current,
+  transport: (a) => L.gatewayTransport(a),
+  dataHost: (a) => (L.nativeWorkspace(a) ? L.v4Host(a) : null),
+  language: (a) => workLang(a) ?? locale(),
+  redraw: () => refreshWS(['stage', 'toolbar']),
+  openMaterial: (id) => openMaterial(id),
+  openChat: (role, text) => openChat(role, text),
+  openWork: () => go('work'),
+  openSettings: () => {
+    closeSheet(true);
+    ui.menu = null;
+    sheetConfig();
+  },
+  submit: () => {
+    commit();
+    sheetDeliver();
+  },
+});
+const aipmHere = (a) => hatHere(a) === 'pm' && L.nativeWorkspace(a) && Aipm.ready(a);
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every
 // product manager's screen of the practice.
 const progressSlot = (a) =>
   ['work', 'engineer'].includes(ui.route) && Board.entryPending(a)
     ? ''
-    : (hatHere(a) === 'pm'
-        ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
-        : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
+    : aipmHere(a)
+      ? `<div class="rc-prog-wrap">${islandSlot('aipm-guide')}<div class="aipm-feature" data-aipm-feature></div></div>`
+      : (hatHere(a) === 'pm'
+          ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
+          : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
 function nextSuggestion(a) {
   if (!(a.tests || []).length)
     return T('先试一个员工会问的问题。', 'Try a question an employee would ask.');
@@ -1663,6 +1689,12 @@ function nextStep(a) {
   return `<p class="rc-entry-next" data-entry-next><b>${label ? esc(T(label[0], label[1])) : T('复现', 'Reproduce')}</b><span>${T('下一步：', 'Next: ')}${next ? esc(T(next[0], next[1])) : T('先复现委托里的问题。', 'Reproduce the issue in the ticket.')}</span></p>`;
 }
 function mountProgress(a) {
+  const guide = a && document.querySelector('[data-island="aipm-guide"]') && Aipm.props(a);
+  if (guide) {
+    keepIsland('aipm-guide', SevenStepGuide, guide);
+    Aipm.mountFeature(a, document.querySelector('[data-aipm-feature]'));
+    return;
+  }
   if (!document.querySelector('[data-island="shell-progress"]')) return;
   const p = progressOf(progressFacts(a));
   const tx = (t) => T(t[0], t[1]);

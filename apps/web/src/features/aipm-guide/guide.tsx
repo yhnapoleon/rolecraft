@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import type { GuideStepView, GuideView, ProgressView, StepId } from './model';
+import { companyBrief, patterns } from './content';
+import { IDS, type GuideStepView, type GuideView, type ProgressView, type StepId } from './model';
 import './guide.css';
 
 export type GuideProps = {
   guide: GuideView;
   progress: ProgressView;
-  compact?: boolean;
+  /** The step's one screen; folded it leaves the ~50px bar. */
+  open: boolean;
+  /** Explicit fake data (development only), labelled as such. */
+  fixture?: boolean;
   stale?: boolean;
   updatedAt?: string;
   busy?: boolean;
@@ -15,16 +19,16 @@ export type GuideProps = {
   onMaterial(id: string): void;
   onPrimary(step: GuideStepView): void;
   onRefresh(): void;
-  onCompany(): void;
-  onPatterns(): void;
+  onToggle(): void;
 };
 export function SevenStepGuide(p: GuideProps) {
   const [map, setMap] = useState(false);
   const en = p.guide.language === 'en';
   const t = (zh: string, english: string) => (en ? english : zh);
-  const current = p.guide.steps.find((s) => s.id === p.progress.focus)!;
-  const record = p.progress.steps.find((s) => s.id === current.id)!;
-  const suggestion = p.guide.steps.find((s) => s.id === p.progress.suggested)!;
+  // Both lists are the seven steps in order (model.ts refuses anything else).
+  const current = p.guide.steps[IDS.indexOf(p.progress.focus)];
+  const record = p.progress.steps[IDS.indexOf(p.progress.focus)];
+  const suggestion = p.guide.steps[IDS.indexOf(p.progress.suggested)];
   const status = {
     not_started: t('尚未开始', 'Not started'),
     working: t('正在处理', 'Working'),
@@ -46,7 +50,7 @@ export function SevenStepGuide(p: GuideProps) {
   };
   return (
     <section
-      className={`aipm-guide ${p.compact ? 'aipm-guide--compact' : ''}`}
+      className={`aipm-guide ${p.open ? '' : 'aipm-guide--compact'}`}
       aria-label={t('七步工作引导', 'Seven-step work guide')}
     >
       <div className="aipm-guide__bar">
@@ -58,6 +62,19 @@ export function SevenStepGuide(p: GuideProps) {
           <span>{t('正在处理', 'Working on')}</span>
           <strong>{current.label}</strong>
         </div>
+        {p.fixture && (
+          <span className="aipm-guide__fixture">
+            {t('假数据 · 接口未就绪', 'Fake data · not connected')}
+          </span>
+        )}
+        <button
+          type="button"
+          className="btn quiet small"
+          aria-expanded={p.open}
+          onClick={p.onToggle}
+        >
+          {p.open ? t('收起引导', 'Fold the guide') : t('本步引导', 'Step guide')}
+        </button>
         <button
           type="button"
           className="btn quiet small"
@@ -118,7 +135,7 @@ export function SevenStepGuide(p: GuideProps) {
           {p.error}
         </p>
       )}
-      {!p.compact && (
+      {p.open && (
         <div className="aipm-guide__paper" key={current.id}>
           <p className="aipm-guide__eyebrow">
             {t('场景引导', 'Authored guidance')} · {status[record.status]}
@@ -126,15 +143,14 @@ export function SevenStepGuide(p: GuideProps) {
           <h1>{current.goal}</h1>
           <p className="aipm-guide__summary">{current.summary}</p>
           {current.id === 'business' && (
-            <button type="button" className="btn quiet small" onClick={p.onCompany}>
-              {t('公司一页纸 · 待用户确认', 'Company brief · Pending user confirmation')}
-            </button>
+            <CompanyCard
+              guide={p.guide}
+              role={role}
+              onAsk={p.onQuestion}
+              onMaterial={p.onMaterial}
+            />
           )}
-          {current.id === 'solution' && (
-            <button type="button" className="btn quiet small" onClick={p.onPatterns}>
-              {t('比较四种公开做法', 'Compare four reference patterns')}
-            </button>
-          )}
+          {current.id === 'solution' && <Patterns guide={p.guide} />}
           <div className="aipm-guide__questions">
             {current.questions.map((q) => (
               <button type="button" key={q.text} onClick={() => p.onQuestion(q.role, q.text)}>
@@ -203,6 +219,96 @@ export function SevenStepGuide(p: GuideProps) {
         </div>
       )}
     </section>
+  );
+}
+// Step 1's short card: what the company sells, whom this pilot serves, and who decides.
+function CompanyCard(p: {
+  guide: GuideView;
+  role: Record<GuideStepView['questions'][number]['role'], string>;
+  onAsk: GuideProps['onQuestion'];
+  onMaterial: GuideProps['onMaterial'];
+}) {
+  const c = companyBrief(p.guide.language);
+  if (c.revision !== p.guide.revision) return null;
+  const en = p.guide.language === 'en';
+  const shown = c.sentences.slice(0, 3);
+  const rest = c.sentences.slice(3);
+  const sources = [...new Set(c.sentences.flatMap((s) => s.materials))];
+  return (
+    <aside className="aipm-company" aria-label={c.title}>
+      <p className="aipm-company__head">
+        <strong>{c.title}</strong>
+        {c.pending && <span>{c.statusLabel}</span>}
+      </p>
+      <p>{shown.map((s) => s.text).join('')}</p>
+      <details>
+        <summary>{en ? 'Read the whole brief' : '展开全文'}</summary>
+        <p>{rest.map((s) => s.text).join(en ? ' ' : '')}</p>
+        <div>
+          {sources.map((id) => (
+            <button
+              type="button"
+              className="btn quiet small"
+              key={id}
+              onClick={() => p.onMaterial(id)}
+            >
+              {materialLabel(id, en)}
+            </button>
+          ))}
+        </div>
+      </details>
+      <div className="aipm-company__ask">
+        {c.questions.map((q) => (
+          <button
+            type="button"
+            className="btn small"
+            key={q.text}
+            onClick={() => p.onAsk(q.role, q.text)}
+          >
+            {en ? 'Ask ' : '问 '}
+            {p.role[q.role].split(' · ')[0]}
+            <small>{q.text}</small>
+          </button>
+        ))}
+      </div>
+    </aside>
+  );
+}
+// Step 5: four public reference patterns to compare against, each with its own source.
+function Patterns({ guide }: { guide: GuideView }) {
+  const set = patterns(guide.language);
+  const en = guide.language === 'en';
+  return (
+    <details className="aipm-patterns">
+      <summary>
+        {en ? 'Compare four reference patterns' : '比较四种公开做法'}
+        <small>{set.label}</small>
+      </summary>
+      <dl>
+        {set.cards.map((c) => (
+          <div key={c.id}>
+            <dt>{c.title}</dt>
+            <dd>{c.when}</dd>
+            <dd>
+              {en ? 'Cost: ' : '代价：'}
+              {c.cost}
+            </dd>
+            <dd>
+              {en ? 'Not for: ' : '不适用：'}
+              {c.whenNot}
+            </dd>
+            <dd>
+              <a href={c.source.url} target="_blank" rel="noreferrer">
+                {c.source.title}
+              </a>{' '}
+              · {en ? 'accessed ' : '查阅于 '}
+              {c.source.accessed}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p>{set.note}</p>
+    </details>
   );
 }
 export function materialLabel(id: string, en: boolean) {
