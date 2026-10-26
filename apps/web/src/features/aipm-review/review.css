@@ -43,6 +43,38 @@
 }
 
 /* What you wrote: one sentence per line, underlined by relation, a numbered mark at the end. */
+.aipm-review__written {
+  display: grid;
+  gap: 6px;
+}
+/* Headings and quotes look as on the worksheet, and are never numbered or marked. */
+.aipm-review__h {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font: 600 13px / 1.5 var(--sans);
+}
+.aipm-review {
+  --review-sand: color-mix(in srgb, var(--warn) 30%, var(--surface-3));
+}
+.aipm-review__quote {
+  margin: 4px 0;
+  padding: 6px 12px;
+  border-left: 2px solid var(--review-sand);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--review-sand) 12%, transparent);
+}
+.aipm-review__quote p {
+  margin: 0;
+  color: var(--ink-2);
+  font: 400 14px / 1.7 var(--serif);
+  white-space: pre-line;
+}
+.aipm-review__quote cite {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font: normal 400 11.5px / 1.5 var(--sans);
+}
 .aipm-review__plain {
   display: grid;
   gap: 6px;
@@ -242,10 +274,57 @@
   font-size: 12px;
   font-weight: 500;
 }
+.aipm-review__track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.aipm-review__track .aipm-review__step {
+  position: relative;
+  z-index: 1;
+}
+.aipm-review__knob {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  transition:
+    transform var(--slow) var(--spring),
+    width var(--slow) var(--spring);
+}
+.aipm-review__knob[data-still] {
+  transition: none;
+}
 .aipm-review__step[data-current] {
   background: var(--ink);
   color: var(--paper);
   font-weight: 600;
+}
+/* Once the knob is placed it carries the dark fill; the pill keeps only its light text. */
+.aipm-review__knob[style] ~ .aipm-review__step[data-current] {
+  background: transparent;
+}
+.aipm-review__step[data-looking] {
+  background:
+    linear-gradient(90deg, var(--fill) 0%, var(--fill-2) 50%, var(--fill) 100%) 0 0 / 200% 100%;
+  animation: aipm-review-shimmer 1.2s linear infinite;
+}
+@keyframes aipm-review-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-review__knob {
+    transition: none;
+  }
+  .aipm-review__step[data-looking] {
+    animation: none;
+  }
 }
 .aipm-review__step[data-passed] {
   color: var(--ink);
@@ -304,12 +383,28 @@
 .aipm-review__mis p {
   margin: 0;
 }
+.aipm-review__mis-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
 .aipm-review__mis-title {
   color: var(--ink);
+  font-size: 15px;
   font-weight: 600;
+  line-height: 1.4;
 }
 .aipm-review__mis[data-first] .aipm-review__mis-title {
   color: var(--bad);
+}
+.aipm-review__mis-body {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.aipm-review__mis-quote {
+  color: var(--ink-2);
+  font: 400 14px / 1.65 var(--serif);
 }
 .aipm-review__mis-line {
   color: var(--ink-2);
@@ -390,8 +485,24 @@
 /* How colleagues would see it: three compact cards in the result page's person colours. */
 .aipm-review__mentors {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
+}
+.aipm-review__angle {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.aipm-review__mentor[data-preset="none"] {
+  background: transparent;
+}
+.aipm-review__ask--light {
+  border-bottom-color: transparent;
+  color: var(--ink-2);
+}
+.aipm-review__ask--light:hover {
+  border-bottom-color: var(--line-2);
 }
 .aipm-review__mentor {
   display: grid;
@@ -513,10 +624,6 @@
   vertical-align: 1px;
   white-space: nowrap;
 }
-.aipm-review__coverage [data-source="model"] .aipm-review__pill {
-  box-shadow: inset 0 0 0 1px currentColor;
-  background: none;
-}
 .aipm-review__advised {
   display: grid;
   gap: 4px;
@@ -531,4 +638,7 @@
 .aipm-review .rule-lines__item,
 .aipm-review .rule-lines__note {
   font-size: 12.5px;
+}
+.aipm-review__mis-head .aipm-review__model-tag {
+  margin-left: auto;
 }

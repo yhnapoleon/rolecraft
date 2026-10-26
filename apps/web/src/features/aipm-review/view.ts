@@ -11,9 +11,12 @@ import type { Report } from '../feedback-native/index';
 import { COLLEAGUE_NAMES, type Colleague } from '../../screens/result/colleagues';
 import {
   colleagueKey,
+  defaultAngle,
   coverageRow,
   deltaLine,
   groupSentences,
+  ownSentences,
+  writtenBlocks,
   coverageMarkName,
   materialOf,
   mergedCoverage,
@@ -31,6 +34,7 @@ import {
 } from './model';
 import type { SectionReview, StepId } from './types';
 import '../../screens/result/result.css';
+import 'number-flow';
 import './review.css';
 
 /** The sentence step: off, running, ready (the whole PRD's preview), failed, or refused. */
@@ -56,6 +60,8 @@ export type ReviewViewInput = {
   edited?: boolean;
   onAsk?: (who: Colleague) => void;
   onBack?: () => void;
+  /** What this screen showed for the same review just before, so changes can move. */
+  previous?: { status: SectionReview['status']; delta?: SectionReview['delta'] } | null;
   /** A running model look was followed for its time limit without a result. */
   modelTimedOut?: boolean;
   /** Opens a named material beside the sheet. */
@@ -109,14 +115,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     el('h2', stepName(review.step_id, language), 'aipm-review__title'),
   );
   const written = input.sections[review.step_id] ?? '';
-  const plain = () => {
-    const box = el('div', '', 'aipm-review__plain');
-    const paragraphs = written.split(/\n+/).filter((line) => line.trim());
-    if (!paragraphs.length)
-      box.append(el('p', t('这一节还是空的。', 'This section is empty.'), 'aipm-review__muted'));
-    for (const line of paragraphs) box.append(el('p', line));
-    return box;
-  };
+  const blocks = writtenBlocks(written);
   // One line per sentence: underline and numbered mark by the recognizer's relation, the
   // matched source sentence opened in place (the lens's tones, drawn as the wireframe does).
   const toneName = {
@@ -125,9 +124,10 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     insufficient: t('依据不足 / 还不知道', 'Not enough evidence / not known yet'),
     deferred: t('暂缓判定，留给人核对', 'Deferred to a person'),
   } as const;
-  const sentenceList = (units: readonly ChainUnit[]) => {
+  const sentenceList = (units: readonly ChainUnit[], start = 0) => {
     const list = el('ol', '', 'aipm-review__sentences');
-    units.forEach((unit, index) => {
+    units.forEach((unit, at) => {
+      const index = start + at;
       const tone = toneOf(unit);
       const row = el('li', '', 'aipm-review__sent');
       row.dataset.tone = tone;
@@ -188,11 +188,41 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     }
     return box;
   };
+  // What was written, block by block as the sheet shows it: headings and quotes keep their own
+  // look and are never marked; only the learner's own sentences are numbered and underlined.
+  const writtenView = (units: readonly ChainUnit[]) => {
+    const box = el('div', '', 'aipm-review__written');
+    if (!blocks.length)
+      box.append(el('p', t('这一节还是空的。', 'This section is empty.'), 'aipm-review__muted'));
+    const left = [...ownSentences(units, blocks)];
+    let numbered = 0;
+    for (const block of blocks) {
+      if (block.type === 'h') box.append(el('h4', block.text, 'aipm-review__h'));
+      else if (block.type === 'quote') {
+        const quote = el('blockquote', '', 'aipm-review__quote');
+        quote.append(el('p', block.text));
+        if (block.source) quote.append(el('cite', `— ${block.source}`));
+        box.append(quote);
+      } else {
+        const body = squashText(block.text);
+        const mine = left.filter((unit) => body.includes(squashText(unit.quote)));
+        for (const unit of mine) left.splice(left.indexOf(unit), 1);
+        if (mine.length) {
+          box.append(sentenceList(mine, numbered));
+          numbered += mine.length;
+        } else box.append(el('p', block.text, 'aipm-review__plain'));
+      }
+    }
+    // Sentences the recognizer split differently from the paragraphs, kept rather than lost.
+    if (left.length) box.append(sentenceList(left, numbered));
+    return { box, numbered: numbered + left.length };
+  };
   const pass = input.sentences;
   if (pass.kind === 'ready') {
     const groups = groupSentences(pass.preview.units ?? [], input.sections);
     const own = sectionPreview(pass.preview, groups.bySection[review.step_id] ?? []).units ?? [];
-    paper.append(...(own.length ? [sentenceList(own), legend(own)] : [plain()]));
+    const shown = writtenView(own);
+    paper.append(shown.box, ...(shown.numbered ? [legend(own)] : []));
     if (groups.unassigned.length) {
       const rest = el('details', '', 'aipm-review__unassigned');
       rest.append(
@@ -208,7 +238,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
       paper.append(rest);
     }
   } else {
-    paper.append(plain());
+    paper.append(writtenView([]).box);
   }
   const sentenceNote: Record<Sentences['kind'], string> = {
     ready: t(
@@ -266,21 +296,47 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     'aria-label',
     t(`状态：${statusName(current, language)}`, `Status: ${statusName(current, language)}`),
   );
+  // Three steps on one track; a dark knob marks the current one and slides (spring) when the
+  // status changes. While the model is still looking, the third step says so instead.
+  const looking = modelPart(review).status === 'running';
+  const track = el('div', '', 'aipm-review__track');
+  const knob = el('span', '', 'aipm-review__knob');
+  knob.setAttribute('aria-hidden', 'true');
+  track.append(knob);
+  const pills = new Map<string, HTMLElement>();
   STATUSES.forEach((status, index) => {
-    if (index) steps.append(el('span', '', 'aipm-review__rule'));
-    const pill = el('span', statusName(status, language), 'aipm-review__step');
+    if (index) track.append(el('span', '', 'aipm-review__rule'));
+    const label =
+      looking && status === 'solid'
+        ? t('模型细看中', 'Model looking')
+        : statusName(status, language);
+    const pill = el('span', label, 'aipm-review__step');
     if (status === current) pill.dataset.current = '';
     else if (STATUSES.indexOf(status) < STATUSES.indexOf(current)) pill.dataset.passed = '';
-    steps.append(pill);
+    if (looking && status === 'solid') pill.dataset.looking = '';
+    pills.set(status, pill);
+    track.append(pill);
   });
-  steps.append(el('span', nextStatusHint(review, language), 'aipm-review__hint'));
+  steps.append(track, el('span', nextStatusHint(review, language), 'aipm-review__hint'));
   sheet.append(steps);
+  slideKnob(doc, track, knob, pills.get(input.previous?.status ?? current), pills.get(current));
   const delta = deltaLine(review, language, input.previousVersion);
   if (delta) {
     const line = el('p', '', 'aipm-review__delta');
-    // The before → after counts carry the weight of the line.
-    for (const part of delta.split(/(\d+ → \d+)/))
-      line.append(/→/.test(part) ? el('b', part) : part);
+    // The before → after counts carry the weight of the line; a changed "after" rolls.
+    const before = deltaLine({ ...review, delta: input.previous?.delta ?? null }, language);
+    const was = before ? [...before.matchAll(/\d+ → (\d+)/g)].map((m) => Number(m[1])) : [];
+    let at = 0;
+    for (const part of delta.split(/(\d+ → \d+)/)) {
+      const pair = part.match(/^(\d+) → (\d+)$/);
+      if (!pair) {
+        line.append(part);
+        continue;
+      }
+      const b = el('b', `${pair[1]} → `);
+      b.append(rollingCount(doc, Number(pair[2]), was[at++]));
+      line.append(b);
+    }
     sheet.append(line);
   }
 
@@ -306,12 +362,23 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
       const card = el('div', '', 'aipm-review__mis');
       if (index === 0) card.dataset.first = '';
       card.dataset.finding = item.finding;
-      const title = el('p', item.message, 'aipm-review__mis-title');
-      if (byModel(item)) {
+      // Title: the point's name in red (a rule finding is its own short name); then the
+      // model's words in plain ink, the source sentence in the serif, scope and next step.
+      const model = byModel(item);
+      const head = el('div', '', 'aipm-review__mis-head');
+      head.append(
+        el(
+          'p',
+          model && item.checked_scope ? item.checked_scope : item.message,
+          'aipm-review__mis-title',
+        ),
+      );
+      if (model) {
         card.dataset.source = 'model';
-        title.append(tag());
+        head.append(tag());
       }
-      card.append(title);
+      card.append(head);
+      if (model && item.checked_scope) card.append(el('p', item.message, 'aipm-review__mis-body'));
       for (const ref of item.basis_refs ?? [])
         if (ref.quote)
           card.append(
@@ -321,16 +388,17 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
                 `资料原句：${ref.quote} · v${ref.version}`,
                 `Source: ${ref.quote} · v${ref.version}`,
               ),
-              'aipm-review__mis-line',
+              'aipm-review__mis-quote',
             ),
           );
-      card.append(
-        el(
-          'p',
-          t(`核对范围：${item.checked_scope}`, `Checked: ${item.checked_scope}`),
-          'aipm-review__mis-line',
-        ),
-      );
+      if (!model)
+        card.append(
+          el(
+            'p',
+            t(`核对范围：${item.checked_scope}`, `Checked: ${item.checked_scope}`),
+            'aipm-review__mis-line',
+          ),
+        );
       // The finding's own next step: a link to the material it names, or its words.
       const material = materialOf(item.basis_refs);
       if (item.next_action?.label)
@@ -498,33 +566,44 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   if (rubricNodes.length)
     section(t('对应的正式评价项', 'Formal criteria for this section'), ...rubricNodes);
 
-  // What each colleague would ask: a preset question per person, then a way to really ask.
-  if ((review.mentor_prompts ?? []).length) {
+  // What each colleague would ask: all three are always there. A preset question shows when
+  // this review triggered one; otherwise the colleague's usual angle on this sheet, and a
+  // lighter way to ask.
+  {
     const columns = el('div', '', 'aipm-review__mentors');
     for (const who of ['manager', 'business', 'technical'] as Colleague[]) {
       const prompt = (review.mentor_prompts ?? []).find((p) => colleagueKey(p.colleague) === who);
-      if (!prompt) continue;
       // The result page's person colours (data-person) on the wireframe's compact card.
       const box = el('section', '', 'result-colleague aipm-review__mentor');
       box.dataset.person = who;
+      if (!prompt) box.dataset.preset = 'none';
       const top = el('p', '', 'aipm-review__who');
       const avatar = el('span', COLLEAGUE_NAMES[who][0], 'result-colleague__avatar');
       avatar.setAttribute('aria-hidden', 'true');
       top.append(avatar, el('b', COLLEAGUE_NAMES[who]));
-      const quote = el('blockquote', `“${prompt.question}”`, 'aipm-review__question');
+      const said = prompt
+        ? el('blockquote', `“${prompt.question}”`, 'aipm-review__question')
+        : el(
+            'p',
+            t(
+              `常从「${defaultAngle(review.step_id, who, language)}」看这张纸`,
+              `Usually looks at ${defaultAngle(review.step_id, who, language).toLowerCase()}`,
+            ),
+            'aipm-review__angle',
+          );
       const go = button(
         t(`问 ${COLLEAGUE_NAMES[who]}`, `Ask ${COLLEAGUE_NAMES[who]}`),
-        'aipm-review__ask',
+        prompt ? 'aipm-review__ask' : 'aipm-review__ask aipm-review__ask--light',
         () => ask(who),
       );
-      const hint = prompt.pointer?.text
+      const hint = prompt?.pointer?.text
         ? el(
             'p',
             t(`再看看：${prompt.pointer.text}`, `Look again: ${prompt.pointer.text}`),
             'aipm-review__muted',
           )
         : null;
-      box.append(top, quote, ...(hint ? [hint] : []), go);
+      box.append(top, said, ...(hint ? [hint] : []), go);
       columns.append(box);
     }
     section(
@@ -587,6 +666,46 @@ function misconceptionTitle(rule: boolean, model: boolean, language: Language) {
         ? t('模型建议', 'model advice')
         : t('规则判定', 'rule check');
   return t(`先改这一条 · 常见误区（${from}）`, `Fix this first · common misconception (${from})`);
+}
+
+const squashText = (value: string) => value.replace(/\s+/g, '');
+
+/** Places the knob on the current step; from the previous step it slides there on the spring. */
+function slideKnob(
+  doc: Document,
+  track: HTMLElement,
+  knob: HTMLElement,
+  from: HTMLElement | undefined,
+  to: HTMLElement | undefined,
+) {
+  const frame = doc.defaultView?.requestAnimationFrame?.bind(doc.defaultView);
+  if (!frame || !to) return;
+  const place = (pill: HTMLElement) => {
+    knob.style.width = `${pill.offsetWidth}px`;
+    knob.style.transform = `translateX(${pill.offsetLeft}px)`;
+  };
+  frame(() => {
+    if (!track.isConnected) return;
+    knob.dataset.still = '';
+    place(from ?? to);
+    frame(() => {
+      delete knob.dataset.still;
+      place(to);
+    });
+  });
+}
+
+/** A count that rolls from its previous value with number-flow; plain text without it. */
+function rollingCount(doc: Document, value: number, previous?: number) {
+  const node = doc.createElement('number-flow') as HTMLElement & { update?: (v: number) => void };
+  if (typeof node.update !== 'function') {
+    node.textContent = String(value);
+    return node;
+  }
+  node.update(previous ?? value);
+  if (previous != null && previous !== value)
+    doc.defaultView?.requestAnimationFrame(() => node.update?.(value));
+  return node;
 }
 
 /** A reason as one sentence, ending with exactly one full stop. */

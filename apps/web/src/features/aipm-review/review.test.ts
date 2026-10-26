@@ -13,8 +13,12 @@ import {
   deltaLine,
   groupSentences,
   orderCoverage,
+  ownSentences,
+  reviewDetailForColleague,
   reviewSummaryForColleague,
   sheetOfCriterion,
+  shownStatus,
+  writtenBlocks,
   staleNote,
 } from './model';
 import { renderReview } from './view';
@@ -72,11 +76,11 @@ describe('review content (L4 shared fixture)', () => {
 
   it('writes a colleague summary as questions to discuss, in one language', () => {
     expect(reviewSummaryForColleague(fixtureReview('zh'), 'business', { language: 'zh' })).toBe(
-      '我在写「验证真需求」第 4 版。批改说：这里把结单时长当成了人工工时；有误：指标口径。从业务口径看，你觉得我最该先核对哪一处？',
+      '我在写「验证真需求」第 4 版。批改标出：指标口径（有误）、下一步怎么验证（缺了）。从业务口径看，你觉得我最该先核对哪一处？',
     );
     const en = reviewSummaryForColleague(fixtureReview('en'), 'technical', { language: 'en' });
     expect(en).toBe(
-      'I’m writing “Validate the need”, version 4. The review says: Elapsed ticket time is used as labour time here; Wrong: Metric definition. From the system and test evidence, which part do you think I should check first?',
+      'I’m writing “Validate the need”, version 4. The review marks Metric definition (wrong), How to validate next (missing). From the system and test evidence, which part do you think I should check first?',
     );
     expect(en).not.toMatch(CJK);
   });
@@ -148,7 +152,11 @@ describe('review screen', () => {
     root.byClass('aipm-review__link')[0].click();
     expect(onOpenMaterial).toHaveBeenCalledWith('service_desk_sample');
     const asks = root.byClass('aipm-review__ask');
-    expect(asks.map((b) => b.textContent)).toEqual(['问 Grace', '问 Chen']);
+    expect(asks.map((b) => b.textContent)).toEqual(['问 Grace', '问 Chen', '问 Daniel']);
+    // No preset question fired for Daniel: his usual angle on this sheet, and a lighter ask.
+    const daniel = root.byClass('aipm-review__mentor')[2];
+    expect(daniel.dataset.preset).toBe('none');
+    expect(daniel.textContent).toContain('常从「哪条证据能推翻这个假设」看这张纸');
     asks[1].click();
     expect(onAsk).toHaveBeenCalledWith('business');
     expect(root.textContent).toContain('和第 3 版比');
@@ -157,6 +165,58 @@ describe('review screen', () => {
 
   it('renders English without Chinese', () => {
     expect(draw('en').textContent).not.toMatch(CJK);
+  });
+});
+
+describe('what was written, by block', () => {
+  const text = [
+    '新员工反复来问报销和请假怎么办。',
+    '### 这个数字怎么算出来的',
+    '> 分类政策与流程：36次；\n> 接单到结单时长合计324分钟，均值9分钟。\n> — 《支持台导出 SD-120》v1',
+    '这些时长不等于有人在处理。下一步请 Chen 抽 10 单。',
+  ].join('\n\n');
+  const unit = (index: number, quote: string, label = 'insufficient') => ({
+    index,
+    quote,
+    label,
+    confidence: 0.9,
+    decision: 'decide',
+  });
+  const units = [
+    unit(0, '新员工反复来问报销和请假怎么办。', 'supported'),
+    unit(1, '### 这个数字怎么算出来的'),
+    unit(2, '> 分类政策与流程：36次；'),
+    unit(3, '接单到结单时长合计324分钟，均值9分钟。', 'supported'),
+    unit(4, '> — 《支持台导出 SD-120》v1'),
+    unit(5, '这些时长不等于有人在处理。', 'contradicted'),
+    unit(6, '下一步请 Chen 抽 10 单。'),
+  ];
+
+  it('reads headings, quotes with their source, and the learner’s paragraphs', () => {
+    expect(writtenBlocks(text).map((b) => b.type)).toEqual(['p', 'h', 'quote', 'p']);
+    expect(writtenBlocks(text)[2]).toEqual({
+      type: 'quote',
+      text: '分类政策与流程：36次；\n接单到结单时长合计324分钟，均值9分钟。',
+      source: '《支持台导出 SD-120》v1',
+    });
+  });
+
+  it('numbers only the learner’s own sentences', () => {
+    expect(ownSentences(units, writtenBlocks(text)).map((u) => u.index)).toEqual([0, 5, 6]);
+    const root = asFake(
+      renderReview(fakeDocument(), {
+        review: fixtureReview('zh'),
+        language: 'zh',
+        sections: { need: text },
+        sentences: { kind: 'ready', preview: { units } },
+      }),
+    );
+    expect(root.byClass('aipm-review__n').map((n) => n.textContent)).toEqual(['1', '2', '3']);
+    expect(root.byClass('aipm-review__h')[0].textContent).toBe('这个数字怎么算出来的');
+    expect(root.byClass('aipm-review__quote')[0].textContent).toContain(
+      '— 《支持台导出 SD-120》v1',
+    );
+    expect(root.textContent).not.toMatch(/###|^>/m);
   });
 });
 
@@ -212,7 +272,7 @@ describe('the model look', () => {
     const wrong = { ...review, model_items: items };
     expect(deltaLine(wrong, 'zh')).toContain('有误 0 → 3');
     expect(reviewSummaryForColleague(wrong, 'manager', { language: 'zh' })).toContain(
-      '有误：会让我们不做的事实',
+      '批改标出：会让我们不做的事实（有误）',
     );
   });
 
@@ -246,6 +306,34 @@ describe('the model look', () => {
     expect(
       draw({ ...fixtureModelReview('zh', 'not_configured'), misconceptions: [model] }).textContent,
     ).toContain('模型的判断只是建议');
+  });
+
+  it('never shows “Holds up” while the model is still looking', () => {
+    const running = { ...fixtureModelReview('zh', 'running'), status: 'solid' as const };
+    expect(shownStatus(running)).toBe('based');
+    const root = draw(running);
+    const steps = root.byClass('aipm-review__step');
+    expect(steps.map((p) => p.textContent)).toEqual(['草稿', '有依据', '模型细看中']);
+    expect(steps[2].dataset.looking).toBe('');
+    expect(steps[1].dataset.current).toBe('');
+  });
+
+  it('keeps the model’s own words for the attachable review summary', () => {
+    const review = fixtureModelReview('zh', 'done');
+    const model = {
+      ...(review.misconceptions ?? [])[0],
+      source: 'model_suggestion' as const,
+      checked_scope: '指标口径没混',
+      message: '正文把两个口径的均值并列使用。',
+    };
+    const detail = reviewDetailForColleague(
+      { ...review, misconceptions: [model] },
+      { language: 'zh' },
+    );
+    expect(detail).toContain('· 指标口径没混：正文把两个口径的均值并列使用。（模型建议）');
+    expect(
+      reviewSummaryForColleague({ ...review, misconceptions: [model] }, 'business'),
+    ).not.toContain('并列使用');
   });
 
   it('says why the model look failed, and keeps the rule results', () => {

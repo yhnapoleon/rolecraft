@@ -20,6 +20,11 @@
     import { FIXTURE_PRD, fixtureModelReview, fixturePreview, fixtureReview } from './fixture.ts';
 
     const params = new URL(location.href).searchParams;
+    // ?blocks=1: the section as the worksheet saves it, with a heading and a cited quote.
+    const BLOCKS = {
+      zh: '新员工反复来问报销和请假怎么办。\n\n### 这个数字怎么算出来的\n\n> elapsed_minutes = 从建单到结单的分钟数\n> — 《SD-120 字段说明》v1\n\n按平均 429 分钟一单，助手每单能为同事省下约 7 小时人工。这 429 分钟取自 SD-120 的 elapsed_minutes。首批 20 位新同事都会愿意先用助手再找人。下一步请 Chen 抽 10 单看实际处理时间。',
+      en: 'New hires keep asking how expenses and leave work.\n\n### How this number is worked out\n\n> elapsed_minutes = minutes from opening to closing a ticket\n> — SD-120 field notes v1\n\nAt an average of 429 minutes a ticket, the assistant saves about 7 staff hours per ticket. The 429 minutes come from elapsed_minutes in SD-120. All 20 new hires in the first group will use the assistant before asking a person. Next, Chen samples 10 tickets for actual handling time.',
+    };
     const language = params.get('lang') === 'en' ? 'en' : 'zh';
     const sentences =
       params.get('rec') === 'off'
@@ -40,7 +45,9 @@
           ? fixtureModelReview(language, params.get('model'))
           : fixtureReview(language),
         language,
-        sections: FIXTURE_PRD[language],
+        sections: params.get('blocks')
+          ? { ...FIXTURE_PRD[language], need: BLOCKS[language] }
+          : FIXTURE_PRD[language],
         sentences,
         previousVersion: 3,
         currentPrdVersion: params.get('edited') ? 5 : 4,
