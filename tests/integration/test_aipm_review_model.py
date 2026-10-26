@@ -372,3 +372,5 @@ def test_free_text_metric_is_never_marked_covered(base, with_judge):
     assert first_fix["section_or_row_id"] == "need.metric_scope"
     assert done["status"] == "draft"
     assert text in json.dumps(judge.messages[0])
+    # The Judge is asked the exact question for this point, not just its label.
+    assert "elapsed time from ticket creation to closure" in json.dumps(judge.messages[0])

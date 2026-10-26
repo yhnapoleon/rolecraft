@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "aipm-coverage-2",
+  "revision": "aipm-coverage-3",
   "note": "Server-only. Labels and look_again name topics and sources, never the expected conclusion.",
   "items": [
     {
@@ -58,6 +58,10 @@
         "requires": [
           "business.audience"
         ]
+      },
+      "model_check": {
+        "zh": "这一节写的服务对象（公司内部员工、外部客户或两者）是否与公司一页纸里这次试点的对象一致？明显写反或混用判 wrong；一致判 covered；没写服务对象判 missing。",
+        "en": "Does the audience this section names (internal staff, external customers or both) match who this pilot serves in the company one-pager? Contradicting or mixing them is wrong; matching is covered; naming no audience is missing."
       }
     },
     {
@@ -175,6 +179,10 @@
         "requires": [
           "stakeholders.approver-choice.name_or_role"
         ]
+      },
+      "model_check": {
+        "zh": "这一节说谁来拍板或批准这次试点时，这个人是否真有批准权；是否把只是提意见或使用的人写成了批准者？写错人判 wrong；拍板人正确判 covered；没说谁拍板判 missing。",
+        "en": "Where this section says who decides or approves the pilot, does that person actually hold approval authority, or is someone who only advises or uses it named as the approver? Wrong person is wrong; the right approver is covered; no approver named is missing."
       }
     },
     {
@@ -319,6 +327,10 @@
         "requires": [
           "needs.*.metric"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否把从建单到结单的历时（结单时长、处理时长、duration 一类的时间字段）当成了同事实际处理咨询的人工时间，或据此算出可节省的人工工时？这样写判 wrong；明确区分了历时与人工处理时间判 covered；完全没谈时长或工时的口径判 missing。",
+        "en": "Does this section treat the elapsed time from ticket creation to closure (closure or handling duration, a duration field) as staff working time on the request, or derive saved staff hours from it? If so, wrong; if it clearly separates elapsed time from hands-on handling time, covered; if it never addresses what the duration measures, missing."
       }
     },
     {
@@ -401,6 +413,10 @@
         "requires": [
           "rows"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否让 AI 助手自己做最终批准（例如批准报销、开通权限），而不是只解释、拟稿，再交给有权限的人？让 AI 最终批准判 wrong；最终批准明确留给有权限的人判 covered；没谈谁做最终批准判 missing。",
+        "en": "Does this section let the AI assistant give final approval itself (e.g. approve an expense or grant access) instead of only explaining or drafting for an authorised person? AI final approval is wrong; final approval clearly left with an authorised person is covered; not addressing who approves is missing."
       }
     },
     {
@@ -426,6 +442,10 @@
         "requires": [
           "rows"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否把助手现在没有的执行工具（直接提交、修改系统、调用外部系统）写成已经能做？写成已能执行判 wrong；明确标为计划或需要新工具判 covered；没谈执行能力判 missing。",
+        "en": "Does this section describe execution tools the assistant does not have now (submitting, changing systems, calling external systems) as already available? Claiming they already work is wrong; marking them as planned or needing new tools is covered; not addressing execution is missing."
       }
     },
     {
@@ -584,6 +604,10 @@
         "requires": [
           "solution"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否把申请中、尚未生效的配置或资源当成已经生效？混为一谈判 wrong；分清了请求值和实际生效判 covered；没谈配置和资源判 missing。",
+        "en": "Does this section treat requested, not-yet-effective configuration or resources as already in effect? Treating them as effective is wrong; separating requested from effective is covered; not addressing configuration or resources is missing."
       }
     },
     {
