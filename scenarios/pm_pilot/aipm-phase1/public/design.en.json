@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "experience_revision": "aipm-phase1-v1",
-  "content_revision": "aipm-design-1",
+  "content_revision": "aipm-design-2",
   "language": "en",
   "title": "Needs and design",
   "intro": "Start with one need. Separate the action from final authority. Saving a design does not run tools or apply settings.",
@@ -40,13 +40,406 @@
     }
   ],
   "source_requirements": {
-    "assistant_authority": "assistant_scope",
-    "elapsed_definition": "service_desk_sample",
-    "configuration_dependencies": "technical_brief"
+    "assistant_authority": "technical",
+    "elapsed_definition": "demand",
+    "configuration_dependencies": "technical",
+    "pilot_users": "brief",
+    "approval_rules": "approvals"
   },
   "solution_prompts": [
     "Rationale",
     "Meaningful alternative",
     "Dependencies and resources"
-  ]
+  ],
+  "sheets": {
+    "business": {
+      "order": 1,
+      "segment": "clarify",
+      "goal": "Separate how the company serves customers from whom this internal tool helps.",
+      "angles": [
+        {
+          "id": "offering",
+          "label": "What the company sells, and to whom",
+          "hint": "See who the company's customers are in the company brief.",
+          "materials": [
+            "brief"
+          ]
+        },
+        {
+          "id": "users",
+          "label": "Who this assistant is for",
+          "hint": "In the brief and the candidate list, who will use it directly.",
+          "materials": [
+            "brief",
+            "user_groups"
+          ]
+        },
+        {
+          "id": "today",
+          "label": "How people solve this today",
+          "hint": "What the request log and interviews show people doing now.",
+          "materials": [
+            "demand",
+            "interviews"
+          ]
+        },
+        {
+          "id": "unknowns",
+          "label": "What you do not know yet",
+          "hint": "Mark what the materials do not say yet.",
+          "materials": []
+        }
+      ],
+      "colleagues": [
+        "manager",
+        "business"
+      ],
+      "choice": {
+        "id": "audience",
+        "label": "Who does this assistant serve",
+        "options": [
+          {
+            "id": "internal",
+            "label": "Internal staff"
+          },
+          {
+            "id": "external",
+            "label": "External customers"
+          },
+          {
+            "id": "both",
+            "label": "Both"
+          },
+          {
+            "id": "unknown",
+            "label": "Not sure yet"
+          }
+        ]
+      }
+    },
+    "stakeholders": {
+      "order": 2,
+      "segment": "clarify",
+      "goal": "Separate who uses it, who decides, who does extra work and who bears the outcome.",
+      "angles": [
+        {
+          "id": "daily",
+          "label": "Who uses it every day",
+          "hint": "The candidate list groups people; the interviews give their words.",
+          "materials": [
+            "user_groups",
+            "interviews"
+          ]
+        },
+        {
+          "id": "decides",
+          "label": "Who decides on resources",
+          "hint": "See who published the approval rules and what they cover.",
+          "materials": [
+            "approvals",
+            "brief"
+          ]
+        },
+        {
+          "id": "extra",
+          "label": "Who gets extra work",
+          "hint": "Who has to pitch in, per the coordination notes and interviews.",
+          "materials": [
+            "coordination",
+            "interviews"
+          ]
+        },
+        {
+          "id": "blame",
+          "label": "Who answers when it goes wrong",
+          "hint": "The technical handover says what the assistant can and cannot do.",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "manager",
+        "business"
+      ],
+      "choice": {
+        "id": "approver",
+        "label": "Who decides on this pilot",
+        "options": [
+          {
+            "id": "grace",
+            "label": "Grace · Manager"
+          },
+          {
+            "id": "chen",
+            "label": "Chen · Business lead"
+          },
+          {
+            "id": "daniel",
+            "label": "Daniel · Technical lead"
+          },
+          {
+            "id": "xu_qing",
+            "label": "Xu Qing · Project assistant"
+          },
+          {
+            "id": "unknown",
+            "label": "Not clear yet"
+          }
+        ]
+      }
+    },
+    "need": {
+      "order": 3,
+      "segment": "clarify",
+      "goal": "Make the need a hypothesis that evidence could overturn.",
+      "angles": [
+        {
+          "id": "evidence",
+          "label": "What the raw evidence says",
+          "hint": "Start from the raw export and the interview wording.",
+          "materials": [
+            "demand",
+            "interviews"
+          ]
+        },
+        {
+          "id": "number",
+          "label": "How the number was worked out",
+          "hint": "Compare the field definitions with the estimate's basis.",
+          "materials": [
+            "demand",
+            "business_case"
+          ]
+        },
+        {
+          "id": "stop",
+          "label": "What fact would make us stop",
+          "hint": "Find a fact that, if true, makes this not worth doing.",
+          "materials": [
+            "interviews",
+            "coordination"
+          ]
+        },
+        {
+          "id": "validate",
+          "label": "How to check it next",
+          "hint": "Write the smallest next check.",
+          "materials": []
+        }
+      ],
+      "colleagues": [
+        "business",
+        "manager"
+      ],
+      "choice": {
+        "id": "claim",
+        "label": "This need is currently",
+        "options": [
+          {
+            "id": "hypothesis",
+            "label": "Only a hypothesis"
+          },
+          {
+            "id": "supported",
+            "label": "Partly supported"
+          },
+          {
+            "id": "unresolved",
+            "label": "Hard to say yet"
+          }
+        ]
+      }
+    },
+    "boundary": {
+      "order": 4,
+      "segment": "design",
+      "goal": "For each kind of request: answer or act, and who gives final approval.",
+      "angles": [
+        {
+          "id": "act",
+          "label": "Answer, or act",
+          "hint": "The technical handover states the execution boundary.",
+          "materials": [
+            "technical"
+          ]
+        },
+        {
+          "id": "final",
+          "label": "Who holds final approval",
+          "hint": "Read the approval rules next to the execution boundary.",
+          "materials": [
+            "approvals",
+            "technical"
+          ]
+        },
+        {
+          "id": "fallback",
+          "label": "Who picks up a mistake",
+          "hint": "Who handles hand-offs and fallbacks in the interviews.",
+          "materials": [
+            "interviews"
+          ]
+        },
+        {
+          "id": "cannot",
+          "label": "What cannot be done yet",
+          "hint": "Current capabilities and configuration.",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "technical",
+        "manager"
+      ],
+      "structure": "triage"
+    },
+    "solution": {
+      "order": 5,
+      "segment": "design",
+      "goal": "Compare workable approaches; keep the proposal apart from actual settings.",
+      "angles": [
+        {
+          "id": "two",
+          "label": "Compare at least two approaches",
+          "hint": "Give each a subheading; the choice below lists them.",
+          "materials": []
+        },
+        {
+          "id": "cost",
+          "label": "Development days and resources",
+          "hint": "Work-item budgets and approval limits.",
+          "materials": [
+            "technical",
+            "approvals"
+          ]
+        },
+        {
+          "id": "market",
+          "label": "How others usually do it",
+          "hint": "The pattern cards describe public methods only.",
+          "materials": [],
+          "patterns": true
+        },
+        {
+          "id": "gap",
+          "label": "Where the proposal and settings differ",
+          "hint": "Requested values, actual values and why some are not in effect.",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "technical",
+        "manager"
+      ],
+      "choice": {
+        "id": "selected_approach",
+        "label": "Chosen approach",
+        "from_headings": true,
+        "empty": "List at least two approaches as subheadings in the box to choose one here."
+      },
+      "structure": "diagram"
+    },
+    "assurance": {
+      "order": 6,
+      "segment": "verify",
+      "goal": "Test the risks against clear expectations; keep a watch and a way back.",
+      "angles": [
+        {
+          "id": "disprove",
+          "label": "Which question could overturn the design",
+          "hint": "What went wrong in the trial records.",
+          "materials": [
+            "failures"
+          ]
+        },
+        {
+          "id": "policy",
+          "label": "What to retest when policy changes",
+          "hint": "The travel policy has an old and a new version.",
+          "materials": [
+            "policy"
+          ]
+        },
+        {
+          "id": "signal",
+          "label": "What signals to watch after launch",
+          "hint": "What the request log can measure.",
+          "materials": [
+            "demand"
+          ]
+        },
+        {
+          "id": "rollback",
+          "label": "How to roll back",
+          "hint": "Which settings can be rolled back on their own.",
+          "materials": [
+            "technical"
+          ]
+        }
+      ],
+      "colleagues": [
+        "technical",
+        "business"
+      ],
+      "structure": "evaluation"
+    },
+    "decision": {
+      "order": 7,
+      "segment": "verify",
+      "goal": "Decide on an exact version and its conditions.",
+      "angles": [
+        {
+          "id": "conditions",
+          "label": "Under what conditions I commit",
+          "hint": "Approval limits and the resources you asked for.",
+          "materials": [
+            "approvals"
+          ]
+        },
+        {
+          "id": "open",
+          "label": "What is still unresolved",
+          "hint": "List what still needs checking.",
+          "materials": []
+        },
+        {
+          "id": "changed",
+          "label": "What changed since the last version",
+          "hint": "Compare with your previous PRD version.",
+          "materials": []
+        }
+      ],
+      "colleagues": [
+        "manager"
+      ],
+      "choice": {
+        "id": "intended_decision",
+        "label": "Intended decision",
+        "options": [
+          {
+            "id": "launch",
+            "label": "Proceed with the proposal"
+          },
+          {
+            "id": "launch_narrow",
+            "label": "Proceed with a limited scope"
+          },
+          {
+            "id": "defer_with_conditions",
+            "label": "Defer until conditions are met"
+          },
+          {
+            "id": "no_go",
+            "label": "Do not proceed with this proposal"
+          }
+        ]
+      }
+    }
+  },
+  "placeholder": "Write here. It can be wrong or empty; nothing is checked until you hand it in for review."
 }
