@@ -12,7 +12,8 @@ is written to the run directory, and the launcher itself is unchanged.
         --run-dir /private/tmp/aipm-int-run
 
 The candidate is read from build/out/<AIPM_CANDIDATE, default int-1>; build it first with
-build_candidate.py --output scenarios/pm_pilot/aipm-phase1/build/out/int-1.
+build_candidate.py --output scenarios/pm_pilot/aipm-phase1/build/out/int-1. A --env-file
+(model slots given as *_KEY_FILE paths) is merged with the candidate packages.
 """
 
 import json
@@ -61,8 +62,21 @@ def main(argv: list[str]) -> int:
             raise SystemExit("--run-dir is required so the preview never reuses the demo stack")
         catalog, roots = candidate_catalog(run_dir.resolve())
         launcher.CATALOGS["aipm"] = catalog
+        # A given --env-file (model slots as *_KEY_FILE paths, never keys) is kept and the
+        # candidate packages are added to it.
+        given = ""
+        if "--env-file" in argv:
+            at = argv.index("--env-file")
+            given = Path(argv[at + 1]).read_text(encoding="utf-8")
+            argv = argv[:at] + argv[at + 2 :]
         env_file = run_dir.resolve() / "aipm.env"
-        env_file.write_text("CAREER_LAB_AIPM_PACKAGES=" + os.pathsep.join(map(str, roots)) + "\n")
+        env_file.write_text(
+            given.rstrip("\n")
+            + ("\n" if given.strip() else "")
+            + "CAREER_LAB_AIPM_PACKAGES="
+            + os.pathsep.join(map(str, roots))
+            + "\n"
+        )
         argv = [*argv, "--catalog", "aipm", "--env-file", str(env_file)]
     return launcher.main(argv)
 
