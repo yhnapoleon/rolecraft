@@ -197,6 +197,9 @@ export function createAipmPractice(deps: PracticeDeps) {
         return c.updateBatch(String(payload.batch_id), cmd);
       case 'aipm.assessment.record':
         return c.recordAssessment(cmd);
+      case 'aipm.design_drafts.resolve':
+        if (!c.resolveDraft) throw new Error('AIPM agent drafts are not connected');
+        return c.resolveDraft(String(payload.draft_id), cmd);
       default:
         throw new Error(`Unsupported AIPM operation: ${operation}`);
     }
