@@ -122,10 +122,28 @@ describe('agent activity feed', () => {
     );
     expect(titled.object?.title).toBe('住宿上限委托');
     setPreference('en');
-    expect(toEvent(row(8, { tool: 'engineer.tickets.read', objects: [{ kind: 'ticket', id: 't1', version: null, title: '住宿上限委托' }] })).object?.title).toBe('the hotel-limit ticket');
-    expect(toEvent(row(9, { tool: 'engineer.trial', objects: [{ kind: 'ticket', id: 't2', version: null, title: 'An unknown backend title' }] })).object?.title).toBe('the ticket');
-    expect(toEvent(row(10, { tool: 'engineer.tickets.read', objects: [] })).object?.title).toBe('the ticket');
-    expect(toEvent(row(11, { tool: 'engineer.reviews.read', objects: [] })).object?.title).toBe('the review');
+    expect(
+      toEvent(
+        row(8, {
+          tool: 'engineer.tickets.read',
+          objects: [{ kind: 'ticket', id: 't1', version: null, title: '住宿上限委托' }],
+        }),
+      ).object?.title,
+    ).toBe('the hotel-limit ticket');
+    expect(
+      toEvent(
+        row(9, {
+          tool: 'engineer.trial',
+          objects: [{ kind: 'ticket', id: 't2', version: null, title: 'An unknown backend title' }],
+        }),
+      ).object?.title,
+    ).toBe('the ticket');
+    expect(toEvent(row(10, { tool: 'engineer.tickets.read', objects: [] })).object?.title).toBe(
+      'the ticket',
+    );
+    expect(toEvent(row(11, { tool: 'engineer.reviews.read', objects: [] })).object?.title).toBe(
+      'the review',
+    );
     setPreference('zh');
     const review = toEvent(
       row(7, {
@@ -164,5 +182,61 @@ describe('a session that no longer exists', () => {
     expect(sessionGone({ status: 409, code: 'version_conflict' })).toBe(false);
     expect(sessionGone({ status: 503 })).toBe(false);
     expect(sessionGone({ status: 404 })).toBe(true);
+  });
+});
+
+describe('handshake versus work', () => {
+  it('reports a connected feed as not yet working until a tool call row arrives', async () => {
+    const pages = [
+      {
+        items: [
+          {
+            seq: 1,
+            at: '2026-10-26T08:00:00Z',
+            delegation_id: 'd',
+            kind: 'connected',
+            status: 'ok',
+          },
+        ],
+        connection: {
+          state: 'connected',
+          client: 'claude-code',
+          last_seen: '2026-10-26T08:00:00Z',
+        },
+        complete: true,
+        next_cursor: 1,
+      },
+      {
+        items: [
+          {
+            seq: 2,
+            at: '2026-10-26T08:00:05Z',
+            delegation_id: 'd',
+            kind: 'tool_call',
+            tool: 'observation',
+            status: 'ok',
+          },
+        ],
+        connection: {
+          state: 'connected',
+          client: 'claude-code',
+          last_seen: '2026-10-26T08:00:05Z',
+        },
+        complete: true,
+        next_cursor: 2,
+      },
+    ];
+    let i = 0;
+    const feed = createAgentFeed({
+      read: async () => pages[Math.min(i++, 1)] as never,
+      emit: () => {},
+      changed: () => {},
+      schedule: () => 0,
+      cancel: () => {},
+    });
+    await feed.poll();
+    expect(feed.state()).toMatchObject({ state: 'connected', working: false });
+    await feed.poll();
+    expect(feed.state()).toMatchObject({ state: 'connected', working: true });
   });
 });

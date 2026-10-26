@@ -1,7 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { codexCommand } from '../../app/agent-connection';
-import { CLIENTS, commandFor, ConnectPanel, connectionLabel, SLOW_MS, waitingHint } from './connect';
+import {
+  CLIENTS,
+  commandFor,
+  ConnectPanel,
+  connectionLabel,
+  reachableHint,
+  SLOW_MS,
+  waitingHint,
+} from './connect';
 
 const endpoint = 'http://127.0.0.1:18910/api/sessions/example/mcp';
 
@@ -113,5 +121,18 @@ describe('waiting for the first call', () => {
         last_seen: '2026-10-26T07:00:00Z',
       })?.slow,
     ).toBe(false);
+  });
+});
+
+describe('reachable before the first tool call', () => {
+  it('says the setup is written and that an open session must restart or reconnect', () => {
+    const connected = { state: 'connected' as const, client: 'claude-code', last_seen: null };
+    expect(connectionLabel(connected, 'zh', true)).toBe('已连通 · 配置已写好');
+    expect(connectionLabel(connected, 'en', true)).toBe('Reachable · setup written');
+    expect(connectionLabel(connected, 'zh')).toBe('已连接 · 来自 Claude Code');
+    expect(reachableHint('zh', 'claude-desktop')).toContain('/mcp');
+    expect(reachableHint('zh', 'claude')).toContain('要重启');
+    expect(reachableHint('en', 'codex')).toContain('start a new one');
+    expect(reachableHint('en', 'claude')).not.toMatch(/[一-鿿]/);
   });
 });

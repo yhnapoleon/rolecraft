@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { onAgentEvent } from '../../shell/agent-bus';
 import { Button } from '../../ui-kit';
 import { ConnectPanel, connectionLabel } from './connect';
-import type { AgentEvent } from './feed';
+import { type AgentEvent, working } from './feed';
 import { AccessUnconfirmed, canConnect, ensureAccess } from './grant';
 import { type AgentPageProps, feedStore } from './index';
 import { Rig } from './rig';
@@ -26,6 +26,9 @@ export function AgentPage(props: AgentPageProps) {
   const [failed, setFailed] = useState('');
   const [reveal, setReveal] = useState(false);
   const server = feed.connection.state;
+  // A handshake without any tool call: the setup is written and reachable, not yet at work.
+  const reachable = server === 'connected' && !working(feed.rows);
+  const light = reachable ? 'reachable' : undefined;
   const phase =
     server === 'connected' ? 'connected' : server === 'idle' ? 'idle' : issued ? 'waiting' : 'none';
   const client = clientName(feed.connection.client);
@@ -47,9 +50,9 @@ export function AgentPage(props: AgentPageProps) {
 
   // While someone waits for the first connection, poll fast.
   useEffect(() => {
-    feedStore.watch(phase === 'waiting');
+    feedStore.watch(phase === 'waiting' || reachable);
     return () => feedStore.watch(false);
-  }, [phase]);
+  }, [phase, reachable]);
 
   // Screen readers hear one merged sentence every 2 seconds, not every call.
   const [spoken, setSpoken] = useState('');
@@ -73,7 +76,9 @@ export function AgentPage(props: AgentPageProps) {
     try {
       const token = (await ensureAccess(host))?.token ?? null;
       if (!token)
-        setFailed(t(lang, '没能连接你的 Agent，请再试一次。', "Couldn't connect your agent. Try again."));
+        setFailed(
+          t(lang, '没能连接你的 Agent，请再试一次。', "Couldn't connect your agent. Try again."),
+        );
       return token;
     } catch (error) {
       setFailed(
@@ -152,10 +157,10 @@ export function AgentPage(props: AgentPageProps) {
             {t(lang, '我的 Agent', 'My agent')}
           </h1>
           <span className="ag-head-status">
-            <span className="rc-agent-light" data-state={phase} aria-hidden="true" />
+            <span className="rc-agent-light" data-state={light ?? phase} aria-hidden="true" />
             {phase === 'none'
               ? t(lang, '还没连接', 'Not connected')
-              : connectionLabel(feed.connection, lang)}
+              : connectionLabel(feed.connection, lang, reachable)}
           </span>
         </div>
         <p className="ag-lede">
@@ -176,6 +181,7 @@ export function AgentPage(props: AgentPageProps) {
       <Rig
         settled={feed.loaded}
         phase={phase}
+        reachable={reachable}
         client={client}
         lastSeen={feed.connection.last_seen ?? undefined}
         workspace={props.workspace}
@@ -222,8 +228,8 @@ export function AgentPage(props: AgentPageProps) {
       {(phase === 'connected' || phase === 'idle') && host ? (
         <div className="ag-connection-summary">
           <span className="ag-connect-status" role="status">
-            <span className="rc-agent-light" data-state={phase} aria-hidden="true" />
-            {connectionLabel(feed.connection, lang)}
+            <span className="rc-agent-light" data-state={light ?? phase} aria-hidden="true" />
+            {connectionLabel(feed.connection, lang, reachable)}
           </span>
           <Button variant="ghost" onClick={() => setReveal(!reveal)} aria-expanded={showConnect}>
             {showConnect
@@ -240,6 +246,7 @@ export function AgentPage(props: AgentPageProps) {
           opener={props.opener}
           secret={secret}
           connection={feed.connection}
+          reachable={reachable}
         />
       ) : null}
 

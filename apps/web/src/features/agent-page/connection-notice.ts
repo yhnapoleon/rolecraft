@@ -1,5 +1,5 @@
 // Observe the global feed, not a route. Persist only activity identities (never credentials).
-import type { FeedSnapshot } from './feed';
+import { type FeedSnapshot, working } from './feed';
 import { clientName } from './verbs';
 
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem'>;
@@ -29,7 +29,11 @@ export function createConnectionNotice(
   };
   return (feed: FeedSnapshot) => {
     if (!feed.loaded) return;
-    const state = feed.connection.state;
+    // A handshake alone (setup check) is not the agent at work; the notice waits for a call.
+    const state =
+      feed.connection.state === 'connected' && !working(feed.rows)
+        ? 'reachable'
+        : feed.connection.state;
     const last = feed.rows.at(-1);
     const id = last ? `${last.delegation_id}:${last.seq}` : feed.connection.last_seen;
     const initial = previous === null;

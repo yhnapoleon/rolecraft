@@ -23,9 +23,11 @@ export function mcpEndpoint(origin: string, sessionId: string) {
   return `${origin.replace(/\/+$/, '')}/api/sessions/${encodeURIComponent(sessionId)}/mcp`;
 }
 
-/** User scope is shared by the CLI and the desktop Code tab, across project folders. */
+/** User scope is shared by the CLI and the desktop Code tab, across project folders. After
+ * writing it, `claude mcp get` opens one MCP handshake so the page sees the setup at once; only
+ * its Status line is shown, because the full output repeats the Authorization header. */
 export function claudeCodeCommand(endpoint: string, token: string) {
-  return `claude mcp remove ${SERVER} -s user >/dev/null 2>&1; claude mcp add -s user --transport http ${SERVER} ${shell(endpoint)} --header ${shell(`Authorization: Bearer ${token}`)}`;
+  return `claude mcp remove ${SERVER} -s user >/dev/null 2>&1; claude mcp add -s user --transport http ${SERVER} ${shell(endpoint)} --header ${shell(`Authorization: Bearer ${token}`)} >/dev/null && { claude mcp get ${SERVER} 2>&1 | grep -m1 'Status:' || true; }`;
 }
 
 /** Stage edits with Codex's own TOML writer: preserve unrelated settings, back up, then replace.
@@ -33,7 +35,7 @@ export function claudeCodeCommand(endpoint: string, token: string) {
  * CODEX_HOME is respected so the exact command can be exercised without a real user profile.
  */
 export function codexCommand(endpoint: string, token: string) {
-  const script = `import json, os, pathlib, subprocess, sys, tempfile, time
+  const script = `import json, os, pathlib, subprocess, sys, tempfile, time, urllib.request
 config = (pathlib.Path(os.environ.get("CODEX_HOME") or pathlib.Path.home() / ".codex") / "config.toml").resolve()
 config.parent.mkdir(parents=True, exist_ok=True)
 original = config.read_bytes() if config.exists() else None
@@ -71,7 +73,15 @@ with tempfile.TemporaryDirectory(prefix="rolecraft-mcp-") as stage:
     finally:
         if os.path.exists(pending):
             os.unlink(pending)
-print("RoleCraft MCP configured.")`;
+# One MCP handshake so RoleCraft shows the setup at once. The token is never printed.
+hello = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "codex-setup", "version": "1"}}}
+request = urllib.request.Request(sys.argv[1], data=json.dumps(hello).encode(), method="POST", headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream", "Authorization": "Bearer " + sys.argv[2]})
+try:
+    with urllib.request.urlopen(request, timeout=10) as reply:
+        reached = reply.status == 200
+except Exception:
+    reached = False
+print("RoleCraft MCP configured." + (" Server reachable." if reached else " Server not reached yet."))`;
   return `python3 -c ${shell(script)} ${shell(endpoint)} ${shell(token)}`;
 }
 

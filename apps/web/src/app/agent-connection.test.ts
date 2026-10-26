@@ -27,8 +27,17 @@ describe('agent connection commands', () => {
   });
   it('gives Claude Code a local-scope HTTP server with the token in its header', () => {
     expect(claudeCodeCommand(ENDPOINT, TOKEN)).toBe(
-      `claude mcp remove rolecraft -s user >/dev/null 2>&1; claude mcp add -s user --transport http rolecraft '${ENDPOINT}' --header 'Authorization: Bearer ${TOKEN}'`,
+      `claude mcp remove rolecraft -s user >/dev/null 2>&1; claude mcp add -s user --transport http rolecraft '${ENDPOINT}' --header 'Authorization: Bearer ${TOKEN}' >/dev/null && { claude mcp get rolecraft 2>&1 | grep -m1 'Status:' || true; }`,
     );
+  });
+  it('makes one handshake after setup without printing the token', () => {
+    const claude = claudeCodeCommand(ENDPOINT, TOKEN);
+    // The handshake's output is narrowed to its Status line (the full output repeats headers).
+    expect(claude).toContain("claude mcp get rolecraft 2>&1 | grep -m1 'Status:'");
+    const codex = codexCommand(ENDPOINT, TOKEN);
+    expect(codex).toContain('"method": "initialize"');
+    expect(codex).toContain('urllib.request.urlopen(request, timeout=10)');
+    expect(codex).not.toMatch(/print\([^)]*argv\[2\]/);
   });
   it('starts Codex connected, with the token only in its environment', () => {
     const command = codexCommand(ENDPOINT, TOKEN);

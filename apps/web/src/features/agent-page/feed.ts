@@ -119,6 +119,9 @@ const FAST = 1500;
 const SLOW = 4000;
 const LIMIT = 400;
 
+/** A real tool call, not just a client's handshake (e.g. the setup command's own check). */
+export const working = (rows: readonly AgentActivity[]) => rows.some((r) => r.kind === 'tool_call');
+
 /** Answers that will not change on a later read: the session is gone or not ours to read
  * (e.g. a practice id kept from an earlier server). Polling then stops instead of retrying. */
 export function sessionGone(error: unknown) {
@@ -222,6 +225,7 @@ export function createAgentFeed(ports: FeedPorts) {
         state: connection.state,
         client: connection.client ? clientName(connection.client) : undefined,
         lastSeen: connection.last_seen ?? undefined,
+        working: connection.state === 'connected' ? working(rows) : undefined,
       };
     },
   };

@@ -42,7 +42,13 @@ export function commandFor(client: Client, endpoint: string, token: string, open
   );
 }
 
-export function connectionLabel(connection: AgentConnection | undefined, lang: 'zh' | 'en') {
+export function connectionLabel(
+  connection: AgentConnection | undefined,
+  lang: 'zh' | 'en',
+  reachable = false,
+) {
+  if (connection?.state === 'connected' && reachable)
+    return t(lang, '已连通 · 配置已写好', 'Reachable · setup written');
   if (connection?.state === 'connected') {
     const name = connection.client?.trim();
     return name
@@ -52,6 +58,22 @@ export function connectionLabel(connection: AgentConnection | undefined, lang: '
   if (connection?.state === 'idle')
     return t(lang, '已连接过 · 当前空闲', 'Previously connected · idle');
   return t(lang, '等待首次调用', 'Waiting for the first call');
+}
+
+/** Said while only the handshake arrived. An open session never picks up a newly added server
+ * (the client's own behaviour), so this never suggests it works without a restart. */
+export function reachableHint(lang: 'zh' | 'en', client: Client) {
+  if (client === 'codex' || client === 'codex-desktop')
+    return t(
+      lang,
+      '已经开着的 Codex 对话读不到新连接，要新开对话（仍没有就完全退出再打开 Codex）；新开的对话直接能用。',
+      'An open Codex conversation does not see the new connection: start a new one (if it is still missing, quit and reopen Codex). New conversations can use it right away.',
+    );
+  return t(
+    lang,
+    '已经开着的 Claude Code 要重启，或者在 /mcp 里重连，才能用上；新开的会话直接能用。',
+    'A Claude Code session that was already open must restart or reconnect in /mcp to use it; new sessions can use it right away.',
+  );
 }
 
 /** After this long with no call, the waiting line turns into a short check. */
@@ -169,6 +191,7 @@ export function ConnectPanel({
   opener,
   secret,
   connection,
+  reachable = false,
 }: {
   lang: 'zh' | 'en';
   sessionId: string;
@@ -176,6 +199,8 @@ export function ConnectPanel({
   opener: Pair;
   secret: () => Promise<string | null>;
   connection?: AgentConnection;
+  /** Connected by a handshake only: setup is written, no tool call yet. */
+  reachable?: boolean;
 }) {
   const [client, setClient] = useState<Client>('claude-desktop');
   const [manual, setManual] = useState<string | null>(null);
@@ -211,12 +236,17 @@ export function ConnectPanel({
         <p className="ag-connect-status" role="status" data-connected={connected}>
           <span
             className="ag-status-dot rc-agent-light"
-            data-state={connection?.state ?? 'none'}
+            data-state={reachable ? 'reachable' : (connection?.state ?? 'none')}
             aria-hidden="true"
           />
-          {connectionLabel(connection, lang)}
+          {connectionLabel(connection, lang, reachable)}
         </p>
       </header>
+      {reachable ? (
+        <p className="ag-step-hint ag-connect-wait" role="note">
+          {reachableHint(lang, client)}
+        </p>
+      ) : null}
       {waiting ? (
         <p className="ag-step-hint ag-connect-wait" role="status" data-slow={waiting.slow}>
           {waiting.text}

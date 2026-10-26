@@ -35,6 +35,11 @@
   border-radius: inherit;
   background: color-mix(in srgb, var(--agent-connected) 14%, transparent);
 }
+/* Reachable: the setup's handshake arrived but no tool call yet. Same green, held still. */
+.rc-agent-light[data-state="reachable"] {
+  background: var(--agent-connected);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-connected) 12%, transparent);
+}
 @keyframes rc-agent-breathe {
   0%,
   100% {
