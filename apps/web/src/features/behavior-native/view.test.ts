@@ -112,3 +112,9 @@ describe('behaviour view', () => {
     expect(html).not.toContain('…');
   });
 });
+
+
+it('keeps the chosen disclosure state when the same behavior is redrawn', () => {
+  expect(behaviorHtml(data, 'en', { lens: true })).toContain('<details class="rc-behavior__steps">');
+  expect(behaviorHtml(data, 'en', { lens: true, stepsOpen: true })).toContain('<details class="rc-behavior__steps" open>');
+});

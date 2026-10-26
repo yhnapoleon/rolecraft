@@ -115,3 +115,13 @@ describe('generator setting', () => {
     expect(submittedGenerator(form('other'), 'extractive')).toBe('extractive');
   });
 });
+
+
+it.each(['zh', 'en'] as const)('shows a recorded gate notice in %s without relabelling history', (language) => {
+  setPreference(language);
+  const label = answerModeLabel({ mode: 'gate', assistant: 'model' });
+  expect(label.mode).toBe('gate');
+  expect(label.waiting).toBe(false);
+  expect(label.text).toBe(language === 'zh' ? '范围／资料提示' : 'Scope / source notice');
+  expect(answerModeLine({ mode: 'gate', assistant: 'waiting_model' })).toContain('data-answer-mode="gate"');
+});

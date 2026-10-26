@@ -34,11 +34,12 @@ class Provider:
         self.calls.append(payload)
         messages = payload["messages"]
         system = messages[0]["content"]
-        if system.startswith("assistant-generation-v1"):
+        if system.startswith("assistant-generation-v2"):
             data = json.loads(messages[1]["content"])
             return json.dumps(
                 {
                     "answer": data["candidates"][0]["text"],
+                    "answerable": True,
                     "citation_ids": [data["candidates"][0]["id"]],
                 }
             )

@@ -385,7 +385,7 @@ class Assistant:
         )
         if generated is not None:
             answer, refs, code = generated.answer, generated.citations, generated.error_code
-            status, execution = generated.applied(status, execution)
+            status, execution = generated.applied(status, execution, fallback=cfg.fallback)
         result = TestResultV2(
             id=rid,
             execution=execution,

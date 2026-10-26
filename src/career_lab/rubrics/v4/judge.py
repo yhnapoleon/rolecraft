@@ -43,12 +43,14 @@ class AdvisoryJudge:
                 pending(package, message(work_language, "用途或适用责任仍需明确。")), ()
             )
         if package.completeness != "complete":
-            return JudgeOutcome(
-                pending(
-                    package, message(work_language, "语义证据未完整纳入，需补齐或缩小评审范围。")
-                ),
-                (),
-            )
+            reason = "语义证据未完整纳入，需补齐或缩小评审范围。"
+            if package.completeness == "text_overflow":
+                reason = "完整证据超出装配预算；未调用评价模型，规则结果保留。"
+            elif "evidence_time_mismatch" in package.rule_context.get("reference_errors", ()):
+                reason = "所提供引用的记录时点与来源不一致；请核对引用时点后重新评审。"
+            elif "evidence_quote_mismatch" in package.rule_context.get("reference_errors", ()):
+                reason = "所提供引文与对应版本的原文不一致；请核对引文后重新评审。"
+            return JudgeOutcome(pending(package, message(work_language, reason)), ())
         if self.model is None:
             return JudgeOutcome(
                 pending(

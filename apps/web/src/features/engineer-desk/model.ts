@@ -65,6 +65,9 @@ export interface ExperimentSummary {
   readonly config_hash?: string | null;
   readonly counts: Readonly<Record<string, number>>;
   readonly status: string;
+  readonly rows?: readonly (TrialRow | ReproductionRow)[];
+  readonly rows_omitted?: boolean;
+  readonly effective_differences?: Readonly<Record<string, string>>;
 }
 export interface TrialRow {
   readonly id: string;
@@ -488,6 +491,75 @@ export interface ExperimentRowView {
   readonly expected: string;
   readonly actual: string;
   readonly answer: string;
+  readonly citations: string;
+}
+
+/** Ticket reads carry public rows; old servers may still return only summaries. */
+export function listedExperiment(
+  summary: ExperimentSummary,
+  ticketId: string,
+): Experiment | undefined {
+  return summary.rows
+    ? { ...summary, ticket_id: ticketId, changes: summary.changes ?? {} }
+    : undefined;
+}
+
+export function experimentLimits(experiment: ExperimentSummary): string[] {
+  return Object.entries(experiment.effective_differences ?? {}).map(([field, reason]) => {
+    const labels: Record<string, string> = {
+      realtime_sync_not_provisioned: T(
+        '实时同步未配置，仍按每日更新。',
+        'Real-time sync was not provisioned; updates remain daily.',
+      ),
+      manual_policy_not_provisioned: T(
+        '人工政策处理条件未满足，仍按每日更新。',
+        'Manual policy handling was not provisioned; updates remain daily.',
+      ),
+      scope_filter_not_provisioned: T(
+        '范围过滤未配置，未生效。',
+        'Scope filtering was not provisioned and did not take effect.',
+      ),
+      human_fallback_not_provisioned: T(
+        '人工兜底未配置，未生效。',
+        'Human fallback was not provisioned and did not take effect.',
+      ),
+      requested_work_not_fully_provisioned: T(
+        '申请的开发项目未全部配置。',
+        'Requested development work was not fully provisioned.',
+      ),
+      requested_work_exceeds_approved_budget: T(
+        '申请的开发项目超出已批准预算。',
+        'Requested development work exceeds the approved budget.',
+      ),
+      requested_participants_exceed_approved_capacity: T(
+        '人数超出已批准容量。',
+        'Participants exceed approved capacity.',
+      ),
+      requested_launch_exceeds_approved_deadline: T(
+        '上线时间超出已批准期限。',
+        'Launch timing exceeds the approved deadline.',
+      ),
+    };
+    return (
+      labels[reason] ??
+      T(
+        `${fieldName(field)}未按申请生效，原因尚未识别。`,
+        `${fieldName(field)} did not take effect as requested; the reason is unavailable.`,
+      )
+    );
+  });
+}
+
+function citedVersions(citations: readonly Citation[]): string {
+  return citations.length
+    ? T('引用 ', 'Cites ') +
+        citations
+          .map(
+            (ref) =>
+              `${sourceName(ref.object_id)} ${ref.version == null ? T('版本未记录', 'version unrecorded') : `v${ref.version}`}`,
+          )
+          .join(' · ')
+    : T('没有引用', 'No citation');
 }
 
 const isReproduction = (row: TrialRow | ReproductionRow): row is ReproductionRow =>
@@ -510,6 +582,7 @@ export function experimentRows(experiment: Experiment): ExperimentRowView[] {
         expected: statusWord(row.recorded.status),
         actual: statusWord(row.reproduced.status),
         answer: row.reproduced.answer_summary,
+        citations: citedVersions(row.reproduced.citations),
       };
     const verdict = {
       pass: T('通过', 'Passed'),
@@ -528,6 +601,7 @@ export function experimentRows(experiment: Experiment): ExperimentRowView[] {
       expected: row.expected_status ? statusWord(row.expected_status) : '',
       actual: statusWord(row.actual_status),
       answer: row.answer_summary,
+      citations: citedVersions(row.citations),
     };
   });
 }

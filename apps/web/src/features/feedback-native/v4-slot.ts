@@ -442,6 +442,34 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
         for (const ref of row.products) reference(ref, sid);
         return row;
       });
+      // Show the confirmed delivery and its attachments while feedback/history reads continue.
+      // Never publish a response for a different session or an obsolete workspace point.
+      if (started !== epoch || closed || host.snapshot().session?.sessionId !== sid) return;
+      if (JSON.stringify(host.snapshot().asOf) !== JSON.stringify(current.asOf)) {
+        refreshAgain = true;
+        return;
+      }
+      const confirmedSubmissions = saved.map((row) => ({
+        ref: { session_id: sid, kind: 'submission', object_id: String(row.id), version: Number(row.version) },
+        products: row.products as ObjectRef[],
+        decision: String(row.decision),
+      }));
+      state = {
+        ...state,
+        products: selected,
+        references: readCatalog(timeline, selected),
+        submittedAt: {
+          ...Object.fromEntries(saved.flatMap((row) => {
+            const at = host.draft<string>('feedback', `delivered-at:${String(row.id)}`);
+            return typeof at === 'string' ? [[String(row.id), at]] : [];
+          })),
+          ...deliveryTimes(timeline),
+        },
+        submissions: confirmedSubmissions,
+        submission: confirmedSubmissions.at(-1) ?? null,
+        ...waiting(),
+      };
+      emit();
       // Shared public collection; older hosts may not yet expose this route.
       const reviews: ReviewRecord[] = [];
       let reviewHistoryAvailable = false;
@@ -506,6 +534,17 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
           if (!reports.some((old) => old.id === row.id)) {
             const modelAdvice = readRegisteredAdvice(row.model_advice, sid);
             reports.push({ ...row, model_advice: modelAdvice } as unknown as Report);
+            if (started !== epoch || closed || host.snapshot().session?.sessionId !== sid) return;
+            if (JSON.stringify(host.snapshot().asOf) !== JSON.stringify(current.asOf)) {
+              refreshAgain = true;
+              return;
+            }
+            // Response history is ancillary: a confirmed report can already be read in place.
+            state = {
+              ...state,
+              reports: [...state.reports.filter((old) => !reports.some((read) => read.id === old.id)), ...reports],
+            };
+            emit();
           }
           if (current.available[W05_V4_OPERATIONS.responses])
             for (const response of await pages(W05_V4_OPERATIONS.responses, {

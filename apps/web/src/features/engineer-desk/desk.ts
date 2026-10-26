@@ -27,6 +27,7 @@ import {
   validateImpactNote,
   type Change,
   type EditableField,
+  listedExperiment,
   type Experiment,
   type ExperimentSummary,
   type JsonValue,
@@ -1369,7 +1370,8 @@ export class EngineerDesk {
       this.ctx.doc,
       this.ticket as TicketDetail,
       summary,
-      this.experiments.get(summary.id),
+      this.experiments.get(summary.id) ??
+        listedExperiment(summary, (this.ticket as TicketDetail).id),
       this.expanded.has(summary.id),
       () => {
         if (this.expanded.has(summary.id)) this.expanded.delete(summary.id);

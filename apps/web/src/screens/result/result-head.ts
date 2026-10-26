@@ -25,6 +25,7 @@ export interface ResultHeadActions extends CoverActions {
 export interface ResultWait {
   phase?: FeedbackNativeState['feedbackPhase'];
   seconds?: number;
+  reading?: boolean;
   freshStamp?: boolean;
   pressElapsed?: number;
 }
@@ -230,6 +231,16 @@ function changeList(doc: Document, changes: CoverChange[], language: FeedbackLan
   return ul;
 }
 
+/** Only name stages actually reported by the server; a slow read is a separate wait. */
+export function resultWaitWords(language: FeedbackLanguage, wait: ResultWait): string {
+  const T = (zh: string, en: string) => feedbackText(language, zh, en);
+  if (wait.phase === 'running') return T('评审正在生成反馈。', 'The reviewer is writing the feedback.');
+  if (wait.phase === 'queued') return T('交付已记录，正在等待评审。', 'The delivery is recorded and waiting for the reviewer.');
+  return wait.reading
+    ? T('交付已记录，正在读取反馈。', 'The delivery is recorded. Reading the feedback.')
+    : T('交付已记录，反馈尚未就绪。', 'The delivery is recorded; feedback is not ready yet.');
+}
+
 /** The wait, told by what really happened: recorded, then the queue and the reviewer as the
  * server reports them. Only the current step glows; the clock counts real seconds. */
 function waitingPart(doc: Document, view: CoverView, language: FeedbackLanguage, wait: ResultWait) {
@@ -249,6 +260,7 @@ function waitingPart(doc: Document, view: CoverView, language: FeedbackLanguage,
   }
   type Step = { id: string; label: string; state: 'done' | 'now' | 'next' };
   const running = wait.phase === 'running';
+  const queued = wait.phase === 'queued';
   const steps: Step[] = [
     {
       id: 'recorded',
@@ -260,7 +272,7 @@ function waitingPart(doc: Document, view: CoverView, language: FeedbackLanguage,
     {
       id: 'queued',
       label: running ? T('已排上', 'Queued') : T('排队等评审', 'Waiting for the reviewer'),
-      state: view.confirming ? 'next' : running ? 'done' : 'now',
+      state: view.confirming ? 'next' : running ? 'done' : queued ? 'now' : 'next',
     },
     {
       id: 'reviewer',
@@ -301,9 +313,9 @@ function waitingPart(doc: Document, view: CoverView, language: FeedbackLanguage,
   }
   const hint = doc.createElement('p');
   hint.className = 'result-wait__hint';
-  hint.textContent = T(
-    '通常要 15 秒到一分半。可以先回工作板，结果到了会告诉你。',
-    'This usually takes 15 to 100 seconds. You can go back to the board; you’ll be told when it’s ready.',
+  hint.textContent = resultWaitWords(language, wait) + T(
+    '可以先回工作板，结果到了会告诉你。',
+    ' You can go back to the board; you’ll be told when it’s ready.',
   );
   const back = doc.createElement('button');
   back.type = 'button';

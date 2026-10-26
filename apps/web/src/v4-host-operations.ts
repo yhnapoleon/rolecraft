@@ -6,7 +6,7 @@ type Empty = Record<string, never>;
 export type PageInput = { cursor?: number; limit?: number; since_seq?: number; as_of_seq?: number };
 export type Page<T> = { items: T[]; as_of: C.VersionPoint; next_cursor?: number | null };
 export type AssistantAnswerMode = {
-  mode: 'extractive' | 'llm' | 'unavailable' | 'failed';
+  mode: 'extractive' | 'llm' | 'unavailable' | 'failed' | 'gate';
   provider: string | null;
   model_revision: string | null;
   config_version: number;

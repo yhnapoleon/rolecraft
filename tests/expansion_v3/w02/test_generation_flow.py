@@ -224,6 +224,7 @@ def configured_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, request):
                         "message": {
                             "content": jsonlib.dumps(
                                 {
+                                    "answerable": True,
                                     "answer": answer,
                                     "citation_ids": [citation_id],
                                 }
@@ -304,7 +305,7 @@ def test_gen_02_candidate_citations_are_openable(configured_api):
     metadata = data["generations"][0]
     assert metadata["mode"] == "llm"
     assert metadata["work_language"] == language
-    assert metadata["prompt_revision"] == "assistant-generation-v1"
+    assert metadata["prompt_revision"] == "assistant-generation-v2"
     assert metadata["config_ref"] == result["config_ref"]
     cited = result["citations"][0]
     read = post(
@@ -410,6 +411,7 @@ def test_gen_02_rejects_whole_answer_with_any_non_candidate_reference(
         content = json.dumps(
             {
                 "answer": "malicious answer must never be saved",
+                "answerable": True,
                 "citation_ids": [candidate, citation],
             }
         )

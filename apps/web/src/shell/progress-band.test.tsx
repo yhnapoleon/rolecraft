@@ -77,3 +77,17 @@ it.each([true, false])(
     expect(html).toContain('Summary');
   },
 );
+
+it('keeps the dock to one current-layer line and an explicit expansion control', () => {
+  const p: ProgressBandProps = {
+    layers: [{ id: 'reflect', n: 6, label: 'Reflect and continue', goal: 'Read feedback, revise and practise again', state: 'current', confirmed: ['Delivered'], missing: ['Read the feedback'] }],
+    current: 'reflect', carried: [], folded: true, foldedByDefault: true,
+    words, lang: 'en', onFold: () => {}, onArrivedSeen: () => {},
+  };
+  const html = renderToStaticMarkup(<ProgressBand {...p} />);
+  const dock = html.slice(html.indexOf('class="rc-prog-dock"'), html.indexOf('<section'));
+  expect(dock).toContain('Reflect and continue');
+  expect(dock).toContain('aria-haspopup="dialog"');
+  expect(dock).not.toContain('rc-prog__summary');
+  expect(dock).not.toContain('Read feedback, revise and practise again');
+});

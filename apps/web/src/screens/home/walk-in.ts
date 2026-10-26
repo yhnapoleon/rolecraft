@@ -27,16 +27,6 @@ function prepareCopy(node: HTMLElement) {
     n.style.viewTransitionName = 'none';
   }
 }
-const fade = (el: Element, from: number, to: number, delay = 0) =>
-  el
-    .animate([{ opacity: from }, { opacity: to }], {
-      duration: 160,
-      delay,
-      easing: 'ease',
-      fill: 'forwards',
-    })
-    .finished.catch(() => {});
-
 /** Fade the new page in over 160ms, without moving (reduced motion, and the fallbacks). */
 export function fadeIn() {
   const main = document.getElementById('main');
@@ -106,11 +96,11 @@ export async function walkIn(o: {
   }
 
   const giveUp = async () => {
+    // Remove lifted copies before revealing the board on a slow connection.
+    end();
     o.hold(false);
     o.show();
     fadeIn();
-    await Promise.all([...layer.children].map((n) => fade(n, 1, 0)));
-    end();
   };
   if (!flying || performance.now() - t0 > BUDGET_MS) return giveUp();
 
@@ -149,8 +139,8 @@ export async function walkIn(o: {
   }
   if (to.some((t) => !t)) {
     // The cards did not come in time: the board shows as itself.
-    await Promise.all([...layer.children].map((n) => fade(n, 1, 0)));
     end();
+    fadeIn();
     return;
   }
 

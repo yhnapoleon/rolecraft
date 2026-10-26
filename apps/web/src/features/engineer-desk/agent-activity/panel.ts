@@ -12,6 +12,7 @@ import { chip, codeDiff, flashDone, key, squares } from '../bits';
 import { el, iconNode, workLang } from '../dom';
 import {
   clock,
+  listedExperiment,
   reproductionVerdict,
   settingsDiff,
   type DraftSummary,
@@ -20,7 +21,7 @@ import {
   type TicketDetail,
 } from '../model';
 import { arriveAll, byKeyboard, pulse } from '../motion';
-import { runMarks } from '../steps/tape';
+import { lineRows, runMarks } from '../steps/tape';
 import { go } from '../wire';
 import { agentStatus, connectOffer, streamTarget } from './status';
 import { mountStreamSlot } from './stream-slot';
@@ -390,7 +391,7 @@ export class AgentPanel {
         doc,
         'span',
         { class: 'ed-card__tally' },
-        squares(doc, runMarks(item.run, undefined, t.public_probes.length)),
+        squares(doc, runMarks(item.run, listedExperiment(item.run, t.id), t.public_probes.length)),
         T(
           `公开 ${item.run.counts.passed ?? 0}/${t.public_probes.length}`,
           `Public ${item.run.counts.passed ?? 0}/${t.public_probes.length}`,
@@ -494,18 +495,16 @@ export class AgentPanel {
           doc,
           'p',
           { class: 'ed-card__line ed-card__result' },
-          squares(doc, runMarks(item.run, undefined, t.public_probes.length) as Mark[]),
+          squares(
+            doc,
+            runMarks(item.run, listedExperiment(item.run, t.id), t.public_probes.length) as Mark[],
+          ),
           T(
             `公开 ${item.run.counts.passed ?? 0}/${t.public_probes.length} 通过`,
             `Public ${item.run.counts.passed ?? 0}/${t.public_probes.length} passed`,
           ),
         ),
-        el(
-          doc,
-          'p',
-          { class: 'ed-card__aside' },
-          T('逐行结果在你的 Agent 那里', 'Row-by-row results stay with your agent'),
-        ),
+        lineRows(doc, t, item.run, listedExperiment(item.run, t.id), []),
       );
     }
     const draft = (item as DraftItem).draft;

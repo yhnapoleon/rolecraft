@@ -572,7 +572,7 @@
   top: 8px;
   left: 0;
   right: 0;
-  display: block;
+  display: flex;
   align-items: center;
   gap: 14px;
   min-height: 42px;
@@ -826,3 +826,15 @@
     margin: 0;
   }
 }
+
+/* The dock names the current layer; its full summary opens in the existing work-map dialog. */
+.rc-prog-dock__current {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.rc-prog-dock__expand { flex: none; }
+#main { scroll-padding-top: calc(var(--progress-dock-height, 0px) + 16px); }

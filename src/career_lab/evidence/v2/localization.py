@@ -6,6 +6,18 @@ Default zh preserves legacy callers and stored feedback is never rewritten.
 """
 
 EN = {
+    "完整证据超出装配预算；未调用评价模型，规则结果保留。": (
+        "The complete evidence exceeds the assembly budget. "
+        "The evaluation model was not called; rule results are retained."
+    ),
+    "所提供引用的记录时点与来源不一致；请核对引用时点后重新评审。": (
+        "The supplied reference timestamps do not match their source records. "
+        "Check the reference timestamps before requesting another review."
+    ),
+    "所提供引文与对应版本的原文不一致；请核对引文后重新评审。": (
+        "A supplied quotation does not match the original text of that version. "
+        "Check the quotation before requesting another review."
+    ),
     "\n预期（待验证）：": "\nExpected outcome (unverified): ",
     "\n模型生成回答（待核验）：": "\nModel-generated answer (awaiting verification): ",
     "作者判断（待核对）：": "Author interpretation (unverified): ",

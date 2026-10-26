@@ -80,11 +80,12 @@ function startProvider() {
       const payload = JSON.parse(body);
       const system = payload.messages?.[0]?.content ?? '';
       let content = 'Test double reply.';
-      if (system.startsWith('assistant-generation-v1')) {
+      if (system.startsWith('assistant-generation-v2')) {
         calls.assistant += 1;
         const data = JSON.parse(payload.messages[1].content);
         content = JSON.stringify({
           answer: COPY[data.work_language].generated,
+          answerable: true,
           citation_ids: [data.candidates[0].id],
         });
       } else calls.other += 1;

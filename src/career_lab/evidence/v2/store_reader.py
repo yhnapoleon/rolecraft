@@ -35,6 +35,7 @@ class StoreEvidenceReader:
         source_reader=None,
         rule_provider=None,
         submission_rule_provider=None,
+        capture_at=None,
     ):
         if auth.actor_id != "learner" or auth.executor.kind not in {"human", "external_agent"}:
             raise C.ProtocolError("public_actor_required", status=403)
@@ -265,7 +266,12 @@ class StoreEvidenceReader:
                 }
             )
 
-        store.query(auth, capture)
+        if capture_at is None:
+            store.query(auth, capture)
+        else:
+            # Historical rule reads need only the fixed submission window. The common
+            # store still applies current credentials and object visibility at that point.
+            store.query_at(auth, capture_at, capture)
 
     @staticmethod
     def key(ref):

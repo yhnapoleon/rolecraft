@@ -49,7 +49,7 @@ def body_digests(calls: list[Call], session_id: str) -> list[str]:
 def request_kind(payload: dict) -> str:
     """Which product call a chat request is, from its fixed system prompt or payload."""
     system = payload["messages"][0]["content"]
-    if system.startswith("assistant-generation-v1"):
+    if system.startswith("assistant-generation-v2"):
         return "assistant"
     if system.startswith("Review the actual reply"):
         return "role_review"
@@ -72,7 +72,11 @@ def reply(payload: dict, language: str, *, insufficient: bool = False) -> str:
     if kind == "assistant":
         data = json.loads(messages[1]["content"])
         return json.dumps(
-            {"answer": data["candidates"][0]["text"], "citation_ids": [data["candidates"][0]["id"]]}
+            {
+                "answerable": True,
+                "answer": data["candidates"][0]["text"],
+                "citation_ids": [data["candidates"][0]["id"]],
+            }
         )
     if kind == "role_review":
         return json.dumps(

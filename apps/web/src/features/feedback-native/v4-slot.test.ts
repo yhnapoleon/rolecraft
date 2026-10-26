@@ -182,6 +182,53 @@ describe('W05 v4 host adapter', () => {
     });
     return asked;
   }
+  it('shows confirmed delivery records before slow feedback and response reads finish', async () => {
+    const f = fixture();
+    let release!: () => void;
+    let requested!: () => void;
+    const reached = new Promise<void>((resolve) => { requested = resolve; });
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    f.setRead(async (operation, input) => {
+      if (operation === op.feedback) { requested(); await blocked; }
+      return f.served(operation, input);
+    });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    const reading = ctl.adapter.refresh();
+    await reached;
+    try {
+      expect(ctl.adapter.snapshot().submission?.ref.object_id).toBe('sub');
+      expect(ctl.adapter.snapshot().products.map((p) => p.product_id)).toContain('p');
+      expect(ctl.adapter.snapshot().busy).toBe(true);
+    } finally {
+      release();
+      await reading;
+      ctl.destroy();
+    }
+  });
+
+  it('shows a confirmed feedback report before its slower response history finishes', async () => {
+    const f = fixture();
+    let release!: () => void;
+    let requested!: () => void;
+    const reached = new Promise<void>((resolve) => { requested = resolve; });
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    f.setRead(async (operation, input) => {
+      if (operation === op.responses) { requested(); await blocked; }
+      return f.served(operation, input);
+    });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    const reading = ctl.adapter.refresh();
+    await reached;
+    try {
+      expect(ctl.adapter.snapshot().reports.map((report) => report.id)).toEqual(['f']);
+      expect(ctl.adapter.snapshot().busy).toBe(true);
+    } finally {
+      release();
+      await reading;
+      ctl.destroy();
+    }
+  });
+
   it('checks before submitting with exactly the input it would submit, and only reads', async () => {
     const f = fixture();
     const asked = checking(f);
