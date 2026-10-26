@@ -96,6 +96,7 @@ def sentence_preview(packages, language: str, title_of=None) -> dict | None:
                         "reason",
                         "decision",
                         "expected_cost",
+                        "branches",
                     )
                 },
                 "evidence": _closest_sentence(row["quote"], source.text) if source else None,

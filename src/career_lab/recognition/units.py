@@ -167,9 +167,21 @@ def split_material(
 
 
 def candidate_units(candidate: CandidateEvidenceV2) -> list[CandidateEvidenceV2]:
-    """One whole-text candidate as sentence candidates; unchanged when it has no span."""
+    """One candidate as sentence candidates.
+
+    A candidate quoting an exact span of its source, or carrying the whole source text with
+    no quote (a material or record cited as a whole), is cut into units whose references
+    quote their exact span of that source. A candidate with a quote but no span (its place
+    in the source unknown) and a candidate of a single unit stay as they are.
+    """
     ref = candidate.ref
-    if ref.span_start is None or ref.quote is None or ref.quote != candidate.text:
+    if ref.span_start is not None:
+        if ref.quote != candidate.text:
+            return [candidate]
+        base = ref.span_start
+    elif ref.quote is None and candidate.text:
+        base = 0
+    else:
         return [candidate]
     spans = [s for s in split_text(candidate.text) if s.kind != "heading"]
     if len(spans) <= 1:
@@ -179,8 +191,8 @@ def candidate_units(candidate: CandidateEvidenceV2) -> list[CandidateEvidenceV2]
         unit_ref = EvidenceRefV2.model_validate(
             ref.model_dump(mode="json")
             | {
-                "span_start": ref.span_start + span.start,
-                "span_end": ref.span_start + span.end,
+                "span_start": base + span.start,
+                "span_end": base + span.end,
                 "quote": span.text,
             }
         )
