@@ -40,8 +40,9 @@ describe('work stack model', () => {
   it('counts rechecks and agent drafts in the badge', () => {
     expect(pendingCount([item('a', { status: 'recheck', agentDraft: true }), item('b')])).toBe(2);
   });
-  it('drifts the fan right and turns it at most 3 degrees', () => {
+  it('drifts the fan right on a curve and turns it at most 3 degrees', () => {
     expect(fanOffset(0)).toEqual({ x: 0, rotate: 0 });
+    expect(fanOffset(6).x).toBeGreaterThan(fanOffset(3).x * 3);
     expect(fanOffset(9).rotate).toBe(3);
   });
 });

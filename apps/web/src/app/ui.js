@@ -1713,7 +1713,7 @@ const progressSlot = (a, sevenSteps = aipmHere(a)) =>
     : sevenSteps
       ? `<div class="rc-prog-wrap aipm-v2">${islandSlot('aipm-compass')}</div>${
           aipmScreen(a) ? '<div class="aipm-main" data-aipm-main></div>' : ''
-        }${islandSlot('aipm-stack', 'aipm-stack-slot')}`
+        }<div class="aipm-stack-slot">${islandSlot('aipm-stack')}</div>`
       : (hatHere(a) === 'pm'
           ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
           : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');

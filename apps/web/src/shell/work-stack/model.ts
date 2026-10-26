@@ -51,7 +51,8 @@ export function initialFocus(items: readonly StackItem[]): number {
   return at >= 0 ? at : 0;
 }
 
-/** The fan's gentle drift: each sheet a little further right and turned, up to 3°. */
+/** The fan's drift: it leans right faster the higher it goes (a curve, as in a Dock fan), and
+ * turns a little with it, up to 3°. */
 export function fanOffset(index: number): { x: number; rotate: number } {
-  return { x: index * 7, rotate: Math.min(index * 0.45, 3) };
+  return { x: Math.round(2.6 * index * index), rotate: Math.min(+(index * 0.42).toFixed(2), 3) };
 }

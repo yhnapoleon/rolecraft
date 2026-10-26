@@ -166,7 +166,9 @@ export function suggestionLine(rows: SheetRow[], progress: ProgressView, languag
   const row = rows.find((r) => r.suggested);
   if (!row) return null;
   const step = progress.steps.find((s) => s.id === row.id);
-  const detail = row.gapHint ?? step?.nextAction ?? row.goal;
+  const detail = row.gapHint
+    ? `${language === 'en' ? 'still missing ' : '还缺'}${row.gapHint}`
+    : (step?.nextAction ?? row.goal);
   const q = language === 'en' ? ['“', '”'] : ['「', '」'];
   return { step: row.id, text: `${q[0]}${row.label}${q[1]} ${detail}` };
 }
