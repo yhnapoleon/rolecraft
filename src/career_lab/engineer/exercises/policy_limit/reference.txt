@@ -1,0 +1,52 @@
+import re
+
+# Which item a text is about; the first matching item wins.
+TOPICS = {
+    "taxi": ("出租车", "打车", "taxi", "cab"),
+    "meal": ("餐", "meal"),
+    "hotel": ("住宿", "酒店", "hotel", "lodging"),
+}
+# An amount next to its currency: "400元", "¥400.00", "CNY 400", "RMB 1,200".
+AMOUNT = re.compile(
+    r"(?:(?:CNY|RMB|¥|￥)\s*(\d[\d,]*(?:\.\d+)?))|(?:(\d[\d,]*(?:\.\d+)?)\s*元)"
+)
+SENTENCE = re.compile(r"(?<=[。；;！？!?])|(?<=\.)\s+")
+
+
+def topic(text: str) -> str | None:
+    folded = text.casefold()
+    for name, words in TOPICS.items():
+        if any(word in folded for word in words):
+            return name
+    return None
+
+
+def amount(sentence: str) -> float | None:
+    found = AMOUNT.search(sentence)
+    if found is None:
+        return None
+    value = float((found.group(1) or found.group(2)).replace(",", ""))
+    return int(value) if value.is_integer() else value
+
+
+def current_limit(question: str, chunks: list[dict], registry: dict[str, int]) -> dict:
+    asked = topic(question)
+    if asked is None:
+        return {"status": "fallback"}
+    found = []
+    for chunk in chunks:
+        for sentence in SENTENCE.split(chunk["text"]):
+            value = amount(sentence)
+            if value is not None and topic(sentence) == asked:
+                found.append((chunk, value))
+                break
+    if not found:
+        return {"status": "fallback"}
+    current = [(c, v) for c, v in found if registry.get(c["source"]) == c["version"]]
+    if current:
+        chunk, value = current[0]
+        status = "answered"
+    else:
+        chunk, value = max(found, key=lambda pair: pair[0]["version"])
+        status = "answered_with_warning"
+    return {"status": status, "value": value, "source": chunk["source"], "version": chunk["version"]}

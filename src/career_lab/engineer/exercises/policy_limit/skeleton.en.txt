@@ -1,0 +1,33 @@
+import re
+
+
+def current_limit(question: str, chunks: list[dict], registry: dict[str, int]) -> dict:
+    """The reimbursement limit the question asks about, extracted from the source text in code.
+
+    question: the employee's question, e.g. "What is the hotel reimbursement limit per night?"
+    chunks:   candidate chunks from retrieval, highest score first, e.g.
+              {"source": "policy", "version": 2, "score": 0.71, "text": "... CNY 400 per night ..."}
+    registry: the source registry: the version of each source in force now, e.g.
+              {"policy": 2, "meal": 1}
+
+    Return one of:
+      {"status": "answered", "value": 400, "source": "policy", "version": 2}
+      {"status": "answered_with_warning", "value": 500, "source": "policy", "version": 1}
+          only a superseded version was retrieved: give the old value, flagged as out of date
+      {"status": "fallback"}
+          no reliable amount: hand over to a person, don't guess
+    """
+    # As written now: the first number in the top-scoring chunk. Run the cases to see where
+    # it goes wrong.
+    if not chunks:
+        return {"status": "fallback"}
+    top = chunks[0]
+    found = re.search(r"\d+", top["text"])
+    if found is None:
+        return {"status": "fallback"}
+    return {
+        "status": "answered",
+        "value": int(found.group()),
+        "source": top["source"],
+        "version": top["version"],
+    }

@@ -68,6 +68,8 @@ ROUTES = {
         "POST", "/engineer/tickets/{ticket_id}/reproductions", ("ticket_id",)
     ),
     "engineer.trial": Route("POST", "/engineer/tickets/{ticket_id}/trials", ("ticket_id",)),
+    "engineer.code.read": Route("GET", "/engineer/tickets/{ticket_id}/code", ("ticket_id",)),
+    "engineer.code.run": Route("POST", "/engineer/tickets/{ticket_id}/code-runs", ("ticket_id",)),
     "engineer.submissions.draft": Route(
         "POST", "/engineer/tickets/{ticket_id}/drafts", ("ticket_id",)
     ),
@@ -89,9 +91,18 @@ ENGINEER_TOOL_NOTES = {
         "Tries a candidate: payload.changes is {field: new value}, fields taken from the "
         "ticket detail's editable_fields; unlisted fields keep the baseline."
     ),
+    "engineer.code.read": (
+        "The ticket's coding exercise: the task, the skeleton of current_limit, the public "
+        "cases with what each should return, the hidden-case count and the latest run."
+    ),
+    "engineer.code.run": (
+        "Runs payload.code (Python source defining current_limit, see engineer.code.read) in "
+        "an isolated process; returns each public case and only the count of hidden ones."
+    ),
     "engineer.submissions.draft": (
         "Drafts a fix: changes is {field: new value}, fields from the ticket detail's "
-        "editable_fields; only the person signs it, on the RoleCraft web page."
+        "editable_fields; code_run_id attaches a code run; only the person signs it, on "
+        "the RoleCraft web page."
     ),
     "engineer.reviews.read": (
         "Reads the reviews run after the person signs a draft; only the person signs, on the "
@@ -100,7 +111,7 @@ ENGINEER_TOOL_NOTES = {
 }
 # The engineer writes run inline with the rule-based retrieval and queue no job.
 ENGINEER_SYNC_OPERATIONS = frozenset(
-    {"engineer.reproduce", "engineer.trial", "engineer.submissions.draft"}
+    {"engineer.reproduce", "engineer.trial", "engineer.code.run", "engineer.submissions.draft"}
 )
 # Fixed synchronous workspace/lifecycle operations. Asynchronous/model-backed entries
 # cannot be activated by MCP while the common atomic delegate-job limit is absent.

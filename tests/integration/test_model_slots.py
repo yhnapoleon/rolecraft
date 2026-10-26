@@ -2,7 +2,8 @@
 
 Real loopback HTTP services stand in for providers (models ``qa-loopback-roles`` and
 ``qa-loopback-judge``); they prove wiring and request shape only, never answer quality.
-SLOT-01's request bytes were recorded on main d163747 with the same driver.
+SLOT-01 uses frozen main request bytes with explicit snapshots for intentional prompt
+revisions; all requests still use the same driver and byte-level comparison.
 """
 
 import json
@@ -103,8 +104,23 @@ def test_slot_01_unset_slot_variables_keep_shared_configuration_and_main_request
             digests = body_digests(provider.calls, session.session_id)
     assert [role["status"], assistant["status"]] == golden["statuses"]
     assert provider.kinds() == golden["kinds"]
-    # Generation v2 explicitly reports missing information; keep the frozen v1 fixture intact.
     expected = list(golden["body_sha256"])
+    # Recorded on b07ec765: cooperative-help-v3 and artifact-review-v2
+    # (e9ba052f, 9b50d0f5, f3b67b9d). Reverting only those policy/review inputs
+    # reproduces the frozen role digests; all other request bytes are unchanged.
+    role_digest, review_digest = {
+        "zh": (
+            "286f107e39c7cee5f278e640149aed641ff1ca8dd905360a36befb29c78b56c2",
+            "6729b2ad2ca8023fafedf5d2c868ee278cc15b34e13dcfbbe852303b5eb98c9e",
+        ),
+        "en": (
+            "822f94eaa426d20ca8ef2a141f4c4295f47f5bde3733e216f7d02d1004a470b8",
+            "e0addc843705b610a976ee8503173c7415854790d55a0e80680b87fb13d3d4ff",
+        ),
+    }[language]
+    expected[golden["kinds"].index("role")] = role_digest
+    expected[golden["kinds"].index("role_review")] = review_digest
+    # Generation v2 explicitly reports missing information; keep the frozen v1 fixture intact.
     expected[golden["kinds"].index("assistant")] = {
         "zh": "712a0b2c868aac47ee39ce000295e76fd4637b6696532e19f1bf77a7f1a15dba",
         "en": "545c5e6de9f836165cca8caceaf4c49df2bfc3efeb2808c2a5857fa6c4f2aa27",

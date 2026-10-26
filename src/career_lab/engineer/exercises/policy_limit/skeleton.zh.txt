@@ -1,0 +1,31 @@
+import re
+
+
+def current_limit(question: str, chunks: list[dict], registry: dict[str, int]) -> dict:
+    """问题里问的那一项报销上限，金额由代码从原文抽取。
+
+    question: 员工的问题，例如「住宿报销上限是多少？」
+    chunks:   检索给出的候选片段，按分数从高到低，例如
+              {"source": "policy", "version": 2, "score": 0.71, "text": "……每人每晚400元……"}
+    registry: 资料登记处：各资料现在生效的版本，例如 {"policy": 2, "meal": 1}
+
+    返回其中一种：
+      {"status": "answered", "value": 400, "source": "policy", "version": 2}
+      {"status": "answered_with_warning", "value": 500, "source": "policy", "version": 1}
+          只检索到已被替代的旧版：给旧值，但提醒已过期
+      {"status": "fallback"}
+          找不到可靠的金额：转人工，不猜
+    """
+    # 现在的写法：取分数最高的片段里的第一个数字。跑一下用例，看它在哪里出错。
+    if not chunks:
+        return {"status": "fallback"}
+    top = chunks[0]
+    found = re.search(r"\d+", top["text"])
+    if found is None:
+        return {"status": "fallback"}
+    return {
+        "status": "answered",
+        "value": int(found.group()),
+        "source": top["source"],
+        "version": top["version"],
+    }

@@ -1,0 +1,131 @@
+{
+  "title": "根治：用代码给出现行的报销上限",
+  "task": "助手回答报销上限时，金额要由确定性代码从现行条款里精确抽取，不交给生成模型。实现 current_limit：从检索给出的片段里找到问题问的那一项（住宿、出租车或餐费），按资料登记处选出现行版本并抽出金额；只拿到已被替代的旧版时给旧值并提醒已过期；找不到可靠金额就转人工，不猜。平台在隔离进程里运行你的代码：公开用例逐条显示，隐藏用例只给通过数。",
+  "cases": [
+    {
+      "id": "P1",
+      "public": true,
+      "point": "读出现行标准",
+      "question": "住宿报销上限是多少？",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.71, "text": "费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P2",
+      "public": true,
+      "point": "索引落后：只拿到旧版时给旧值并提醒",
+      "question": "住宿报销上限是多少？",
+      "chunks": [
+        {"source": "policy", "version": 1, "score": 0.69, "text": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered_with_warning", "value": 500, "source": "policy", "version": 1}
+    },
+    {
+      "id": "P3",
+      "public": true,
+      "point": "别把出租车的 200 元当成住宿上限",
+      "question": "出差住宿每晚能报多少钱？",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.74, "text": "出差出租车单程报销上限仍为200元；超限或特殊路线走例外核验。"},
+        {"source": "policy", "version": 2, "score": 0.62, "text": "费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P4",
+      "public": true,
+      "point": "新旧两版同时检索到：按登记处选现行版",
+      "question": "住宿报销上限？",
+      "chunks": [
+        {"source": "policy", "version": 1, "score": 0.70, "text": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。"},
+        {"source": "policy", "version": 2, "score": 0.66, "text": "费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P5",
+      "public": true,
+      "point": "英文原文也要抽得出来",
+      "question": "What is the hotel limit per night?",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.68, "text": "Expense-management notice: the hotel reimbursement cap for domestic business travel is now CNY 400 per person per night. Costs above the cap still require prior written manager approval and receipts."}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "P6",
+      "public": true,
+      "point": "片段里没有金额：转人工，不猜",
+      "question": "住宿报销上限是多少？",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.41, "text": "发布部门：费用管理。本文替代此前的住宿限额条款；个案材料由业务负责人协调核验。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "fallback"}
+    },
+    {
+      "id": "H1",
+      "public": false,
+      "point": "换一项：餐费",
+      "question": "餐费每天最多能报多少？",
+      "chunks": [
+        {"source": "meal", "version": 1, "score": 0.66, "text": "餐费报销上限为每人每天100元；报销需保留合规票据，重复报销和个人个案交费用管理核验。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 100, "source": "meal", "version": 1}
+    },
+    {
+      "id": "H2",
+      "public": false,
+      "point": "反过来问出租车",
+      "question": "出租车单程能报多少？",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.72, "text": "费用管理通知：国内出差住宿报销上限改为每人每晚400元；超出上限仍须事前取得经理书面批准并保留票据。"},
+        {"source": "policy", "version": 2, "score": 0.65, "text": "出差出租车单程报销上限仍为200元；超限或特殊路线走例外核验。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 200, "source": "policy", "version": 2}
+    },
+    {
+      "id": "H3",
+      "public": false,
+      "point": "另一种数字写法",
+      "question": "住宿每晚上限多少？",
+      "chunks": [
+        {"source": "policy", "version": 2, "score": 0.64, "text": "费用管理通知（2026）：国内出差住宿报销上限调整为每人每晚 ¥400.00；超出部分须事前审批。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered", "value": 400, "source": "policy", "version": 2}
+    },
+    {
+      "id": "H4",
+      "public": false,
+      "point": "检索到的是别的规则",
+      "question": "住宿报销上限是多少？",
+      "chunks": [
+        {"source": "meal", "version": 1, "score": 0.38, "text": "餐费报销上限为每人每天100元；报销需保留合规票据，重复报销和个人个案交费用管理核验。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "fallback"}
+    },
+    {
+      "id": "H5",
+      "public": false,
+      "point": "索引落后，且出租车片段排在前面",
+      "question": "住宿报销上限是多少？",
+      "chunks": [
+        {"source": "policy", "version": 1, "score": 0.73, "text": "出差出租车单程报销上限为200元；超限或特殊路线需走例外核验。"},
+        {"source": "policy", "version": 1, "score": 0.69, "text": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。"}
+      ],
+      "registry": {"policy": 2, "meal": 1},
+      "expected": {"status": "answered_with_warning", "value": 500, "source": "policy", "version": 1}
+    }
+  ]
+}

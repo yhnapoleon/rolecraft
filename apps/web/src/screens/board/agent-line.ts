@@ -15,6 +15,7 @@ export function agentLine(
     const labels: Record<string, [string, string]> = {
       'engineer.reproduce': ['已交回复现结果', 'Reproduction returned'],
       'engineer.trial': ['已交回试跑结果', 'Trial returned'],
+      'engineer.code.run': ['已交回代码运行结果', 'Code run returned'],
       'engineer.submissions.draft': ['已起草签字单', 'Drafted a sign-off'],
     };
     const latest = [...events]

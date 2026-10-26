@@ -4,7 +4,7 @@ Layout under the root (``CAREER_LAB_ENGINEER_ROOT``, default ``runs/local/engine
 
 - ``sessions/<session>/tickets/<ticket>/``: ``ticket.json``, ``seed-test.json`` (seeded
   tickets only), ``pack/`` (immutable task package), ``trials/``, ``reproductions/``,
-  ``drafts/``, ``signoffs/``, ``submission-inputs/``;
+  ``code_runs/``, ``drafts/``, ``signoffs/``, ``submission-inputs/``;
 - ``sessions/<session>/submissions/``: the immutable submission repository;
 - ``public-reviews/<session>/<review>/report.json``: public reports;
 - ``private-reviews/<session>/``: the private review store (owner-only, never served).
@@ -25,7 +25,7 @@ from career_lab.contracts import v2 as C
 from career_lab.runtime.file_lock import flock, funlock
 
 SESSION_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
-RECORD_ID = re.compile(r"^(ticket|trial|draft|signoff|review)-[0-9a-f]{64}$")
+RECORD_ID = re.compile(r"^(ticket|trial|coderun|draft|signoff|review)-[0-9a-f]{64}$")
 
 
 def record_id(kind: str, value: Any) -> str:
