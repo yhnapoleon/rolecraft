@@ -87,6 +87,7 @@ export function createAipmPractice(deps: PracticeDeps) {
   const registry = createAipmRegistry();
   let missing: AipmFeatureId[] | null = null;
   let live: { key: string; el: HTMLElement } | null = null;
+  let reveal = false;
 
   const stateOf = (a: Attempt) => states.get(a.id);
   const asOfKey = (a: Attempt) => JSON.stringify(deps.dataHost(a)?.snapshot().asOf ?? null);
@@ -298,6 +299,7 @@ export function createAipmPractice(deps: PracticeDeps) {
         s = a && stateOf(a);
       if (!a || !s) return;
       s.feature = s.feature === id ? null : id;
+      reveal = s.feature !== null;
       deps.redraw();
     },
   };
@@ -382,6 +384,12 @@ export function createAipmPractice(deps: PracticeDeps) {
       live = { key, el };
     }
     root.replaceChildren(live.el);
+    // Just opened: bring it to the top of the view, where the person is about to work.
+    if (reveal) {
+      reveal = false;
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      root.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
+    }
   }
 
   return { ready, props, mountFeature, host, missing: () => missing };
