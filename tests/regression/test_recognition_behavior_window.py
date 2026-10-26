@@ -73,3 +73,13 @@ def test_the_frozen_behaviour_is_the_live_trajectory_up_to_the_hand_in(
     assert outputs["steps"] == up_to_hand_in
     assert live["window"]["to_seq"] >= window["to_seq"]
     assert frozen[-1]["revision"] == live["record"]["revision"]
+
+
+def test_with_the_layer_off_a_job_view_carries_no_history(
+    published_session: PublishedSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Off, job views are exactly as before: the frozen history is a recognition-layer change."""
+    monkeypatch.delenv("CAREER_LAB_RECOGNIZERS", raising=False)
+    store = published_session.app.state.v2_store
+    sentinel = object()
+    assert store._with_frozen_history(None, sentinel, None) is sentinel

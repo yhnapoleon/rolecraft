@@ -21,7 +21,7 @@
 ## 1. 行为分析：口径与数据
 
 - **口径**：交付时的行为分析 = 该局从开始到交付命令所在快照点的全部**学员可见**事件（material_read、test_assistant、config_applied、request/decision、index_refreshed、submitted、revision_opened、场景里程碑）加上三位同事的对话轮次。交付那一步本身计入（`steps[-1].symbol == "submit"`）。
-- **实现**：`storage/v2_jobs.py::job_view` → `_with_frozen_history`。任务视图离开事务后还要用，所以历史在事务内读完（用 `public_history_reader`，和实时 `GET /behavior` 同一个读取器、同一套 `reference_allowed` 权限检查，上限是任务快照的 `business_seq`），然后以静态 `public_history(page, auth)` 挂回视图。所有 v2 任务（反馈、同事回合）都经过这里；同事 prompt 的 `learner_state` 因此也能看到阶段和已读材料了。
+- **实现**：`storage/v2_jobs.py::job_view` → `_with_frozen_history`。任务视图离开事务后还要用，所以历史在事务内读完（用 `public_history_reader`，和实时 `GET /behavior` 同一个读取器、同一套 `reference_allowed` 权限检查，上限是任务快照的 `business_seq`），然后以静态 `public_history(page, auth)` 挂回视图。所有 v2 任务（反馈、同事回合）都经过这里；同事 prompt 的 `learner_state` 因此也能看到阶段和已读材料了。和识别层其它改动一样，**只在设了 `CAREER_LAB_RECOGNIZERS` 时生效**；读历史出错时退回旧行为（视图不带历史），不会让反馈任务失败。
 - **可对照的数据**：行为记录 `outputs` 新增 `window {from_seq, to_seq, events, turns}`、`steps [{seq, symbol, event_id}]`、`reference`；`GET /behavior` 的 `sequence[]` 每行也带 `event_id`，`window` 同形。回归测试 `tests/regression/test_recognition_behavior_window.py`：冻结 `steps` == 实时 `sequence` 过滤到 `to_seq` 的部分。
 - **「回看工作过程」**：参考轨迹在 `strategy.reference.sequence`，学员轨迹在 `sequence[]`，`alignment{missing, extra, swapped}` 不变。
 

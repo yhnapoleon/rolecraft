@@ -190,12 +190,23 @@ class JobStoreMixin:
         A job view outlives its transaction, so the public history is read now, with the
         job's own authorization and cut at the snapshot's business point, and kept with the
         view. A job (feedback, a colleague turn) then sees the same events the learner's
-        live reads see up to that point. Without an installed history reader the view has
-        none, as before.
+        live reads see up to that point.
+
+        Recognition layer only (demo edition): with ``CAREER_LAB_RECOGNIZERS`` unset, or
+        without an installed history reader, or when the history cannot be read, the view
+        has no history, exactly as before.
         """
+        from career_lab.recognition import registry as recognizers
+
         reader = self.public_history_reader
-        if reader is None:
+        if reader is None or recognizers.root() is None:
             return view
+        try:
+            return self._frozen_history(c, view, auth, reader)
+        except ProtocolError:
+            return view
+
+    def _frozen_history(self, c, view, auth, reader):
         state, bindings, allowed = view.state, view.bindings, view.objects
 
         def reference_allowed(ref):
