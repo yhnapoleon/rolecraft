@@ -1,0 +1,277 @@
+/* v2 stage: the compass under the toolbar, the workbench or one sheet in a ~760px column,
+ * the sheet pile in the lower-left blank, a material beside a sheet when there is room. */
+.aipm-main {
+  width: calc(100% - 80px);
+  max-width: 1100px;
+  margin-inline: auto;
+}
+#ws-stage:has(.aipm-v2) .board {
+  max-width: 816px;
+}
+.aipm-stack-slot {
+  position: fixed;
+  z-index: 30;
+  left: 20px;
+  bottom: 20px;
+}
+.aipm-main {
+  padding: 18px 0 132px;
+}
+.aipm-main__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 760px;
+  margin: 0 auto 16px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.aipm-main__crumbs button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  cursor: pointer;
+}
+.aipm-main__crumbs button:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.aipm-main__crumbs [aria-current] {
+  color: var(--ink);
+  font-weight: 550;
+}
+.aipm-main__sep {
+  color: var(--ink-4);
+}
+.aipm-main__body {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.aipm-main__missing {
+  padding: 48px 0;
+  color: var(--ink-3);
+  text-align: center;
+}
+.aipm-main[data-split="true"] {
+  display: grid;
+  grid-template-columns: minmax(0, 580px) minmax(0, 360px);
+  grid-template-areas:
+    "crumbs crumbs"
+    "body aside";
+  justify-content: center;
+  column-gap: 24px;
+}
+.aipm-main[data-split="true"] .aipm-main__crumbs {
+  grid-area: crumbs;
+  max-width: none;
+  margin-inline: 0;
+}
+.aipm-main[data-split="true"] .aipm-main__body {
+  grid-area: body;
+  max-width: none;
+  margin: 0;
+}
+.aipm-main__aside {
+  grid-area: aside;
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  max-height: calc(100vh - var(--toolbar-h) - 88px);
+  overflow: auto;
+}
+.aipm-main__aside-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+.aipm-main__aside-head {
+  gap: 8px;
+  align-items: center;
+}
+.aipm-main__aside-quote {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--fill);
+  color: var(--ink);
+  font: 500 13px var(--sans);
+  cursor: pointer;
+}
+.aipm-main__aside-quote:hover {
+  background: var(--fill-2);
+}
+.aipm-main__aside-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.aipm-main__aside-close:hover {
+  background: var(--fill);
+  color: var(--ink);
+}
+@media (max-width: 767px) {
+  .aipm-main {
+    width: calc(100% - 28px);
+  }
+  .aipm-compass {
+    padding: 0 14px;
+  }
+  .aipm-stack-slot {
+    left: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The colleague side: what this colleague can see, and the PRD chip on the composer. */
+.aipm-sees {
+  margin: 8px 12px 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.aipm-sees b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.aipm-sees span {
+  color: var(--ink-3);
+}
+.aipm-prd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: 0 0 0 0.5px var(--line-2);
+  color: var(--ink-2);
+  font: 500 12.5px / 1.5 var(--sans);
+  cursor: pointer;
+  transition:
+    background var(--fast) var(--ease-out),
+    color var(--fast) var(--ease-out);
+}
+.aipm-prd-chip[aria-pressed="true"] {
+  background: var(--primary);
+  box-shadow: none;
+  color: var(--on-primary);
+  font-weight: 600;
+}
+.aipm-prd-chip:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.aipm-prd-note {
+  margin: 0 0 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-prd-chip {
+    transition: none;
+  }
+}
+
+/* While the pile is open the stage steps back (the wireframe's ghosted desk): the sheets read
+ * cleanly over it, the compass and the colleagues stay as they are. */
+#ws-stage > :not(.rc-prog-wrap, .aipm-stack-slot) {
+  transition:
+    opacity var(--mid) var(--ease-out),
+    filter var(--mid) var(--ease-out);
+}
+#ws-stage:has(.ws-stack:is([data-open="preview"], [data-open="pinned"]))
+  > :not(.rc-prog-wrap, .aipm-stack-slot) {
+  opacity: 0.34;
+  filter: saturate(0.7);
+}
+.aipm-stack-slot .ws-stack__scrim {
+  background: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  #ws-stage > :not(.rc-prog-wrap, .aipm-stack-slot) {
+    transition: none;
+  }
+}
+/* A preset prompt under a local reply: dashed, labelled, never in the colleague's voice. */
+.aipm-mentor {
+  margin: 4px 12px 10px;
+  padding: 10px 14px 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: 14px;
+  color: var(--ink);
+}
+.aipm-mentor__label {
+  margin: 0 0 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.aipm-mentor__q {
+  margin: 0 0 6px;
+  font: 400 14.5px / 1.6 var(--serif);
+}
+.aipm-mentor__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: 13px var(--sans);
+  cursor: pointer;
+}
+.aipm-mentor__link:hover {
+  color: var(--ink);
+}
+.aipm-mentor__pointer {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.aipm-stack-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+/* An open pile rises above its neighbour. */
+.aipm-stack-slot .ws-stack {
+  z-index: 1;
+}
+.aipm-stack-slot .ws-stack:is([data-open="preview"], [data-open="pinned"]) {
+  z-index: 5;
+}
+/* Materials have no sheet state to show; on a phone only the sheets get a capsule. */
+.ws-stack[data-kind="materials"] .ws-stack__dot {
+  display: none;
+}
+@media (max-width: 767px) {
+  .ws-stack[data-kind="materials"] {
+    display: none;
+  }
+}
+/* One pile open at a time reads cleanly: the other steps aside. */
+.aipm-stack-slot .ws-stack {
+  transition: opacity var(--fast) var(--ease-out);
+}
+.aipm-stack-slot:has(.ws-stack:is([data-open="preview"], [data-open="pinned"]))
+  .ws-stack[data-open="closed"] {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-stack-slot .ws-stack {
+    transition: none;
+  }
+}

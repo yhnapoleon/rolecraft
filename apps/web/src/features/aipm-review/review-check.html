@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="icon" href="data:,">
+    <title>AIPM section review check</title>
+  </head>
+  <body style="margin:0;background:var(--canvas)">
+    <main style="max-width:1320px;margin:0 auto;padding:24px 16px">
+      <div id="fixture"></div>
+    </main>
+    <script type="module">
+    // FIXTURE ONLY: a development page for screenshots; no session, server or model.
+    import '@fontsource-variable/instrument-sans/wdth.css';
+    import '@fontsource-variable/newsreader/opsz.css';
+    import '../../app/styles.css';
+    import '../../app/material.css';
+    import { renderReview } from './view.ts';
+    import { FIXTURE_PRD, fixtureModelReview, fixturePreview, fixtureReview } from './fixture.ts';
+
+    const params = new URL(location.href).searchParams;
+    const language = params.get('lang') === 'en' ? 'en' : 'zh';
+    const sentences =
+      params.get('rec') === 'off'
+        ? { kind: 'off' }
+        : { kind: 'ready', preview: fixturePreview(language) };
+    document.documentElement.lang = language;
+    // ?model=not_configured|running|done|failed: the model look's states, on the same fake review.
+    // Headless Chrome has no viewport under 500px; ?w=390 narrows the page itself.
+    if (params.get('w'))
+      Object.assign(document.querySelector('main').style, {
+        width: `${params.get('w')}px`,
+        margin: '0',
+        boxSizing: 'border-box',
+      });
+    document.getElementById('fixture').append(
+      renderReview(document, {
+        review: params.get('model')
+          ? fixtureModelReview(language, params.get('model'))
+          : fixtureReview(language),
+        language,
+        sections: FIXTURE_PRD[language],
+        sentences,
+        previousVersion: 3,
+        currentPrdVersion: params.get('edited') ? 5 : 4,
+      }),
+    );
+    if (params.get('probe')) {
+      setTimeout(() => {
+        const w = document.documentElement.clientWidth;
+        const wide = [...document.querySelectorAll('*')]
+          .filter((e) => e.getBoundingClientRect().right > w + 1)
+          .map(
+            (e) =>
+              `${e.tagName}.${String(e.className).split(' ')[0]}:${Math.round(e.getBoundingClientRect().width)}`,
+          );
+        const pre = document.createElement('pre');
+        pre.id = 'probe';
+        pre.textContent = `vw=${w} sw=${document.documentElement.scrollWidth} ${wide.slice(0, 25).join(' | ')}`;
+        document.body.prepend(pre);
+      }, 1500);
+    }
+    </script>
+  </body>
+</html>

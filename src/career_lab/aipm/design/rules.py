@@ -26,7 +26,14 @@ class DesignFacts:
 
 
 PREDICATES = frozenset(
-    {"ai_final_approval", "elapsed_as_labor", "tool_unavailable", "config_difference"}
+    {
+        "ai_final_approval",
+        "elapsed_as_labor",
+        "tool_unavailable",
+        "config_difference",
+        "audience_conflict",
+        "unauthorized_approver",
+    }
 )
 
 
@@ -130,6 +137,19 @@ def evaluate_design(
                     and metric.get("kind") == "labor_time"
                 ):
                     emit(rule, need["id"], "need", basis)
+        elif predicate == "audience_conflict" and available:
+            business = design.get("business") or {}
+            # Only the structured choice; "both" and "unknown" are never judged wrong.
+            if business.get("audience") in rule["applies_when"]["conflicting_audiences"]:
+                emit(rule, "business", "business", basis)
+        elif predicate == "unauthorized_approver" and available:
+            known = set(rule["applies_when"]["known_people"])
+            authorized = set(rule["applies_when"]["authorized"])
+            for person in design.get("stakeholders", []):
+                # Free-text names are never matched; only a chosen person id is judged.
+                who = person.get("name_or_role")
+                if "approver" in person.get("relationships", ()) and who in known - authorized:
+                    emit(rule, person["id"], "stakeholders", basis)
         elif predicate == "config_difference" and available:
             if any(
                 key in facts.effective_config and value != facts.effective_config[key]

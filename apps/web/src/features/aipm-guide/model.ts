@@ -15,6 +15,38 @@ export type GuideQuestion = {
   role: 'manager' | 'business' | 'technical';
   text: string;
 };
+/** v2: the three segments the seven points hang on, and a worksheet's state (spec §2). */
+export type Segment = 'clarify' | 'design' | 'verify';
+export type SheetStatus = 'not_started' | 'draft' | 'based' | 'solid' | 'recheck';
+export type SheetView = {
+  status: SheetStatus;
+  recheckReason?: string;
+  gapHint?: string;
+  prdVersion?: number;
+  editedSinceReview: boolean;
+  agentDraft: boolean;
+  /** No `sheet` from the server yet: derived here from work and quality status (stub). */
+  derived: boolean;
+};
+const SEGMENT: Record<StepId, Segment> = {
+  business: 'clarify',
+  stakeholders: 'clarify',
+  need: 'clarify',
+  boundary: 'design',
+  solution: 'design',
+  assurance: 'verify',
+  decision: 'verify',
+};
+const ICON: Record<StepId, string> = {
+  business: 'Building2',
+  stakeholders: 'Users',
+  need: 'Search',
+  boundary: 'ShieldHalf',
+  solution: 'Workflow',
+  assurance: 'ListChecks',
+  decision: 'Flag',
+};
+const SHEET = ['not_started', 'draft', 'based', 'solid', 'recheck'];
 export type GuideStepView = {
   id: StepId;
   order: number;
@@ -32,6 +64,9 @@ export type GuideStepView = {
   feedback: string;
   example: string;
   agentBrief: string;
+  segment: Segment;
+  /** A lucide icon name. */
+  icon: string;
 };
 export type GuideView = {
   language: Language;
@@ -50,6 +85,8 @@ export type ProgressView = {
     storage_revision: number;
   };
   complete: boolean;
+  /** The pilot PRD's latest version (v2: one plan product, seven sections). */
+  prd?: { id: string; version: number };
   /** Drafts an agent wrote that wait for the person (never step records until adopted). */
   drafts: { id: string; key: string; steps: StepId[] }[];
   steps: {
@@ -61,6 +98,9 @@ export type ProgressView = {
     quality: string;
     missing: string[];
     feedback: { message: string; source: string; stale: boolean }[];
+    sheet: SheetView;
+    /** The server's first suggested action for this step, in the practice's language. */
+    nextAction?: string;
   }[];
 };
 const object = (v: unknown): Record<string, unknown> => {
@@ -125,6 +165,10 @@ export function guideView(value: unknown): GuideView {
         feedback: optional(direction.feedback),
         example: optional(direction.example),
         agentBrief: optional(direction.agent_brief),
+        segment: (['clarify', 'design', 'verify'].includes(s.segment as string)
+          ? s.segment
+          : SEGMENT[stepId(s.id)]) as Segment,
+        icon: optional(s.icon) || ICON[stepId(s.id)],
       };
     }),
   };
@@ -139,8 +183,22 @@ export function progressView(value: unknown): ProgressView {
     )
   )
     throw new Error('Invalid AIPM snapshot');
+  const drafts: ProgressView['drafts'] = Array.isArray(p.pending_agent_drafts)
+    ? p.pending_agent_drafts.map((d) => {
+        const row = object(d),
+          ref = object(row.ref);
+        const steps = Array.isArray(row.steps)
+          ? row.steps.filter((s): s is StepId => IDS.includes(s as StepId))
+          : [];
+        return { id: text(ref.object_id), key: `${text(ref.object_id)}@${ref.version}`, steps };
+      })
+    : [];
+  const prd = p.prd_ref && typeof p.prd_ref === 'object' ? object(p.prd_ref) : null;
   return {
     sessionId: text(p.session_id),
+    ...(prd && Number.isSafeInteger(prd.version)
+      ? { prd: { id: text(prd.object_id), version: Number(prd.version) } }
+      : {}),
     revision: text(p.content_revision),
     language: language(p.work_language),
     focus: stepId(p.focus_step),
@@ -151,16 +209,7 @@ export function progressView(value: unknown): ProgressView {
       storage_revision: Number(at.storage_revision),
     },
     complete: object(p.projection ?? {}).complete === true,
-    drafts: Array.isArray(p.pending_agent_drafts)
-      ? p.pending_agent_drafts.map((d) => {
-          const row = object(d),
-            ref = object(row.ref);
-          const steps = Array.isArray(row.steps)
-            ? row.steps.filter((s): s is StepId => IDS.includes(s as StepId))
-            : [];
-          return { id: text(ref.object_id), key: `${text(ref.object_id)}@${ref.version}`, steps };
-        })
-      : [],
+    drafts,
     steps: rows(p.steps).map((s) => {
       if (
         !['not_started', 'working', 'recorded', 'recheck', 'uncovered'].includes(
@@ -170,6 +219,9 @@ export function progressView(value: unknown): ProgressView {
         throw new Error('Invalid work status');
       if (s.completed !== (s.work_status === 'recorded'))
         throw new Error('Inconsistent completion');
+      const id = stepId(s.id);
+      const agentDraft = drafts.some((d) => d.steps.includes(id));
+      const actions = Array.isArray(s.next_actions) ? s.next_actions.map(object) : [];
       return {
         id: stepId(s.id),
         order: Number(s.order),
@@ -188,9 +240,37 @@ export function progressView(value: unknown): ProgressView {
               };
             })
           : [],
+        sheet: sheetOf(s, agentDraft),
+        ...(typeof actions[0]?.label === 'string' ? { nextAction: actions[0].label } : {}),
       };
     }),
   };
+}
+function sheetOf(step: Record<string, unknown>, agentDraft: boolean): SheetView {
+  if (step.sheet && typeof step.sheet === 'object') {
+    const v = object(step.sheet);
+    if (!SHEET.includes(text(v.status))) throw new Error('Invalid sheet status');
+    return {
+      status: v.status as SheetStatus,
+      ...(typeof v.recheck_reason === 'string' ? { recheckReason: v.recheck_reason } : {}),
+      ...(typeof v.gap_hint === 'string' ? { gapHint: v.gap_hint } : {}),
+      ...(Number.isSafeInteger(v.prd_version) ? { prdVersion: Number(v.prd_version) } : {}),
+      editedSinceReview: v.edited_since_review === true,
+      agentDraft: v.agent_draft_pending === true || agentDraft,
+      derived: false,
+    };
+  }
+  // Until L4 projects `sheet`: the spec's mapping read backwards, cautious where it is ambiguous
+  // (has_findings covers both a faulty draft and a supported one, so it stays a draft).
+  const status: SheetStatus =
+    step.work_status === 'recheck'
+      ? 'recheck'
+      : step.work_status === 'not_started'
+        ? 'not_started'
+        : step.quality_status === 'checked_for_declared_scope'
+          ? 'solid'
+          : 'draft';
+  return { status, editedSinceReview: false, agentDraft, derived: true };
 }
 export function matchingSnapshot(
   guide: GuideView,

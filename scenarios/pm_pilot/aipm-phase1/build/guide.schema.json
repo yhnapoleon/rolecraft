@@ -84,6 +84,17 @@
             "items": {
               "type": "object"
             }
+          },
+          "segment": {
+            "enum": [
+              "clarify",
+              "design",
+              "verify"
+            ]
+          },
+          "icon": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9]+$"
           }
         }
       }

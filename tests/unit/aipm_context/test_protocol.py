@@ -62,7 +62,8 @@ def test_resources_prompts_and_tool_share_read_service():
             "text"
         ]
     )
-    assert len(rpc(protocol, "resources/templates/list")["resourceTemplates"]) == 1
+    templates = rpc(protocol, "resources/templates/list")["resourceTemplates"]
+    assert {t["name"] for t in templates} == {"aipm-section-review", "submission-feedback"}
     assert len(rpc(protocol, "prompts/list")["prompts"]) == 2
 
 

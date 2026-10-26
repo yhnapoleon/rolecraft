@@ -9,6 +9,8 @@
       "order": 1,
       "label": "Understand the business",
       "goal": "Separate the company’s business from this internal-tool assignment.",
+      "segment": "clarify",
+      "icon": "Building2",
       "expected_outputs": [
         "Business explanation and sources"
       ],
@@ -58,6 +60,8 @@
       "order": 2,
       "label": "Users and stakeholders",
       "goal": "Distinguish users, approvers and people affected.",
+      "segment": "clarify",
+      "icon": "Users",
       "expected_outputs": [
         "Users and responsibilities"
       ],
@@ -109,6 +113,8 @@
       "order": 3,
       "label": "Validate the need",
       "goal": "Make the need hypothesis open to disproof.",
+      "segment": "clarify",
+      "icon": "Search",
       "expected_outputs": [
         "Need hypothesis, counterevidence and validation"
       ],
@@ -160,6 +166,8 @@
       "order": 4,
       "label": "Set AI boundaries",
       "goal": "Specify the answer, the action and who can approve it.",
+      "segment": "design",
+      "icon": "ShieldHalf",
       "expected_outputs": [
         "Versioned request triage"
       ],
@@ -211,6 +219,8 @@
       "order": 5,
       "label": "Solution and reference patterns",
       "goal": "Compare feasible approaches; separate plans from applied settings.",
+      "segment": "design",
+      "icon": "Workflow",
       "expected_outputs": [
         "Approach comparison and dependencies"
       ],
@@ -261,6 +271,8 @@
       "order": 6,
       "label": "Evaluation, monitoring and rollback",
       "goal": "Test risks against expectations and plan observation and recovery.",
+      "segment": "verify",
+      "icon": "ListChecks",
       "expected_outputs": [
         "Expectations, tests and monitoring / rollback plan"
       ],
@@ -311,6 +323,8 @@
       "order": 7,
       "label": "Launch decision",
       "goal": "Decide on exact versions and the conditions you commit to.",
+      "segment": "verify",
+      "icon": "Flag",
       "expected_outputs": [
         "Exact-version submission and linked revision"
       ],

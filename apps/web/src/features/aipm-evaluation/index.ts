@@ -3,6 +3,7 @@
  * Running uses the host's `sendPreparedTest`, which sends the saved original command verbatim. */
 import type { AipmDesign, MonitoringPlan, ObjectRef } from '../../aipm/types';
 import {
+  blockSummary,
   type BatchView,
   type CaseDraft,
   emptyMonitoring,
@@ -88,7 +89,11 @@ function latestRef(progress: unknown, kind: string): ObjectRef | null {
   return refs.filter((r) => r.kind === kind).sort((a, b) => b.version - a.version)[0] ?? null;
 }
 
-export function installAipmEvaluation(host: EvaluationHost, options: InstallOptions = {}) {
+/** The desk without registering it, so a sheet can embed its own copy (`mountEvaluationBlock`). */
+export function createEvaluationDesk(
+  host: Omit<EvaluationHost, 'registerFeature'>,
+  options: InstallOptions = {},
+) {
   const context = host.getSessionContext();
   const language: Language = context?.workLanguage ?? 'zh';
   const state: DeskState = {
@@ -536,6 +541,69 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
       };
     },
   };
-  const unregister = host.registerFeature('evaluation', feature);
-  return { feature, state, unregister, load, run, sendAgain };
+  return { feature, state, load, run, sendAgain };
+}
+
+export function installAipmEvaluation(host: EvaluationHost, options: InstallOptions = {}) {
+  const desk = createEvaluationDesk(host, options);
+  const unregister = host.registerFeature('evaluation', desk.feature);
+  return { ...desk, unregister };
+}
+
+/** ⑥'s structure block on the sheet (v2 spec §5.1): one summary line, folded by default; opening
+ * it mounts the same desk in place. It reads only; every write stays an explicit desk action. */
+export function mountEvaluationBlock(
+  host: Omit<EvaluationHost, 'registerFeature'>,
+  root: HTMLElement,
+  options: InstallOptions = {},
+) {
+  const desk = createEvaluationDesk(host, options);
+  const doc = root.ownerDocument;
+  const t = (zh: string, en: string) => text(desk.state.language, zh, en);
+  const box = doc.createElement('section');
+  box.className = 'aipm-eval-block';
+  const head = doc.createElement('button');
+  head.type = 'button';
+  head.className = 'aipm-eval-block__head';
+  head.setAttribute('aria-expanded', 'false');
+  const body = doc.createElement('div');
+  body.className = 'aipm-eval-block__body';
+  body.hidden = true;
+  box.append(head, body);
+  root.replaceChildren(box);
+  let dispose: (() => void) | undefined;
+  const label = () => {
+    head.replaceChildren();
+    const name = doc.createElement('span');
+    name.className = 'aipm-eval-block__name';
+    name.textContent = t('评测、监控与回退', 'Evaluation, monitoring and rollback');
+    const line = doc.createElement('span');
+    line.className = 'aipm-eval-block__line';
+    line.textContent = blockSummary(desk.state.view, desk.state.language);
+    const toggle = doc.createElement('span');
+    toggle.className = 'aipm-eval-block__toggle';
+    toggle.textContent = body.hidden ? t('展开编辑', 'Open to edit') : t('收起', 'Fold');
+    head.append(name, line, toggle);
+  };
+  head.addEventListener('click', () => {
+    const opening = body.hidden;
+    body.hidden = !opening;
+    head.setAttribute('aria-expanded', String(opening));
+    if (opening) dispose = desk.feature.mount?.(body) ?? undefined;
+    else {
+      dispose?.();
+      dispose = undefined;
+      void desk.load().then(label);
+    }
+    label();
+  });
+  label();
+  void desk.load().then(label);
+  return {
+    element: box,
+    destroy() {
+      dispose?.();
+      box.remove();
+    },
+  };
 }

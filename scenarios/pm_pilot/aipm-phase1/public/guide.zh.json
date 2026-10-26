@@ -9,6 +9,8 @@
       "order": 1,
       "label": "看懂业务",
       "goal": "分清公司经营业务和本次内部工具任务。",
+      "segment": "clarify",
+      "icon": "Building2",
       "expected_outputs": [
         "业务说明与来源"
       ],
@@ -58,6 +60,8 @@
       "order": 2,
       "label": "用户与相关方",
       "goal": "区分使用者、批准者和承担后果的人。",
+      "segment": "clarify",
+      "icon": "Users",
       "expected_outputs": [
         "用户与责任记录"
       ],
@@ -109,6 +113,8 @@
       "order": 3,
       "label": "验证真需求",
       "goal": "让需求假设可以被证据推翻。",
+      "segment": "clarify",
+      "icon": "Search",
       "expected_outputs": [
         "需求假设、反证与验证办法"
       ],
@@ -160,6 +166,8 @@
       "order": 4,
       "label": "划定 AI 边界",
       "goal": "明确要回答什么、要做什么，以及谁能批准。",
+      "segment": "design",
+      "icon": "ShieldHalf",
       "expected_outputs": [
         "有版本的需求分拣"
       ],
@@ -211,6 +219,8 @@
       "order": 5,
       "label": "系统方案与市场做法",
       "goal": "比较可行办法，分清方案和实际配置。",
+      "segment": "design",
+      "icon": "Workflow",
       "expected_outputs": [
         "方案比较与依赖"
       ],
@@ -261,6 +271,8 @@
       "order": 6,
       "label": "评测、监控与回退",
       "goal": "用明确预期验证风险，留下观察和退路。",
+      "segment": "verify",
+      "icon": "ListChecks",
       "expected_outputs": [
         "预期、测试与观察／回退计划"
       ],
@@ -311,6 +323,8 @@
       "order": 7,
       "label": "上线决策",
       "goal": "对确切版本和承诺条件作出决定。",
+      "segment": "verify",
+      "icon": "Flag",
       "expected_outputs": [
         "精确版本交付与关联修订"
       ],

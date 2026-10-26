@@ -3,7 +3,7 @@
  * progress over the real guide content, for development; it is never a fallback. */
 import zh from '../../../../../scenarios/pm_pilot/aipm-phase1/public/guide.zh.json';
 import en from '../../../../../scenarios/pm_pilot/aipm-phase1/public/guide.en.json';
-import { IDS, type Language, type StepId } from './model';
+import type { Language, StepId } from './model';
 
 export type GuideTransport = (path: string, body?: unknown, method?: string) => Promise<unknown>;
 type Writer = (command: Record<string, unknown>) => Promise<unknown>;
@@ -20,6 +20,9 @@ export type GuideClient = {
   recordAssessment: Writer;
   /** Adopt or dismiss an agent's design draft (L4); absent until that client is built in. */
   resolveDraft?(id: string, command: Record<string, unknown>): Promise<unknown>;
+  /** A section review of one PRD version (L4, v2). */
+  createSectionReview?(command: Record<string, unknown>): Promise<unknown>;
+  sectionReviews?(stepId?: StepId): Promise<unknown>;
 };
 export type GuideSource = { client: GuideClient; fixture: boolean };
 
@@ -50,9 +53,26 @@ export async function guideSource(
   };
 }
 
+const fixtureSheets = (en: boolean): Partial<Record<StepId, Record<string, unknown>>> => ({
+  business: { status: 'solid', edited_since_review: false, agent_draft_pending: false },
+  stakeholders: { status: 'based', edited_since_review: false, agent_draft_pending: false },
+  need: {
+    status: 'draft',
+    edited_since_review: false,
+    agent_draft_pending: false,
+    gap_hint: en ? 'a fact that would make us not do it' : '一个会让我们不做的事实',
+  },
+  boundary: {
+    status: 'recheck',
+    recheck_reason: en ? 'expense policy updated to v2' : '报销政策更新到 v2',
+    edited_since_review: false,
+    agent_draft_pending: false,
+  },
+});
 /** Explicit fake data: the real authored guide, a made-up snapshot, focus kept in memory. */
 function fixtureClient(sessionId: string, language: Language): GuideClient {
   const guide = language === 'en' ? en : zh;
+  const sheets = fixtureSheets(language === 'en');
   let focus: StepId = 'business';
   let seq = 0;
   const refused = () => Promise.reject(new Error('Fixture data: this write is not connected.'));
@@ -67,8 +87,9 @@ function fixtureClient(sessionId: string, language: Language): GuideClient {
         storage_revision: seq,
       },
       focus_step: focus,
-      suggested_step: IDS[Math.min(IDS.indexOf(focus) + 1, 6)],
+      suggested_step: 'need',
       projection: { complete: true },
+      // Every sheet state once, so the compass and the pile can be looked at as a whole.
       steps: guide.steps.map((s) => ({
         ...s,
         work_status: s.id === focus ? 'working' : 'not_started',
@@ -76,7 +97,20 @@ function fixtureClient(sessionId: string, language: Language): GuideClient {
         quality_status: 'unverified',
         missing: [],
         open_feedback: [],
+        ...(sheets[s.id as StepId] ? { sheet: sheets[s.id as StepId] } : {}),
       })),
+      pending_agent_drafts: [
+        {
+          ref: {
+            session_id: sessionId,
+            kind: 'aipm_design_draft',
+            object_id: 'fixture-draft',
+            version: 1,
+          },
+          author_kind: 'external_agent',
+          steps: ['solution'],
+        },
+      ],
     }),
     enroll: async () => ({}),
     setFocus: async (command) => {

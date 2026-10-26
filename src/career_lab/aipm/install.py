@@ -1,5 +1,7 @@
 """Post-Gateway installation. Both the registry and the actual store need models."""
 
+from contextlib import contextmanager
+
 from career_lab.aipm.design import OBJECT_MODELS as DESIGN_MODELS
 from career_lab.aipm.design import operations as design_operations
 from career_lab.aipm.design.handlers import DesignReadInput, DesignSaveInput
@@ -9,9 +11,11 @@ from career_lab.api.aipm_routes import mount_aipm_routes
 from career_lab.api.modules import Operation, V2Response
 from career_lab.contracts import v2 as C
 
+from . import review
 from .drafts import handlers as draft_handlers
 from .feedback_discovery import discover
-from .progress import default_contents, design_facts, enrolled, handlers
+from .progress import default_contents, design_facts, enrolled, handlers, require_owner
+from .review_model import ModelReviewer
 from .types import (
     AipmDesignDraft,
     AipmFocus,
@@ -25,6 +29,9 @@ from .types import (
     FeedbackRead,
     FocusInput,
     PageRead,
+    SectionReview,
+    SectionReviewInput,
+    SectionReviewRead,
     StepLinkInput,
 )
 
@@ -33,6 +40,7 @@ OBJECT_MODELS = {
     "aipm_focus": AipmFocus,
     "aipm_step_link": AipmStepLink,
     "aipm_design_draft": AipmDesignDraft,
+    "aipm_section_review": SectionReview,
     **DESIGN_MODELS,
     **EVALUATION_MODELS,
 }
@@ -119,6 +127,90 @@ def install_aipm(app, contents=None):
             "aipm.design_drafts.list", DraftList, drafts["aipm.design_drafts.list"], "observation"
         )
     )
+
+    store = app.state.v2_store
+
+    def review_create(view, command, auth):
+        require_owner(auth)
+        content = enrolled(view, auth, catalog)
+        if view.state.status == "submitted":
+            raise C.ProtocolError("session_submitted", status=409)
+        body = SectionReviewInput.model_validate(command.payload)
+        model = "running" if reviewer.configured() else "not_configured"
+        return review.create(view, auth, content, body, review.RULE_CHECK.get(), model)
+
+    def review_read(view, query, auth):
+        enrolled(view, auth, catalog)
+        page = review.page(view, auth, query.step_id, query.cursor, query.limit)
+        for item in page["items"]:
+            stored = item["review"]
+            if stored.get("model_status") == "running" and not reviewer.in_flight(stored["id"]):
+                # Interrupted (e.g. a restart). Asking for the same review again resumes it.
+                item["review"] = dict(
+                    stored,
+                    model_status="failed",
+                    model_reason=reviewer.interrupted(content_of(view)),
+                )
+        return V2Response(result=page)
+
+    def content_of(view):
+        return catalog[view.bindings.scenario.sha256]
+
+    reviewer = ModelReviewer(app, catalog)
+    app.state.aipm_reviewer = reviewer
+
+    def start_model(auth, result):
+        body = (result or {}).get("result") or {}
+        stored = body.get("review") or {}
+        if stored.get("model_status") == "running":
+            reviewer.start(auth, C.ObjectRef.model_validate(body["ref"]))
+
+    @contextmanager
+    def prepare_review(auth, command):
+        """Run the existing read-only rule check before the write transaction opens."""
+        token = review.RULE_CHECK.set(rule_check_for(auth, command))
+        try:
+            yield
+        finally:
+            review.RULE_CHECK.reset(token)
+
+    def rule_check_for(auth, command):
+        require_owner(auth)
+        body = SectionReviewInput.model_validate(command.get("payload") or {})
+        if body.design_ref is None:
+            return None
+        design = store.query(auth, lambda view: view.get(body.design_ref).content)
+        decision = design.get("intended_decision")
+        bindings, _ = store.session_metadata(auth)
+        checks = getattr(registry, "rule_checks", {}).get(C.canonical(bindings))
+        if decision is None or checks is None:
+            return None
+        request = C.SubmissionRuleCheckRequest(
+            schema_version=2,
+            request_id=command["request_id"],
+            expected_version=command["expected_version"],
+            expected_workspace_revision=command["expected_workspace_revision"],
+            operation="submissions.rule_check",
+            payload=C.SubmitInput(decision=decision, products=(body.prd_ref,)),
+        )
+        return checks.draft(store, auth, request)
+
+    registry.register(
+        Operation("aipm.section_review.create", "act", SectionReviewInput, review_create)
+    )
+    registry.register(
+        Operation(
+            "aipm.section_review.read",
+            "read",
+            SectionReviewRead,
+            review_read,
+            mutates=False,
+            response_model=V2Response,
+            action_name="observation",
+        )
+    )
+    app.state.aipm_prepare = {"aipm.section_review.create": prepare_review}
+    app.state.aipm_after = {"aipm.section_review.create": start_model}
 
     # L2 rules come from the enrolled package only; one operation set per rules file.
     built = {}

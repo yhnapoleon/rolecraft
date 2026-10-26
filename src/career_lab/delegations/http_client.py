@@ -172,13 +172,18 @@ class HttpAgentClient:
             credentials, route.method, suffix, body, query, deadline, operation=name
         )
 
-    def aipm_read(self, kind, *, submission_id=None, version=None):
+    def aipm_read(self, kind, *, submission_id=None, version=None, step_id=None):
         """Fixed extension reads only; never an arbitrary URI or filesystem proxy."""
         credentials = self._credentials()
+        query = None
         if kind in {"guide", "progress"}:
-            if submission_id is not None or version is not None:
+            if submission_id is not None or version is not None or step_id is not None:
                 raise RemoteFailure("tool_arguments_invalid", 422)
             suffix = "/aipm/" + kind
+        elif kind == "section_review":
+            if not isinstance(step_id, str) or not step_id.isalpha():
+                raise RemoteFailure("tool_arguments_invalid", 422)
+            suffix, query = "/aipm/section-reviews", {"step_id": step_id, "limit": 1}
         elif kind == "submission_feedback":
             if type(version) is not int or version < 1:
                 raise RemoteFailure("tool_arguments_invalid", 422)
@@ -191,7 +196,7 @@ class HttpAgentClient:
             )
         else:
             raise RemoteFailure("tool_arguments_invalid", 422)
-        value = self._request(credentials, "GET", suffix)
+        value = self._request(credentials, "GET", suffix, query=query)
         try:
             result = value["result"]["result"]
             if not isinstance(result, dict):

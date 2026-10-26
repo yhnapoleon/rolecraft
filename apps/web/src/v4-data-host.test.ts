@@ -134,6 +134,42 @@ describe('v4 single host persistence and recovery', () => {
       JSON.parse([...map.values()][0]).requests[pending.requestId].command,
     );
   });
+  it('rebuilds a command once, quietly, when a background job moved the version point', async () => {
+    const { host, fetcher, ports } = setup();
+    let sent = 0;
+    fetcher.mockImplementation(async (_url, init) => {
+      if (!init?.body) return reply({ schema_version: 2, state });
+      sent += 1;
+      return sent === 1
+        ? reply({ code: 'version_conflict', detail: 'moved' }, 409)
+        : reply(response(JSON.parse(String(init.body))));
+    });
+    const result = await host.command('work_items.create', { title: 'Investigate' });
+    expect(result.status).toBe('confirmed');
+    const ids = posts(fetcher).map((c) => JSON.parse(String(c[1]?.body)).request_id);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).not.toBe(ids[1]);
+    expect(ports.announce).not.toHaveBeenCalled();
+  });
+  it('reports a second version conflict and never retries a content conflict', async () => {
+    const twice = setup();
+    twice.fetcher.mockImplementation(async (_url, init) =>
+      init?.body
+        ? reply({ code: 'version_conflict', detail: 'moved' }, 409)
+        : reply({ schema_version: 2, state }),
+    );
+    expect((await twice.host.command('work_items.create', { title: 'A' })).status).toBe('failed');
+    expect(posts(twice.fetcher)).toHaveLength(2);
+    expect(twice.ports.announce).toHaveBeenCalledTimes(1);
+    const content = setup();
+    content.fetcher.mockImplementation(async (_url, init) =>
+      init?.body
+        ? reply({ code: 'object_version_conflict', detail: 'edited' }, 409)
+        : reply({ schema_version: 2, state }),
+    );
+    expect((await content.host.command('work_items.create', { title: 'B' })).status).toBe('failed');
+    expect(posts(content.fetcher)).toHaveLength(1);
+  });
   it('does not silently convert a server 500 into a definitive rejection', async () => {
     const { host, fetcher } = setup();
     fetcher.mockImplementation(async (_url, init) =>

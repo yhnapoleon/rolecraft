@@ -29,10 +29,13 @@ export function createAipmRegistry() {
 const modules = import.meta.glob<Record<string, unknown>>([
   '../features/aipm-design/{index,install}.{ts,tsx}',
   '../features/aipm-evaluation/{index,install}.{ts,tsx}',
+  '../features/aipm-review/{index,install}.{ts,tsx}',
 ]);
 const OWNERS: Record<AipmFeatureId, [folder: string, name: string]> = {
   design: ['../features/aipm-design/', 'installAipmDesign'],
   evaluation: ['../features/aipm-evaluation/', 'installAipmEvaluation'],
+  worksheet: ['../features/aipm-design/', 'installAipmWorksheet'],
+  review: ['../features/aipm-review/', 'installAipmReview'],
 };
 
 /** Runs every installer present in this build once per host. Returns the features still missing,

@@ -78,7 +78,7 @@ export const FINDINGS: Record<ProcessFeedback['finding'], Pair> = {
 type Section = { title: Pair; question: Pair; why: Pair; example: readonly Pair[] };
 export const SECTIONS: Record<StepId, Section> = {
   business: {
-    title: ['业务理解', 'Business understanding'],
+    title: ['看懂业务', 'Understand the business'],
     question: [
       '这家公司靠什么服务客户，这次要帮谁？',
       'How does the company serve customers, and who is this pilot for?',
@@ -125,7 +125,7 @@ export const SECTIONS: Record<StepId, Section> = {
     ],
   },
   need: {
-    title: ['真需求', 'The real need'],
+    title: ['验证真需求', 'Validate the need'],
     question: [
       '要解决的问题是什么，什么事实会推翻它？',
       'What problem are you solving, and what fact would disprove it?',
@@ -148,7 +148,7 @@ export const SECTIONS: Record<StepId, Section> = {
     ],
   },
   boundary: {
-    title: ['AI 边界', 'AI boundary'],
+    title: ['划定 AI 边界', 'Set AI boundaries'],
     question: [
       '每项请求要回答还是要行动，最后谁说了算？',
       'Does each request need an answer or an action, and who has the final say?',
@@ -170,7 +170,7 @@ export const SECTIONS: Record<StepId, Section> = {
     ],
   },
   solution: {
-    title: ['系统方案', 'System design'],
+    title: ['系统方案与市场做法', 'Solution and reference patterns'],
     question: ['选哪种做法，为什么不选另一种？', 'Which approach, and why not the alternative?'],
     why: [
       '方案图按你保存的分拣自动生成。这里写选定做法、理由，以及至少一个认真考虑过的替代做法。',

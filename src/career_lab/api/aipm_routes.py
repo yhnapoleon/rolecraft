@@ -13,6 +13,7 @@ READS = (
     ("/designs/{design_id}", "aipm.design.read"),
     ("/batches/{batch_id}", "aipm.batch.read"),
     ("/drafts", "aipm.design_drafts.list"),
+    ("/section-reviews", "aipm.section_review.read"),
 )
 WRITES = (
     ("/enrollment", "aipm.enroll"),
@@ -24,6 +25,7 @@ WRITES = (
     ("/assessments", "aipm.assessment.record"),
     ("/drafts", "aipm.design.draft"),
     ("/drafts/{draft_id}/state", "aipm.design_drafts.resolve"),
+    ("/section-reviews", "aipm.section_review.create"),
 )
 # The only extension write a delegated Agent may make: a draft awaiting the owner.
 AGENT_WRITES = frozenset({"aipm.design.draft"})
@@ -67,7 +69,19 @@ def mount_aipm_routes(app):
             if not (human or agent):
                 raise C.ProtocolError("human_required", status=403)
             params = {k: v for k, v in request.path_params.items() if k != "session_id"}
-            return gateway.dispatch(auth, operation, body.model_dump(mode="json"), params)
+            command = body.model_dump(mode="json")
+            # Read-only preparation outside the write transaction (e.g. rule checks).
+            prepare = getattr(app.state, "aipm_prepare", {}).get(operation)
+            after = getattr(app.state, "aipm_after", {}).get(operation)
+            if prepare is None:
+                result = gateway.dispatch(auth, operation, command, params)
+            else:
+                with prepare(auth, command):
+                    result = gateway.dispatch(auth, operation, command, params)
+            if after is not None:
+                # Work that must not hold the request, started once the write committed.
+                after(auth, result)
+            return result
 
         return endpoint
 

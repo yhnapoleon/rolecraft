@@ -16,7 +16,24 @@ export type AipmSessionContext = {
   asOf: VersionPoint | null;
   readOnly: boolean;
 };
-export type AipmFeatureId = 'design' | 'evaluation';
+/** design/evaluation: phase-1 panels. worksheet (L2) and review (L3) fill the main screen in v2. */
+export type AipmFeatureId = 'design' | 'evaluation' | 'worksheet' | 'review';
+export type AipmStepId =
+  | 'business'
+  | 'stakeholders'
+  | 'need'
+  | 'boundary'
+  | 'solution'
+  | 'assurance'
+  | 'decision';
+/** A worksheet: one of the seven steps, or a free sheet (a plain work product). */
+export type AipmSheetId = AipmStepId | `free:${string}`;
+export type AipmColleague = 'manager' | 'business' | 'technical';
+/** What the main screen shows (v2 §3.2). The workbench is the practice's board. */
+export type AipmScreen =
+  | { kind: 'workbench'; sheet?: undefined; step?: undefined }
+  | { kind: 'worksheet'; sheet: AipmSheetId; material?: string; step?: undefined }
+  | { kind: 'review'; step: AipmStepId; reviewRef?: ObjectRef; sheet?: undefined };
 export type AipmContentId = 'company' | 'guide' | 'patterns' | 'design' | 'evaluation';
 export type AipmFeature = {
   render(): string;
@@ -48,4 +65,21 @@ export interface AipmHost<TProgress = unknown, TClient = unknown> {
   refresh(): Promise<void>;
   registerFeature(id: AipmFeatureId, feature: AipmFeature): () => void;
   openFeature(id: AipmFeatureId): void;
+  /* ---------- v2 main screen (spec §3.2, §10 L1) ---------- */
+  /** What the main screen shows now; a mounted worksheet or review reads its target here. */
+  currentScreen(): AipmScreen;
+  /** Opens that worksheet in the main screen (the worksheet feature remounts per sheet). */
+  openWorksheet(sheet: AipmSheetId): void;
+  /** Opens a material beside the open worksheet (two columns); alone when the screen is narrow. */
+  openMaterialSplit(materialId: string): void;
+  /** Shows a section review (L3's feature) for that step; without a ref, its latest one. */
+  openReview(step: AipmStepId, reviewRef?: ObjectRef): void;
+  openWorkbench(): void;
+  /** Opens that colleague's conversation with the message prefilled (never sent for the person).
+   * attachPrd defaults to true when that colleague has not been shared the latest PRD version. */
+  askColleague(input: {
+    colleague: AipmColleague;
+    prefill: string;
+    attachPrd?: boolean;
+  }): Promise<void>;
 }

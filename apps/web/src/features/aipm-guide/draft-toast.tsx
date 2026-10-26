@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { createElement, useEffect, useRef } from 'react';
 import { toast as sonner } from 'sonner';
 import { toastTimer } from '../../shell/status-toast';
+import './draft-toast.css';
 
 function DraftToast(p: {
   text: string;

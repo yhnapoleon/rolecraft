@@ -7,6 +7,7 @@ import type { AipmDesign, ObjectRef } from '../../aipm/types';
 import { type EvaluationHost, installAipmEvaluation } from './index';
 import {
   type BatchView,
+  blockSummary,
   buckets,
   coverageOf,
   type EvaluationContent,
@@ -251,6 +252,12 @@ describe('run, judgement and plan-only cases stay apart', () => {
       expect(english.replace(/FIXTURE[^<"]*/g, '')).not.toMatch(/[一-鿿]/);
       expect(renderDesk(desk({ tab, view }))).not.toMatch(/Run the remaining|Judged by|Plan only/);
     }
+  });
+
+  it('folds the block on a sheet into one line', () => {
+    expect(blockSummary(null, 'zh')).toBe('还没有评测批次');
+    expect(blockSummary(view, 'zh')).toBe('4 题 · 运行 2/3 · 已判定 1 · 观察计划 0 条');
+    expect(blockSummary(view, 'en')).toBe('4 cases · ran 2/3 · judged 1 · 0 observation plans');
   });
 
   it('marks monitoring as a plan, not deployed', () => {
