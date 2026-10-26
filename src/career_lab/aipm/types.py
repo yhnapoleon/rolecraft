@@ -552,6 +552,9 @@ class CoverageRule(DTO):
     look_again: dict[Literal["zh", "en"], str]
     look_again_materials: tuple[str, ...] = ()
     false_positive_examples: tuple[dict, ...] = ()
+    # Sent to the Judge only (never to the learner): the exact question the model decides when
+    # the point is judged from free text, e.g. a rule point whose structured input is missing.
+    model_check: dict[Literal["zh", "en"], str] | None = None
 
 
 class MentorRule(DTO):

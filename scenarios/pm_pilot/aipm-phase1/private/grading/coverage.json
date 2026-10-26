@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "aipm-coverage-2",
+  "revision": "aipm-coverage-4",
   "note": "Server-only. Labels and look_again name topics and sources, never the expected conclusion.",
   "items": [
     {
@@ -58,6 +58,10 @@
         "requires": [
           "business.audience"
         ]
+      },
+      "model_check": {
+        "zh": "这一节写的服务对象（公司内部员工、外部客户或两者）是否与公司一页纸里这次试点的对象一致？明显写反或混用判 wrong；一致判 covered；没写服务对象判 missing。",
+        "en": "Does the audience this section names (internal staff, external customers or both) match who this pilot serves in the company one-pager? Contradicting or mixing them is wrong; matching is covered; naming no audience is missing."
       }
     },
     {
@@ -104,7 +108,11 @@
         "brief"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否把两件事分开写：公司对外靠什么业务服务客户（向企业客户提供企业应用实施与持续运维服务），以及这次内部知识助手直接帮谁（内部新员工、运营和行政支持人员）？把两者混为一谈，例如写成助手服务外部企业客户，判 wrong；两件事都写了且分开判 covered；只写了其中一件或都没写判 missing。",
+        "en": "Does this section keep two things apart: how the company serves its customers (enterprise application implementation and ongoing operations for business clients) and whom this internal knowledge assistant directly helps (new internal staff, operations and administrative support)? Merging them, for example saying the assistant serves external business clients, is wrong; both stated and kept apart is covered; only one or neither stated is missing."
+      }
     },
     {
       "id": "business.unknowns",
@@ -122,7 +130,11 @@
       },
       "look_again_materials": [],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否把资料没有提供的背景（公司规模、收入、投资回报等）标成未知或待确认，而不是自己假定？把这类数字或结论当作事实写出判 wrong；明确标为未知或待确认判 covered；完全没提判 missing。",
+        "en": "Does this section mark background the materials do not supply (company size, revenue, return on investment) as unknown or to be confirmed, rather than assuming it? Stating such figures or conclusions as fact is wrong; explicitly marking them unknown or to be confirmed is covered; not mentioning them is missing."
+      }
     },
     {
       "id": "stakeholders.approver",
@@ -175,6 +187,10 @@
         "requires": [
           "stakeholders.approver-choice.name_or_role"
         ]
+      },
+      "model_check": {
+        "zh": "这一节说谁来拍板或批准这次试点时，这个人是否真有批准权；是否把只是提意见或使用的人写成了批准者？写错人判 wrong；拍板人正确判 covered；没说谁拍板判 missing。",
+        "en": "Where this section says who decides or approves the pilot, does that person actually hold approval authority, or is someone who only advises or uses it named as the approver? Wrong person is wrong; the right approver is covered; no approver named is missing."
       }
     },
     {
@@ -224,7 +240,11 @@
         "interviews"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写出试点会让谁多干活、多干什么（例如行政支持台、技术负责人或项目助理的配合）？写出至少一类具体的人及其额外工作判 covered；断言没有人需要额外配合，或把额外工作安到与资料矛盾的人身上判 wrong；没写判 missing。",
+        "en": "Does this section say who gets extra work from the pilot and what it is (for example the administrative support desk, the technical lead or the project assistant)? Naming at least one concrete group and its extra work is covered; claiming nobody needs to pitch in, or assigning the work to someone the materials contradict, is wrong; saying nothing is missing."
+      }
     },
     {
       "id": "stakeholders.opinion_vs_approval",
@@ -244,7 +264,11 @@
         "approvals"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否把同事的意见和正式批准分开？资料中 Grace 负责试点决定与资源批准，Chen、Daniel 和许青的意见或支持不等于批准。把某位同事的支持写成已经批准判 wrong；明确区分意见与批准判 covered；完全没涉及批准判 missing。",
+        "en": "Does this section keep a colleague's view apart from formal approval? In the materials Grace decides the pilot and approves resources; views or support from Chen, Daniel or Xu Qing are not approvals. Treating a colleague's support as an approval is wrong; clearly separating views from approval is covered; not touching approval at all is missing."
+      }
     },
     {
       "id": "need.claim",
@@ -319,6 +343,10 @@
         "requires": [
           "needs.*.metric"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否把从建单到结单的历时（结单时长、处理时长、duration 一类的时间字段）当成了同事实际处理咨询的人工时间，或据此算出可节省的人工工时？这样写判 wrong；明确区分了历时与人工处理时间判 covered；完全没谈时长或工时的口径判 missing。",
+        "en": "Does this section treat the elapsed time from ticket creation to closure (closure or handling duration, a duration field) as staff working time on the request, or derive saved staff hours from it? If so, wrong; if it clearly separates elapsed time from hands-on handling time, covered; if it never addresses what the duration measures, missing."
       }
     },
     {
@@ -358,7 +386,11 @@
         "coordination"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了一个具体、可核对的事实或条件，一旦成立就说明不值得做或应缩小范围？泛泛的「可能有风险」不算。写了具体可核对的反证条件判 covered；只有空泛风险或没写判 missing；把本该推翻需求的事实当作支持证据（逻辑颠倒）判 wrong。",
+        "en": "Does this section name a concrete, checkable fact or condition that, if true, would make the pilot not worth doing or call for a narrower scope? A vague 'there may be risks' does not count. A concrete, checkable disconfirming condition is covered; only vague risk or nothing is missing; treating a disconfirming fact as supporting evidence (reversed logic) is wrong."
+      }
     },
     {
       "id": "need.next_check",
@@ -376,7 +408,11 @@
       },
       "look_again_materials": [],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了下一步可执行的最小核对：看哪份数据、问谁、抽查多少？写出可执行的具体核对判 covered；只说「进一步调研」之类判 missing；下一步依赖资料里明确不存在的数据，例如 SD-120 导出没有的「坐席实际操作分钟」字段，却当作现成数据，判 wrong。",
+        "en": "Does this section give a small, doable next check: which data, whom to ask, how many cases to sample? A concrete, doable check is covered; only 'research further' or similar is missing; relying on data the materials say does not exist, such as a 'minutes of active staff work' field the SD-120 export lacks, as if it were available, is wrong."
+      }
     },
     {
       "id": "boundary.authority",
@@ -401,6 +437,10 @@
         "requires": [
           "rows"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否让 AI 助手自己做最终批准（例如批准报销、开通权限），而不是只解释、拟稿，再交给有权限的人？让 AI 最终批准判 wrong；最终批准明确留给有权限的人判 covered；没谈谁做最终批准判 missing。",
+        "en": "Does this section let the AI assistant give final approval itself (e.g. approve an expense or grant access) instead of only explaining or drafting for an authorised person? AI final approval is wrong; final approval clearly left with an authorised person is covered; not addressing who approves is missing."
       }
     },
     {
@@ -426,6 +466,10 @@
         "requires": [
           "rows"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否把助手现在没有的执行工具（直接提交、修改系统、调用外部系统）写成已经能做？写成已能执行判 wrong；明确标为计划或需要新工具判 covered；没谈执行能力判 missing。",
+        "en": "Does this section describe execution tools the assistant does not have now (submitting, changing systems, calling external systems) as already available? Claiming they already work is wrong; marking them as planned or needing new tools is covered; not addressing execution is missing."
       }
     },
     {
@@ -472,7 +516,11 @@
         "interviews"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写明助手答错或答不了时由哪个具体角色接手、怎样转交？写到具体角色和转交方式判 covered；只说「转人工」而没写谁判 missing；声称助手会自动创建人工工单或自动转交（资料说转交提示不会自动创建工单）判 wrong。",
+        "en": "Does this section say which specific role picks up when the assistant is wrong or cannot answer, and how it is handed over? A named role and hand-off is covered; only 'escalate to a human' without who is missing; claiming the assistant automatically creates a human ticket or hands off by itself (the materials say the hand-off prompt creates no ticket) is wrong."
+      }
     },
     {
       "id": "solution.selected",
@@ -584,6 +632,10 @@
         "requires": [
           "solution"
         ]
+      },
+      "model_check": {
+        "zh": "这一节是否把申请中、尚未生效的配置或资源当成已经生效？混为一谈判 wrong；分清了请求值和实际生效判 covered；没谈配置和资源判 missing。",
+        "en": "Does this section treat requested, not-yet-effective configuration or resources as already in effect? Treating them as effective is wrong; separating requested from effective is covered; not addressing configuration or resources is missing."
       }
     },
     {
@@ -668,7 +720,11 @@
         "technical"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了出问题时回退到什么（哪项配置或哪个版本）以及由谁决定回退？写出回退对象和负责人判 covered；只说「有问题就回滚」判 missing；把回退写成助手自动完成、没有人负责判 wrong。",
+        "en": "Does this section say what to roll back to when something goes wrong (which setting or version) and who decides? A rollback target and an owner is covered; only 'roll back if there is a problem' is missing; describing rollback as something the assistant does on its own with nobody responsible is wrong."
+      }
     },
     {
       "id": "assurance.signal",
@@ -688,7 +744,11 @@
         "demand"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写了上线后要观察的具体信号以及观察窗口？写出具体信号和窗口判 covered；只说「持续观察」判 missing；把结单历时（duration_minutes，包含等待和排队）当作人工节省的信号判 wrong。",
+        "en": "Does this section name the specific signals to watch after launch and the observation window? Concrete signals with a window is covered; only 'keep monitoring' is missing; treating elapsed case time (duration_minutes, which includes waiting and queueing) as a signal of labour saved is wrong."
+      }
     },
     {
       "id": "decision.intended",
@@ -729,7 +789,11 @@
         "approvals"
       ],
       "false_positive_examples": [],
-      "predicate": {}
+      "predicate": {},
+      "model_check": {
+        "zh": "这一节是否写清决定附带的条件和仍未解决的事？涉及资源时是否在审批上限内（容量 60 人、开发资源 6 人日、期限第 10 天）。条件和未决事项写得具体判 covered；只写结论、没有条件判 missing；承诺超出审批上限，或把尚未批准的资源写成已批准判 wrong。",
+        "en": "Does this section state the conditions attached to the decision and what is still unresolved? Where resources are involved, are they within the approval limits (capacity 60 people, 6 development days, deadline day 10)? Concrete conditions and open items is covered; a conclusion without conditions is missing; committing beyond the approval limits, or treating unapproved resources as approved, is wrong."
+      }
     },
     {
       "id": "decision.self_changes",
