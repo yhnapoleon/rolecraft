@@ -18,6 +18,7 @@ import {
   materialOf,
   mergedCoverage,
   modelPart,
+  shownStatus,
   type Language,
   nextStatusHint,
   orderCoverage,
@@ -55,6 +56,8 @@ export type ReviewViewInput = {
   edited?: boolean;
   onAsk?: (who: Colleague) => void;
   onBack?: () => void;
+  /** A running model look was followed for its time limit without a result. */
+  modelTimedOut?: boolean;
   /** Opens a named material beside the sheet. */
   onOpenMaterial?: (id: string) => void;
 };
@@ -87,7 +90,9 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   const root = el('section', '', 'aipm-review native-feedback');
   root.lang = language;
   root.dataset.aipmReview = review.step_id;
-  root.dataset.status = review.status;
+  // The status with the model's verdicts counted, once its look has finished.
+  const current = shownStatus(review);
+  root.dataset.status = current;
   const grid = el('div', '', 'aipm-review__grid');
 
   // ---- What you wrote ----
@@ -230,8 +235,8 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   const sheet = el('article', '', 'aipm-review__sheet');
   const head = el('header', '', 'aipm-review__head');
   const heading = el('div', '', 'aipm-review__heading');
-  const chip = el('span', statusName(review.status, language), 'aipm-review__chip');
-  chip.dataset.status = review.status;
+  const chip = el('span', statusName(current, language), 'aipm-review__chip');
+  chip.dataset.status = current;
   heading.append(el('h3', t('批改单', 'Review'), 'aipm-review__name'), chip);
   const time = new Date(review.created_at);
   const clock = Number.isNaN(time.getTime())
@@ -259,16 +264,13 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
   steps.setAttribute('role', 'img');
   steps.setAttribute(
     'aria-label',
-    t(
-      `状态：${statusName(review.status, language)}`,
-      `Status: ${statusName(review.status, language)}`,
-    ),
+    t(`状态：${statusName(current, language)}`, `Status: ${statusName(current, language)}`),
   );
   STATUSES.forEach((status, index) => {
     if (index) steps.append(el('span', '', 'aipm-review__rule'));
     const pill = el('span', statusName(status, language), 'aipm-review__step');
-    if (status === review.status) pill.dataset.current = '';
-    else if (STATUSES.indexOf(status) < STATUSES.indexOf(review.status)) pill.dataset.passed = '';
+    if (status === current) pill.dataset.current = '';
+    else if (STATUSES.indexOf(status) < STATUSES.indexOf(current)) pill.dataset.passed = '';
     steps.append(pill);
   });
   steps.append(el('span', nextStatusHint(review, language), 'aipm-review__hint'));
@@ -340,17 +342,22 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     el('span', t('模型判断 · 建议', 'Model judgement · advice'), 'aipm-review__model-tag');
   const coverage = mergedCoverage(review);
   const modelLine =
-    model.status === 'running'
+    model.status === 'running' && input.modelTimedOut
       ? t(
-          '模型细看中…规则判定已先列出，模型的判断稍后补进来。',
-          'The model is looking… Rule results are listed first; the model’s judgement follows.',
+          '模型还在看，稍后回来查看。规则判定已在下面。',
+          'The model is still looking; come back later. Rule results are below.',
         )
-      : model.status === 'failed'
+      : model.status === 'running'
         ? t(
-            `模型细看没有完成：${model.error ?? '原因未返回'}。下面只有规则判定。`,
-            `The model look did not finish: ${model.error ?? 'no reason returned'}. Only rule results are below.`,
+            '模型细看中…规则判定已先列出，模型的判断稍后补进来。',
+            'The model is looking… Rule results are listed first; the model’s judgement follows.',
           )
-        : null;
+        : model.status === 'failed'
+          ? t(
+              `模型细看没有完成：${model.error ?? '原因未返回'}。下面只有规则判定。`,
+              `The model look did not finish: ${model.error ?? 'no reason returned'}. Only rule results are below.`,
+            )
+          : null;
   if (coverage.length || modelLine) {
     const list = el('ul', '', 'fb-list aipm-review__coverage');
     for (const item of orderCoverage(coverage)) {

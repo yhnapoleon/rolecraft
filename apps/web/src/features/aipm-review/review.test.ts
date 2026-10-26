@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asFake, fakeDocument } from '../results-native/fake-dom';
-import { FIXTURE_PRD, fixturePage, fixturePreview, fixtureReview } from './fixture';
+import {
+  FIXTURE_PRD,
+  fixtureModelReview,
+  fixturePage,
+  fixturePreview,
+  fixtureReview,
+} from './fixture';
 import { backToSheet, installAipmReview, pickReview, type ReviewHost } from './index';
 import {
   coverageRow,
@@ -146,59 +152,63 @@ describe('review screen', () => {
 });
 
 describe('the model look', () => {
-  const withModel = (over: Record<string, unknown>) =>
-    ({ ...fixtureReview('zh'), ...over }) as ReturnType<typeof fixtureReview>;
-  const draw = (review: ReturnType<typeof fixtureReview>) =>
+  const draw = (review: ReturnType<typeof fixtureReview>, modelTimedOut = false) =>
     asFake(
       renderReview(fakeDocument(), {
         review,
         language: 'zh',
         sections: FIXTURE_PRD.zh,
         sentences: { kind: 'off' },
+        modelTimedOut,
       }),
     );
-  const judged = {
-    ...(fixtureReview('zh').coverage ?? []).find((c) => c.id === 'need.counterfact'),
-    mark: 'wrong',
-    source: 'model_suggestion',
-  };
 
-  it('lists rule results at once and says the model is still looking', () => {
-    const root = draw(withModel({ model_status: 'running' }));
-    expect(root.byClass('aipm-review__model-status')[0].textContent).toContain('模型细看中');
-    expect(root.byClass('fb-item')).toHaveLength(4);
+  it('says “no model connected” on the points only a model can judge', () => {
+    const root = draw(fixtureModelReview('zh', 'not_configured'));
+    expect(root.textContent).toContain('未接入模型 · 再看看：需求访谈 · 反对意见');
+    expect(root.byClass('aipm-review__model-status')).toHaveLength(0);
   });
 
-  it('puts the model’s verdict in place, marked as advice, and counts its “wrong”', () => {
-    const review = withModel({
-      model_status: 'done',
-      model_coverage: [judged],
-      model_rubric: [
-        {
-          criterion: 'R2.support',
-          label: 'NOT_MET',
-          source: 'pending',
-          explanation: '证据\n只有一条访谈。',
-        },
-      ],
-    });
+  it('lists rule results at once and says the model is still looking, or to come back', () => {
+    const running = fixtureModelReview('zh', 'running');
+    expect(draw(running).byClass('aipm-review__model-status')[0].textContent).toContain(
+      '模型细看中',
+    );
+    expect(draw(running).byClass('fb-item')).toHaveLength(4);
+    expect(draw(running, true).byClass('aipm-review__model-status')[0].textContent).toContain(
+      '模型还在看，稍后回来查看',
+    );
+  });
+
+  it('puts the model’s verdicts in place as advice, and recounts status and comparison', () => {
+    const review = fixtureModelReview('zh', 'done');
     const root = draw(review);
-    const rows = root.byClass('fb-item');
-    const model = rows.filter((row) => row.dataset.source === 'model');
+    const model = root.byClass('fb-item').filter((row) => row.dataset.source === 'model');
     expect(model.map((row) => row.dataset.feedbackItem)).toEqual(['need.counterfact']);
+    expect(model[0].dataset.coverage).toBe('missing');
     expect(model[0].textContent).toContain('模型判断 · 建议');
-    expect(rows.slice(0, 2).map((row) => row.dataset.coverage)).toEqual(['wrong', 'wrong']);
-    expect(root.byClass('aipm-review__advised')).toHaveLength(1);
+    expect(model[0].textContent).toContain('再看看：没写出会让试点停下的事实');
+    expect(root.byClass('aipm-review__advised')[0].textContent).toContain('只引用了一次访谈');
     expect(root.textContent).toContain('交付时由正式反馈判断：指标与验收口径');
-    expect(root.textContent).not.toContain('判断的证据支持、');
     expect(root.textContent).toContain('模型的判断只是建议');
-    expect(reviewSummaryForColleague(review, 'manager', { language: 'zh' })).toContain(
+    // Two missing points now (one by the model): gaps recounted from the merged coverage.
+    expect(deltaLine(review, 'zh', 3)).toBe('和第 3 版比：引用 0 → 1 · 缺口 3 → 2 · 有误 0 → 2');
+  });
+
+  it('lets a model “wrong” count in status, comparison and the colleague summary', () => {
+    const review = fixtureModelReview('zh', 'done');
+    const items = (review.model_items ?? []).map((item) =>
+      item.target === 'coverage' ? { ...item, mark: 'wrong' as const } : item,
+    );
+    const wrong = { ...review, model_items: items };
+    expect(deltaLine(wrong, 'zh')).toContain('有误 0 → 3');
+    expect(reviewSummaryForColleague(wrong, 'manager', { language: 'zh' })).toContain(
       '有误：会让我们不做的事实',
     );
   });
 
   it('says why the model look failed, and keeps the rule results', () => {
-    const root = draw(withModel({ model_status: 'failed', model_error: '模型超时' }));
+    const root = draw(fixtureModelReview('zh', 'failed'));
     expect(root.byClass('aipm-review__model-status')[0].textContent).toContain(
       '模型细看没有完成：模型超时',
     );
@@ -207,15 +217,12 @@ describe('the model look', () => {
 });
 
 describe('installAipmReview', () => {
-  it('rereads a running model look until its verdicts arrive, and stops when left', async () => {
-    vi.useFakeTimers();
-    const running = { ...fixtureReview('zh'), model_status: 'running' } as ReturnType<
-      typeof fixtureReview
-    >;
-    const done = { ...running, model_status: 'done' } as ReturnType<typeof fixtureReview>;
-    const reads = [running, running, done];
+  const followHost = (
+    reads: ReturnType<typeof fixtureReview>[],
+    last: ReturnType<typeof fixtureReview>,
+  ) => {
     const sectionReviews = vi.fn(async () => ({
-      items: [{ ref: running.prd_ref, review: reads.shift() ?? done }],
+      items: [{ ref: last.prd_ref, review: reads.shift() ?? last }],
       next_cursor: null,
     }));
     const host = {
@@ -229,15 +236,37 @@ describe('installAipmReview', () => {
       openMaterialSplit: vi.fn(),
       askColleague: vi.fn(),
     } as unknown as ReviewHost;
+    return { host, sectionReviews };
+  };
+
+  it('rereads a running model look every 2 s until revision 2 arrives, then stops', async () => {
+    vi.useFakeTimers();
+    const running = fixtureModelReview('zh', 'running');
+    const done = fixtureModelReview('zh', 'done');
+    const { host, sectionReviews } = followHost([running, running], done);
     const installed = installAipmReview(host);
     await installed.open('need');
-    await vi.advanceTimersByTimeAsync(3000);
-    await vi.advanceTimersByTimeAsync(3000);
-    expect((installed.state.review as unknown as { model_status: string }).model_status).toBe(
-      'done',
-    );
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(installed.state.review?.model_status).toBe('running');
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(installed.state.review?.revision).toBe(2);
     const calls = sectionReviews.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(9000);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(sectionReviews.mock.calls.length).toBe(calls);
+    vi.useRealTimers();
+  });
+
+  it('gives up after about 60 s and says to come back later', async () => {
+    vi.useFakeTimers();
+    const running = fixtureModelReview('zh', 'running');
+    const { host, sectionReviews } = followHost([], running);
+    const installed = installAipmReview(host);
+    await installed.open('need');
+    await vi.advanceTimersByTimeAsync(62000);
+    expect(installed.state.modelTimedOut).toBe(true);
+    const calls = sectionReviews.mock.calls.length;
+    expect(calls).toBe(31);
+    await vi.advanceTimersByTimeAsync(10000);
     expect(sectionReviews.mock.calls.length).toBe(calls);
     vi.useRealTimers();
   });

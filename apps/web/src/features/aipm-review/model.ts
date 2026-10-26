@@ -3,6 +3,7 @@
 import type { ChainUnit, PreviewRecognition } from '../recognition-native/chain';
 import type { ItemRow } from '../feedback-native/feedback-items';
 import type { Colleague } from '../../screens/result/colleagues';
+import type { ModelJudgement, ModelStatus } from '../../aipm/types';
 import type {
   CoverageItem,
   ReviewColleague,
@@ -118,11 +119,12 @@ export function nextStatusHint(review: SectionReview, language: Language) {
   const wrong =
     mergedCoverage(review).some((c) => c.mark === 'wrong') ||
     (review.misconceptions ?? []).some((m) => m.finding === 'violation');
-  if (review.status === 'draft' && wrong)
+  const status = shownStatus(review);
+  if (status === 'draft' && wrong)
     return text(language, '改掉「有误」后可到「有依据」', 'Fix what is wrong to reach Grounded');
-  if (review.status === 'draft')
+  if (status === 'draft')
     return text(language, '引用一份资料后可到「有依据」', 'Cite a source to reach Grounded');
-  if (review.status === 'based')
+  if (status === 'based')
     return text(
       language,
       '补上缺的要点后可到「站得住」',
@@ -136,7 +138,7 @@ export function deltaLine(
   language: Language,
   previousVersion?: number | null,
 ) {
-  const d = review.delta;
+  const d = shownDelta(review);
   if (!d) return null;
   const head =
     previousVersion != null
@@ -222,35 +224,65 @@ export function coverageMarkName(mark: CoverageItem['mark'], language: Language)
  * point is always "to check" in this release (no model look), with a way to ask a colleague. */
 // ---- The model's look (user 10-26: on whenever a model is connected) --------------------
 
-export type ModelStatus = 'not_configured' | 'running' | 'done' | 'failed';
+export type { ModelStatus } from '../../aipm/types';
 export type ModelPart = {
   status: ModelStatus;
   error: string | null;
+  /** Coverage points the model judged, shaped as coverage rows. */
   coverage: CoverageItem[];
+  /** Criteria the model judged, shaped as rule lines (MET / PARTIAL / NOT_MET). */
   rubric: RubricLine[];
 };
-type WithModel = SectionReview & {
-  model_status?: ModelStatus | null;
-  model_error?: string | null;
-  model_coverage?: CoverageItem[] | null;
-  model_rubric?: RubricLine[] | null;
+const RUBRIC_LABEL: Record<ModelJudgement['mark'], string | null> = {
+  covered: 'MET',
+  missing: 'PARTIAL',
+  wrong: 'NOT_MET',
+  to_check: null,
 };
-/** The model part of a review. The field names are provisional until L4's type lands; this is
- * the only place that reads them. */
+/** The model part of a review (revision 2 when a model is connected): its items split into
+ * coverage points and criteria. Only items of a finished look are used. */
 export function modelPart(review: SectionReview): ModelPart {
-  const r = review as WithModel;
+  const status = review.model_status ?? 'not_configured';
+  const items = status === 'done' ? (review.model_items ?? []) : [];
+  const rules = new Map((review.coverage ?? []).map((c) => [c.id, c]));
   return {
-    status: r.model_status ?? 'not_configured',
-    error: r.model_error ?? null,
-    coverage: r.model_coverage ?? [],
-    rubric: r.model_rubric ?? [],
+    status,
+    error: review.model_reason ?? null,
+    coverage: items
+      .filter((item) => item.target === 'coverage')
+      .map((item) => {
+        const rule = rules.get(item.id);
+        return {
+          id: item.id,
+          label: item.label || rule?.label || item.id,
+          check: rule?.check ?? 'model',
+          severity: rule?.severity ?? 'medium',
+          owner: rule?.owner ?? 'manager',
+          mark: item.mark,
+          pointer: { text: item.note, refs: item.citations ?? [] },
+          source: 'model_suggestion' as const,
+        };
+      }),
+    rubric: items.flatMap((item) => {
+      const label = item.target === 'rubric' ? RUBRIC_LABEL[item.mark] : null;
+      return label
+        ? [
+            {
+              criterion: item.id,
+              label,
+              source: 'pending' as const,
+              explanation: `${item.label}\n${item.note}`,
+              citations: item.citations ?? [],
+            },
+          ]
+        : [];
+    }),
   };
 }
 export type ShownCoverage = CoverageItem & { byModel?: boolean };
-/** Rule coverage, with the model's finished verdicts in place of the points only it can judge. */
+/** Rule coverage, with the model's finished verdicts in place of the points it judged. */
 export function mergedCoverage(review: SectionReview): ShownCoverage[] {
-  const part = modelPart(review);
-  const judged = new Map(part.status === 'done' ? part.coverage.map((c) => [c.id, c]) : []);
+  const judged = new Map(modelPart(review).coverage.map((c) => [c.id, c]));
   const base = review.coverage ?? [];
   const shown: ShownCoverage[] = base.map((c) => {
     const verdict = judged.get(c.id);
@@ -259,6 +291,36 @@ export function mergedCoverage(review: SectionReview): ShownCoverage[] {
   for (const verdict of judged.values())
     if (!base.some((c) => c.id === verdict.id)) shown.push({ ...verdict, byModel: true });
   return shown;
+}
+
+/** The review's status with the model's coverage verdicts counted, by the server's own rule
+ * (`aipm/review.py::_status`); before a finished look it is the stored status. */
+export function shownStatus(review: SectionReview): ReviewStatus {
+  if (modelPart(review).status !== 'done') return review.status;
+  const coverage = mergedCoverage(review);
+  if ((review.misconceptions ?? []).length || coverage.some((m) => m.mark === 'wrong'))
+    return 'draft';
+  const cited = coverage.some((m) => m.check === 'citation' && m.mark === 'covered');
+  if (!cited || coverage.some((m) => m.mark === 'missing' && m.severity === 'high')) return 'draft';
+  if (coverage.some((m) => m.mark === 'missing' && m.severity === 'medium')) return 'based';
+  return 'solid';
+}
+/** The comparison's "after" counts again with the model's verdicts (`review.py::counts`). */
+export function shownDelta(review: SectionReview): SectionReview['delta'] {
+  const d = review.delta;
+  if (!d || modelPart(review).status !== 'done') return d ?? null;
+  const coverage = mergedCoverage(review);
+  return {
+    citations: [
+      d.citations[0],
+      coverage.filter((m) => m.check === 'citation' && m.mark === 'covered').length,
+    ],
+    gaps: [d.gaps[0], coverage.filter((m) => m.mark === 'missing').length],
+    wrong: [
+      d.wrong[0],
+      coverage.filter((m) => m.mark === 'wrong').length + (review.misconceptions ?? []).length,
+    ],
+  };
 }
 
 /** What a point only a model can judge says while it has no verdict. */
@@ -330,7 +392,7 @@ export function reviewSummaryForColleague(
       `${coverageMarkName(item.mark, language)}${text(language, '：', ': ')}${item.label}`,
     );
   }
-  const status = statusName(review.status, language);
+  const status = statusName(shownStatus(review), language);
   if (language === 'zh') {
     const said = points.length ? `批改说：${points.join('；')}。` : `批改结果是「${status}」。`;
     return `我在写「${sheet}」第 ${version} 版。${said}你怎么看？`;

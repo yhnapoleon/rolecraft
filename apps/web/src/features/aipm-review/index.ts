@@ -55,9 +55,9 @@ export type ReviewOptions = {
 /** Sentence marks are the same under all four decisions (L4's test, spec §6.6), so the sentence
  * check is asked with this fixed placeholder and never waits for a choice on ⑦. */
 const SENTENCE_DECISION: Decision = 'defer_with_conditions';
-/** How often, and for how long (2 minutes), a running model look is reread. */
-const FOLLOW_MS = 3000;
-const FOLLOW_TRIES = 40;
+/** How often, and for how long (about 60 s), a running model look is reread. */
+const FOLLOW_MS = 2000;
+const FOLLOW_TRIES = 30;
 
 function dig<T>(value: unknown, pick: (v: Loose) => T | undefined, depth = 5): T | undefined {
   if (!value || typeof value !== 'object' || depth < 0) return undefined;
@@ -95,6 +95,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     sentences: Sentences;
     currentPrdVersion: number | null;
     edited: boolean;
+    modelTimedOut: boolean;
     error: string | null;
     loading: boolean;
   } = {
@@ -104,6 +105,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     sentences: { kind: 'off' },
     currentPrdVersion: null,
     edited: false,
+    modelTimedOut: false,
     error: null,
     loading: false,
   };
@@ -128,6 +130,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
           sentences: state.sentences,
           currentPrdVersion: state.currentPrdVersion,
           edited: state.edited,
+          modelTimedOut: state.modelTimedOut,
           hasDecision: !!decision(),
           onAsk: (who) => void ask(who),
           onBack: () => state.step && host.openWorksheet(state.step),
@@ -200,6 +203,7 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     Object.assign(state, {
       step,
       review: null,
+      modelTimedOut: false,
       error: null,
       loading: true,
       sentences: { kind: 'off' },
@@ -241,15 +245,23 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
    * verdicts when they arrive. Reading never starts a model call; leaving the screen stops it. */
   function follow(mine: number, tries = 0) {
     const review = state.review;
-    if (!review || !state.step || modelPart(review).status !== 'running' || tries >= FOLLOW_TRIES)
+    if (!review || !state.step || modelPart(review).status !== 'running') return;
+    if (tries >= FOLLOW_TRIES) {
+      state.modelTimedOut = true;
+      paint();
       return;
+    }
     const step = state.step;
     setTimeout(async () => {
       if (mine !== token) return;
       const client = host.getClient() as ReviewClient | null;
       const page = await client?.sectionReviews(step).catch(() => null);
       if (mine !== token) return;
-      const same = page?.items.find((item) => item.review.id === review.id)?.review;
+      // Revision 2 (with the model's items) supersedes revision 1 of the same review.
+      const same = page?.items
+        .map((item) => item.review)
+        .filter((r) => r.id === review.id)
+        .sort((a, b) => (b.revision ?? 1) - (a.revision ?? 1))[0];
       if (same) {
         state.review = same;
         paint();

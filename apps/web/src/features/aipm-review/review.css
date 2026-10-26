@@ -527,3 +527,8 @@
   justify-self: start;
   margin-left: 0;
 }
+/* Rule lines at the review's scale (the result page sets them larger). */
+.aipm-review .rule-lines__item,
+.aipm-review .rule-lines__note {
+  font-size: 12.5px;
+}

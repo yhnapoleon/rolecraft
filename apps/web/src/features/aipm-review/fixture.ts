@@ -80,3 +80,49 @@ export function fixtureReview(language: Language): SectionReview {
   ) as unknown as SectionReview;
 }
 export const fixturePage = () => structuredClone(shared.page) as unknown as SectionReviewPage;
+
+/** FIXTURE ONLY — the same review as the model's look runs (revision 1) and after it finished
+ * (revision 2), or failed. The model items say where to look again, never the answer. */
+export function fixtureModelReview(
+  language: Language,
+  status: 'not_configured' | 'running' | 'done' | 'failed',
+): SectionReview {
+  const zh = language === 'zh';
+  const t = (a: string, b: string) => (zh ? a : b);
+  const review = fixtureReview(language);
+  if (status !== 'done')
+    return {
+      ...review,
+      revision: 1,
+      model_status: status,
+      model_items: [],
+      model_reason: status === 'failed' ? t('模型超时', 'The model timed out') : null,
+    };
+  return {
+    ...review,
+    revision: 2,
+    model_status: 'done',
+    model_reason: null,
+    model_items: [
+      {
+        target: 'coverage',
+        id: 'need.counterfact',
+        label: t('会让我们不做的事实', 'A fact that would make us stop'),
+        mark: 'missing',
+        note: t(
+          '没写出会让试点停下的事实；再看需求访谈里的反对意见。',
+          'No fact that would stop the pilot; look again at the objections in the demand interviews.',
+        ),
+        source: 'model_suggestion',
+      },
+      {
+        target: 'rubric',
+        id: 'R2.support',
+        label: t('判断的证据支持', 'Evidence supporting judgments'),
+        mark: 'missing',
+        note: t('只引用了一次访谈，还没有反证。', 'One interview cited; no counter-evidence yet.'),
+        source: 'model_suggestion',
+      },
+    ],
+  };
+}
