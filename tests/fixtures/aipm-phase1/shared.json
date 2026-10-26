@@ -1,0 +1,56 @@
+{
+  "fixture": true,
+  "notice": "Synthetic contract examples only; not completion evidence or installed content.",
+  "experience_revision": "aipm-phase1-v1",
+  "step_ids": [
+    "business",
+    "stakeholders",
+    "need",
+    "boundary",
+    "solution",
+    "assurance",
+    "decision"
+  ],
+  "cases": [
+    {
+      "id": "approval-by-ai",
+      "target_action": "approve",
+      "final_authority": "ai",
+      "expected": "violation"
+    },
+    {
+      "id": "explain-policy",
+      "target_action": "explain",
+      "final_authority": "named_human_role",
+      "expected": "not_a_violation"
+    },
+    {
+      "id": "draft-with-confirmation",
+      "target_action": "prepare_draft",
+      "final_authority": "named_human_role",
+      "expected": "plan_only"
+    },
+    {
+      "id": "free-text-unknown",
+      "expected": "unverified"
+    },
+    {
+      "id": "feedback-not-ready",
+      "status": "not_ready",
+      "feedback_ref": null,
+      "read": null,
+      "exact_read": null
+    },
+    {
+      "id": "changed-source",
+      "expected": "recheck"
+    },
+    {
+      "id": "limited-scope",
+      "projection": {
+        "complete": false,
+        "reason": "insufficient_scope"
+      }
+    }
+  ]
+}
