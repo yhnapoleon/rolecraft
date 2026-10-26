@@ -394,7 +394,16 @@ def with_model(view, auth, content, stored, items, status, reason, revision=None
     out["status"] = _status(coverage, feedback, "wrong" in rubric_marks.values())
     fired = {_rule_id(f, f["input_ref"]) for f in rules_found}
     prompts = _mentor(view, auth, content, stored["step_id"], fired, coverage, rubric_marks)
-    out["mentor_prompts"] = [p.model_dump(mode="json") for p in prompts]
+    # Keep each earlier question unless the model found its point covered: a point that went
+    # from "to check" to "missing" or "wrong" still deserves that colleague's question.
+    marks = {m.id: m.mark for m in coverage} | rubric_marks
+    kept = [
+        MentorPrompt.model_validate(p)
+        for p in stored.get("mentor_prompts") or ()
+        if marks.get(p["trigger_id"]) != "covered"
+    ]
+    merged = {(p.colleague, p.question): p for p in (*kept, *prompts)}
+    out["mentor_prompts"] = [p.model_dump(mode="json") for p in merged.values()]
     return SectionReview.model_validate(out).model_dump(mode="json")
 
 
@@ -534,12 +543,10 @@ def sheets(view, objects, design, pending_steps):
         if row is not None:
             review = row.content
             current = stale(view, review, latest)
+            # A short point name for the compass; the full wording stays on the review sheet.
             worst = next(
-                (m["message"] for m in review.get("misconceptions") or ()),
-                next(
-                    (m["label"] for m in review.get("coverage") or () if m["mark"] != "covered"),
-                    None,
-                ),
+                (m["label"] for m in review.get("coverage") or () if m["mark"] != "covered"),
+                None,
             )
             state.update(review_ref=row.ref, gap_hint=worst)
             if current is not None and current.reason != "edited":

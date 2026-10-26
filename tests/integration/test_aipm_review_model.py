@@ -103,6 +103,14 @@ def test_model_items_merge_once_and_are_cached_per_prd_version(base):
     assert done["affects_formal_score"] is False
     assert "mentor.need.model" not in json.dumps(done)  # trigger ids are coverage/rule ids
     assert {p["trigger_id"] for p in done["mentor_prompts"]} == {"need.counterfact"}
+    # B7: revision 1's question (triggered while the point was "to check") survives the model
+    # turning that point into "missing", next to the question the new mark triggers.
+    initial = made["mentor_prompts"]
+    assert [p["colleague"] for p in initial] == ["manager"]
+    assert {p["colleague"] for p in done["mentor_prompts"]} == {"manager", "business"}
+    # The compass gets the point's short name, not a misconception's whole sentence.
+    sheet = progress.steps(result(get(base, "progress")))["need"]["sheet"]
+    assert sheet["gap_hint"] == "A fact that would stop us"
     assert any(
         "stop us" in p["question"] or "stop" in p["question"] for p in done["mentor_prompts"]
     )
