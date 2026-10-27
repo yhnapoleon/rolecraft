@@ -44,6 +44,7 @@ import {
   type SectionCheck,
   sectionCheck,
 } from './model';
+import { AnswerPath } from './answer-path';
 import './desk.css';
 
 export const DESIGN_ID = 'aipm-design';
@@ -1024,7 +1025,8 @@ function LinkWork({
   );
 }
 
-/** The fixed-structure proposal drawn from the saved triage, beside what is actually in effect. */
+/** The assistant's answer path with the values in effect now, then the proposal drawn from the
+ * saved triage. Retrieval rows run on the answer path above instead of three generic nodes. */
 export function DiagramBlock({
   c,
   host,
@@ -1037,8 +1039,16 @@ export function DiagramBlock({
   language: Language;
 }) {
   const lanes = useMemo(() => (saved ? diagram(saved.design, language) : []), [saved, language]);
+  const data = host.getDataHost();
+  const readOnly = !!host.getSessionContext()?.readOnly || !!data?.snapshot().readOnly;
   return (
     <div className="aipm-design__diagram">
+      <AnswerPath
+        data={data}
+        language={language}
+        readOnly={readOnly}
+        onSettings={() => void host.openSettings()}
+      />
       <div>
         <p className="aipm-design__eyebrow">
           {c.t('拟议方案 · 按已保存的分拣生成', 'Proposed design · drawn from your saved triage')}
@@ -1052,13 +1062,19 @@ export function DiagramBlock({
                   {c.route(lane.route)} · {lane.status}
                 </small>
               </div>
-              <ol className="aipm-design__nodes">
-                {lane.nodes.map((node) => (
-                  <li key={`${lane.rowId}:${node}`} className="aipm-design__node">
-                    {node}
-                  </li>
-                ))}
-              </ol>
+              {lane.route === 'retrieval_generation' ? (
+                <p className="aipm-design__on-path">
+                  {c.t('这一路走上面的回答链', 'This route runs on the answer path above')}
+                </p>
+              ) : (
+                <ol className="aipm-design__nodes">
+                  {lane.nodes.map((node) => (
+                    <li key={`${lane.rowId}:${node}`} className="aipm-design__node">
+                      {node}
+                    </li>
+                  ))}
+                </ol>
+              )}
             </div>
           ))
         ) : (
@@ -1070,18 +1086,6 @@ export function DiagramBlock({
           </p>
         )}
       </div>
-      <aside className="aipm-design__actual">
-        <p className="aipm-design__eyebrow">{c.t('实际生效', 'In effect')}</p>
-        <p>
-          {c.t(
-            '知识助手仍按当前设置运行。上面的组件都是拟议，保存方案不会改变设置。',
-            'The assistant still runs on its current settings. Everything shown is proposed; saving never changes settings.',
-          )}
-        </p>
-        <button type="button" className="btn quiet small" onClick={() => void host.openSettings()}>
-          {c.t('打开实际设置', 'Open actual settings')}
-        </button>
-      </aside>
     </div>
   );
 }

@@ -311,8 +311,14 @@
 }
 .aipm-design__diagram {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
-  gap: 16px 22px;
+  gap: 22px;
+  min-width: 0;
+}
+.aipm-design__on-path {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
 }
 .aipm-design__lane {
   padding: 10px 0;
@@ -355,20 +361,6 @@
   left: -17px;
   color: var(--ink-2);
 }
-.aipm-design__actual {
-  align-self: start;
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line-2);
-}
-.aipm-design__actual p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.6;
-}
 .aipm-design__foot {
   display: flex;
   align-items: center;
@@ -380,8 +372,197 @@
   .aipm-design__open {
     padding: 18px 16px;
   }
-  .aipm-design__routes,
-  .aipm-design__diagram {
+  .aipm-design__routes {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- The assistant's answer path (design view) ----------
+   Small instruments on the paper: surface cells, hairline borders, no shadow. Amber marks a
+   setting that is asked for but not in effect; no other colour carries meaning here. */
+.aipm-path {
+  container-type: inline-size;
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.aipm-path__title {
+  margin: 0;
+  font: 600 17px / 1.35 var(--sans);
+  color: var(--ink);
+}
+.aipm-path__lead {
+  margin: -14px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.aipm-path__row {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.aipm-path__row-title {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.aipm-path__nodes {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-path__nodes[data-count="3"] {
+  --n: 3;
+}
+.aipm-path__step {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.aipm-path__step + .aipm-path__step {
+  padding-left: 28px;
+}
+/* 16px hairline, then the chevron, centred between two cells. */
+.aipm-path__link {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: flex;
+  align-items: center;
+  width: 28px;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+}
+.aipm-path__link::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 1px;
+  background: var(--line-2);
+}
+.aipm-path__link svg {
+  flex: none;
+  margin-left: -2px;
+}
+.aipm-path__node {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--r-row, 7px);
+  background: var(--surface);
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+button.aipm-path__node {
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out);
+}
+button.aipm-path__node:hover {
+  border-color: var(--line-2);
+}
+button.aipm-path__node:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.aipm-path__name {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.aipm-path__value {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.aipm-path__note,
+.aipm-path__reason {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.aipm-path__who {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.aipm-path__node[data-state="amber"] {
+  background: var(--warn-tint);
+  border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+}
+.aipm-path__node[data-state="amber"] .aipm-path__value,
+.aipm-path__node[data-state="amber"] .aipm-path__reason {
+  color: var(--warn);
+}
+/* Loading: grey frames of the same size, still (no shimmer). */
+.aipm-path__node--blank {
+  height: 76px;
+  background: var(--fill);
+  border-color: transparent;
+}
+.aipm-path__failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.aipm-path__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: -6px 0 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+@container (max-width: 640px) {
+  .aipm-path__nodes,
+  .aipm-path__nodes[data-count="3"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .aipm-path__step + .aipm-path__step {
+    padding: 22px 0 0;
+  }
+  .aipm-path__link {
+    top: 0;
+    left: 50%;
+    flex-direction: column;
+    width: auto;
+    height: 22px;
+    transform: translateX(-50%);
+  }
+  .aipm-path__link::before {
+    width: 1px;
+    height: 10px;
+  }
+  .aipm-path__link svg {
+    margin: -2px 0 0;
+    transform: rotate(90deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.aipm-path__node {
+    transition: none;
   }
 }
