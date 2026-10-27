@@ -110,6 +110,7 @@ import './document-motion.css';
 import { markdownHtml } from './markdown';
 import { answerChain, fromWorkbenchRun } from '../features/answer-chain/model';
 import { answerChainHtml } from '../features/answer-chain/view';
+import { holdsStageUnderDocument, selectSettled } from '../features/answer-chain/arrival';
 import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
@@ -269,6 +270,8 @@ const ui = {
   intake: { text: '', result: null, open: false },
   busy: false,
   lastRun: null,
+  // A queued test that settled in the background and has not been drawn yet.
+  settledRun: null,
   importDrafts: {},
   chatQuotes: {},
   practice: {},
@@ -5336,10 +5339,14 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     parts = parts.filter((p) => p !== 'stage');
   }
   // Under an open document the board stays as it is (B1); it catches up when the sheet closes.
-  if (parts.includes('stage') && ui.docSheet && WS.includes(ui.route) && !routeTask(a)) {
+  // A queued test that has just arrived is drawn once anyway (276-07).
+  const underDocument = !!ui.docSheet && WS.includes(ui.route) && !routeTask(a);
+  if (parts.includes('stage') && holdsStageUnderDocument(ui, a.tests || [], underDocument)) {
     ui.stageStale = true;
     parts = parts.filter((p) => p !== 'stage');
   }
+  if (parts.includes('stage') && (a.tests || []).some((t) => t.id === ui.settledRun))
+    ui.settledRun = null;
   if (parts.includes('stage') && dirty) flush();
   ui.notesCache = Coach.notes(a, E);
   const key = focusKey();
@@ -5816,6 +5823,7 @@ function resetAttemptUi() {
     compare: false,
     editPending: null,
     lastRun: null,
+    settledRun: null,
     reviewTab: 'rules',
     practice: {},
   });
@@ -7713,6 +7721,13 @@ function evidenceView(a, value) {
 }
 
 /* ---------- events ---------- */
+// A queued test settled in the background: select it where it was asked and redraw, without
+// waiting for the person to leave and come back.
+window.addEventListener('v4-test-settled', (e) => {
+  if (!e.detail?.testId) return;
+  selectSettled(ui, { caseId: e.detail.caseId ?? null, testId: e.detail.testId });
+  if (current() && WS.includes(ui.route)) refreshWS(['stage', 'rail']);
+});
 document.addEventListener('rolecraft:open-chat', (e) => {
   const role = ROLE_OF[e.detail?.roleId];
   if (role && current()) openChat(role);

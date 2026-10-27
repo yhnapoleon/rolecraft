@@ -83,6 +83,16 @@ const unconfirmed = () =>
     0,
     'response_unconfirmed',
   );
+/** A recovery read still unanswered after this long counts as unconfirmed; the next poll asks
+ * again. The poll that waited on it is released instead of holding every later poll back. */
+export const RECOVER_TIMEOUT_MS = 15000;
+function withinRecoverTime<T>(read: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(unconfirmed()), RECOVER_TIMEOUT_MS);
+  });
+  return Promise.race([read, late]).finally(() => clearTimeout(timer));
+}
 const copy = <T>(value: T): T => structuredClone(value);
 
 /** A grant issued on this page, with its secret: memory only, never journaled or stored. */
@@ -738,7 +748,9 @@ export class V4DataHost implements V4HostAdapter {
         throw new ApiError('Keep the original browser data', 0, 'storage_unavailable');
       let response: any;
       try {
-        response = await this.raw(this.path('/requests/' + encodeURIComponent(requestId)));
+        response = await withinRecoverTime(
+          this.raw(this.path(`/requests/${encodeURIComponent(requestId)}`)),
+        );
       } catch (error) {
         if (
           error instanceof ApiError &&

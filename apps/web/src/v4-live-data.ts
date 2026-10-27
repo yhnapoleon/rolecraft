@@ -362,8 +362,13 @@ export class V4LiveData {
     const testId = jobs
       .map((job) => job.effect?.result?.test?.id)
       .find((value): value is string => typeof value === 'string');
-    if (recovered.status === 'confirmed' && testId) this.linkTest(id, testId, origin, requestId);
-    else this.store.report({ error: assistantText('assistant_mode_queued_failed') });
+    if (recovered.status === 'confirmed' && testId) {
+      this.linkTest(id, testId, origin, requestId);
+      // The page selects the result that just arrived, so it shows without leaving and returning.
+      globalThis.dispatchEvent?.(
+        new CustomEvent('v4-test-settled', { detail: { caseId: origin.caseId ?? null, testId } }),
+      );
+    } else this.store.report({ error: assistantText('assistant_mode_queued_failed') });
     const { [requestId]: _settled, ...rest } = this.current(id).queuedTestRuns ?? {};
     this.store.update(id, { queuedTestRuns: rest });
   }
