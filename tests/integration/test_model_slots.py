@@ -105,17 +105,17 @@ def test_slot_01_unset_slot_variables_keep_shared_configuration_and_main_request
     assert [role["status"], assistant["status"]] == golden["statuses"]
     assert provider.kinds() == golden["kinds"]
     expected = list(golden["body_sha256"])
-    # Recorded on b07ec765: cooperative-help-v3 and artifact-review-v2
-    # (e9ba052f, 9b50d0f5, f3b67b9d). Reverting only those policy/review inputs
-    # reproduces the frozen role digests; all other request bytes are unchanged.
+    # Recorded on c1bcdd99 plus cooperative-help-v4 (one observation, one question when
+    # the learner asks about their own work) and artifact-review-v2. Only the colleague
+    # turn and its review change; all other request bytes are unchanged.
     role_digest, review_digest = {
         "zh": (
-            "286f107e39c7cee5f278e640149aed641ff1ca8dd905360a36befb29c78b56c2",
-            "6729b2ad2ca8023fafedf5d2c868ee278cc15b34e13dcfbbe852303b5eb98c9e",
+            "5a33efd864332c37047513c47dc0b1cea46beffed73681c82be74e2f7e97c445",
+            "bcddccb51690c7e068da85f11429db618b3b584c0a02cf71756db14812ceb4d0",
         ),
         "en": (
-            "822f94eaa426d20ca8ef2a141f4c4295f47f5bde3733e216f7d02d1004a470b8",
-            "e0addc843705b610a976ee8503173c7415854790d55a0e80680b87fb13d3d4ff",
+            "6ebe831e688adb2682c54a144289fc6d4b2546bad4144ec0594bf1efed465504",
+            "84b76c6499ddf8d3105446b9d6587f97842fa5a2f4182d69b22475200ef0542a",
         ),
     }[language]
     expected[golden["kinds"].index("role")] = role_digest
