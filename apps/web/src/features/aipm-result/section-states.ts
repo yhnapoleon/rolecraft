@@ -1,4 +1,4 @@
-/** "Judgements you improved before delivery" on the AIPM result page: per section, the first
+/** "Section reviews before delivery" on the AIPM result page: per section, the first
  * section review and the review of the delivered PRD version. Reads the stored reviews only;
  * it never creates a review and never changes the formal score. */
 import type { AipmClient } from '../../aipm/client';
@@ -70,8 +70,12 @@ const pointText = (p: ReviewPoint, language: Language) =>
     `${statusName(p.status, language)}（${versionName(p.version, language)}）`,
     `${statusName(p.status, language)} (${versionName(p.version, language)})`,
   );
-const tag = (p: ReviewPoint, language: Language) =>
-  `<span class="aipm-states__tag" data-status="${p.status}">${esc(statusName(p.status, language))}</span>` +
+const RANK: Readonly<Record<Status, number>> = { draft: 0, based: 1, solid: 2 };
+/** The delivered review stands higher than the first one: the improvement the data shows. */
+export const rose = (s: SectionState) =>
+  !!s.first && !!s.delivered && RANK[s.delivered.status] > RANK[s.first.status];
+const tag = (p: ReviewPoint, language: Language, rise = false) =>
+  `<span class="aipm-states__tag" data-status="${p.status}"${rise ? ' data-rise="true"' : ''}>${esc(statusName(p.status, language))}</span>` +
   `<span class="aipm-states__ver">${esc(versionName(p.version, language))}</span>`;
 const ARROW =
   '<svg class="aipm-states__arrow" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -100,33 +104,53 @@ export function rowSentence(s: SectionState, language: Language) {
 
 function rowPath(s: SectionState, language: Language) {
   const quiet = (words: string) => `<span class="aipm-states__none">${esc(words)}</span>`;
-  if (s.first && s.delivered) return `${tag(s.first, language)}${ARROW}${tag(s.delivered, language)}`;
+  if (s.first && s.delivered)
+    return `${tag(s.first, language)}${ARROW}${tag(s.delivered, language, rose(s))}`;
   if (s.first) return `${tag(s.first, language)}${ARROW}${quiet(NOT_REVIEWED_DELIVERED(language))}`;
   if (s.delivered) return tag(s.delivered, language);
   return quiet(NOT_REVIEWED(language));
 }
 
+/** The sections nobody reviewed, as one quiet closing line. */
+export function unreviewedLine(names: readonly string[], all: boolean, language: Language) {
+  if (all) return text(language, '交付前没有批改任何一节。', 'No section was reviewed before delivery.');
+  const list = names.join(text(language, '、', ', '));
+  return text(
+    language,
+    `其余 ${names.length} 节交付前没有批改：${list}`,
+    names.length === 1
+      ? `One other section was not reviewed before delivery: ${list}`
+      : `The other ${names.length} sections were not reviewed before delivery: ${list}`,
+  );
+}
+
+/** Reviewed sections first, each a button opening its review; the rest folded into one line. */
 export function sectionStatesHtml(states: readonly SectionState[], language: Language) {
-  const rows = states
+  const reviewed = states.filter((s) => s.open);
+  const rest = states.filter((s) => !s.open).map((s) => stepName(s.step, language));
+  const rows = reviewed
     .map((s) => {
-      const inner =
-        `<span class="aipm-states__name">${esc(stepName(s.step, language))}</span>` +
-        `<span class="aipm-states__path" aria-hidden="true">${rowPath(s, language)}</span>`;
-      if (!s.open)
-        return `<li><div class="aipm-states__row"><span class="sr-only">${esc(rowSentence(s, language))}</span>${inner.replace('class="aipm-states__name"', 'class="aipm-states__name" aria-hidden="true"')}</div></li>`;
       const label = `${rowSentence(s, language)}${text(language, '。打开这一次批改', '. Open this review')}`;
-      return `<li><button type="button" class="aipm-states__row" data-states-step="${s.step}" aria-label="${esc(label)}">${inner}<span class="aipm-states__open" aria-hidden="true">›</span></button></li>`;
+      return (
+        `<li><button type="button" class="aipm-states__row" data-states-step="${s.step}"${rose(s) ? ' data-rise="true"' : ''} aria-label="${esc(label)}">` +
+        `<span class="aipm-states__name">${esc(stepName(s.step, language))}</span>` +
+        `<span class="aipm-states__path" aria-hidden="true">${rowPath(s, language)}<span class="aipm-states__open">›</span></span>` +
+        '</button></li>'
+      );
     })
     .join('');
+  const restLine = rest.length
+    ? `<p class="aipm-states__rest">${esc(unreviewedLine(rest, !reviewed.length, language))}</p>`
+    : '';
   return `<h2 class="aipm-states__title" id="aipm-states-title">${esc(
-    text(language, '交付前你已改好的判断', 'Judgements you improved before delivery'),
+    text(language, '交付前的逐节批改', 'Section reviews before delivery'),
   )}</h2><p class="aipm-states__lead">${esc(
     text(
       language,
       '这是交付前各节的批改记录，不改变正式评分。',
       'These are the section reviews before delivery; they do not change the formal score.',
     ),
-  )}</p><ol class="aipm-states__list">${rows}</ol>`;
+  )}</p>${rows ? `<ol class="aipm-states__list">${rows}</ol>` : ''}${restLine}`;
 }
 
 // ---- Mount ----------------------------------------------------------------------------

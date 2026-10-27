@@ -5,6 +5,7 @@ import {
   mountSectionStates,
   readAllReviews,
   resetSectionStatesCache,
+  rose,
   rowSentence,
   sectionStates,
   sectionStatesHtml,
@@ -74,9 +75,34 @@ describe('section states', () => {
     expect(states).toHaveLength(7);
     expect(states.every((s) => s.open === null)).toBe(true);
     const html = sectionStatesHtml(states, 'en');
-    expect(html).toContain('Not reviewed on this version');
+    expect(html).toContain('No section was reviewed before delivery.');
+    expect(html).not.toContain('aipm-states__list');
     expect(html).not.toContain('data-states-step');
     expect(rowSentence(states[4], 'zh')).toBe('系统方案与市场做法：这一版没有批改过');
+  });
+
+  it('lists reviewed sections first and folds the rest into one closing line', () => {
+    const states = sectionStates(newestFirst(item('need', 1, 'draft'), item('need', 2, 'draft')), 2);
+    const html = sectionStatesHtml(states, 'zh');
+    expect(html.match(/data-states-step/g)).toHaveLength(1);
+    expect(html).toContain('其余 6 节交付前没有批改：看懂业务、');
+    expect(html.indexOf('data-states-step="need"')).toBeLessThan(html.indexOf('aipm-states__rest'));
+    expect(html).toContain('<h2 class="aipm-states__title" id="aipm-states-title">交付前的逐节批改</h2>');
+    // Draft → Draft did not rise; nothing turns green.
+    expect(html).not.toContain('data-rise');
+    const en = sectionStatesHtml(sectionStates(newestFirst(item('business', 1, 'solid')), 1), 'en');
+    expect(en).toContain('Section reviews before delivery');
+    expect(en).toContain('The other 6 sections were not reviewed before delivery: Users and stakeholders');
+  });
+
+  it('marks a status that rose, and only that row', () => {
+    const items = newestFirst(item('need', 1, 'draft'), item('need', 2, 'based'), item('business', 1, 'based'), item('business', 2, 'draft'));
+    const states = sectionStates(items, 2);
+    expect(rose(stepOf(states, 'need'))).toBe(true);
+    expect(rose(stepOf(states, 'business'))).toBe(false);
+    const html = sectionStatesHtml(states, 'en');
+    expect(html.match(/data-rise="true"/g)).toHaveLength(2); // the need row and its delivered tag
+    expect(html).toMatch(/data-states-step="need" data-rise="true"/);
   });
 
   it('keeps the first review when the delivered version was not reviewed again', () => {
@@ -153,7 +179,7 @@ describe('mounting', () => {
     await mountSectionStates(el as never, { client, submission, prdId: 'prd', language: 'zh', openReview });
     expect(el.hidden).toBe(false);
     expect(el.classes.has('aipm-states')).toBe(true);
-    expect(el.innerHTML).toContain('交付前你已改好的判断');
+    expect(el.innerHTML).toContain('交付前的逐节批改');
     expect(el.innerHTML).toContain('不改变正式评分');
     el.click('need');
     expect(openReview).toHaveBeenCalledWith('need', items[0].ref);

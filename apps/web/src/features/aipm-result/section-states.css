@@ -1,5 +1,6 @@
-/* "Judgements you improved before delivery": an instrument panel between the detail and the
-   work replay. Only "Holds up" is green; "Grounded" is an ink outline; "Draft" stays grey. */
+/* "Section reviews before delivery": an instrument panel between the detail and the work
+   replay. "Holds up" and a status that rose are green; "Grounded" is an ink outline; "Draft"
+   stays grey. Reviewed sections come first; the rest are one quiet line at the end. */
 .aipm-states {
   container-type: inline-size;
   min-width: 0;
@@ -41,7 +42,7 @@
 }
 .aipm-states__row {
   display: grid;
-  grid-template-columns: minmax(9em, 14em) minmax(0, 1fr) 16px;
+  grid-template-columns: minmax(9em, 14em) minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   width: 100%;
@@ -60,8 +61,10 @@ button.aipm-states__row {
   cursor: pointer;
   transition: background-color 160ms var(--ease-out);
 }
-button.aipm-states__row:hover {
-  background: var(--fill);
+@media (hover: hover) and (pointer: fine) {
+  button.aipm-states__row:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
 }
 button.aipm-states__row:focus-visible {
   outline: none;
@@ -101,6 +104,12 @@ button.aipm-states__row:focus-visible {
   background: var(--fill);
   color: var(--ink-3);
 }
+/* The delivered status is higher than the first one: the improvement, said by the data. */
+.aipm-states__tag[data-rise="true"] {
+  border-color: transparent;
+  background: var(--good-tint);
+  color: var(--good);
+}
 .aipm-states__ver {
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
@@ -113,24 +122,30 @@ button.aipm-states__row:focus-visible {
 .aipm-states__none {
   color: var(--ink-3);
 }
+/* Right after the state (8px with the path's 6px gap), so the row reads as one control. */
 .aipm-states__open {
+  margin-left: 2px;
   color: var(--ink-3);
   font-size: 16px;
   line-height: 1;
 }
+.aipm-states__rest {
+  margin: 6px 0 0;
+  padding: 8px 8px 4px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.aipm-states__lead + .aipm-states__rest {
+  padding-top: 0;
+  border-top: 0;
+}
 @container (max-width: 520px) {
   .aipm-states__row {
-    grid-template-columns: minmax(0, 1fr) 16px;
-    gap: 4px 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
     padding: 8px;
-  }
-  .aipm-states__path {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  .aipm-states__open {
-    grid-column: 2;
-    grid-row: 1 / span 2;
   }
 }
 @media (prefers-reduced-motion: reduce) {
