@@ -28,7 +28,7 @@ describe('recorded judgment chain', () => {
       '0.510',
       'α = 0.4',
       'Original source',
-      'Retrieval method not recorded',
+      'This record does not say which retrieval method ran',
     ])
       expect(h).toContain(v);
     expect(h).toContain('The checks disagree');
