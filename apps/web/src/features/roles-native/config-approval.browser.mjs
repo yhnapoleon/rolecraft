@@ -220,7 +220,7 @@ try {
       text('实时同步需要更多开发人日', 'Real-time sync needs more developer-days'),
     );
     const row = await innerText('[data-request-id]');
-    assert.ok(row.includes(text('开发人日：申请 7', 'Developer-days: requested 7')), row);
+    assert.ok(row.includes(text('开发人日：申请 7', 'Person-days: requested 7')), row);
     assert.ok(!row.includes(text('截止日', 'Deadline day')), row);
   });
 
@@ -233,7 +233,7 @@ try {
       card.includes(
         text(
           '开发人日：申请 7，超出上限 6；方案需要 7，超出上限 6',
-          'Developer-days: requested 7, over the ceiling of 6; the plan needs 7, over the ceiling of 6',
+          'Person-days: requested 7, over the ceiling of 6; the plan needs 7, over the ceiling of 6',
         ),
       ),
       card,
@@ -254,7 +254,7 @@ try {
       again.includes(
         text(
           '开发人日：申请 6；方案需要 7，超出上限 6',
-          'Developer-days: requested 6; the plan needs 7, over the ceiling of 6',
+          'Person-days: requested 6; the plan needs 7, over the ceiling of 6',
         ),
       ),
       again,
@@ -379,7 +379,7 @@ try {
     await clickReady(browser, text('核实申请', 'Check request'));
     await waitFor(
       browser,
-      `[...document.querySelectorAll('[data-decision-card] li.ok')].some((li) => li.innerText.includes(${JSON.stringify(text('开发人日：3 → 6（方案需要 6 · 上限 6）', 'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)'))}))`,
+      `[...document.querySelectorAll('[data-decision-card] li.ok')].some((li) => li.innerText.includes(${JSON.stringify(text('开发人日：3 → 6（方案需要 6 · 上限 6）', 'Person-days: 3 → 6 (plan needs 6 · ceiling 6)'))}))`,
       20000,
     );
     // No card offers a capped request once the allocation reaches it.
@@ -397,7 +397,7 @@ try {
         first.includes(
           text(
             '开发人日：申请 7，超出上限 6；方案需要 7，超出上限 6',
-            'Developer-days: requested 7, over the ceiling of 6; the plan needs 7, over the ceiling of 6',
+            'Person-days: requested 7, over the ceiling of 6; the plan needs 7, over the ceiling of 6',
           ),
         ),
       first,
@@ -442,18 +442,18 @@ try {
     );
     // Each request once with its latest decision, in the order they were made: 7, 6 and 7
     // declined, day 8 with 7 declined, then day 9 with 6 approved.
-    const declined7 = text('开发人日：申请 7 · 未批准', 'Developer-days: requested 7 · declined');
+    const declined7 = text('开发人日：申请 7 · 未批准', 'Person-days: requested 7 · declined');
     const decided = [
       declined7,
-      text('开发人日：申请 6 · 未批准', 'Developer-days: requested 6 · declined'),
+      text('开发人日：申请 6 · 未批准', 'Person-days: requested 6 · declined'),
       declined7,
       text(
         '截止日：申请第 8 天、开发人日：申请 7 · 未批准',
-        'Deadline day: requested day 8; Developer-days: requested 7 · declined',
+        'Deadline day: requested day 8; Person-days: requested 7 · declined',
       ),
       text(
         '截止日：申请第 9 天 · 已批准第 9 天、开发人日：申请 6 · 已批准 6',
-        'Deadline day: requested day 9 · approved day 9; Developer-days: requested 6 · approved 6',
+        'Deadline day: requested day 9 · approved day 9; Person-days: requested 6 · approved 6',
       ),
     ];
     assert.equal(
