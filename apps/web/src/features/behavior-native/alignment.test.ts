@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignmentHtml, behaviorHtml, symbolLabel, type Behavior } from './view';
+import { alignmentHtml, behaviorHtml, referenceLabels, symbolLabel, type Behavior } from './view';
 import { methodsHtml } from '../recognition-native/record-inspector';
 
 const base: Behavior = {
@@ -65,7 +65,8 @@ describe('alignment path in the technical record', () => {
         say('5 对，其中 2 对动作不同', '5 pairs, 2 with different actions'),
       ])
         expect(html).toContain(word);
-      expect(html).toContain('tabindex="0"');
+      // No inner scroll box: the list scrolls with the inspector.
+      expect(html).not.toContain('tabindex');
       expect(html).not.toMatch(/animation|transition/);
       if (l === 'en') expect(html).not.toMatch(/[一-鿿]/);
     },
@@ -104,5 +105,15 @@ describe('alignment path in the technical record', () => {
     expect(product(withPath)).toBe(product(without));
     expect(withPath.split('<rc-record-entry')[1]).toContain('br-align');
     expect(methodsHtml('en', 'behavior')).toContain('step-by-step match');
+  });
+
+  it('tells repeated reference names apart and keeps English punctuation half-width', () => {
+    const top = [{ strategy: 'test_heavy' }, { strategy: 'thorough' }, { strategy: 'test_heavy' }];
+    expect(referenceLabels(top, 'en')).toEqual(['Test-heavy · ref 1', 'Read, ask, then test', 'Test-heavy · ref 2']);
+    expect(referenceLabels(top, 'zh')[2]).toMatch(/· 参考 2$/);
+    expect(referenceLabels([{ strategy: 'thorough' }], 'en')).toEqual(['Read, ask, then test']);
+    const record = behaviorHtml(base, 'en').split('<rc-record-entry')[1];
+    expect(record).toContain('Declared execution source: ');
+    expect(record).not.toContain('：');
   });
 });

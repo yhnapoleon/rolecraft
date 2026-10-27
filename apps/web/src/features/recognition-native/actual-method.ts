@@ -113,12 +113,13 @@ const recorded = (value: unknown): value is RetrievalField =>
   !!value && typeof value === 'object' && 'method' in value;
 /** The retrieval method one sentence actually ran, from its own `retrieval`, the preview's
  * pass-wide `retrieval`, or an older record's `retrieval_method`. Absent means not recorded;
- * a recorded null means no candidate passages, never a guessed method. */
+ * a recorded null means no candidate passages, never a guessed method. A keyword fallback
+ * carries why in `note`. */
 export function retrievalMethod(
   unit: { retrieval?: unknown; retrieval_method?: unknown } | null | undefined,
   preview: object | null | undefined,
   language: Language,
-): { kind: RetrievalKind; label: string } {
+): { kind: RetrievalKind; label: string; note?: string } {
   const t = (zh: string, en: string) => (language === 'zh' ? zh : en);
   const field = recorded(unit?.retrieval)
     ? unit.retrieval
@@ -143,10 +144,7 @@ export function retrievalMethod(
   const label = {
     fused: t('语义检索 + 关键词检索融合', 'Semantic + keyword retrieval (fused)'),
     semantic: t('语义检索', 'Semantic retrieval'),
-    keyword_fallback: t(
-      '关键词检索（语义模型未加载）',
-      'Keyword retrieval (semantic model not loaded)',
-    ),
+    keyword_fallback: t('关键词检索', 'Keyword retrieval'),
     keyword: t('关键词检索', 'Keyword retrieval'),
     none: t('没有候选段落', 'No candidate passages'),
     unrecorded: t(
@@ -154,5 +152,8 @@ export function retrievalMethod(
       'This record does not say which retrieval method ran',
     ),
   }[kind];
-  return { kind, label };
+  // The fallback is the same method run for a reason; the reason reads as a quieter aside.
+  return kind === 'keyword_fallback'
+    ? { kind, label, note: t('（语义模型未加载）', ' (semantic model not loaded)') }
+    : { kind, label };
 }
