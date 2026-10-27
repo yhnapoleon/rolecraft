@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { AssistantConfig, EffectiveConfig } from '../../contracts-v2';
 import { WORK_COST } from '../../app/vocab.js';
@@ -32,7 +32,7 @@ export type PathNodeKey = OfflineKey | StageKey;
 export type PathNode = {
   key: PathNodeKey;
   name: string;
-  /** Hidden while the node is amber; the requested → effective line takes its place. */
+  /** The value in effect; an amber node adds the requested → effective line below its row. */
   value: string;
   note: string | null;
   identities: Identity[];
@@ -227,6 +227,8 @@ export async function readPath(data: Pick<V4HostAdapter, 'query'>): Promise<Path
 
 // ---- View ---------------------------------------------------------------------------------
 
+/** One step on the track: the same dot, name and identity as the test bench's answer chain,
+ * with the value in effect between. Only the main identity shows; the rest is in the title. */
 function Node({
   n,
   language,
@@ -236,58 +238,46 @@ function Node({
   language: Language;
   onSettings: (() => void) | null;
 }) {
-  const who = n.identities.map((i) => identityName(i, language)).join(' · ');
+  const [main, ...rest] = n.identities;
+  const clickable = n.settable && !!onSettings;
+  const title = [
+    n.note,
+    rest.length ? n.identities.map((i) => identityName(i, language)).join(' · ') : null,
+    !clickable && n.identities.includes('daniel')
+      ? text(language, '要调整，从测试台把失败的题交给 Daniel', 'To change this, hand a failed test to Daniel from the test bench')
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
   const body = (
     <>
       <span className="sr-only">{nodeSentence(n, language)}</span>
+      <span className="aipm-path__dot" aria-hidden="true" />
       <span className="aipm-path__name" aria-hidden="true">
         {n.name}
       </span>
-      {n.amber ? (
-        <>
-          <span className="aipm-path__value" aria-hidden="true">
-            {n.amber.change}
-          </span>
-          <span className="aipm-path__reason" aria-hidden="true">
-            {n.amber.reason}
-          </span>
-        </>
-      ) : (
-        <>
-          <span className="aipm-path__value" aria-hidden="true">
-            {n.value}
-          </span>
-          {n.note ? (
-            <span className="aipm-path__note" aria-hidden="true">
-              {n.note}
-            </span>
-          ) : null}
-        </>
-      )}
+      <span className="aipm-path__value" aria-hidden="true">
+        {n.value}
+      </span>
       <span className="aipm-path__who" aria-hidden="true">
-        {who}
+        {main ? identityName(main, language) : null}
+        {clickable ? <Settings2 size={12} strokeWidth={1.6} /> : null}
       </span>
     </>
   );
   const state = n.amber ? 'amber' : undefined;
-  if (n.settable && onSettings)
-    return (
-      <button type="button" className="aipm-path__node" data-state={state} onClick={onSettings}>
-        {body}
-      </button>
-    );
   return (
-    <div
-      className="aipm-path__node"
-      data-state={state}
-      title={
-        n.identities.includes('daniel')
-          ? text(language, '要调整，从测试台把失败的题交给 Daniel', 'To change this, hand a failed test to Daniel from the test bench')
-          : undefined
-      }
-    >
-      {body}
-    </div>
+    <li className="aipm-path__step" data-state={state}>
+      {clickable ? (
+        <button type="button" className="aipm-path__node" title={title || undefined} onClick={onSettings}>
+          {body}
+        </button>
+      ) : (
+        <div className="aipm-path__node" title={title || undefined}>
+          {body}
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -302,32 +292,44 @@ function Row({
   language: Language;
   onSettings: (() => void) | null;
 }) {
+  const amber = nodes.filter((n) => n.amber);
   return (
     <div className="aipm-path__row">
       <p className="aipm-path__row-title">{title}</p>
-      <ol className="aipm-path__nodes" aria-label={title} data-count={nodes.length}>
-        {nodes.map((n, i) => (
-          <li key={n.key} className="aipm-path__step">
-            {i > 0 ? (
-              <span className="aipm-path__link" aria-hidden="true">
-                <ChevronRight size={12} strokeWidth={1.6} />
-              </span>
-            ) : null}
-            <Node n={n} language={language} onSettings={onSettings} />
-          </li>
+      <ol className="aipm-path__nodes" aria-label={title}>
+        {nodes.map((n) => (
+          <Node key={n.key} n={n} language={language} onSettings={onSettings} />
         ))}
       </ol>
+      {amber.length ? (
+        // Each node already reads its own change aloud; these lines are for the eye.
+        <ul className="aipm-path__reasons" aria-hidden="true">
+          {amber.map((n) => (
+            <li key={n.key} className="aipm-path__reason">
+              <strong>{n.name}</strong>
+              {text(language, '：', ': ')}
+              {n.amber?.change}
+              {text(language, '。', '. ')}
+              {n.amber?.reason}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
 
 function Skeleton({ count }: { count: number }) {
   return (
-    <ol className="aipm-path__nodes" aria-hidden="true" data-count={count}>
+    <ol className="aipm-path__nodes" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: fixed placeholders, never reordered.
         <li key={i} className="aipm-path__step">
-          <span className="aipm-path__node aipm-path__node--blank" />
+          <span className="aipm-path__node aipm-path__node--blank">
+            <span className="aipm-path__dot" />
+            <span className="aipm-path__bar" />
+            <span className="aipm-path__bar" />
+          </span>
         </li>
       ))}
     </ol>
@@ -360,8 +362,8 @@ export function AnswerPathView({
       </h3>
       <p className="aipm-path__lead">
         {t(
-          '标「你的设置」的格子由你决定，标「Daniel 调」的由工程同事调整。保存方案不会改设置。',
-          'Cells marked "Your setting" are yours to decide; "Daniel tunes" cells are adjusted by engineering. Saving a proposal never changes settings.',
+          '标「你的设置」的环节由你决定，标「Daniel 调」的由工程同事调整。保存方案不会改设置。',
+          'Steps marked "Your setting" are yours to decide; "Daniel tunes" steps are adjusted by engineering. Saving a proposal never changes settings.',
         )}
       </p>
       {state.kind === 'failed' ? (

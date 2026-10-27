@@ -188,6 +188,22 @@ describe('answer path (design view)', () => {
     expect(sealed).toContain('打开实际设置');
   });
 
+  it('draws one dot track: main identity on the step, the rest in its title, reasons under the row', () => {
+    const e = effective({ update_strategy: 'realtime' }, { update_strategy: 'daily' }, { update_strategy: 'realtime_sync_not_provisioned' });
+    const view = answerPathView(read(e), 'en');
+    const page = html(
+      <AnswerPathView state={{ kind: 'ready', view }} language="en" onSettings={vi.fn()} onOpenSettings={vi.fn()} onRetry={vi.fn()} />,
+    );
+    expect(page.match(/class="aipm-path__dot"/g)).toHaveLength(8);
+    expect(page).not.toContain('>Your setting · Recognition model<');
+    expect(page).toMatch(/title="Out-of-scope detection\nYour setting · Recognition model"/);
+    expect(page).toContain(
+      '<li class="aipm-path__reason"><strong>Index updates</strong>: You asked: Real-time → in effect: Daily. Real-time sync needs 5 person-days that are not approved yet.</li>',
+    );
+    // Only the clickable steps carry the settings mark.
+    expect(page.match(/lucide-settings-2/g)).toHaveLength(5);
+  });
+
   it('shows loading frames, then a retry when the read fails', async () => {
     const loading = html(<AnswerPath data={{ query: () => new Promise(() => {}), subscribe: () => () => {}, snapshot: () => ({ asOf: null }) as never }} language="zh" readOnly={false} onSettings={vi.fn()} />);
     expect(loading).toContain('aipm-path__node--blank');
