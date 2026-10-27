@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from career_lab.aipm.review_model import SYSTEM
@@ -5,20 +7,38 @@ from career_lab.rubrics.v4.claim_status import claim_status_guide
 
 
 @pytest.mark.parametrize(
-    "language,proposal,completed",
+    "language,principles",
     [
-        ("zh", "提出另行采集实际工时", "声称现有字段或已经完成采集仍须有依据"),
+        (
+            "zh",
+            (
+                "现有记录中已有的信息、提议以后采集的信息，以及声称已经完成采集",
+                "仅凭现有资料缺少某个字段，不能否定以后采集该字段的提议",
+                "提议的方法及采集责任归属应另行核对",
+                "声称字段已经存在或采集已经完成，仍须有依据",
+                "不能把提议当成已验证结果",
+            ),
+        ),
         (
             "en",
-            "A proposal to collect actual handling time later",
-            "Claims that a field exists or collection is complete",
+            (
+                "information already in existing records, proposals for future collection, "
+                "and claims that collection is complete",
+                "A field missing from existing records alone cannot refute a proposal "
+                "to collect it later",
+                "Check the proposed method and responsibility for collection separately",
+                "Claims that a field already exists or collection is complete "
+                "still require evidence",
+                "never treat a proposal as a verified result",
+            ),
         ),
     ],
 )
-def test_reviewer_distinguishes_proposals_from_recorded_and_completed_claims(
-    language, proposal, completed
-):
+def test_reviewer_distinguishes_proposals_from_recorded_and_completed_claims(language, principles):
     guide = claim_status_guide(language)
-    assert proposal in guide
-    assert completed in guide
+    for principle in principles:
+        assert principle in guide
+    assert re.search(r"\b[A-Z]{1,12}-\d+\b", guide, re.IGNORECASE) is None
+    for case_detail in ("SD-", "实际工时", "actual handling time", "duration_minutes"):
+        assert case_detail.casefold() not in guide.casefold()
     assert guide in SYSTEM[language]
