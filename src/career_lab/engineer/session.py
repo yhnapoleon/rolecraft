@@ -67,10 +67,12 @@ from .colleague import (
     GRACE_ACTOR,
     credential,
     facts_of,
+    failure_of,
     grace_reply,
     grace_rule,
     pick,
     rules_for,
+    target_check,
 )
 from .execution import matches, run_query, suite_probes
 from .files import encode, file_ref, publish, retained_documentation
@@ -560,6 +562,24 @@ class EngineerService:
             rules = rules_for(facts_of(targets))
             if not rules:
                 return self.daniel_failed(module, sid, ticket_id, "no_rule")
+            # The failure each handed-over question showed, checked again in every trial. The
+            # trials run on the reproduced snapshot, so the targets' source versions hold.
+            sources: dict[str, int] = {}
+            for test in targets:
+                for key, version in test.execution.source_versions.items():
+                    sources[key] = max(version, sources.get(key, version))
+            failing = {
+                summary(test.query, QUERY_SUMMARY): failure
+                for test in targets
+                if (
+                    failure := failure_of(
+                        test.status,
+                        test.error_code,
+                        [(ref.object_id, ref.version) for ref in test.citations],
+                        sources,
+                    )
+                )
+            }
             self.handover_state(sid, ticket_id, state="trying")
             tried, skipped = [], []
             for rule in rules:
@@ -574,6 +594,7 @@ class EngineerService:
                     auth,
                     f"{run}-trial-{rule.id}",
                 )["trial"]
+                out["target"] = target_check(failing, out["rows"], sources)
                 tried.append((rule, out))
             if not tried:
                 return self.daniel_failed(module, sid, ticket_id, "no_valid_candidate", skipped)
@@ -638,7 +659,12 @@ class EngineerService:
                 ticket_id,
                 state="reported",
                 actor=DANIEL_ACTOR,
-                rule={"id": rule.id, "why": rule.why[language], "changes": changes},
+                rule={
+                    "id": rule.id,
+                    "why": rule.why[language],
+                    "changes": changes,
+                    "target": chosen["target"],
+                },
                 tried=[
                     {
                         "rule": r.id,
@@ -647,6 +673,8 @@ class EngineerService:
                         "counts": t["counts"],
                         # As the trial recorded it: requested settings not in effect, and why.
                         "effective_differences": t.get("effective_differences", {}),
+                        # Whether the handed-over questions' failure is gone, by rule.
+                        "target": t["target"],
                     }
                     for r, t in tried
                 ],

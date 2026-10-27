@@ -7,11 +7,15 @@ from career_lab.engineer.candidate import EDITABLE_FIELDS
 from career_lab.engineer.colleague import (
     CANDIDATE_RULES,
     MAX_TRIALS,
+    NO_HIT,
+    STALE_UNWARNED,
     facts_of,
+    failure_of,
     grace_reply,
     grace_rule,
     pick,
     rules_for,
+    target_check,
 )
 
 
@@ -48,6 +52,55 @@ def test_pick_takes_the_first_clean_trial_else_the_fewest_failures() -> None:
     trial = lambda failed, errors=0: {"counts": {"failed": failed, "errors": errors}}  # noqa: E731
     assert pick([(a, trial(1)), (b, trial(0)), (c, trial(0))])[0] is b
     assert pick([(a, trial(2)), (b, trial(1, 1)), (c, trial(1))])[0] is c
+
+
+def test_pick_prefers_a_trial_that_clears_the_targets_failure() -> None:
+    a, b, c = CANDIDATE_RULES[:3]
+
+    def trial(failed: int, cleared: int) -> dict:
+        target = {"failures": [STALE_UNWARNED], "questions": 1, "cleared": cleared}
+        return {"counts": {"failed": failed, "errors": 0}, "target": target}
+
+    # A clean public run that leaves the stale answer as it was does not win.
+    assert pick([(a, trial(0, 0)), (b, trial(1, 1)), (c, trial(0, 1))])[0] is c
+    assert pick([(a, trial(0, 0)), (b, trial(1, 1))])[0] is b
+    assert pick([(a, trial(0, 0)), (b, trial(1, 0))])[0] is a
+
+
+def test_the_failure_a_rule_can_check_is_a_stale_unwarned_answer_or_no_hit() -> None:
+    sources = {"policy": 2, "faq": 1}
+    assert failure_of("answered", None, [("policy", 1)], sources) == STALE_UNWARNED
+    assert failure_of("answered_with_warning", None, [("policy", 1)], sources) is None
+    assert failure_of("answered", None, [("policy", 2), ("faq", 1)], sources) is None
+    assert failure_of("fallback", "stale_source_guard", [], sources) is None
+    assert failure_of("fallback", "no_retrieval_hit", [], sources) == NO_HIT
+
+
+def _row(status: str | None, cited: list, result: str = "unchecked", query: str = "q") -> dict:
+    return {
+        "is_target": True,
+        "query": query,
+        "actual_status": status,
+        "error_code": None,
+        "citations": [{"object_id": o, "version": v} for o, v in cited],
+        "result": result,
+    }
+
+
+def test_a_trial_clears_the_target_only_when_its_failure_is_gone() -> None:
+    sources = {"policy": 2}
+    failing = {"q": STALE_UNWARNED}
+    warned = target_check(failing, [_row("answered_with_warning", [("policy", 1)])], sources)
+    assert warned == {"failures": [STALE_UNWARNED], "questions": 1, "cleared": 1}
+    current = target_check(failing, [_row("answered", [("policy", 2)])], sources)
+    assert current is not None and current["cleared"] == 1
+    stale = target_check(failing, [_row("answered", [("policy", 1)])], sources)
+    assert stale is not None and stale["cleared"] == 0
+    # A row that could not run clears nothing; questions that showed no failure are not counted.
+    broken = target_check(failing, [_row(None, [], "error")], sources)
+    assert broken is not None and broken["cleared"] == 0
+    assert target_check(failing, [_row("answered", [("policy", 1)], query="other")], sources) is None
+    assert target_check({}, [_row("answered", [("policy", 1)])], sources) is None
 
 
 def _eval(e1: str, e2: str, probes: tuple = (), hidden: int = 0) -> dict:

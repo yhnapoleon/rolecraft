@@ -11,7 +11,7 @@ import { signalsChanged } from '../../shell';
 import { keepGraceReply as keep } from './grace-signal';
 import type { GatewayTransport } from '../../gateway-transport';
 import { engineerApi, failureText, type DecisionResult } from './api';
-import { reviewResult, outcomeClean } from './hand-back';
+import { reviewResult, outcomeClean, withTargetCheck } from './hand-back';
 import { recordHandBack } from './local-state';
 import type { TicketDetail } from './model';
 
@@ -43,7 +43,8 @@ export async function colleagueReported(
     );
   const api = engineerApi(transport, sessionId);
   const record = await api.review(h.review_id);
-  const result = reviewResult(record, T('zh', 'en') as 'zh' | 'en');
+  // The board reads the target as the report does: from Daniel's rule check.
+  const result = withTargetCheck(reviewResult(record, T('zh', 'en') as 'zh' | 'en'), h.rule?.target);
   recordHandBack(sessionId, h.review_id, {
     at: new Date().toISOString(),
     ticketId: ticket.id,

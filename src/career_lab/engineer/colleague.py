@@ -46,8 +46,8 @@ class CandidateRule:
     why: dict[str, str] = field(default_factory=dict)
 
 
-# Tried in this order; the first that fixes the targets with no public probe failing wins,
-# otherwise the one with the fewest failures. Narrow changes come before broad ones.
+# Tried in this order; the first that clears the targets' failure with no public probe failing
+# wins, otherwise the one with the fewest failures. Narrow changes come before broad ones.
 CANDIDATE_RULES: tuple[CandidateRule, ...] = (
     CandidateRule(
         "freshness_warn",
@@ -113,12 +113,70 @@ def rules_for(facts: set[str]) -> list[CandidateRule]:
     return [rule for rule in CANDIDATE_RULES if rule.when in facts][:MAX_TRIALS]
 
 
+# The failure a handed-over question showed, which a rule can check again in a trial: an answer
+# citing an older version than its source with no warning, or nothing retrieved. Whether the
+# answer's content is right needs an expectation, which a handed-over question does not carry.
+STALE_UNWARNED = "stale_unwarned"
+NO_HIT = "no_hit"
+
+
+def failure_of(
+    status: str | None,
+    error_code: str | None,
+    cited: list[tuple[str, int]],
+    sources: dict[str, int],
+) -> str | None:
+    if status == "answered" and any(
+        version < sources.get(object_id, version) for object_id, version in cited
+    ):
+        return STALE_UNWARNED
+    if error_code == "no_retrieval_hit":
+        return NO_HIT
+    return None
+
+
+def target_check(
+    failing: dict[str, str], rows: list[dict[str, Any]], sources: dict[str, int]
+) -> dict[str, Any] | None:
+    """Whether a trial cleared the failure each handed-over question showed, by rule.
+
+    ``failing`` maps a target question (as trial rows summarise it) to its failure. A row that
+    could not run has not cleared anything. None when no target showed a rule-checkable failure.
+    """
+    checked = [row for row in rows if row["is_target"] and row["query"] in failing]
+    if not checked:
+        return None
+    cleared = sum(
+        row["result"] != "error"
+        and failure_of(
+            row["actual_status"],
+            row["error_code"],
+            [(c["object_id"], c["version"]) for c in row["citations"]],
+            sources,
+        )
+        != failing[row["query"]]
+        for row in checked
+    )
+    return {
+        "failures": sorted({failing[row["query"]] for row in checked}),
+        "questions": len(checked),
+        "cleared": cleared,
+    }
+
+
+def cleared(trial: dict[str, Any]) -> bool:
+    check = trial.get("target")
+    return check is None or check["cleared"] == check["questions"]
+
+
 def pick(tried: list[tuple[CandidateRule, dict[str, Any]]]) -> tuple[CandidateRule, dict[str, Any]]:
-    """The first candidate with no failure or error on the public probes, else the fewest."""
-    clean = [t for t in tried if not t[1]["counts"]["failed"] and not t[1]["counts"]["errors"]]
-    if clean:
-        return clean[0]
-    return min(tried, key=lambda t: t[1]["counts"]["failed"] + t[1]["counts"]["errors"])
+    """The first candidate that clears the targets' failure with no failure or error on the
+    public probes; otherwise the one clearing the targets with the fewest, else the fewest."""
+
+    def failures(t: tuple[CandidateRule, dict[str, Any]]) -> int:
+        return t[1]["counts"]["failed"] + t[1]["counts"]["errors"]
+
+    return min(tried, key=lambda t: (not cleared(t[1]), failures(t)))
 
 
 # Grace's rule on a signed report: apply only a fix that the trusted review found to repair
