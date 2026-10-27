@@ -1,0 +1,3172 @@
+{
+ "totals": {
+  "stored": {
+   "insufficient": 194,
+   "supported": 51,
+   "contradicted": 25
+  },
+  "whole": {
+   "insufficient": 205,
+   "supported": 61,
+   "contradicted": 4
+  },
+  "units": {
+   "insufficient": 174,
+   "supported": 84,
+   "contradicted": 12
+  }
+ },
+ "cited": {
+  "stored": {
+   "supported": 46,
+   "contradicted": 20,
+   "insufficient": 111
+  },
+  "whole": {
+   "supported": 61,
+   "insufficient": 112,
+   "contradicted": 4
+  },
+  "units": {
+   "supported": 63,
+   "insufficient": 107,
+   "contradicted": 7
+  }
+ },
+ "replies": [
+  {
+   "session": "73a5d8fdc512462d8e48011fac911eb5",
+   "scenario": "pm_pilot_v2",
+   "language": "zh",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "按已收到并已记录的资源口径，问题是“最多”与“现有额度”要分开看：",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "**当前委托里的预留容量是30人**，这是项目现有资源：[经理委托：内部知识助手试点 · v1]。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.755,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "**规则允许的审批上限是60人**：[经理发布：资源审批规则 · v1]。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.471,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "这是审批天花板，不等于已有容量，也不等于已批准60人。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "defer",
+     "units_confidence": 0.473,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "我看到的配置记录里，请求和实际参数都是 **participants 20、launch_day 7**：[试用配置与完整回答 · v1]。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.984,
+     "units_evidence": []
+    },
+    {
+     "quote": "这是某一试验配置的实际值，不能直接当作试点安排。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.986,
+     "units_evidence": []
+    },
+    {
+     "quote": "记录里也有“超出当前额度（未自动修改）：计划上线第10天晚于当前期限第7天”的条目：[试用配置与完整回答 · v1]，说明第10天方案在记录时并未自动生效。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.511,
+     "units_evidence": [
+      "material:trial_details@1"
+     ]
+    },
+    {
+     "quote": "所以，如果你的意思是“能邀请多少人”，要先确认你想匹配的是**当前30人容量**、**审批上限60人**，还是**配置里的20人**；",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.75,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "三者不能混用。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.937,
+     "units_evidence": []
+    },
+    {
+     "quote": "另外，我作为技术负责人只能解释资源和实现边界，试点开放人数要由经理的正式决定记录确定。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "你希望我按哪一种口径核实现有配置是否与拟邀请人数一致？",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "73a5d8fdc512462d8e48011fac911eb5",
+   "scenario": "pm_pilot_v2",
+   "language": "zh",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "需要，但要按真实缺口申请，不能因为“先开20人”就默认资源已齐。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "按[经理发布：资源审批规则 · v1]，任何容量、开发人日和正式试点期限的调整，都要先有申请、决定记录生效后由产品经理另行应用；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.987,
+     "units_evidence": []
+    },
+    {
+     "quote": "聊天里的询问或方案草稿都不等于批准。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "目前[经理委托：内部知识助手试点 · v1]写明项目预留容量30人、开发资源3人日、正式试点期限第7天。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.513,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "所以首批20人本身并不超出现有容量；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "真正可能需要申请的是配置所需的开发人日或期限是否超出预留。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.986,
+     "units_evidence": []
+    },
+    {
+     "quote": "如果要我审，请把请求条款、理由和拟实施配置写在一起，并说明哪一项超出现有资源。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.819,
+     "units_evidence": []
+    },
+    {
+     "quote": "按[经理发布：资源审批规则 · v1]，人工兜底要选human并含human_fallback工作项；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.958,
+     "units_evidence": []
+    },
+    {
+     "quote": "日更或政策人工核验还要scope_filter；",
+     "cited": false,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.778,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "实时策略要realtime_sync。",
+     "cited": false,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.84,
+     "units_evidence": [
+      "material:approvals@1",
+      "material:trial_details@1"
+     ]
+    },
+    {
+     "quote": "缺口以上的备用量规则允许，但不会自动评估其经济成本。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.455,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    }
+   ]
+  },
+  {
+   "session": "73a5d8fdc512462d8e48011fac911eb5",
+   "scenario": "pm_pilot_v2",
+   "language": "zh",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "不能直接这样算。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "这个数是陈敏在《陈敏的收益测算草稿 BC-01 · v1》里写的：“SD-120的重复率55%乘以780分钟，得到429分钟”，并且她自己注明“如果助手接住重复问题，十个工作日可释放429分钟支持时间”。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.477,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "但同一份草稿的附件栏写的是“需求样本SD-120”，没有另附按重复标记筛选的时长合计，也没有坐席工作计时表；",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.758,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "草稿本身也标为筹备期草稿v0.1，尚无员工试点结果。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.969,
+     "units_evidence": []
+    },
+    {
+     "quote": "关键问题在口径：《支持台导出 SD-120：咨询登记与字段口径 · v1》的字段字典写明 `duration_minutes = closed_at − accepted_at`，而“等待补资料、排队转交和复核期间，系统不暂停计时”；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.981,
+     "units_evidence": []
+    },
+    {
+     "quote": "导出也没有“坐席实际操作分钟”字段。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "defer",
+     "units_confidence": 0.456,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "原始行里例如 SD-089 账号核验从14:05到14:17，备注是“用户补信息”，这段时长主要不是坐席劳动。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.814,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "所以把780分钟的55%当成可释放的支持时间，会高估。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "另外这个55%是66次重复标记除以全部120次，分母是全部咨询而不是重复咨询的时长；",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.471,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "重复标记又由当班人员按相近问法手动勾选。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.798,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "要做有依据的测算，得带导出批次、行号和字段名去找陈敏核对现有记录，缺的原始资料由她协调、收到后另附来源——这是吕雯在字段口径材料里的附注。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.916,
+     "units_evidence": []
+    },
+    {
+     "quote": "就目前资料，429分钟只能算一个待核验的草稿估计，不能当节省人力上报。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "你现在是想先核对测算口径，还是要先定这一轮试用观察什么？",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "bd889762d2dd4118af30b1d22830ed6e",
+   "scenario": "pm_pilot_v2",
+   "language": "en",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "You're pointing at a real constraint, but the answer turns on a shortfall you can name and evidence, not on the wave size by itself.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "A 20-person first wave needs a resource request only if it exposes a shortfall above current allocation in one of the three covered types (capacity, developer-days, pilot deadline) — and unneeded term",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "What the records actually show:",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.831,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Current allocation** is 30 people, 3 developer-days and deadline day 7 ([Manager brief: an internal knowledge-assistant pilot · v1](material:manager-brief-30)).",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.466,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "A 20-person wave is inside the 30-person capacity, so capacity is not short.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.984,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Deadline**: the proposed day-10 setting is over the day-7 deadline, but day 10 exceeds the ceiling of day 10?",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.476,
+     "units_evidence": [
+      "material:trial_details@1"
+     ]
+    },
+    {
+     "quote": "No — the ceiling is day 10 ([Manager's published resource-approval rules · v1](material:resource-rules-ceilings)).",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.463,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "Keep in mind the day-10 plan also depends on `realtime_sync`, which alone takes 5 developer-days against 3 available ([Technical handover: capabilities and configuration · v1](material:technical-hando",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.744,
+     "units_evidence": [
+      "material:technical@1"
+     ]
+    },
+    {
+     "quote": "budget for it is not approved in the current plan.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.977,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Developer-days**: `scope_filter` is 1 day and the `human_fallback` entry point is 1 day;",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.821,
+     "units_evidence": [
+      "material:technical@1",
+      "material:trial_details@1"
+     ]
+    },
+    {
+     "quote": "those already appear effective in the trial settings, so a separate request only holds if you can show they are not actually funded.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Fallback staffing** is not a human-fallback resource request the rules cover;",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "Chen Min's 45 minutes a day is described in the notes as a discussion arrangement, and her original reply says that time is for understanding questions, not a duty commitment ([Information-security ru",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.845,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Benefit figure**: BC-01's 429 minutes comes from 55% × 780 minutes;",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.484,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "SD-120 has no active-work-minutes field and no duration sum for repeat rows, so that number is not yet a verified basis for a pilot case ([Chen Min's benefits estimate BC-01 · v1](material:bc-01);",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "[Service-desk export SD-120: requests and field definitions · v1](material:sd-120-fields)).",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "One question for you: which specific shortfall would a 20-person wave create —",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "bd889762d2dd4118af30b1d22830ed6e",
+   "scenario": "pm_pilot_v2",
+   "language": "en",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "On the resources as published, the pilot's ceiling is **60 people**, but that is an approval ceiling, not an approved pilot size.",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.504,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "The manager brief states the project \"currently has capacity for 30 people, 3 developer-days and a pilot deadline of day 7\" [Manager brief: an internal knowledge-assistant pilot · v1].",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.495,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "The manager's published rules set approval ceilings of \"capacity 60 people, 6 developer-days, and deadline day 10,\" and require every requested resource to correspond to a real shortfall above the cur",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.463,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "The trial configuration I can see lists `participants` as 20 [Trial settings and complete answers · v1].",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.985,
+     "units_evidence": []
+    },
+    {
+     "quote": "So: published approval ceiling 60;",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.97,
+     "units_evidence": []
+    },
+    {
+     "quote": "current capacity 30;",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.976,
+     "units_evidence": []
+    },
+    {
+     "quote": "the recorded trial setting is 20. Which figure applies to your pilot depends on what has actually been approved and recorded — a resource allocation changes only after a decision is recorded, and the ",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.979,
+     "units_evidence": []
+    },
+    {
+     "quote": "I have no record here of a recorded approval above 30.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "My question: for the audience you have in mind, what is the actual participant shortfall above the current 30-person allocation that would justify a larger request?",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "bd889762d2dd4118af30b1d22830ed6e",
+   "scenario": "pm_pilot_v2",
+   "language": "en",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "No — not directly, and that's the key point about the 429-minute figure.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.979,
+     "units_evidence": []
+    },
+    {
+     "quote": "**What 429 actually is:** Per Chen Min's benefits estimate BC-01 · v1, it is SD-120's repeat rate (55%) multiplied by total elapsed time (780 minutes).",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.761,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "But SD-120 defines duration_minutes as closed_at − accepted_at, and the clock keeps running while the requester supplies missing information, while a case waits for transfer, and during review.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.75,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "The export has **no field for minutes of active staff work**.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.745,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "So 429 minutes is elapsed time attributed to repeat-marked requests, not measured labor time.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.977,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Concrete counterevidence in the same export:**",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "SD-014 (meeting-room link): accepted 09:10/closed 09:14 — \"Sent the link;",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.449,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "waited for confirmation.\"",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.899,
+     "units_evidence": []
+    },
+    {
+     "quote": "The gap is waiting, not work.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "SD-061 (hotel exception): accepted 10:20/closed 10:38 — \"Transferred to the expense owner at 10:23.\" Most of that elapsed time sat with a different owner.",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.806,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "SD-089 (account verification): \"Requester supplied missing details\" — the clock ran while the requester acted.",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.983,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Also worth noting:** the 55% denominator is all 120 requests (66 repeat-intent marks), which is a definition choice, not a labor-savings rate.",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.769,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "And BC-01 · v1 says itself there is no separate sum of durations for repeat-marked rows and no staff time sheet attached.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.869,
+     "units_evidence": []
+    },
+    {
+     "quote": "So the honest position: BC-01 is a preparation-stage estimate, and 429 minutes can't be claimed as freed support time without active-handling-time evidence.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "If you want that checked against the records, Chen Min's own note in BC-01 · v1 says: \"If someone wants to check my estimate, send me the specific fields.\"",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.914,
+     "units_evidence": []
+    },
+    {
+     "quote": "Would you like to point to the specific SD-120 rows/fields you'd want her to review?",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.987,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "336534b2598f470e894939bc765d7a8b",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "zh",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "是的，20人本身构成真实缺口，但仍要按资源审批规则正式申请，不能把人数写进去就直接开。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "原因是当前给这个项目预留的只有30人、3人日、第7天，而你提到的20人是筹备配置草案中的数字；",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.502,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "草案不等于已获批资源或开放日期。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.78,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "见《经理委托：IT 工单助手试点 · v1》和《经理发布：资源审批规则 · v1》。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "申请要写清请求条款、理由和拟实施配置，并按规则匹配人力兜底：fallback选human、包含human_fallback工作项。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.943,
+     "units_evidence": []
+    },
+    {
+     "quote": "若按日更或政策人工核验来安排，还要scope_filter；",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.898,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "实时策略则需realtime_sync，但它单列5人日，已经超过3人日预算，这一点得在取舍里说明。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "contradicted",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.468,
+     "units_evidence": [
+      "material:technical@1"
+     ]
+    },
+    {
+     "quote": "未满足这些条件会被退回补齐。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.933,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "还有一点需要你先定：首批20人具体取哪个组，还是从INV-50里按什么口径挑？",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "这会影响你申请条款的写法，但申请本身仍需另行审批，聊天里的讨论不算批准。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.987,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "336534b2598f470e894939bc765d7a8b",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "zh",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "经理给这个项目的预留是 **30 人**，不是当前草稿里的 20 人。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.745,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "依据是《经理委托：IT 工单助手试点 · v1》原文：“目前为项目预留的容量是30人，可用开发资源3人日，正式试点期限为第7天。”",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.795,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "同时要区分三件事：那份 20 人、第 7 天的筹备配置只是草案，“已有草案不代表资源或上线日期已获批”；",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.506,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "经理委托明确说“本次委托以上方预留为准，请核对后决定提出什么建议”。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.794,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "资源审批规则里的 60 人是可审批上限，不等于本项目已获资源。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "defer",
+     "units_confidence": 0.48,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "开工前请以决定记录为准。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.984,
+     "units_evidence": []
+    },
+    {
+     "quote": "另外，人数能批下来不等于助手对 30 人都可靠：陈敏只承诺每天 45 分钟查看记录，人工兜底的人员和响应约定还没确认。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.961,
+     "units_evidence": []
+    },
+    {
+     "quote": "这两点要一起写进建议。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "如果你要定邀请名单，我的问题是：这部分容量是给 30 人全部正式试用，还是先小范围试用再扩？",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "336534b2598f470e894939bc765d7a8b",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "zh",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "不能直接把 429 分钟算成节省的服务台人力。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "我自己的草稿把两个口径混在了一起，先把卡住的地方说清楚。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "在[陈敏的收益测算草稿 BC-01 · v1]里，429 分钟是这么来的：SD-120 的重复率 55% 乘以 780 分钟。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.522,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "但 [服务台导出 SD-120：工单登记与字段口径 · v1] 写明，`duration_minutes = closed_at − accepted_at`，等待用户补截图、排队转派二线、复核期间系统不暂停计时；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.987,
+     "units_evidence": []
+    },
+    {
+     "quote": "导出也没有“工程师实际处理分钟”字段。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.744,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "也就是说，780 分钟里包含的不是工程师一直在干活的时间，把其中一部分直接说成可释放的人力，口径上站不住。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "同样在 SD-120 里，原始行也能看出这一点：SD-014 结单备注是“发指引，等用户确认”，SD-089 是“用户补信息”，这些时长里有等待成分。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.833,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "要谈节省，至少得先拿到工程师实际处理的时长，或者明确把“等待时间”与“处理时间”分开；",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.923,
+     "units_evidence": []
+    },
+    {
+     "quote": "这份导出给不了这个拆分。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "[服务台导出 SD-120：工单登记与字段口径 · v1] 也留了口子：需要核对时可以带导出批次、行号和字段名来讨论现有记录，仍缺的原始资料由我协调。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.982,
+     "units_evidence": []
+    },
+    {
+     "quote": "我这边还没逐项核过这些字段，所以现在只能承认 429 分钟不能当人力节省用，还不能给你一个替换后的数字。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "你手上如果有具体行号或字段名想用来反证，直接发我，我按记录改测算。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.982,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "a187b7c68b1c48e9990daae579c0fb1b",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "en",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "No — not directly, and I need to correct my earlier position on this.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.939,
+     "units_evidence": []
+    },
+    {
+     "quote": "I initially advocated the 429-minute figure from BC-01 without having checked every SD-120 field.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "Having now looked at the field definitions, I retract that as a labor-savings estimate.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "The key fact: SD-120 defines `duration_minutes = closed_at - accepted_at`, and the export explicitly states \"The export has no field for minutes of active engineer work\" [Service-desk export SD-120: t",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.857,
+     "units_evidence": []
+    },
+    {
+     "quote": "The clock keeps running while the requester supplies screenshots, during second-line transfer waits, and during review.",
+     "cited": false,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.788,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "So elapsed time is not the same as time the desk actively worked.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "The 429 figure in [Chen Min's benefits estimate BC-01 · v1] is 55% × 780 minutes, and 780 is total elapsed time across all 120 tickets.",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.75,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "It multiplies an elapsed-time total, not a labor total, and BC-01 itself notes there is \"no separate sum of durations for repeat-marked rows and no engineer time sheet attached.\"",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.912,
+     "units_evidence": []
+    },
+    {
+     "quote": "It's a preparation draft with no pilot results.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.982,
+     "units_evidence": []
+    },
+    {
+     "quote": "Some rows illustrate why elapsed ≠ worked, e.g. SD-014 (accepted 09:10/closed 09:14, \"Sent the instructions;",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "decide",
+     "units_confidence": 0.957,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "waited for confirmation\") and SD-089 (requester supplied missing details) [SD-120 · v1].",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.907,
+     "units_evidence": []
+    },
+    {
+     "quote": "And C's interview note: a requester stopped replying and another re-asked elsewhere, \"Both tickets were marked complete when closed\" [Preparation interviews INT-03 · v1].",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "On my side, I won't treat waiting time as labor saved.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "What I can support is that BC-01's 429 is an elapsed-time-based upper bound with no engineer-time evidence behind it.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "Chen Min herself said: \"If someone wants to check my estimate, send me the specific fields\" [BC-01 · v1].",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.823,
+     "units_evidence": []
+    },
+    {
+     "quote": "So my main question back to you: do you want to reconstruct a defensible service-desk value measure from SD-120's actual fields (repeat_intent marks by category, elapsed time as a bound), or is your a",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "a187b7c68b1c48e9990daae579c0fb1b",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "en",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "Before I answer that, one observation with its qualifications: whether resources are needed isn't determined by the headcount of 20 alone.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "Under the published rules, a request must correspond to a real shortfall above the current allocation, and my current approved allocation is already 30 people, 3 developer-days and a pilot deadline of",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.757,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "[Manager's published resource-approval rules · v1]).",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "So a 20-participant wave sits inside current capacity, but developer-days and the deadline depend on which configuration you intend to run, and the saved day-7 / 20-participant setup is explicitly a p",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "The relevant configuration facts I have: the work-item costs are 1 developer-day for scope filtering, 1 for a human-fallback entry point, and 5 for real-time synchronization, and human fallback is a s",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.942,
+     "units_evidence": []
+    },
+    {
+     "quote": "Rules also require human fallback to be set with the human_fallback work item, and manual policy verification requires scope_filter ([Manager's published resource-approval rules · v1]).",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.923,
+     "units_evidence": []
+    },
+    {
+     "quote": "You haven't asked me to approve anything yet, so nothing is pending on my side.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.979,
+     "units_evidence": []
+    },
+    {
+     "quote": "One main question so I can judge whether a request is warranted at all:",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "Which configuration do you intend for the 20-person wave — the current applied settings, or one that includes real-time synchronization or manual policy verification — and what specific shortfall does",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.746,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    }
+   ]
+  },
+  {
+   "session": "a187b7c68b1c48e9990daae579c0fb1b",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "en",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "The published resource ceiling for capacity is 60 people — [Manager's published resource-approval rules · v1].",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.465,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "That is an approval ceiling, not an approved pilot size.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.974,
+     "units_evidence": []
+    },
+    {
+     "quote": "As I understand it, [Manager brief: an IT ticket-assistant pilot · v1] gives a working allocation of capacity for 30 people with 3 developer-days and a pilot deadline of day 7, and the saved setup is ",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.756,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "saving a setup does not mean its resources or launch date are approved.",
+     "cited": false,
+     "stored": "contradicted",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.497,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "One point that affects any request: [Manager's published resource-approval rules · v1] says every requested resource must correspond to a real configuration shortfall above the current allocation, and",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.975,
+     "units_evidence": []
+    },
+    {
+     "quote": "So the number to propose should follow from the audience and configuration you actually plan to test, not from the ceiling.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.924,
+     "units_evidence": []
+    },
+    {
+     "quote": "Do you want the ceiling figures, or the evidence needed to justify a particular participant number?",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.964,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "f20d2d9c19754f589441704968c944ba",
+   "scenario": "pm_pilot_v2",
+   "language": "zh",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "需要申请，但按你现在说的“首批只开 20 人”，要证明的是现有资源不够 20 人这一配置，而不是直接要满额。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "依据《经理发布：资源审批规则 · v1》：每项资源申请必须对应“超过现有资源的真实配置缺口”；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.82,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "没有人数缺口的容量申请会被拒绝。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "defer",
+     "units_confidence": 0.449,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "另外，《经理委托：内部知识助手试点 · v1》写明目前为项目预留容量 30 人、开发资源 3 人日、正式试点期限第 7 天。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.509,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "因此只开 20 人本身不构成对预留容量的缺口，除非你的目标配置需要 20 人以外的容量或额外工作项，且这些超出已预留的部分有具体理由。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.95,
+     "units_evidence": []
+    },
+    {
+     "quote": "同时，规则要求请求条款写清请求条款、理由和拟实施配置，并安排人工兜底（fallback 为 human、包含 human_fallback 工作项）；",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.94,
+     "units_evidence": []
+    },
+    {
+     "quote": "若涉及日更或政策人工核验还需 scope_filter，实时策略还需 realtime_sync。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.787,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "你打算用于这 20 人的具体配置和工作项是哪些？",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.974,
+     "units_evidence": []
+    },
+    {
+     "quote": "这决定到底有没有需要申请的缺口。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.792,
+     "units_evidence": []
+    },
+    {
+     "quote": "建议你先看未读的审批规则与配置材料，再提交申请。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "f20d2d9c19754f589441704968c944ba",
+   "scenario": "pm_pilot_v2",
+   "language": "zh",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "不能直接算成节省的人力。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "429分钟来自 BC-01 草稿里“55% 重复率 × 780分钟”的算法，而 SD-120 的字段口径不足以支撑把它当作可节省劳动时间：duration_minutes 是结单时间减接单时间，等待补资料、排队转交和复核期间系统并不暂停计时，导出也没有“坐席实际操作分钟”这个字段。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.986,
+     "units_evidence": []
+    },
+    {
+     "quote": "吕雯在《支持台导出 SD-120：咨询登记与字段口径 · v1》里也注明未逐条填写人工操作时长。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "SD-014、SD-061、SD-089 这几行就是含等待和转交的例子。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.852,
+     "units_evidence": []
+    },
+    {
+     "quote": "所以 BC-01 原文的 429分钟可以保留为草稿测算，但不能等同于释放出来的支持时间；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.962,
+     "units_evidence": []
+    },
+    {
+     "quote": "这正是我此前需要修正的地方。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.985,
+     "units_evidence": []
+    },
+    {
+     "quote": "要继续核对，主要问题是你打算用哪个口径替代它：是按坐席实际操作时间重算，还是先缩小到可核验的重复问题范围？",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "f20d2d9c19754f589441704968c944ba",
+   "scenario": "pm_pilot_v2",
+   "language": "zh",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "按已批准资源，目前能上的是 **20 人**，不是我之前可能听到的 30 或 60。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "依据：《经理委托：内部知识助手试点 · v1》给项目预留容量是 30 人；",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.772,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "《经理发布：资源审批规则 · v1》写的可审批上限是 60 人。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.483,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "但这两个是委托背景和审批上限，不是当前已生效的运行配置。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "《试用配置与完整回答 · v1》里实际配置的 `participants` 是 20、`launch_day` 是 7，也就是当前实际批次按 20 人、第 7 天执行。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.939,
+     "units_evidence": []
+    },
+    {
+     "quote": "若要扩到 30 或 60，需要按《经理发布：资源审批规则 · v1》提出对应容量缺口的申请，且决定记录生效后才调整额度，配置还要由产品经理另行应用——这些我目前没有看到已批准记录。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.972,
+     "units_evidence": []
+    },
+    {
+     "quote": "另外提醒一点：容量只是人数上限，不代表试点可以直接开放。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.966,
+     "units_evidence": []
+    },
+    {
+     "quote": "当前实际配置里 `fallback` 是 human、含 human_fallback 工作项，但陈敏在《信息安全规则与陈敏的安排回复 · v1》中明确说“这段时间供我了解问题，不等于有人值班接单。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.955,
+     "units_evidence": []
+    },
+    {
+     "quote": "人工兜底的人员、服务时段和响应约定还没有确认”，所以“转人工”目前只是提示，不会自动建单。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.901,
+     "units_evidence": []
+    },
+    {
+     "quote": "你是想确认现有 20 人的开放名单，还是在准备一份扩容到 30 人以上的申请？",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "如果是后者，我可以帮你核对缺口和预算。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "07121b53023b43bda1a98570c828150f",
+   "scenario": "pm_pilot_v2",
+   "language": "en",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "**Main observation: No — the 429-minute figure mixes elapsed clock time with staff work, so it cannot be counted directly as labor saved.** Supporting qualifications: BC-01 computes 55% × 780 minutes,",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "The export defines duration_minutes = closed_at − accepted_at, and states the clock keeps running while a requester supplies missing information, while a case waits for transfer, and during review;",
+     "cited": false,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.845,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "there is no field for minutes of active staff work [Service-desk export SD-120: requests and field definitions · v1].",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "The repeat_intent mark is also manual and approximate (\"similarly worded requests\"), and the 55% uses all 120 requests as its denominator.",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.496,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "Field-level examples from the same export show elapsed time that is not staff work: SD-014, meeting-room entry, accepted 09:10/closed 09:14, note \"Sent the link;",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.862,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "waited for confirmation\";",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.88,
+     "units_evidence": []
+    },
+    {
+     "quote": "SD-061, hotel exception, accepted 10:20/closed 10:38, note \"Transferred to the expense owner at 10:23\";",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.779,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "SD-089, account verification, accepted 14:05/closed 14:17, note \"Requester supplied missing details.\"",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.866,
+     "units_evidence": []
+    },
+    {
+     "quote": "These rows are included in the category totals [Service-desk export SD-120 · v1].",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.932,
+     "units_evidence": []
+    },
+    {
+     "quote": "Category context, for reference only: Office FAQ 288 minutes / 50 repeat marks;",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.972,
+     "units_evidence": []
+    },
+    {
+     "quote": "policies and procedures 324 minutes / 14 repeat marks;",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.774,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "sensitive individual cases 168 minutes / 2 repeat marks [Service-desk export SD-120 · v1].",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "Note the distribution differs sharply from the single blended 429-minute figure, so a per-category reading matters.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "On my earlier position: I had advocated the 429-minute BC-01 estimate without checking every SD-120 field.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "With the field evidence above, I accept that the estimate cannot be treated as labor saved as written.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "Chen Min has said she wants the specific fields sent to her for checking — the export itself says to bring the batch, row and field to Chen Min, and that missing source material should be attached whe",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "That hasn't happened yet;",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.817,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "no reply or revision record exists.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "One question: when you take the specific fields above to Chen Min, do you want the review limited to SD-120 duration and repeat_int",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "07121b53023b43bda1a98570c828150f",
+   "scenario": "pm_pilot_v2",
+   "language": "en",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "The ceiling published in the manager's rules is 60 people, but the pilot itself is currently scoped to 20 participants at a launch day of 7.",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "contradicted",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.543,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "Approval ceiling: \"capacity 60 people, 6 developer-days, and deadline day 10\" — [Manager's published resource-approval rules · v1]",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.526,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "Current allocation and pilot plan: participants 20, launch_day 7 — [Trial settings and complete answers · v1]",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.75,
+     "units_evidence": [
+      "material:trial_details@1"
+     ]
+    },
+    {
+     "quote": "The current brief records \"capacity for 30 people, 3 developer-days and a pilot deadline of day 7\" — [Manager brief: an internal knowledge-assistant pilot · v1]",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.471,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "One qualification matters: the approval rules say every requested resource \"must correspond to a real configuration shortfall above the current allocation,\" and a capacity request with no participant ",
+     "cited": false,
+     "stored": "contradicted",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.973,
+     "units_evidence": []
+    },
+    {
+     "quote": "So 60 is a ceiling, not a granted number — I have not seen a recorded decision raising the participants above 20. Also, a capacity change only takes effect once the decision is recorded, and the Produ",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.987,
+     "units_evidence": []
+    },
+    {
+     "quote": "Whether a higher headcount is actually needed is a decision that rests on participant evidence I have not been given — the candidate list and service-desk export are outside what I can disclose here.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.979,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "07121b53023b43bda1a98570c828150f",
+   "scenario": "pm_pilot_v2",
+   "language": "en",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "A question like this is really a business-judgment call on my side (I own capacity, developer-days and deadlines), so I'll give you what the published rules actually say and then ask one thing.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.926,
+     "units_evidence": []
+    },
+    {
+     "quote": "From [Manager's published resource-approval rules · v1]: every requested resource must correspond to a real configuration shortfall **above the current allocation**;",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.848,
+     "units_evidence": []
+    },
+    {
+     "quote": "the amount must cover the need and stay within the ceiling (capacity 60 people, 6 developer-days, deadline day 10).",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.853,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "A capacity request with no participant shortfall is rejected, and a mixed request with unnecessary terms is returned as a whole.",
+     "cited": false,
+     "stored": "contradicted",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "decide",
+     "units_confidence": 0.904,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "Commitments only change once the decision is recorded successfully — conversational support doesn't do that.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "decide",
+     "units_confidence": 0.897,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "So the size of the first wave alone doesn't answer it: 20 participants already fits within the current capacity allocation of 30 people ([Manager brief: an internal knowledge-assistant pilot · v1]).",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.744,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "Whether any *other* request is justified depends on genuine shortfalls in your proposed configuration, not on the wave size.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "The related context I'm holding: the demonstration is booked for day 5 ([Manager's calendar: internal demonstration · v1]), and the invite decision is recorded separately after I get your recommendati",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.773,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "INV-50 lists 50 candidates across three groups and none have been invited or confirmed ([Candidate invitation list INV-50 · v1]) — and note the list counts people, not requests ([same · v1]).",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.9,
+     "units_evidence": []
+    },
+    {
+     "quote": "Xu Qing's note claiming \"45 minutes a day\" for human fallback maps to Chen Min's own original wording, which said only that she \"can set aside 45 minutes a day to look at trial questions and handoff r",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.939,
+     "units_evidence": []
+    },
+    {
+     "quote": "The one question: for the 20-person first wave you have in mind, can you give me your proposed configuration and the exact shortfall it creates relative to the current allocation, so I can judge wheth",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.98,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "55ec89886a3b4a209752878fbf093834",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "zh",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "不能直接把 429 分钟算成节省的服务台人力。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "这个数字来自 BC-01 草稿里的“重复率55%乘以780分钟”，但 SD-120 的字段口径说明，780 分钟是 `closed_at − accepted_at` 的接单到结单时长合计，等待用户补截图、排队转派二线、复核期间系统都不暂停计时；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.46,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "导出里也没有“工程师实际处理分钟”字段。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "defer",
+     "units_confidence": 0.452,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "因此这 780 分钟包含了等待和非处理环节，不能整段当作人工劳动量。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "另外，BC-01 附件栏只写了“需求样本SD-120”，没有另附按重复标记筛选的时长合计，也没有工程师工作计时表，所以“429分钟”目前只是一个按重复率折算的草稿测算，不是可直接核对的节省工时。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.758,
+     "units_evidence": []
+    },
+    {
+     "quote": "如果要把它变成可检查的依据，需要按 SD-120 的具体行号和字段名逐项核对实际处理时长；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "这份原始资料仍缺，按吕雯的附注应由陈敏协调补齐，收到后另附来源。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.832,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    }
+   ]
+  },
+  {
+   "session": "55ec89886a3b4a209752878fbf093834",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "zh",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "目前能明确引用的安排是：经理委托里写的是“目前为项目预留的容量是30人，可用开发资源3人日，正式试点期限为第7天”（《经理委托：IT 工单助手试点 · v1》）。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.514,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "同一份材料还写明“当前保存的是20人、第7天的筹备配置草案。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.885,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "已有草案不代表资源或上线日期已获批”；",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.799,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "资源审批规则里可审批上限是60人，但这是审批上限，不等于本次已经批到60人（《经理发布：资源审批规则 · v1》）。",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.467,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "工作区里那份试验配置卡中的 `participants 20` 属于接手前的独立试验，不是当前配置版本。",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.889,
+     "units_evidence": [
+      "material:trial_details@1"
+     ]
+    },
+    {
+     "quote": "所以如果你问的是“本次试点能实际开放多少人”，我现在没有看到已批准的最终数值，只能说到预留30人这一层；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "30人是否就是你要填进建议里的开放范围，还需要按审批记录确认。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "supported",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "55ec89886a3b4a209752878fbf093834",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "zh",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "需要，但申请什么取决于你实际要用的配置与当前预留之间有没有缺口。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.984,
+     "units_evidence": []
+    },
+    {
+     "quote": "当前为项目预留的是30人、3人日、正式试点期限第7天（[经理委托：IT 工单助手试点 · v1]）；",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.489,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "首批20人本身不构成容量缺口，所以单为“20人”申请扩容不会成立。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.977,
+     "units_evidence": []
+    },
+    {
+     "quote": "若你想开的是试用配置卡里那份20人、第10天的草案，则第10天晚于第7天，属于真实日期缺口，需在申请里写明请求条款、理由和拟实施配置，并安排人工兜底（fallback=human、含human_fallback工作项）；",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "contradicted",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.744,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "涉及日更或政策人工核验还要scope_filter，实时策略要realtime_sync（[经理发布：资源审批规则 · v1]）。",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.981,
+     "units_evidence": []
+    },
+    {
+     "quote": "还要提醒一句：配置卡明确写着那些是接手前的独立试验、不是当前工作区的配置版本（[试用配置与完整回答 · v1]）；",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.864,
+     "units_evidence": []
+    },
+    {
+     "quote": "已有草案也不代表资源或上线日期已获批。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.736,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "另外，你工作区里几份需求、技术、审批和规则材料还没读，建议先核对一遍再定申请条款。",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.992,
+     "units_evidence": []
+    },
+    {
+     "quote": "你打算按第7天、30人以内开20人，还是坚持第10天那份草案？",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "contradicted",
+     "units": "contradicted",
+     "units_decision": "defer",
+     "units_confidence": 0.556,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    }
+   ]
+  },
+  {
+   "session": "1705ecdab0b1497d9d6be27d4f62fd08",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "en",
+   "role": "business_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "No — not from the records I have.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.984,
+     "units_evidence": []
+    },
+    {
+     "quote": "My main observation: BC-01's 429 minutes is a derived figure, not a labor measurement, and the export it rests on does not contain a field for active engineer work.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.975,
+     "units_evidence": []
+    },
+    {
+     "quote": "The specifics, with titles and versions:",
+     "cited": false,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.877,
+     "units_evidence": []
+    },
+    {
+     "quote": "BC-01 states the method plainly: 55% repeat rate × 780 minutes = 429 minutes, with the note \"If the assistant handles repeated tickets, we could free up 429 minutes of service-desk time over ten worki",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.484,
+     "units_evidence": [
+      "material:business_case@1"
+     ]
+    },
+    {
+     "quote": "The same attachment lists SD-120 but adds: \"There is no separate sum of durations for repeat-marked rows and no engineer time sheet attached.\"",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.794,
+     "units_evidence": []
+    },
+    {
+     "quote": "[Chen Min's benefits estimate BC-01 · v1]",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "SD-120's field dictionary defines `duration_minutes = closed_at - accepted_at`, and says: \"The clock keeps running while the requester supplies screenshots, while a ticket waits for second-line transf",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.818,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "The export has no field for minutes of active engineer work.\"",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.731,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "[Service-desk export SD-120: tickets and field definitions · v1]",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.977,
+     "units_evidence": []
+    },
+    {
+     "quote": "The repeat-intent mark is manual, and the 55% uses all 120 tickets as denominator.",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.533,
+     "units_evidence": [
+      "material:demand@1"
+     ]
+    },
+    {
+     "quote": "The total is 780 minutes across 120 closed tickets over 10 working days.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.976,
+     "units_evidence": []
+    },
+    {
+     "quote": "[Service-desk export SD-120 · v1]",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.81,
+     "units_evidence": []
+    },
+    {
+     "quote": "So 429 minutes bundles elapsed waiting time — requester pauses, second-line transfers, review — with any actual desk effort.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    },
+    {
+     "quote": "Counting the whole figure as labor saved would treat time nobody worked as time recovered.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.935,
+     "units_evidence": []
+    },
+    {
+     "quote": "It is also not a measured saving from a pilot: BC-01 itself says \"there are no employee-pilot results yet.\"",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.887,
+     "units_evidence": []
+    },
+    {
+     "quote": "Two related cautions from the same export batch: open tickets are excluded, and SD-061's note reads \"Transferred to the business lead at 10:23,\" while first-contact resolution and engineer handling ti",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.977,
+     "units_evidence": []
+    },
+    {
+     "quote": "Closure or transfer is not evidence that the fault was resolved — participant C in INT-03 made a similar point about tickets closed after a requester went silent.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.993,
+     "units_evidence": []
+    },
+    {
+     "quote": "My position is that the 429-minute figure is useful as an upper-bound illustration of elapsed desk-clock time tied to repeat-marked tickets, not as a labor-saving claim.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "One question for you: which single field or row in SD-120 would you treat as the defensible basis for any time-saving claim — elapsed time, repeat marks, or something the export would need to start re",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.969,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "1705ecdab0b1497d9d6be27d4f62fd08",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "en",
+   "role": "tech_lead",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "The published limit is 60 people.",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.469,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "The ceilings in [Manager's published resource-approval rules · v1] are capacity 60 people, 6 developer-days and deadline day 10. Two things I should keep distinct from that:",
+     "cited": true,
+     "stored": "contradicted",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.793,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "The current allocation in [Manager brief: an IT ticket-assistant pilot · v1] is 30 people, 3 developer-days, pilot deadline day 7.",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.466,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "The saved setup in [Trial settings and complete answers · v1] is a preparation draft for 20 participants on launch day 7;",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.516,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "saving it does not approve resources or the launch date, per the same brief.",
+     "cited": false,
+     "stored": "contradicted",
+     "whole": "insufficient",
+     "units": "contradicted",
+     "units_decision": "decide",
+     "units_confidence": 0.913,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "So \"at most\" depends on which one you mean: 60 is the maximum that may be applied for under the published rules, while anything above 30 people would need a recorded decision first.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "Note also that a capacity request must correspond to a real participant shortfall above the current allocation, and the rules state every resource request must provide human fallback — the setup alrea",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.948,
+     "units_evidence": []
+    },
+    {
+     "quote": "Which figure are you asking me to work to — the 60-person ceiling or the current 30-person allocation?",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.978,
+     "units_evidence": []
+    }
+   ]
+  },
+  {
+   "session": "1705ecdab0b1497d9d6be27d4f62fd08",
+   "scenario": "it_ticket_pilot_v2",
+   "language": "en",
+   "role": "supervisor",
+   "seq": 11,
+   "sources": 18,
+   "sentences": [
+    {
+     "quote": "**Question: If the first wave is only 20 people, do I still need to request resources?",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.987,
+     "units_evidence": []
+    },
+    {
+     "quote": "** Yes — if the wave configuration actually exceeds the current allocation, and no more than that.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "Current allocation is capacity 30 people, 3 developer-days and a deadline of day 7 ([Manager brief: an IT ticket-assistant pilot · v1]).",
+     "cited": true,
+     "stored": "supported",
+     "whole": "supported",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.473,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "A 20-participant wave is below the capacity figure already recorded, so participant count alone would not create a shortfall.",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.99,
+     "units_evidence": []
+    },
+    {
+     "quote": "But your question mixes a factual check with a judgment, so I can only separate them:",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.988,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Capacity (people):** the saved preparation setup is 20 participants on day 7, and saving a setup does not mean its resources or launch date are approved ([Manager brief · v1]).",
+     "cited": true,
+     "stored": "supported",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.506,
+     "units_evidence": [
+      "material:brief@1"
+     ]
+    },
+    {
+     "quote": "**Developer-days:** work items have fixed costs — scope filtering 1, human-fallback entry point 1, real-time synchronization 5 ([Technical handover: capabilities and configuration · v1]).",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.984,
+     "units_evidence": []
+    },
+    {
+     "quote": "Only a combination whose total work items exceed the current allocation, and are required by the wave's config, would justify a request.",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.986,
+     "units_evidence": []
+    },
+    {
+     "quote": "**Deadline:** a day-10 plan against a day-7 deadline is recorded as over allocation, \"not changed automatically\" ([Trial settings and complete answers · v1]).",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.966,
+     "units_evidence": []
+    },
+    {
+     "quote": "Under the published rules, every resource must correspond to a real configuration shortfall above the current allocation;",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "supported",
+     "units_decision": "decide",
+     "units_confidence": 0.957,
+     "units_evidence": [
+      "material:approvals@1"
+     ]
+    },
+    {
+     "quote": "a capacity request with no participant shortfall or a deadline extension with no date shortfall is rejected, and a mixed request with unnecessary terms is returned as a whole ([Manager's published res",
+     "cited": false,
+     "stored": "contradicted",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.967,
+     "units_evidence": []
+    },
+    {
+     "quote": "One thing worth checking before you answer: the candidate list has 50 names across three groups, has not been matched person by person to the 56 requesters in SD-120, and attendance is unconfirmed ([C",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.932,
+     "units_evidence": []
+    },
+    {
+     "quote": "**My question to you:** which of the three resource types — capacity, developer-days or deadline — do you actually see a shortfall in for a 20-person wave, and what in the proposed configuration creat",
+     "cited": true,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.955,
+     "units_evidence": []
+    },
+    {
+     "quote": "*(Note: I can only speak to materials I have actually received;",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.989,
+     "units_evidence": []
+    },
+    {
+     "quote": "the available set does not include the full technical or approvals material in my hands yet, so any broader review would follow once those are opened.)*",
+     "cited": false,
+     "stored": "insufficient",
+     "whole": "insufficient",
+     "units": "insufficient",
+     "units_decision": "decide",
+     "units_confidence": 0.991,
+     "units_evidence": []
+    }
+   ]
+  }
+ ]
+}

@@ -87,6 +87,10 @@ class Judgement:
     # ensemble, when used), ``pairs`` (per-candidate pair score), ``rule`` (None when the
     # rule had nothing to compare) and ``alpha`` (the late-fusion weight of the model).
     branches: dict = field(default_factory=dict)
+    # How the candidates were ranked (C2): ``method`` is what ran ("rrf", "dense" or
+    # "bm25"); ``fallback`` is true when rrf or dense was asked for but no embedder was
+    # loaded and BM25 ran instead. The same for every candidate of one judgement.
+    retrieval: dict = field(default_factory=dict)
 
     @property
     def confidence(self) -> float:
@@ -99,10 +103,20 @@ def _distribution(label: str, p: float) -> dict[str, float]:
 
 
 def rule_judge(claim: str, candidates: Sequence[tuple[str, str]], lexical: Sequence[float]):
-    """Rule fallback over already retrieved (id, text) candidates and their BM25 scores."""
+    """Rule fallback over already retrieved (id, text) candidates and their BM25 scores.
+
+    Conflicting figures: a claim that itself states a limit ("the approval cap is 60") and
+    a candidate that states that exact limit agree, even when another candidate's figure of
+    the same unit is lower (a reserved capacity of 30; the taxi cap next to the lodging
+    cap): the two measure different things. A claim without a limit word ("invite 50
+    people") that exceeds a stated limit stays a contradiction whatever else repeats its
+    figure, and a fresher contradicting candidate (by ``valid_from``, 0 for a plain
+    ``(id, text)`` pair: the notice that replaced the figure) wins in every case.
+    """
     claimed = quantities(claim)
     contradiction: tuple[float, str, str] | None = None
     support: tuple[float, str, str] | None = None
+    since = {cand[0]: (cand[3] or 0) if len(cand) >= 5 else 0 for cand in candidates}
     for cand, lex in zip(candidates, lexical, strict=False):
         cid, text = cand[0], cand[1]
         stated = quantities(text)
@@ -135,6 +149,20 @@ def rule_judge(claim: str, candidates: Sequence[tuple[str, str]], lexical: Seque
             score = 0.5 + 0.25 * min(lex, 1.0)
             if support is None or score > support[0]:
                 support = (score, cid, "lexical_overlap")
+    if (
+        contradiction is not None
+        and support is not None
+        and support[2].startswith("same_quantity")
+        and _LIMIT.search(claim)
+        and since.get(contradiction[1], 0) <= since.get(support[1], 0)
+    ):
+        p, cid, _ = support
+        return Judgement(
+            "supported",
+            _distribution("supported", p),
+            (cid,),
+            reason=f"conflicting_figures|{contradiction[2]}|{support[2]}",
+        )
     if contradiction is not None and (support is None or contradiction[0] >= support[0]):
         p, cid, reason = contradiction
         return Judgement("contradicted", _distribution("contradicted", p), (cid,), reason=reason)
@@ -167,17 +195,29 @@ def judge(
     language: str = "zh",
     k: int = TOP_K,
     as_of: int = 0,
+    figure_first: bool = False,
 ) -> Judgement:
     """C2 picks the top-k candidates for the claim, then C1 (or the rule) judges them.
 
     Candidates are ``(id, text)`` or ``(id, text, observed, valid_from, valid_until)``.
     The rule additionally reads every limit that came into force during the session
     (``valid_from > 0``) in the claim's unit of measure, wherever retrieval ranked it.
+
+    ``figure_first`` (the colleague reply check): when the rule found the claim's exact
+    figure in a candidate and the model only abstains ("insufficient"), the rule's
+    support stands instead of being averaged away. The model's contradiction still
+    fuses as usual. Off by default: the review path keeps its measured fusion (E10).
     """
     if not candidates:
-        return Judgement("insufficient", _distribution("insufficient", 0.6), reason="no_candidates")
+        return Judgement(
+            "insufficient",
+            _distribution("insufficient", 0.6),
+            reason="no_candidates",
+            retrieval={"method": None, "fallback": False},
+        )
     texts = [c[1] for c in candidates]
-    ranked, method, _ = retrieval.search(claim, texts, k=len(texts), method="rrf")
+    ranked, method, fell_back = retrieval.search(claim, texts, k=len(texts), method="rrf")
+    searched = {"method": method, "fallback": fell_back}
     hits = ranked[:k]
     chosen = [candidates[h.index] for h in hits]
     top = tuple(
@@ -236,6 +276,10 @@ def judge(
                 evidence = result.evidence_ids
             else:
                 evidence = found.evidence_ids
+            reason = f"late_fusion:{alpha:g}|{found.reason}"
+            if figure_first and label == "insufficient" and _figure_found(found):
+                label, fused, evidence = found.label, found.probabilities, found.evidence_ids
+                reason += "|figure_found"
             return Judgement(
                 label=label,
                 probabilities=fused,
@@ -243,17 +287,41 @@ def judge(
                 recognizer_id=result.recognizer_id + "+rule",
                 revision=result.revision,
                 fallback=False,
-                reason=f"late_fusion:{alpha:g}|{found.reason}",
+                reason=reason,
                 top=top,
                 branches=branches,
+                retrieval=searched,
             )
-        return Judgement(**{**result.__dict__, "top": top, "branches": branches})
+        if figure_first and result.label == "insufficient" and _figure_found(found):
+            return Judgement(
+                **{
+                    **found.__dict__,
+                    "recognizer_id": result.recognizer_id + "+rule",
+                    "revision": result.revision,
+                    "fallback": False,
+                    "reason": found.reason + "|figure_found",
+                    "top": top,
+                    "branches": branches,
+                    "retrieval": searched,
+                }
+            )
+        return Judgement(
+            **{**result.__dict__, "top": top, "branches": branches, "retrieval": searched}
+        )
     return Judgement(
         **{
             **found.__dict__,
             "top": top,
             "branches": {"rule": found.probabilities, "rule_window": len(rule_hits)},
+            "retrieval": searched,
         }
+    )
+
+
+def _figure_found(found: Judgement) -> bool:
+    """Did the rule find the claim's exact figure (and side with it)?"""
+    return found.label == "supported" and found.reason.startswith(
+        ("same_quantity", "conflicting_figures")
     )
 
 

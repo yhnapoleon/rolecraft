@@ -22,14 +22,17 @@ GUIDE = {
     "zh": (
         "\n上下文中的 learner_state 是系统识别出的学员当前状态（意图、阶段、读过与未读的材料、"
         "测试次数、待批申请），只用于决定回答的详略与提醒（例如学员未读技术材料时提醒去读），"
-        "不得据此泄露学员不可见的事实。"
+        "不得据此泄露学员不可见的事实。其中 aipm 一项（如有）是学员正在写的能力点、各张工作纸的"
+        "状态和最近一次批改的缺口短标签，只用于决定从哪一处问起；不要复述批改结论，不要据此给出答案。"
     ),
     "en": (
         "\nlearner_state in the context is the learner's state as recognised by the system "
         "(intent, phase, materials read and unread, tests run, pending requests). Use it only "
         "to decide how much detail to give and what to remind them of (for example, to read "
         "the technical material they have not opened); never use it to reveal facts the "
-        "learner cannot see."
+        "learner cannot see. Its aipm entry (when present) is the step the learner is writing, "
+        "the state of each worksheet and the gap labels of the latest review: use it only to "
+        "choose where to ask from; do not restate the review or give the answer it points to."
     ),
 }
 
@@ -97,8 +100,16 @@ def after_reply(reply, snapshot, auth, recognized: dict[str, Any]):
     from career_lab.recognition.reply import check_reply
 
     try:
+        # With when each source was observed and came into force, so the rule can tell
+        # a notice that replaced a figure from the figure it replaced (F04 in replies).
         visible = [
-            (f"{s.ref.kind}:{s.ref.object_id}@{s.ref.version}", s.text)
+            (
+                f"{s.ref.kind}:{s.ref.object_id}@{s.ref.version}",
+                s.text,
+                getattr(s.ref, "observed_at_seq", 0) or 0,
+                getattr(s.ref, "valid_from_seq", 0) or 0,
+                getattr(s.ref, "valid_until_seq", None),
+            )
             for s in snapshot.select_sources(auth, 10**9)[0]
         ]
         private = [
