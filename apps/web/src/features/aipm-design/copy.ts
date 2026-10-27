@@ -59,6 +59,16 @@ export const STARTER_NEEDS: readonly { id: string; scope: string; request: Pair 
     scope: 'access',
     request: ['准备权限申请草稿', 'Prepare an access request draft'],
   },
+  {
+    id: 'hotel_cap_today',
+    scope: 'expense',
+    request: ['出差住宿上限今天是多少', "What is today's hotel cap for business travel?"],
+  },
+  {
+    id: 'over_cap_claim',
+    scope: 'expense',
+    request: ['这张超标的住宿能不能报', 'Can I claim this hotel bill that is over the cap?'],
+  },
 ];
 export const SOURCES: Record<ProcessFeedback['source'], Pair> = {
   rule: ['规则核实', 'Rule check'],

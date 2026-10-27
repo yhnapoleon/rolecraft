@@ -37,6 +37,16 @@
       "id": "access",
       "scope": "access",
       "request": "Prepare an access request draft"
+    },
+    {
+      "id": "hotel_cap_today",
+      "scope": "expense",
+      "request": "What is today's hotel cap for business travel?"
+    },
+    {
+      "id": "over_cap_claim",
+      "scope": "expense",
+      "request": "Can I claim this hotel bill that is over the cap?"
     }
   ],
   "source_requirements": {

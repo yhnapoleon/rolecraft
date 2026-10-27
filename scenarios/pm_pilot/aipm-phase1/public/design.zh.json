@@ -37,6 +37,16 @@
       "id": "access",
       "scope": "access",
       "request": "准备权限申请草稿"
+    },
+    {
+      "id": "hotel_cap_today",
+      "scope": "expense",
+      "request": "出差住宿上限今天是多少"
+    },
+    {
+      "id": "over_cap_claim",
+      "scope": "expense",
+      "request": "这张超标的住宿能不能报"
     }
   ],
   "source_requirements": {
