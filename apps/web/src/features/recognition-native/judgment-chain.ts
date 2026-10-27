@@ -4,6 +4,7 @@ import type { RecognitionRecord } from './badge';
 import type { Language } from '../results-native/localization';
 import { escapeCheck as esc } from './record-inspector';
 import { checkPresentation, leadingProbability, relationLabels } from './check-presentation';
+import { retrievalMethod } from './actual-method';
 import './judgment-chain.css';
 export { leadingProbability } from './check-presentation';
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
@@ -40,7 +41,8 @@ export function judgmentChainHtml(
         }</small></div></div>`
       : '';
   const hits = (unit.top ?? []).filter((h) => typeof h.quote === 'string');
-  const candidates = `<details class="jc-hits"><summary>${t('取回候选原文', 'Retrieved passages')} · ${hits.length}</summary><p>${esc(unit.retrieval_method && ['rrf', 'bm25', 'dense'].includes(unit.retrieval_method) ? { rrf: 'RRF', bm25: 'BM25', dense: 'e5' }[unit.retrieval_method] : t('检索方法未记录', 'Retrieval method not recorded'))}</p>${unit.evidence ? `<p>${t('本次选中的原文', 'Passage selected for this check')}</p><blockquote>${esc(unit.evidence)}</blockquote>` : `<p>${t('选中的原文未记录', 'The selected passage was not saved')}</p>`}${hits
+  const retrieval = retrievalMethod(unit, preview, language);
+  const candidates = `<details class="jc-hits"><summary>${t('取回候选原文', 'Retrieved passages')} · ${hits.length}<span class="jc-retrieval" data-kind="${retrieval.kind}"> · ${esc(retrieval.label)}</span></summary>${unit.evidence ? `<p>${t('本次选中的原文', 'Passage selected for this check')}</p><blockquote>${esc(unit.evidence)}</blockquote>` : `<p>${t('选中的原文未记录', 'The selected passage was not saved')}</p>`}${hits
     .map(
       (h) =>
         `<blockquote>${esc(h.quote)}</blockquote><p>${[
