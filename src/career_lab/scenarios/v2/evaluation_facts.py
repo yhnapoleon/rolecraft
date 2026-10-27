@@ -173,7 +173,31 @@ class ScenarioFactAdapter:
             )
             if actual.valid_from_seq != activation:
                 raise ProtocolError("evidence_time_mismatch")
-            return SourceRecord(actual, text, born)
+
+            # Private metadata for sentence candidates only. Keep the full original
+            # text and reference unchanged for document-level rule proofs.
+            @dataclass(frozen=True)
+            class PublicMaterialSource(SourceRecord):
+                public_fragments: tuple[EvidenceRefV2, ...] = ()
+
+            fragments = self.module.package.project(
+                ref.object_id, ref.version, auth.actor_id, as_of.business_seq, auth.session_id
+            )
+            return PublicMaterialSource(
+                actual,
+                text,
+                born,
+                public_fragments=tuple(
+                    actual.model_copy(
+                        update={
+                            "span_start": fragment.ref.span_start,
+                            "span_end": fragment.ref.span_end,
+                            "quote": fragment.text,
+                        }
+                    )
+                    for fragment in fragments
+                ),
+            )
         if ref.kind == "event":
             found = [(e, p) for e, p in window.events if e.id == ref.object_id and before(p, as_of)]
             if len(found) != 1:
