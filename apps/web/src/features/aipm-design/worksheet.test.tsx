@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { StepId } from '../../aipm/types';
 import type { DesignContent } from './sheet-model';
+import { newRow } from './model';
 import { PatternCards, sendQuote, Worksheet, type WorksheetHost } from './worksheet';
 
 const content = (language: 'zh' | 'en') =>
@@ -82,6 +83,25 @@ describe('worksheet', () => {
       ),
     );
     expect(with_).toEqual(['need', 'boundary', 'solution', 'assurance']);
+  });
+  it('opens the solution diagram above the writing, without a lane count when nothing is triaged', () => {
+    const page = html(<Worksheet host={host('en')} step="solution" preload={preload('en')} />);
+    expect(page).toContain('>Solution diagram</strong>');
+    expect(page).not.toMatch(/0 lanes|Expand/);
+    expect(page.indexOf("The assistant&#x27;s answer path")).toBeGreaterThan(-1);
+    expect(page.indexOf("The assistant&#x27;s answer path")).toBeLessThan(page.indexOf('aipm-sheet__paper"'));
+  });
+  it('counts triage rows in the singular and the plural', () => {
+    const saved = (n: number) => ({
+      ref: { session_id: 's', kind: 'aipm_design', object_id: 'aipm-design', version: 1 },
+      design: { rows: Array.from({ length: n }, (_, i) => newRow(`r${i}`)) },
+      feedback: [],
+    });
+    const triage = (n: number) =>
+      html(<Worksheet host={host('en')} step="boundary" preload={preload('en', { saved: saved(n) })} />);
+    expect(triage(1)).toContain('Triage · 1 row<');
+    expect(triage(2)).toContain('Triage · 2 rows');
+    expect(triage(0)).toContain('<strong>Triage</strong>');
   });
   it('lists the solution choice from the learner’s own subheadings', () => {
     const prd = {

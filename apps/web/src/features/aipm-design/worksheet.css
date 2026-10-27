@@ -515,3 +515,19 @@
     transform: none;
   }
 }
+/* ⑤'s solution diagram is never folded: the same frame, with a plain heading. */
+.aipm-sheet__structure-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+}
+.aipm-sheet__structure-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.aipm-sheet__structure-meta {
+  color: var(--ink-3);
+  font-size: 12px;
+}

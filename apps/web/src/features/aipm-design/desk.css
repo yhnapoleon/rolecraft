@@ -409,112 +409,139 @@
   font-weight: 600;
   line-height: 1.5;
 }
+/* The track: the test bench's answer-chain dots (answer-chain .ac-path: 6px dots on a 1px
+   --line-2 line, 10px amber ring), one column per step. Both rows share a five-column grid,
+   so the three offline steps sit above the first three online ones. */
 .aipm-path__nodes {
   display: grid;
-  grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.aipm-path__nodes[data-count="3"] {
-  --n: 3;
-}
 .aipm-path__step {
   position: relative;
-  display: flex;
+  display: grid;
   min-width: 0;
 }
-.aipm-path__step + .aipm-path__step {
-  padding-left: 28px;
-}
-/* 16px hairline, then the chevron, centred between two cells. */
-.aipm-path__link {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  display: flex;
-  align-items: center;
-  width: 28px;
-  transform: translateY(-50%);
-  color: var(--ink-3);
-}
-.aipm-path__link::before {
+/* The connector from the previous dot to this one, through the dot row's centre. */
+.aipm-path__step + .aipm-path__step::before {
   content: "";
-  flex: none;
-  width: 16px;
-  height: 1px;
-  background: var(--line-2);
-}
-.aipm-path__link svg {
-  flex: none;
-  margin-left: -2px;
+  position: absolute;
+  top: 10.5px;
+  right: calc(50% + 9px);
+  left: calc(-50% + 9px);
+  border-top: 1px solid var(--line-2);
 }
 .aipm-path__node {
   display: grid;
+  grid-template-rows: 10px auto auto auto;
+  justify-items: center;
   align-content: start;
-  gap: 2px;
-  flex: 1;
+  row-gap: 5px;
   min-width: 0;
   min-height: 44px;
   margin: 0;
-  padding: 10px 12px;
+  padding: 6px 6px 8px;
   box-sizing: border-box;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: var(--r-row, 7px);
-  background: var(--surface);
+  background: none;
   font: inherit;
-  color: var(--ink);
-  text-align: left;
-  overflow-wrap: anywhere;
+  color: inherit;
+  text-align: center;
 }
 button.aipm-path__node {
   cursor: pointer;
-  transition: border-color 160ms var(--ease-out);
+  transition: background-color 160ms var(--ease-out);
 }
-button.aipm-path__node:hover {
-  border-color: var(--line-2);
+@media (hover: hover) and (pointer: fine) {
+  button.aipm-path__node:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
 }
 button.aipm-path__node:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+.aipm-path__dot {
+  align-self: center;
+  box-sizing: border-box;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+/* Loading: the same columns, still (no shimmer). */
+.aipm-path__node--blank .aipm-path__dot {
+  background: var(--line-2);
+}
+.aipm-path__bar {
+  width: 64%;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--fill);
+}
+.aipm-path__bar + .aipm-path__bar {
+  width: 44%;
+}
+.aipm-path__step[data-state="amber"] .aipm-path__dot {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--warn);
+  background: var(--warn-tint);
+}
 .aipm-path__name {
+  max-width: 100%;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
-.aipm-path__value {
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-}
-.aipm-path__note,
-.aipm-path__reason {
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ink-3);
-}
-.aipm-path__who {
-  margin-top: 4px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--ink-3);
-}
-.aipm-path__node[data-state="amber"] {
-  background: var(--warn-tint);
-  border-color: color-mix(in srgb, var(--warn) 30%, transparent);
-}
-.aipm-path__node[data-state="amber"] .aipm-path__value,
-.aipm-path__node[data-state="amber"] .aipm-path__reason {
+.aipm-path__step[data-state="amber"] .aipm-path__name {
   color: var(--warn);
 }
-/* Loading: grey frames of the same size, still (no shimmer). */
-.aipm-path__node--blank {
-  height: 76px;
-  background: var(--fill);
-  border-color: transparent;
+.aipm-path__value {
+  max-width: 100%;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.aipm-path__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.aipm-path__who svg {
+  flex: none;
+}
+/* Why a step is not in effect: the test bench's warning reason (2px --warn rule). */
+.aipm-path__reasons {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-path__reason {
+  padding-left: 8px;
+  border-left: 2px solid var(--warn);
+  color: var(--warn);
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.aipm-path__reason strong {
+  font-weight: 600;
 }
 .aipm-path__failed {
   display: flex;
@@ -536,29 +563,43 @@ button.aipm-path__node:focus-visible {
   font-size: 12px;
   line-height: 1.6;
 }
-@container (max-width: 640px) {
-  .aipm-path__nodes,
-  .aipm-path__nodes[data-count="3"] {
+/* Narrow (as the test bench, below 360px): one step per line, a vertical line between dots. */
+@container (max-width: 359px) {
+  .aipm-path__nodes {
     grid-template-columns: minmax(0, 1fr);
   }
-  .aipm-path__step + .aipm-path__step {
-    padding: 22px 0 0;
+  .aipm-path__node {
+    grid-template-columns: 10px minmax(0, 1fr);
+    grid-template-rows: none;
+    justify-items: start;
+    column-gap: 10px;
+    row-gap: 2px;
+    padding: 6px 4px;
+    text-align: start;
   }
-  .aipm-path__link {
+  .aipm-path__node > * {
+    grid-column: 2;
+  }
+  .aipm-path__node > .aipm-path__dot {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: center;
+  }
+  .aipm-path__step + .aipm-path__step::before {
     top: 0;
-    left: 50%;
-    flex-direction: column;
-    width: auto;
-    height: 22px;
-    transform: translateX(-50%);
+    right: auto;
+    left: 8.5px;
+    height: 6px;
+    border-top: 0;
+    border-left: 1px solid var(--line-2);
   }
-  .aipm-path__link::before {
-    width: 1px;
-    height: 10px;
-  }
-  .aipm-path__link svg {
-    margin: -2px 0 0;
-    transform: rotate(90deg);
+  .aipm-path__step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 22px;
+    bottom: 0;
+    left: 8.5px;
+    border-left: 1px solid var(--line-2);
   }
 }
 @media (prefers-reduced-motion: reduce) {
