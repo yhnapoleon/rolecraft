@@ -1,5 +1,8 @@
 /** Evaluation desk markup. Every interpolated value passes `esc`; one screen per tab. */
 import type { AipmDesign, MonitoringPlan } from '../../aipm/types';
+import { stageName, type StageKey } from '../answer-chain/copy';
+import { answerChain, type ChainInput, type ChainView } from '../answer-chain/model';
+import { answerChainHtml, chevron } from '../answer-chain/view';
 import {
   type BatchView,
   buckets,
@@ -36,7 +39,41 @@ export type DeskState = {
   busy: boolean;
   notice: { kind: 'status' | 'error'; message: string } | null;
   judging: Record<string, string>;
+  /** Saved test results by test id: the answer and its chain input. */
+  runs: Record<string, { answer: string; chain: ChainInput }>;
+  /** Each saved case's question by case id, from the saved test plan. */
+  queries?: Record<string, string>;
 };
+
+const ANSWER_PREVIEW = 140;
+const runOf = (state: DeskState, row: EvaluationCase) =>
+  row.run_ref ? state.runs?.[row.run_ref.object_id] : undefined;
+const chainOf = (state: DeskState, row: EvaluationCase) => {
+  const run = runOf(state, row);
+  return run ? answerChain(run.chain, state.language) : null;
+};
+/** Where a run ended up on the chain: the amber step when it carried a problem through. */
+const endedAt = (view: ChainView): StageKey =>
+  (view.stages.find((s) => s.state === 'warn') ?? view.stages[view.stopAt]).key;
+
+/** The answer (140 characters, the rest on request) and the compact answer chain. */
+function runBlock(state: DeskState, row: EvaluationCase) {
+  const t = (zh: string, en: string) => text(state.language, zh, en);
+  const run = runOf(state, row);
+  const view = chainOf(state, row);
+  if (!run || !view || !row.run_ref) return '';
+  const answer = run.answer.trim();
+  const long = [...answer].length > ANSWER_PREVIEW;
+  const short = long ? `${[...answer].slice(0, ANSWER_PREVIEW).join('').trimEnd()}…` : answer;
+  const text_ = answer
+    ? `<p class="aipm-eval__answer-short">${esc(short)}</p>${long ? `<details class="aipm-eval__answer-full"><summary>${esc(t('展开全文', 'Show the full answer'))}</summary><p>${esc(answer)}</p></details>` : ''}`
+    : '';
+  return `<div class="aipm-eval__answer">${text_}${answerChainHtml(view, row.run_ref.object_id, {
+    language: state.language,
+    compact: true,
+    handover: !state.readOnly,
+  })}</div>`;
+}
 
 const routeLabel = (state: DeskState, route: Route) =>
   state.content?.routes.find((r) => r.id === route)?.label ?? route;
@@ -85,9 +122,9 @@ function draftCard(state: DeskState, draft: CaseDraft) {
     draft.route === 'agent_confirmation'
       ? `<label class="aipm-eval__check"><input type="checkbox" data-eval-draft="${esc(draft.key)}" data-field="answerOnly"${draft.answerOnly ? ' checked' : ''}${disabled}> ${esc(t('只运行其中的检索回答子步骤', 'Run only its retrieval-answer substep'))}</label>`
       : '';
-  return `<li class="aipm-eval__draft" data-ready="${draftReady(draft)}">
+  return `<li class="aipm-eval__draft" data-draft="${esc(draft.key)}" data-ready="${draftReady(draft)}">
   <div class="aipm-eval__draft-head">
-    <select data-eval-draft="${esc(draft.key)}" data-field="caseType" aria-label="${esc(t('测试类型', 'Case type'))}"${disabled}>${caseTypeOptions(state, draft)}</select>
+    <span class="aipm-eval__select"><select data-eval-draft="${esc(draft.key)}" data-field="caseType" aria-label="${esc(t('测试类型', 'Case type'))}"${disabled}>${caseTypeOptions(state, draft)}</select>${chevron()}</span>
     ${regression ? `<span class="aipm-eval__tag">${esc(state.content?.regression.label)}</span>` : ''}
     <button type="button" class="aipm-eval__link" data-eval-action="remove-draft" data-key="${esc(draft.key)}"${disabled}>${esc(t('移除', 'Remove'))}</button>
   </div>
@@ -97,6 +134,15 @@ function draftCard(state: DeskState, draft: CaseDraft) {
     <textarea rows="2" data-eval-draft="${esc(draft.key)}" data-field="expected" placeholder="${esc(hint)}"${disabled}>${esc(draft.expected)}</textarea></label>
   ${toggle}
 </li>`;
+}
+
+export function readyLine(state: DeskState) {
+  const ready = state.drafts.filter(draftReady).length;
+  return text(
+    state.language,
+    `${ready} 题已写好预期 · 上限 ${MAX_CASES} 题`,
+    `${ready} with expectations · up to ${MAX_CASES}`,
+  );
 }
 
 function casesScreen(state: DeskState) {
@@ -136,7 +182,7 @@ function casesScreen(state: DeskState) {
       : '';
   const foot = state.view
     ? `<p class="aipm-eval__muted">${esc(t('这些题已建成评测批次。要改预期，请新建一份测试计划；旧成绩不会被改写。', 'These cases are in a batch. To change an expectation, start a new plan; earlier results are not rewritten.'))}</p>`
-    : `<div class="aipm-eval__foot"><span class="aipm-eval__muted">${esc(t(`${ready} 题已写好预期 · 上限 ${MAX_CASES} 题`, `${ready} with expectations · up to ${MAX_CASES}`))}</span>${regression}
+    : `<div class="aipm-eval__foot"><span class="aipm-eval__muted" data-eval-ready>${esc(readyLine(state))}</span>${regression}
   <button type="button" class="btn primary" data-eval-action="save-plan"${state.readOnly || state.busy || !ready ? ' disabled' : ''}>${esc(t('保存预期并建立批次', 'Save expectations and create batch'))}</button></div>`;
   return `${groups}${foot}`;
 }
@@ -162,10 +208,10 @@ function statusLabel(language: Language, row: EvaluationCase, recovery?: Recover
   }
 }
 
+/** The case's own question: the sent command, else the saved plan; never another case's draft. */
 function caseQuery(state: DeskState, row: EvaluationCase) {
-  const draft = state.drafts.find((d) => d.rowId === row.triage_row_id && d.query);
   const command = row.original_command as { payload?: { query?: string } } | null | undefined;
-  return command?.payload?.query ?? draft?.query ?? row.id.slice(0, 8);
+  return command?.payload?.query ?? state.queries?.[row.id] ?? row.id.slice(0, 8);
 }
 
 function caseLine(state: DeskState, row: EvaluationCase, extra = '') {
@@ -188,6 +234,7 @@ function caseLine(state: DeskState, row: EvaluationCase, extra = '') {
     : '';
   return `<li class="aipm-eval__case" data-status="${esc(row.status ?? 'pending')}">
   <div class="aipm-eval__case-head"><span class="aipm-eval__q">${esc(caseQuery(state, row))}</span><span class="aipm-eval__state">${esc(statusLabel(state.language, row, recovery))}</span></div>
+  ${runBlock(state, row)}
   <div class="aipm-eval__meta"><span>${esc(routeLabel(state, row.route))}</span>${abandoned}${open}${act}</div>${extra}
 </li>`;
 }
@@ -223,8 +270,31 @@ function summaryBlock(state: DeskState, view: BatchView) {
       )}</span></li>`;
     })
     .join('');
-  return `<dl class="aipm-eval__stats">${lines}</dl><ul class="aipm-eval__routes">${byRoute}</ul>
+  return `<dl class="aipm-eval__stats">${lines}</dl><ul class="aipm-eval__routes">${byRoute}</ul>${unmetBlock(state, view)}
 <p class="aipm-eval__muted">${esc(t('本期由你本人判定，不做自动语义评分。', 'You judge every result in this release; there is no automatic semantic scoring.'))}</p>`;
+}
+
+/** Cases judged "does not meet", grouped by where they stopped on the answer chain. */
+export function unmetByStage(state: DeskState, view: BatchView) {
+  const latest = latestAssessments(view.assessments);
+  const counts = new Map<StageKey, number>();
+  for (const row of view.batch.cases) {
+    if (latest.get(row.id)?.result !== 'not_satisfied') continue;
+    const chain = chainOf(state, row);
+    if (!chain || chain.tone === 'unknown') continue;
+    const key = endedAt(chain);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function unmetBlock(state: DeskState, view: BatchView) {
+  const t = (zh: string, en: string) => text(state.language, zh, en);
+  const groups = unmetByStage(state, view);
+  if (!groups.length) return '';
+  return `<p class="aipm-eval__unmet"><span>${esc(t('不满足的题停在哪一环', 'Where the unmet cases stopped'))}</span><span>${esc(
+    groups.map(([key, n]) => `${stageName(key, state.language)} ${n}`).join(' · '),
+  )}</span></p>`;
 }
 
 function runScreen(state: DeskState) {
@@ -277,6 +347,17 @@ function verdict(language: Language, result?: string) {
   return t('无法判断', 'Can’t tell');
 }
 
+export const monitoringComplete = (state: DeskState) =>
+  state.monitoring.length > 0 && state.monitoring.every((p) => !monitoringGaps(p).length);
+export const monitoringLine = (state: DeskState) =>
+  monitoringComplete(state)
+    ? text(state.language, '每项都已填写。', 'Every field is filled.')
+    : text(
+        state.language,
+        '每条计划的八项都填写后才能保存。',
+        'Fill all eight fields of each plan to save.',
+      );
+
 function monitoringScreen(state: DeskState) {
   const t = (zh: string, en: string) => text(state.language, zh, en);
   const content = state.content;
@@ -301,14 +382,13 @@ function monitoringScreen(state: DeskState) {
         `<button type="button" class="aipm-eval__chip" data-eval-action="add-monitor" data-starter="${index}" data-source="${m.source}"${disabled}>${esc(m.metric)}${m.source === 'to_collect' ? ` · ${esc(t('待采集', 'to collect'))}` : ''}</button>`,
     )
     .join('');
-  const complete =
-    state.monitoring.length > 0 && state.monitoring.every((p) => !monitoringGaps(p).length);
+  const complete = monitoringComplete(state);
   return `<p class="aipm-eval__muted">${esc(content.monitoring.intro)}</p>
 ${state.view ? '' : `<p class="aipm-eval__notice" data-kind="status">${esc(t('观察计划跟着评测批次保存。先建立批次。', 'The plan is saved with an evaluation batch. Create one first.'))}</p>`}
 <div class="aipm-eval__chips">${starters}<button type="button" class="aipm-eval__chip" data-eval-action="add-monitor"${disabled}>${esc(t('自定义', 'Custom'))}</button></div>
 ${plans ? `<ol class="aipm-eval__plans">${plans}</ol>` : ''}
 <p class="aipm-eval__muted">${esc(content.monitoring.rollback_note)}</p>
-<div class="aipm-eval__foot"><span class="aipm-eval__muted">${esc(complete ? t('每项都已填写。', 'Every field is filled.') : t('每条计划的八项都填写后才能保存。', 'Fill all eight fields of each plan to save.'))}</span>
+<div class="aipm-eval__foot"><span class="aipm-eval__muted" data-eval-complete>${esc(monitoringLine(state))}</span>
 <button type="button" class="btn primary" data-eval-action="save-monitoring"${disabled || !complete || state.busy ? ' disabled' : ''}>${esc(t('保存观察计划', 'Save observation plan'))}</button></div>`;
 }
 

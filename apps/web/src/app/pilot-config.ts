@@ -108,7 +108,7 @@ export function configUse(
       ? [
           T(
             `${names(waiting)}还没批到开发人日（已批准 ${approvedDevDays} 人日）`,
-            `${names(waiting)} isn't funded yet (${approvedDevDays} developer-days approved)`,
+            `${names(waiting)} isn't funded yet (${approvedDevDays} person-days approved)`,
           ),
         ]
       : []),

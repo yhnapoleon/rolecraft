@@ -105,21 +105,71 @@ def test_slot_01_unset_slot_variables_keep_shared_configuration_and_main_request
     assert [role["status"], assistant["status"]] == golden["statuses"]
     assert provider.kinds() == golden["kinds"]
     expected = list(golden["body_sha256"])
-    # Recorded on b07ec765: cooperative-help-v3 and artifact-review-v2
-    # (e9ba052f, 9b50d0f5, f3b67b9d). Reverting only those policy/review inputs
-    # reproduces the frozen role digests; all other request bytes are unchanged.
+    # Recorded on the integration of c1bcdd99 with cooperative-help-v4 (one observation,
+    # one question when the learner asks about their own work). Earlier changes in the
+    # same inputs: cooperative-help-v3 and artifact-review-v2 (e9ba052f, 9b50d0f5,
+    # f3b67b9d) and the colleague-voice line (dd9cb8f5). Only the colleague turn and its
+    # review change; all other request bytes are unchanged.
     role_digest, review_digest = {
         "zh": (
-            "286f107e39c7cee5f278e640149aed641ff1ca8dd905360a36befb29c78b56c2",
-            "6729b2ad2ca8023fafedf5d2c868ee278cc15b34e13dcfbbe852303b5eb98c9e",
+            "5a33efd864332c37047513c47dc0b1cea46beffed73681c82be74e2f7e97c445",
+            "bcddccb51690c7e068da85f11429db618b3b584c0a02cf71756db14812ceb4d0",
         ),
         "en": (
-            "822f94eaa426d20ca8ef2a141f4c4295f47f5bde3733e216f7d02d1004a470b8",
-            "e0addc843705b610a976ee8503173c7415854790d55a0e80680b87fb13d3d4ff",
+            "6ebe831e688adb2682c54a144289fc6d4b2546bad4144ec0594bf1efed465504",
+            "84b76c6499ddf8d3105446b9d6587f97842fa5a2f4182d69b22475200ef0542a",
         ),
     }[language]
     expected[golden["kinds"].index("role")] = role_digest
     expected[golden["kinds"].index("role_review")] = review_digest
+    # The judge and support prompts gained the shared claim-status guidance
+    # (dd9cb8f5, generalized in 263559ad). Removing only that guidance reproduces
+    # the frozen judge and support digests; their other request bytes are unchanged.
+    judged = {
+        "zh": (
+            "da10de3492eb68b6b86096035c85db552cd4358dadb97c3275f7fdc677308cd2",
+            "7c0dd39de4894ef12c595dbe352e7ec363fe4ee19fb630527aefc9bd3e379000",
+            "9af8885b1eba137085b248450e8ae6e767297bd5d55bafc9b63e16e4c45e9496",
+            "5f1ce669e81fe057504f057ab0f1fcec5f31232908c7e2b2d18c6943c295f35e",
+            "1fe3e302ae103a32e7f7063d7d4a085c0aec013329259c1867bf99a29d495e99",
+            "0214712b736e94b57f2deed2dc300aaa8084fa1b66c7058b8fce4cb3c7b7936a",
+            "2d78bba931dd3b4d80ee3a54a124f02c68336464ce173a643bdcbba4bbb659f2",
+            "335fe42e1379cf6d5edc2aaf504595cfe0ac63a7e6bf5ebbbe3e5578603ab794",
+            "00898a1f12842b67bb80bf735065e1f87174c0d8cdd8d0709a29bf65eb14d4a4",
+            "bd0a1edd152436de0cd10d6e1c608ef360fc35004560bafce2de8cbb36637ae5",
+            "37df1125104abc3d0a0325f2d19fc12a234846d59bd1a4a2186335e10f536bab",
+            "9665a83bc05cab7a41906760599220697efe05ba3233dbcb8d6825c130b53e4b",
+            "bc5e997fd26e29f4ea2475750f515008f921ae461cec6b371b5dc75a557651d0",
+            "6c94f113b769211885820526d0b89b59f58d1bf57d77b42693d42fa2ab0dee5d",
+            "cf70af61f0a8ecc52232902ce84f28e3f3c141f93078e94baaf0d3725841db37",
+            "d9e94eb094fea958d29f34404dc981e42cc052b67d3611046463cad81da82e26",
+            "ae4809f4b58ae5b13c585e3e1aa9f63273b64197b07e5574524e0528b2731879",
+            "b591cc1b05027ac129deaceb17c042e009bc38a5614d57455f12061c7155798b",
+        ),
+        "en": (
+            "125e9adbe5c1a2a77f2f6b0cfde7d42a7f367326014feeaff7f1c1dc394265d4",
+            "ef8701e9a36cf6041150ff1704a65ff68cd5b0b24c0fcb6b2dea652e15dd0e7d",
+            "ac1efebd090b9eb518ad90d670c4aa886f52b41c8d5a45e56794999d9779494f",
+            "5204ce6aca804416601c54a860fbbbd8d41a1c24381041685eb8836e3abafb4a",
+            "8949c00237e99ccb2c4f2982bcf9c313c1d2036d19d18bd659ede6c8bc61b045",
+            "72d83fa50a5282cb5807fea12835a72aa10576e9ea477601c8a0aa319b8147ac",
+            "faaa78bea18d0f9bdfe878e590b778047811a2000cf61baffb292a964c0bebf6",
+            "d5a3040ceaba3bcaa9fcaef5fdf11861ca259355611d34250f9590385642a647",
+            "6102c5d22d04e2c4371265e2119e298b0d07385fcefd41cf0998480886d881ad",
+            "1568c1d908d4f91ab7e0e8bef71c5a5568ce66488dafdfc6e04c64c93254bc84",
+            "cf02d9841a1c1ca14c80d58a273da614e644b3721dbf2a5f81f99ba68028810b",
+            "82f50a9f02f645d644323e2f1dd7934947f9cca53eb4ffdcb0cf7d8d741f3dfd",
+            "d13931394370a48aa727e11799f4a97d568d2f5ad2d4229f732896117e196c2f",
+            "2e2304c1998529220bd4393546b73d3679cb30c78076f5d0bad6ba92a6d7276a",
+            "b334bce008667b28d71ce5c8bc5e1c6d57266ad16208f0dbd2860d12a006b178",
+            "0fe1c80ad8432a5da179b08e6faaf113052f56b6000e72d7eda9a4b3c5e3f59a",
+            "e480c6d3c79173d12ed478d3ec07d86ce42525edceb14a2b909e682ccacc3daa",
+            "4185febfc138b048cfe21e7cdd37cac94aad8a7b821c57b88d605ee3ba80488d",
+        ),
+    }[language]
+    positions = [i for i, kind in enumerate(golden["kinds"]) if kind in ("judge", "support")]
+    for position, digest in zip(positions, judged, strict=True):
+        expected[position] = digest
     # Generation v2 explicitly reports missing information; keep the frozen v1 fixture intact.
     expected[golden["kinds"].index("assistant")] = {
         "zh": "712a0b2c868aac47ee39ce000295e76fd4637b6696532e19f1bf77a7f1a15dba",

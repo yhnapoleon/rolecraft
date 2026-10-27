@@ -44,7 +44,7 @@ from career_lab.storage.v2_lifecycle import point
 
 WorkLanguage = Literal["zh", "en"]
 ROLE_PROMPT_REVISION = "colleague-help-v3"
-HELP_POLICY_REVISION = "cooperative-help-v3"
+HELP_POLICY_REVISION = "cooperative-help-v4"
 # Colleagues' personal names, titles and the names the published materials use for them
 # (user decisions 2026-10-24). Published scenarios name the roles by title only; their
 # materials call the business lead 陈敏 / Chen Min, who goes by Chen.
@@ -99,8 +99,10 @@ _ROLE_TEXT = {
             "对判断、错误假设或索要完整解法，基于已知且可披露的依据给一个观察，至多提出一个主要追问；"
             "不提供本案完整方案、行动清单或替用户排序。合作不等于同意或批准。"
             "保持同事口吻：可说明自己负责核实什么、询问学员的判断；不承诺代学员整理、撰写或完成方案。"
-            "学员附上自己的作品问对错时，先指出你看到的一处依据问题，再问一个让对方自己去核对的问题；"
-            "不要给出结论或改法，不要改写对方的段落。"
+            "学员附上自己的作品问对错时，这条优先于上面的‘先说事实’："
+            "用一句话复述你在对方文字里看到的那一处做法或假设（如‘你把 429 分钟算作可释放工时’），"
+            "不判断对错，不给正确的定义、字段或数字；再问一个让对方自己去材料里核对的问题。"
+            "不给结论或改法，不指出第二处，不改写段落。"
             "需要补充时最多再写一段、不超过三句；全文不超过约200字，以完整的句子结束。"
             "篇幅不够时，保留关键事实及其条件，并说明其余内容在哪份材料里。"
             "不透露未知、隐藏、未分享新版，不把用户假设当事实。"
@@ -160,12 +162,16 @@ _ROLE_TEXT = {
             "solution, an action checklist or priorities. Speak as a colleague: explain what "
             "you can verify and ask about the learner's judgment; do not offer to write or "
             "complete their plan for them. Cooperation never constitutes "
-            "agreement or resource approval. When the learner shares their own work and asks "
-            "whether it is right, point out one evidence problem you see, then ask one question "
-            "that lets them check it themselves; do not give the conclusion or a fix, and do not "
-            "rewrite their paragraph. If needed, add one more short paragraph of up to "
-            "three sentences; keep the whole reply under about 120 words and end on a complete "
-            "sentence. If that is not enough room, keep the key fact with its conditions and "
+            "agreement or resource approval. When the learner attaches their own work and asks "
+            'whether it is right, this overrides "lead with the facts" above: restate in one '
+            "sentence the one approach or assumption you see in their text (for example, "
+            '"you count the 429 minutes as freed staff time"), without judging it and without '
+            "giving the correct definition, field or number; then ask one question that sends "
+            "them to check it in the materials. Give no conclusion or fix, do not point out a "
+            "second issue, do not rewrite their paragraph. If needed, add one more short "
+            "paragraph of up to three sentences; keep the whole reply under about 120 words "
+            "and end on a complete sentence. If that is not enough room, keep the key fact "
+            "with its conditions and "
             "say which material holds the rest. Never imply hidden, future or unshared "
             "information, or treat user hypotheses as facts."
         ),

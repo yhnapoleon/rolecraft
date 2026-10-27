@@ -26,6 +26,8 @@ export interface Behavior {
     distance: number;
     top3: { strategy: string; distance: number }[];
     reference?: { id: string; index: number; strategy: string; sequence: string[] };
+    /** DTW warping path to the nearest reference only: own step i matched to reference step j. */
+    path?: { i: number; j: number; cost: number }[];
   } | null;
   alignment: { missing: string[]; extra: string[]; swapped: string[][] };
   phases: { name: string; from_seq: number; to_seq: number }[];
@@ -367,6 +369,65 @@ export function behaviorView(
 }
 
 /** One response, two ordered tracks. Alignment is a count/order summary, not a DTW path. */
+/** The recorded DTW path as one row per matched pair: line style and words carry the cost
+ * (0 same action, 0.5 same kind on another object, 1 different action). A repeated own step
+ * means the reference did more there; a repeated reference step means you did (dtw_path).
+ * Empty when there is no path, no reference, or the path does not fit both sequences. */
+/** Names for the returned references; repeated names get a rank so three "Test-heavy" rows read as three records. */
+export function referenceLabels(top: { strategy: string }[], l: Language) {
+  const names = top.map((s) => strategyName(s.strategy, l)),
+    seen = new Map<string, number>();
+  return names.map((name) => {
+    const n = (seen.get(name) ?? 0) + 1;
+    seen.set(name, n);
+    return names.indexOf(name) === names.lastIndexOf(name) ? name : `${name} · ${l === 'zh' ? `参考 ${n}` : `ref ${n}`}`;
+  });
+}
+
+export function alignmentHtml(
+  data: Behavior,
+  l: Language,
+  label: (symbol: string) => string,
+) {
+  const say = (zh: string, en: string) => (l === 'zh' ? zh : en);
+  const path = data.strategy?.path,
+    reference = data.strategy?.reference?.sequence;
+  if (!Array.isArray(path) || !path.length || !reference) return '';
+  const fits = path.every(
+    (p, k) =>
+      Number.isInteger(p.i) &&
+      Number.isInteger(p.j) &&
+      p.i >= 0 &&
+      p.j >= 0 &&
+      p.i < data.sequence.length &&
+      p.j < reference.length &&
+      [0, 0.5, 1].includes(p.cost) &&
+      (k === 0 || (p.i - path[k - 1].i <= 1 && p.j - path[k - 1].j <= 1 && p.i + p.j > path[k - 1].i + path[k - 1].j)),
+  );
+  if (!fits) return `<p>${say('对齐路径和动作记录对不上，这里不画出。', 'The alignment path does not match the action records, so it is not drawn.')}</p>`;
+  const cost = {
+    0: say('同一动作', 'Same action'),
+    0.5: say('同类动作，对象不同', 'Same kind, different object'),
+    1: say('不同', 'Different'),
+  } as Record<number, string>;
+  const step = (n: number, symbol: string) =>
+    `<span class="br-step-no">${String(n + 1).padStart(2, '0')}</span><span>${esc(label(symbol))}</span>`;
+  const rows = path
+    .map((p, k) => {
+      const previous = path[k - 1];
+      const repeat = previous && previous.i === p.i ? 'reference' : previous && previous.j === p.j ? 'own' : '';
+      const extra = repeat === 'reference' ? say('参考多做了', 'Reference did more') : repeat === 'own' ? say('你多做了', 'You did more') : '';
+      return `<li class="br-align-row" data-cost="${p.cost}"${repeat ? ` data-repeat="${repeat}"` : ''}><span class="br-align-own"${repeat === 'reference' ? ' data-again="true"' : ''}>${step(p.i, data.sequence[p.i].symbol)}</span><span class="br-align-link" aria-hidden="true"></span><span class="br-align-ref"${repeat === 'own' ? ' data-again="true"' : ''}><span class="br-align-to">${say('参考', 'Reference')}</span>${step(p.j, reference[p.j])}</span><span class="br-align-note"><span class="br-align-cost">${cost[p.cost]}</span>${extra ? `<span class="br-align-extra">${extra}</span>` : ''}</span></li>`;
+    })
+    .join('');
+  const differ = path.filter((p) => p.cost === 1).length;
+  const caption = say(
+    `本局与参考的逐步对应：${path.length} 对，其中 ${differ} 对动作不同`,
+    `Step-by-step match with the reference: ${path.length} ${path.length === 1 ? 'pair' : 'pairs'}, ${differ} with different actions`,
+  );
+  return `<figure class="br-align"><figcaption>${caption}</figcaption><p class="br-align-key">${say('DTW 对齐路径，只对最接近的那条参考。实线：同一动作；虚线：同类动作、对象不同；粗线并标「不同」：动作不同。', 'DTW alignment path, for the nearest reference only. Solid line: same action; dashed: same kind, different object; heavy line marked “Different”: different actions.')}</p><div class="br-align-cols" aria-hidden="true"><span>${say('本局', 'This session')}</span><span></span><span>${say('参考', 'Reference')}</span><span></span></div><ol class="br-align-rows" aria-label="${esc(caption)}">${rows}</ol></figure>`;
+}
+
 export function behaviorHtml(
   data: Behavior | { enabled: false } | null | undefined,
   l: Language,
@@ -452,7 +513,9 @@ export function behaviorHtml(
     (typeof eventCount === 'number' && typeof turnCount === 'number'
       ? say(`，来自 ${eventCount} 条操作记录和 ${turnCount} 次提问。`, `, from ${eventCount} operation ${eventCount === 1 ? 'record' : 'records'} and ${turnCount} ${turnCount === 1 ? 'question' : 'questions'}.`)
       : say('；操作记录和提问的数量未完整记录。', '; operation and question counts were not fully recorded.'));
-  const record = `<p>${fallback ? say('阶段按动作类型整理；本次为规则回退。', 'Phases were grouped by action type using a rule fallback.') : data.recognizer ? say('本次用 HMM 解码工作阶段，用 DTW 匹配参考做法。', 'HMM decoded work phases; DTW matched reference approaches.') : say('实际方法未记录。', 'The actual method was not recorded.')}</p><p>${say('阶段是模型对上下文的划分，动作名称保持原样。', 'Phases interpret the action context; action names stay unchanged.')}</p><table class="jc-table"><caption>${say('返回的参考记录', 'Returned reference records')}</caption><tbody>${(data.strategy?.top3 ?? []).map((s) => `<tr><th>${esc(strategyName(s.strategy, l))}</th><td>${Number.isFinite(s.distance) ? s.distance.toFixed(3) : esc(String(s.distance))}</td></tr>`).join('')}</tbody></table><details><summary>${say('查看距离完整精度', 'View full distance precision')}</summary><ol>${(data.strategy?.top3 ?? []).map(s => `<li>${esc(strategyName(s.strategy, l))} · ${esc(String(s.distance))}</li>`).join('')}</ol></details><p>${say('距离越小，动作序列越接近；距离不是概率。', 'A smaller distance means a closer action sequence; it is not a probability.')}</p><p>${say('只记录了动作数量和首次顺序差异，没有逐步对应记录。', 'Only action counts and first-occurrence differences were recorded, not a step-by-step alignment.')}</p><p>${window}</p><p>${say('执行来源声明', 'Declared execution source')}：${esc(({human:say('本人','the learner'),own_agent:say('本人 Agent','own Agent'),reference_agent:say('参考 Agent','reference Agent')} as Record<string,string>)[data.executor.declared] ?? say('未说明','not recorded'))}</p><details><summary>${say('查看原始差异记录', 'View raw difference records')}</summary><pre>${esc(JSON.stringify(data.alignment, null, 2))}</pre></details><details><summary>${say('查看原始动作记录','View recorded action symbols')}</summary><ol>${data.sequence.map(row=>`<li>${say('记录序号', 'Record sequence')} ${row.seq} · ${esc(row.symbol)}${row.question?`<blockquote>${esc(row.question)}</blockquote>`:''}</li>`).join('')}</ol></details>${data.anomalies.length ? `<details><summary>${say('查看规则记录', 'View rule records')}</summary><ul>${data.anomalies.map((a) => `<li>${esc(a.rule)} · ${a.at_seq} · ${a.score}</li>`).join('')}</ul></details>` : ''}`;
+  const top = data.strategy?.top3 ?? [],
+    topLabels = referenceLabels(top, l);
+  const record = `<p>${fallback ? say('阶段按动作类型整理；本次为规则回退。', 'Phases were grouped by action type using a rule fallback.') : data.recognizer ? say('本次用 HMM 解码工作阶段，用 DTW 匹配参考做法。', 'HMM decoded work phases; DTW matched reference approaches.') : say('实际方法未记录。', 'The actual method was not recorded.')}</p><p>${say('阶段是模型对上下文的划分，动作名称保持原样。', 'Phases interpret the action context; action names stay unchanged.')}</p><table class="jc-table"><caption>${say('返回的参考记录', 'Returned reference records')}</caption><tbody>${top.map((s, k) => `<tr><th>${esc(topLabels[k])}</th><td>${Number.isFinite(s.distance) ? s.distance.toFixed(3) : esc(String(s.distance))}</td></tr>`).join('')}</tbody></table><details><summary>${say('查看距离完整精度', 'View full distance precision')}</summary><ol>${top.map((s, k) => `<li>${esc(topLabels[k])} · ${esc(String(s.distance))}</li>`).join('')}</ol></details><p>${say('距离越小，动作序列越接近；距离不是概率。', 'A smaller distance means a closer action sequence; it is not a probability.')}</p>${alignmentHtml(data, l, label) || `<p>${say('只记录了动作数量和首次顺序差异，没有逐步对应记录。', 'Only action counts and first-occurrence differences were recorded, not a step-by-step alignment.')}</p>`}<p>${window}</p><p>${say('执行来源声明：', 'Declared execution source: ')}${esc(({human:say('本人','the learner'),own_agent:say('本人 Agent','own Agent'),reference_agent:say('参考 Agent','reference Agent')} as Record<string,string>)[data.executor.declared] ?? say('未说明','not recorded'))}</p><details><summary>${say('查看原始差异记录', 'View raw difference records')}</summary><pre>${esc(JSON.stringify(data.alignment, null, 2))}</pre></details><details><summary>${say('查看原始动作记录','View recorded action symbols')}</summary><ol>${data.sequence.map(row=>`<li>${say('记录序号', 'Record sequence')} ${row.seq} · ${esc(row.symbol)}${row.question?`<blockquote>${esc(row.question)}</blockquote>`:''}</li>`).join('')}</ol></details>${data.anomalies.length ? `<details><summary>${say('查看规则记录', 'View rule records')}</summary><ul>${data.anomalies.map((a) => `<li>${esc(a.rule)} · ${a.at_seq} · ${a.score}</li>`).join('')}</ul></details>` : ''}`;
   return `${head}<details class="rc-behavior__steps"${options.stepsOpen ? ' open' : ''}><summary>${say('展开工作回放', 'Explore the work review')}</summary><div class="br-content"><section class="br-phases" aria-label="${fallback ? say('按动作类型整理的阶段', 'Phases grouped by action type') : say('识别出的工作阶段', 'Recognised work phases')}"><p class="br-method">${say('按动作顺序，不表示耗时；点阶段查看动作。', 'Action order, not duration. Select a phase.')}</p>${bar}${legend}</section><div class="br-layout">${ideas}<section class="br-own"><h3>${say('这次做过的事', 'Your recorded actions')}</h3>${own}</section></div><footer><p class="rc-behavior__origin">${origin} ${say('范围之外做过什么，单凭这份记录无法判断。', 'This record cannot tell us what happened beyond the visible actions.')}</p>${inspectorEntryHtml(say('阶段来自识别，练法来自参考对照', 'Recognised phases, suggestions from reference comparisons'), record, methodsHtml(l, 'behavior'), l)}</footer></div></details>`;
 }
 

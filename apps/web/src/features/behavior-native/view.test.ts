@@ -190,9 +190,10 @@ it('summarises repeated differences before phases and preserves the full referen
   expect(h).toContain('日常问题测试：本次 0 次，参考 2 次');
   expect(h.indexOf('<rc-phase-timeline>')).toBeLessThan(h.indexOf('日常问题测试：本次 0 次，参考 2 次'));
   expect(h).toContain('差异记录待核对');
-  expect((h.match(/<th>测试密集<\/th>/g) || []).length).toBe(2);
-  expect(h).toContain('测试密集 · 0.2');
-  expect(h).toContain('测试密集 · 0.3');
+  expect(h).toContain('<th>测试密集 · 参考 1</th>');
+  expect(h).toContain('<th>测试密集 · 参考 2</th>');
+  expect(h).toContain('测试密集 · 参考 1 · 0.2');
+  expect(h).toContain('测试密集 · 参考 2 · 0.3');
   expect(h).toContain('查看参考做法与全部差异');
   expect(h).toContain('没有逐步对应记录');
 });
@@ -225,7 +226,8 @@ it('formats distance to three decimals without merging references or treating ro
   const html = behaviorHtml(sample, 'en');
   const table = html.match(/<table class="jc-table">[\s\S]*?<\/table>/)?.[0] ?? '';
   expect((table.match(/<td>0.308<\/td>/g) ?? []).length).toBe(3);
-  expect((table.match(/<th>Test-heavy<\/th>/g) ?? []).length).toBe(2);
+  expect(table).toContain('<th>Test-heavy · ref 1</th>');
+  expect(table).toContain('<th>Test-heavy · ref 2</th>');
   expect(html).toContain('View full distance precision');
   expect(html).toContain('0.3076923076923077');
   expect(html).toContain('0.3077');

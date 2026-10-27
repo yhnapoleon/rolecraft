@@ -57,7 +57,7 @@ const savedPilot = () =>
 const realtimeBox = `document.querySelector('#config-form input[name="workItems"][value="realtime"]')`;
 const gapLine = text(
   '测试实际用：每日索引 · 实时同步还没批到开发人日（已批准 3 人日）',
-  "Tests actually use: Daily index · Real-time sync isn't funded yet (3 developer-days approved)",
+  "Tests actually use: Daily index · Real-time sync isn't funded yet (3 person-days approved)",
 );
 const ceiling = text(
   '可审批上限：容量60人，开发资源6人日，期限第10天。',
@@ -323,7 +323,7 @@ try {
     await waitFor(browser, `!document.querySelector('#sheet')?.open`);
     const v2Line = text(
       '测试实际用：每日索引、不过滤知识范围 · 实时同步还没批到开发人日（已批准 3 人日）',
-      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 developer-days approved)",
+      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 person-days approved)",
     );
     await waitFor(
       browser,

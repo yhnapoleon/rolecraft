@@ -460,6 +460,31 @@ export function Worksheet({
     (r) => !content.colleagues.includes(r),
   );
   const askOrder = [...content.colleagues, ...others].map((r) => ROLE[r]);
+  const structure = (kind: 'triage' | 'diagram' | 'evaluation') => (
+    <Structure
+      kind={kind}
+      open={structureOpen}
+      onToggle={() => setStructureOpen(!structureOpen)}
+      c={c}
+      host={host}
+      language={language}
+      design={design}
+      setDesign={setDesign}
+      saved={loaded.saved}
+      readOnly={readOnly}
+      busy={busy}
+      onSaveDesign={() =>
+        run(async () => {
+          const result = await host.command('aipm.design.save', {
+            design: nextDesign(design, loaded.saved?.design ?? null),
+            expected_revision: loaded.saved?.design.revision ?? 0,
+          });
+          if (failure(result)) throw new Error('save');
+          await reload();
+        })
+      }
+    />
+  );
 
   return (
     <section className="aipm-sheet" lang={language} aria-label={sheetName}>
@@ -602,6 +627,9 @@ export function Worksheet({
         </fieldset>
       )}
 
+      {/* ⑤'s answer path is the sheet's picture: open and above the writing, never folded. */}
+      {content.structure === 'diagram' && structure('diagram')}
+
       <Paper
         c={c}
         blocks={sheet.blocks}
@@ -647,31 +675,8 @@ export function Worksheet({
           }}
         />
       )}
-      {content.structure && content.structure !== 'metric' && (
-        <Structure
-          kind={content.structure}
-          open={structureOpen}
-          onToggle={() => setStructureOpen(!structureOpen)}
-          c={c}
-          host={host}
-          language={language}
-          design={design}
-          setDesign={setDesign}
-          saved={loaded.saved}
-          readOnly={readOnly}
-          busy={busy}
-          onSaveDesign={() =>
-            run(async () => {
-              const result = await host.command('aipm.design.save', {
-                design: nextDesign(design, loaded.saved?.design ?? null),
-                expected_revision: loaded.saved?.design.revision ?? 0,
-              });
-              if (failure(result)) throw new Error('save');
-              await reload();
-            })
-          }
-        />
-      )}
+      {content.structure && content.structure !== 'metric' && content.structure !== 'diagram' &&
+        structure(content.structure)}
 
       <footer className="aipm-sheet__foot">
         <AgentHelp c={c} host={host} step={step} />
@@ -829,6 +834,9 @@ function Paper({
   );
 }
 
+/** "1 row", "2 rows". */
+const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
 function Structure({
   kind,
   open,
@@ -864,12 +872,28 @@ function Structure({
   );
   const summary = {
     triage: c.t(
-      `分拣表 · ${rows.length} 项${wrong.size ? ` · ${wrong.size} 处越权` : ''}`,
-      `Triage · ${rows.length} rows${wrong.size ? ` · ${wrong.size} beyond authority` : ''}`,
+      `分拣表${rows.length ? ` · ${rows.length} 项` : ''}${wrong.size ? ` · ${wrong.size} 处越权` : ''}`,
+      `Triage${rows.length ? ` · ${count(rows.length, 'row')}` : ''}${wrong.size ? ` · ${wrong.size} beyond authority` : ''}`,
     ),
-    diagram: c.t(`系统方案图 · ${rows.length} 条`, `System design · ${rows.length} lanes`),
+    diagram: c.t('方案图', 'Solution diagram'),
     evaluation: c.t('评测计划、监控与回退表', 'Evaluation plan, monitoring and rollback'),
   }[kind];
+  if (kind === 'diagram')
+    return (
+      <section className="aipm-sheet__structure" aria-label={summary}>
+        <div className="aipm-sheet__structure-head">
+          <strong className="aipm-sheet__structure-title">{summary}</strong>
+          {rows.length > 0 && (
+            <small className="aipm-sheet__structure-meta">
+              {c.t(`按 ${rows.length} 行分拣`, `From ${count(rows.length, 'triage row')}`)}
+            </small>
+          )}
+        </div>
+        <div className="aipm-sheet__structure-body">
+          <DiagramBlock c={c} host={host} saved={saved} language={language} />
+        </div>
+      </section>
+    );
   if (kind === 'evaluation')
     return (
       <div className="aipm-sheet__structure">
@@ -887,7 +911,7 @@ function Structure({
       </button>
       {open && (
         <div className="aipm-sheet__structure-body">
-          {kind === 'triage' ? (
+          {kind === 'triage' && (
             <Triage
               id="boundary"
               c={c}
@@ -902,8 +926,6 @@ function Structure({
               onSave={onSaveDesign}
               onNext={(s) => void host.openWorksheet?.(s)}
             />
-          ) : (
-            <DiagramBlock c={c} host={host} saved={saved} language={language} />
           )}
         </div>
       )}

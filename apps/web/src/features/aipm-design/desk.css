@@ -311,8 +311,14 @@
 }
 .aipm-design__diagram {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
-  gap: 16px 22px;
+  gap: 22px;
+  min-width: 0;
+}
+.aipm-design__on-path {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
 }
 .aipm-design__lane {
   padding: 10px 0;
@@ -355,20 +361,6 @@
   left: -17px;
   color: var(--ink-2);
 }
-.aipm-design__actual {
-  align-self: start;
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line-2);
-}
-.aipm-design__actual p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.6;
-}
 .aipm-design__foot {
   display: flex;
   align-items: center;
@@ -380,8 +372,238 @@
   .aipm-design__open {
     padding: 18px 16px;
   }
-  .aipm-design__routes,
-  .aipm-design__diagram {
+  .aipm-design__routes {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- The assistant's answer path (design view) ----------
+   Small instruments on the paper: surface cells, hairline borders, no shadow. Amber marks a
+   setting that is asked for but not in effect; no other colour carries meaning here. */
+.aipm-path {
+  container-type: inline-size;
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.aipm-path__title {
+  margin: 0;
+  font: 600 17px / 1.35 var(--sans);
+  color: var(--ink);
+}
+.aipm-path__lead {
+  margin: -14px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.aipm-path__row {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.aipm-path__row-title {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+/* The track: the test bench's answer-chain dots (answer-chain .ac-path: 6px dots on a 1px
+   --line-2 line, 10px amber ring), one column per step. Both rows share a five-column grid,
+   so the three offline steps sit above the first three online ones. */
+.aipm-path__nodes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-path__step {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+/* The connector from the previous dot to this one, through the dot row's centre. */
+.aipm-path__step + .aipm-path__step::before {
+  content: "";
+  position: absolute;
+  top: 10.5px;
+  right: calc(50% + 9px);
+  left: calc(-50% + 9px);
+  border-top: 1px solid var(--line-2);
+}
+.aipm-path__node {
+  display: grid;
+  grid-template-rows: 10px auto auto auto;
+  justify-items: center;
+  align-content: start;
+  row-gap: 5px;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 6px 8px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: var(--r-row, 7px);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+}
+button.aipm-path__node {
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  button.aipm-path__node:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+}
+button.aipm-path__node:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.aipm-path__dot {
+  align-self: center;
+  box-sizing: border-box;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+/* Loading: the same columns, still (no shimmer). */
+.aipm-path__node--blank .aipm-path__dot {
+  background: var(--line-2);
+}
+.aipm-path__bar {
+  width: 64%;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--fill);
+}
+.aipm-path__bar + .aipm-path__bar {
+  width: 44%;
+}
+.aipm-path__step[data-state="amber"] .aipm-path__dot {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--warn);
+  background: var(--warn-tint);
+}
+.aipm-path__name {
+  max-width: 100%;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.aipm-path__step[data-state="amber"] .aipm-path__name {
+  color: var(--warn);
+}
+.aipm-path__value {
+  max-width: 100%;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.aipm-path__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.aipm-path__who svg {
+  flex: none;
+}
+/* Why a step is not in effect: the test bench's warning reason (2px --warn rule). */
+.aipm-path__reasons {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-path__reason {
+  padding-left: 8px;
+  border-left: 2px solid var(--warn);
+  color: var(--warn);
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.aipm-path__reason strong {
+  font-weight: 600;
+}
+.aipm-path__failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.aipm-path__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: -6px 0 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+/* Narrow (as the test bench, below 360px): one step per line, a vertical line between dots. */
+@container (max-width: 359px) {
+  .aipm-path__nodes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .aipm-path__node {
+    grid-template-columns: 10px minmax(0, 1fr);
+    grid-template-rows: none;
+    justify-items: start;
+    column-gap: 10px;
+    row-gap: 2px;
+    padding: 6px 4px;
+    text-align: start;
+  }
+  .aipm-path__node > * {
+    grid-column: 2;
+  }
+  .aipm-path__node > .aipm-path__dot {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: center;
+  }
+  .aipm-path__step + .aipm-path__step::before {
+    top: 0;
+    right: auto;
+    left: 8.5px;
+    height: 6px;
+    border-top: 0;
+    border-left: 1px solid var(--line-2);
+  }
+  .aipm-path__step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 22px;
+    bottom: 0;
+    left: 8.5px;
+    border-left: 1px solid var(--line-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.aipm-path__node {
+    transition: none;
   }
 }

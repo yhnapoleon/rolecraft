@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { signatureHtml, signatureText } from './signature';
-import { retrievalHit, testAgeText, testMomentHtml, type MomentRun } from './test-moment';
+import { passageText, retrievalHit, testAgeText, testMomentHtml, type MomentRun } from './test-moment';
 const run = { id: 'r', question: 'cap?', answer: 'CNY 400', indexVersion: 2, policyVersion: 2, configVersion: 1, citations: [{ id: 'policy', title: 'Policy', version: 2 }], recognition: [{ task: 'retrieval', recognizer_id: 'retrieval-c2', revision: 'dense', fallback: false, outputs: { method: 'dense', top: [{ material_id: 'policy', rank: 2, quote: 'CNY 400 per night.' }] } }] } satisfies MomentRun;
 describe('normal working moments', () => {
   it.each(['zh', 'en'] as const)('distinguishes age from source impact in %s', (language) => {
@@ -64,5 +64,24 @@ describe('normal working moments', () => {
       expect(html).toContain('class="rc-card-slot" hidden');
       if (lang === 'en') expect(signatureText(run.recognition[0], lang)).not.toMatch(/[\u4e00-\u9fff]/);
     }
+  });
+});
+describe('the retrieved passage', () => {
+  it('ends a cut passage on a word, with an ellipsis', () => {
+    const cut = `${'Keep the receipt. '.repeat(6)}Obtain written manag`.slice(-120);
+    expect(cut.endsWith('manag')).toBe(true);
+    expect(passageText(cut)).toMatch(/[a-z]…$/);
+    expect(passageText(cut)).not.toContain('manag…');
+    expect(passageText('CNY 400 per night.')).toBe('CNY 400 per night.');
+    expect(passageText('出'.repeat(120))).toBe(`${'出'.repeat(120)}…`);
+  });
+  it('says a passage found for an out-of-scope or handed-over question was not used', () => {
+    const out = { ...run, fallback: true, citations: [], recognition: [{ task: 'scope', recognizer_id: 's', revision: 'fit', label: 'out', score: 4, threshold: 2.8 }, ...run.recognition] } satisfies MomentRun;
+    const html = testMomentHtml(out, [out], 'en', x => x);
+    expect(html).toContain('Closest passage (out of scope, not used to answer)');
+    expect(html).not.toContain('Passage retrieved for this run');
+    expect(html).not.toContain('cite-hit');
+    expect(testMomentHtml({ ...out, recognition: run.recognition }, [], 'zh', x => x)).toContain('最接近的原文（未用来作答）');
+    expect(testMomentHtml(run, [run], 'en', x => x)).toContain('Passage retrieved for this run');
   });
 });
