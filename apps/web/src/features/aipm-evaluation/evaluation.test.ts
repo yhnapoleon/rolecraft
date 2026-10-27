@@ -144,6 +144,7 @@ const desk = (over: Partial<DeskState> = {}): DeskState => ({
   busy: false,
   notice: null,
   judging: {},
+  runs: {},
   ...over,
 });
 
