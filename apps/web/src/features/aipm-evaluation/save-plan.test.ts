@@ -8,7 +8,7 @@ import type { EvaluationContent } from './model';
 
 const planRef = { session_id: 's', kind: 'product', object_id: 'plan', version: 1 };
 /** `work_products.create` through the data host: a command envelope around `{ object, ref }`. */
-const created = (cases: { id: string }[]) => ({
+const created = (cases: { id: string; query?: string }[]) => ({
   requestId: 'r',
   status: 'confirmed',
   result: {
@@ -26,9 +26,10 @@ const design = {
 
 describe('saving the evaluation plan', () => {
   it('reads the saved plan from the command envelope', () => {
-    expect(savedPlanOf(created([{ id: 'c1' }, { id: 'c2' }]))).toEqual({
+    expect(savedPlanOf(created([{ id: 'c1', query: 'Hotel cap?' }, { id: 'c2' }]))).toEqual({
       ref: planRef,
       ids: ['c1', 'c2'],
+      queries: { c1: 'Hotel cap?', c2: '' },
     });
     expect(savedPlanOf({ status: 'confirmed', result: { ref: planRef } })).toBeUndefined();
   });
@@ -81,5 +82,6 @@ describe('saving the evaluation plan', () => {
     expect(command).toHaveBeenCalledTimes(2);
     expect(desk.state.view?.batch.id).toBe('batch');
     expect(desk.state.tab).toBe('run');
+    expect(desk.state.queries).toEqual({ d1: 'Hotel cap?' });
   });
 });

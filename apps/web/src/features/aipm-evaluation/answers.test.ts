@@ -119,6 +119,18 @@ describe('evaluation desk: answers and answer chains', () => {
     expect(renderDesk(desk({ runs: {} }))).not.toContain('data-answer-chain');
   });
 
+  it('shows each case its own saved question, not the first draft of its request', () => {
+    const html = renderDesk(
+      desk({
+        queries: { a: 'Hotel cap after the change?', b: 'Weather on Mars?' },
+        drafts: [{ key: 'k', rowId: 'r1', query: 'First draft' } as never],
+      }),
+    );
+    expect(html).toContain('<span class="aipm-eval__q">Hotel cap after the change?</span>');
+    expect(html).toContain('<span class="aipm-eval__q">Weather on Mars?</span>');
+    expect(html).not.toContain('First draft</span>');
+  });
+
   it('hides "Hand to Daniel" on a read-only practice', () => {
     expect(renderDesk(desk({ readOnly: true }))).not.toContain('engineer-handover');
   });

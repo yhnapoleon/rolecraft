@@ -54,7 +54,10 @@ export interface EvaluationHost {
   getDataHost?(): {
     openReference(ref: ObjectRef): Promise<void>;
     /** Saved test results and material titles, for each case's answer and answer chain. */
-    query?(operation: 'tests.list' | 'workbench.read'): Promise<unknown>;
+    query?(
+      operation: 'tests.list' | 'workbench.read' | 'objects.read',
+      input?: Record<string, unknown>,
+    ): Promise<unknown>;
   } | null;
   /** Sends a stored `tests.create` Command unchanged: same request_id, no journal, no retry. */
   sendPreparedTest(command: Record<string, unknown>): Promise<unknown>;
@@ -81,10 +84,16 @@ export function savedPlanOf(response: unknown) {
     const version = [v.object, v.content, v].find(
       (x): x is Loose => !!x && typeof x === 'object' && !!(x as Loose).structured_payload,
     );
-    const payload = version?.structured_payload as { cases?: { id: string }[] } | undefined;
+    const payload = version?.structured_payload as
+      | { cases?: { id: string; query?: string }[] }
+      | undefined;
     const ref = (v.ref ?? v.product_ref) as ObjectRef | undefined;
     return payload?.cases && ref?.object_id
-      ? { ref, ids: payload.cases.map((c) => c.id) }
+      ? {
+          ref,
+          ids: payload.cases.map((c) => c.id),
+          queries: Object.fromEntries(payload.cases.map((c) => [c.id, c.query ?? ''])),
+        }
       : undefined;
   });
 }
@@ -137,6 +146,7 @@ export function createEvaluationDesk(
     notice: null,
     judging: {},
     runs: {},
+    queries: {},
   };
   const t = (zh: string, en: string) => text(language, zh, en);
   const requireBoundPractice = () => {
@@ -197,7 +207,35 @@ export function createEvaluationDesk(
     if (!view) throw new Error('aipm_batch_unreadable');
     state.view = view;
     state.monitoring = view.batch.monitoring?.map((m) => ({ ...m })) ?? state.monitoring;
+    if (view.batch.cases.some((c) => !state.queries?.[c.id])) void readQuestions(view);
     return view;
+  }
+
+  // Each case's question, read once from the saved plan the batch points at.
+  let questions: Promise<void> | null = null;
+  function readQuestions(view: BatchView) {
+    const ref = (view.batch as { plan_ref?: ObjectRef }).plan_ref;
+    const data = host.getDataHost?.();
+    if (!ref || !data?.query) return;
+    questions ??= (async () => {
+      try {
+        const plan = await data.query?.('objects.read', {
+          kind: ref.kind,
+          object_id: ref.object_id,
+          version: ref.version,
+        });
+        requireBoundPractice();
+        const saved = savedPlanOf({ object: (plan as { content?: unknown })?.content, ref });
+        if (saved) {
+          state.queries = { ...state.queries, ...saved.queries };
+          paint();
+        }
+      } catch {
+        // Without the plan the case keeps its short id.
+      } finally {
+        questions = null;
+      }
+    })();
   }
 
   async function load() {
@@ -407,6 +445,7 @@ export function createEvaluationDesk(
         const found = savedPlanOf(product);
         if (!found) throw new Error('plan_ref_unavailable');
         savedPlan = { drafted, ...found };
+        state.queries = { ...state.queries, ...found.queries };
       }
       const saved = savedPlan;
       const designRef: ObjectRef = {
