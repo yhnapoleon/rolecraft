@@ -139,6 +139,7 @@ function setup(
   });
   return {
     read: () => capture.adapter!.read(),
+    update: () => handle.update(snapshot),
     calls: () => calls,
     switchMode: (mode: RolesView['mode']) => {
       currentMode = mode;
@@ -238,6 +239,33 @@ it('keeps the job error code of a reply that did not come through', async () => 
     expect(view.turns[0]).toMatchObject({ status: 'failed', errorCode: 'role_help_unverified' });
     expect(view.turns[0].reply).toBeUndefined();
   } finally {
+    test.destroy();
+  }
+});
+
+it('reads again while a reply is awaited, so a retry refused at once does not stay "replying"', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  const job: { status: string; error_code?: string } = { status: 'queued' };
+  const test = setup(false, { text: '', omissionCount: 0, currentVersion: 1, job });
+  try {
+    expect((await test.read()).turns[0].status).toBe('queued');
+    const reads = test.calls();
+    // The worker refuses the retried job without writing anything: the snapshot is unchanged.
+    job.status = 'failed';
+    job.error_code = 'role_share_receipt_invalid';
+    test.update();
+    expect(test.calls()).toBe(reads); // not on every notification
+    vi.setSystemTime(Date.now() + 1500);
+    test.update();
+    await vi.waitFor(() => expect(test.calls()).toBeGreaterThan(reads));
+    const view = await test.read();
+    expect(view.turns[0]).toMatchObject({ status: 'failed', errorCode: 'role_share_receipt_invalid' });
+    const settled = test.calls();
+    vi.setSystemTime(Date.now() + 1500);
+    test.update(); // nothing awaited any more: an unchanged snapshot reads nothing
+    expect(test.calls()).toBe(settled);
+  } finally {
+    vi.useRealTimers();
     test.destroy();
   }
 });
