@@ -157,6 +157,7 @@ export class V4LiveData {
           id: r.ref.object_id,
           query: t.query,
           answer: t.answer,
+          status: t.status,
           fallback: t.status === 'fallback',
           stale: (t.citations ?? []).some(
             (c: any) =>

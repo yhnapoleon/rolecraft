@@ -108,6 +108,8 @@ import {
 import './pilot-config.css';
 import './document-motion.css';
 import { markdownHtml } from './markdown';
+import { answerChain, fromWorkbenchRun } from '../features/answer-chain/model';
+import { answerChainHtml } from '../features/answer-chain/view';
 import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
@@ -3625,6 +3627,7 @@ function runGroup(a, runs) {
           i,
         ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${(i === 0 ? T('最新', 'Latest') : comparison.referenced ? T('识别基准', 'Recognition baseline') : T('上一次', 'Previous')) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
+      ${runChain(a, x, i === 0)}
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
@@ -3634,6 +3637,19 @@ function runGroup(a, runs) {
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
     <div class="run-actions">${btn(icon('layers', 'i-xs') + T('看依据', 'Check sources'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;
+}
+
+// Which of the assistant's five steps this run passed and where it stopped. Only the latest
+// column carries its recognition cards on the page, so only it links to them.
+function runChain(a, x, latest) {
+  const handover =
+    !!L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && roleOf(a.id) === 'pm' && !sealedSession(a);
+  return answerChainHtml(
+    answerChain(fromWorkbenchRun(x), locale()),
+    x.id,
+    { language: locale(), handover, inspect: latest, fresh: x.id === ui.lastRun },
+    (x.recognition || []).map((r) => r.task),
+  );
 }
 
 /* the rail: people, and what needs you. A chat pushes in where the people were. */

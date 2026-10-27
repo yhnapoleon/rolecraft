@@ -249,6 +249,12 @@ describe('v2 test results shown in the workbench', () => {
       ['current-policy', false],
       ['no-answer', false],
     ]);
+    expect(session.tests.map((t) => (t as { status?: string }).status)).toEqual([
+      'answered',
+      'answered',
+      'answered',
+      'fallback',
+    ]);
     expect(session.tests[0].source_versions).toEqual({ faq: 1, policy: 2 });
     expect(session.tests[1].citations).toEqual([{ material_id: 'policy', version: 1 }]);
     expect(session.tests.every((t) => t.mode === 'extractive')).toBe(true);

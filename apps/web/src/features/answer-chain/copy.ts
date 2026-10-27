@@ -218,7 +218,7 @@ const EN: Record<ChainCopyKey, string> = {
   show_steps: 'Show each step',
   hide_steps: 'Hide steps',
   handover: 'Hand to Daniel',
-  how_judged: 'How the system judged ›',
+  how_judged: 'How this was assessed ›',
 };
 
 export const CHAIN_COPY: CopyTable<ChainCopyKey> = { zh: ZH, en: EN };

@@ -344,6 +344,8 @@ export class LiveWorkbench {
         generation: t.generation ?? null,
         effectiveConfig: t.effective_config ? effectiveSummary(t.effective_config) : null,
         asOfSeq: t.as_of_seq,
+        // The raw result status (answered, answered_with_warning, fallback, failed).
+        status: (t as { status?: string }).status ?? null,
         fallback: t.fallback,
         stale: t.stale,
         recognition: t.recognition ?? [],
