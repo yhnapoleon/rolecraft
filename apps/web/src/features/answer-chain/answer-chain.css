@@ -284,6 +284,11 @@
   .run-cols:is(.two, .three) .ac {
     container-type: normal;
   }
+  /* Small multiples share one legend: the step names show under the latest column only and
+     keep their height elsewhere, so the dots stay level. Each dot keeps its sr-only sentence. */
+  .run-cols:is(.two, .three) > .run-col:not(:first-child) .ac-name {
+    visibility: hidden;
+  }
   .run-cols:is(.two, .three) {
     row-gap: 0;
   }
