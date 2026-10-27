@@ -197,7 +197,7 @@ REASONS = {
         "request_over_limit": "The request exceeds an approval ceiling or would reduce an existing "
         "allocation. Check the published approval rules.",
         "request_not_needed": "The requested terms do not demonstrate an additional shortfall. "
-        "Recheck the target participants, work-item costs and date. Developer-days: allocated 3, "
+        "Recheck the target participants, work-item costs and date. Person-days: allocated 3, "
         "proposed need 6, requested 6; Pilot deadline day: allocated 7, proposed need 7, "
         "requested 7",
         "requested_resources_insufficient": "The requested amount is still insufficient for the "

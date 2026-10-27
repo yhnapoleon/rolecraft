@@ -506,7 +506,7 @@ EN = {
     # Recorded business decisions in feedback (career_lab.api.business_record).
     "已记录的业务决定（规则核实）：": "Recorded business decisions (rule checked):",
     "名额": "Seats",
-    "开发人日": "Developer-days",
+    "开发人日": "Person-days",
     "截止日": "Deadline day",
     "{name}：{asked}": "{name}: {asked}",
     "{name}：{asked} · {outcome}": "{name}: {asked} · {outcome}",

@@ -79,8 +79,8 @@ def test_requests_are_listed_in_the_order_they_were_made():
         pytest.param(
             "en",
             "Recorded business decisions (rule checked):\n"
-            "Developer-days: requested 7 · declined\n"
-            "Developer-days: requested 6 · approved 6",
+            "Person-days: requested 7 · declined\n"
+            "Person-days: requested 6 · approved 6",
             id="en",
         ),
     ],
@@ -136,14 +136,14 @@ def test_a_deadline_reads_as_a_day(language, expected):
             "approved",
             {"dev_days": 6, "deadline_day": 9},
             "Deadline day: requested day 9 · approved day 9; "
-            "Developer-days: requested 6 · approved 6",
+            "Person-days: requested 6 · approved 6",
             id="en-approved",
         ),
         pytest.param(
             "en",
             "rejected",
             {},
-            "Deadline day: requested day 9; Developer-days: requested 6 · declined",
+            "Deadline day: requested day 9; Person-days: requested 6 · declined",
             id="en-rejected",
         ),
         pytest.param(
@@ -151,7 +151,7 @@ def test_a_deadline_reads_as_a_day(language, expected):
             "countered",
             {"dev_days": 6, "deadline_day": 8},
             "Deadline day: requested day 9 · counteroffer day 8; "
-            "Developer-days: requested 6 · counteroffer 6, awaiting acceptance",
+            "Person-days: requested 6 · counteroffer 6, awaiting acceptance",
             id="en-countered",
         ),
     ],

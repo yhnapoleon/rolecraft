@@ -510,9 +510,9 @@ it('writes requests and resources in effect as the recorded decisions do', async
   try {
     setPreference('en');
     await settle();
-    expect(texts(f)).toContain('Deadline day: requested day 8; Developer-days: requested 7');
+    expect(texts(f)).toContain('Deadline day: requested day 8; Person-days: requested 7');
     expect(texts(f)).toContain(
-      'Last checked resources in effect (rule checked): Seats: 30, Deadline day: day 7, Developer-days: 3',
+      'Last checked resources in effect (rule checked): Seats: 30, Deadline day: day 7, Person-days: 3',
     );
   } finally {
     setPreference('zh');

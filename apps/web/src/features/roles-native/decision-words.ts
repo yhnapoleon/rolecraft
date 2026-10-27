@@ -7,7 +7,7 @@ export type ResourceKey = 'capacity' | 'dev_days' | 'deadline_day';
 
 export const resourceNames = (): Record<ResourceKey, string> => ({
   capacity: T('名额', 'Seats'),
-  dev_days: T('开发人日', 'Developer-days'),
+  dev_days: T('开发人日', 'Person-days'),
   deadline_day: T('截止日', 'Deadline day'),
 });
 

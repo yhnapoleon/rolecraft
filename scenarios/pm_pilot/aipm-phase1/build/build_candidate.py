@@ -43,6 +43,11 @@ def snapshot(root):
 
 # The published English brief predates the company name; only English candidates are renamed.
 COMPANY_RENAME = {"en": ("Xingqiao Digital", "Starbridge Digital")}
+# The product names the unit person-days (中文「人日」); the published English materials, facts
+# and roles say developer-days. Only English candidates are rewritten.
+TERM_RENAME = {"en": (("developer-day", "person-day"), ("Developer-day", "Person-day"))}
+# The feedback rubric keeps its wording: these files are bound by its evaluation signature.
+TERM_KEPT = {"runtime/evaluation-rubric.json", "runtime/evaluation-protocol.json"}
 
 
 def shift_span(ref, at, delta, old, new):
@@ -52,9 +57,50 @@ def shift_span(ref, at, delta, old, new):
         ref["span_start"], ref["span_end"] = start + delta, end + delta
     elif end > at:
         if not (start <= at and at + len(old) <= end):
-            raise ValueError("Company name replacement splits a source span")
-        ref["quote"] = ref["quote"].replace(old, new, 1)
+            raise ValueError(f"Replacing {old!r} splits a source span")
+        ref["quote"] = ref["quote"][: at - start] + new + ref["quote"][at - start + len(old) :]
         ref["span_end"] = end + delta
+
+
+def replace_in_material(package, name, object_id, old, new, materials, facts, version=1):
+    """Replace ``old`` in one copied material and keep every span into it exact.
+
+    Returns how many occurrences were replaced. ``materials`` and ``facts`` are edited in place.
+    """
+    path = package / name
+    text = path.read_text()
+    delta = len(new) - len(old)
+    record = next(m for m in materials if m["id"] == object_id and m["version"] == version)
+    sources = [
+        f["source"]
+        for f in facts
+        if f["source"]["object_id"] == object_id and f["source"]["version"] == version
+    ]
+    # Right to left keeps earlier offsets valid while each occurrence is replaced.
+    hits = []
+    at = text.find(old)
+    while at >= 0:
+        hits.append(at)
+        at = text.find(old, at + len(old))
+    for at in reversed(hits):
+        text = text[:at] + new + text[at + len(old) :]
+        for fragment in record["fragments"]:
+            shift_span(fragment["ref"], at, delta, old, new)
+            fragment["text"] = fragment["ref"]["quote"]
+        for source in sources:
+            shift_span(source, at, delta, old, new)
+    for fragment in record["fragments"]:
+        ref = fragment["ref"]
+        assert text[ref["span_start"] : ref["span_end"]] == ref["quote"] == fragment["text"]
+    keys = ("span_start", "span_end", "quote")
+    for source in sources:
+        assert text[source["span_start"] : source["span_end"]] == source["quote"]
+        assert any(all(f["ref"][k] == source[k] for k in keys) for f in record["fragments"]), (
+            f"Fact source left {object_id}"
+        )
+    assert old not in text
+    path.write_text(text)
+    return len(hits)
 
 
 def rename_company(package, name, lang):
@@ -62,41 +108,67 @@ def rename_company(package, name, lang):
     if lang not in COMPANY_RENAME:
         return
     old, new = COMPANY_RENAME[lang]
-    path = package / name
-    text = path.read_text()
-    delta = len(new) - len(old)
     materials = json.loads((package / "materials.json").read_text())
     facts = json.loads((package / "facts.json").read_text())
-    brief = next(m for m in materials if m["id"] == "brief" and m["version"] == 1)
-    sources = [f["source"] for f in facts if f["source"]["object_id"] == "brief"]
-    # Right to left keeps earlier offsets valid while each occurrence is replaced.
-    hits = []
-    at = text.find(old)
-    while at >= 0:
-        hits.append(at)
-        at = text.find(old, at + len(old))
-    if not hits:
+    if not replace_in_material(package, name, "brief", old, new, materials, facts):
         raise ValueError("English brief no longer contains the old company name")
-    for at in reversed(hits):
-        text = text[:at] + new + text[at + len(old) :]
-        for fragment in brief["fragments"]:
-            shift_span(fragment["ref"], at, delta, old, new)
-            fragment["text"] = fragment["ref"]["quote"]
-        for source in sources:
-            shift_span(source, at, delta, old, new)
-    for fragment in brief["fragments"]:
-        ref = fragment["ref"]
-        assert text[ref["span_start"] : ref["span_end"]] == ref["quote"] == fragment["text"]
-    keys = ("span_start", "span_end", "quote")
-    for source in sources:
-        assert text[source["span_start"] : source["span_end"]] == source["quote"]
-        assert any(all(f["ref"][k] == source[k] for k in keys) for f in brief["fragments"]), (
-            "Fact source left the brief"
-        )
-    assert old not in text
-    path.write_text(text)
     write(package / "materials.json", materials)
     write(package / "facts.json", facts)
+
+
+def swap(value, old, new):
+    """``value`` with ``old`` replaced in every string it holds."""
+    if isinstance(value, str):
+        return value.replace(old, new)
+    if isinstance(value, list):
+        return [swap(v, old, new) for v in value]
+    if isinstance(value, dict):
+        return {k: swap(v, old, new) for k, v in value.items()}
+    return value
+
+
+def rename_terms(package, rules, manifest, lang):
+    """Say person-days in every copied English material, fact, role and locale entry."""
+    if lang not in TERM_RENAME:
+        return
+    materials = json.loads((package / "materials.json").read_text())
+    facts = json.loads((package / "facts.json").read_text())
+    roles = json.loads((package / "roles.json").read_text())
+    locale = json.loads((package / "locale.json").read_text())
+    changed = set()
+    for old, new in TERM_RENAME[lang]:
+        for object_id, versions in rules["material_files"].items():
+            for version, name in versions.items():
+                if replace_in_material(
+                    package, name, object_id, old, new, materials, facts, int(version)
+                ):
+                    changed.add((object_id, int(version), name))
+        for fact in facts:
+            fact["unit"] = swap(fact["unit"], old, new)
+        for entry in locale["facts"].values():
+            entry["display_unit"] = swap(entry["display_unit"], old, new)
+        roles = swap(roles, old, new)
+        manifest["role_specs"] = swap(manifest["role_specs"], old, new)
+    for object_id, version, name in changed:
+        next(m for m in locale["materials"] if m["id"] == object_id and m["version"] == version)[
+            "sha256"
+        ] = sha((package / name).read_bytes())
+    write(package / "materials.json", materials)
+    write(package / "facts.json", facts)
+    write(package / "roles.json", roles)
+    write(package / "locale.json", locale)
+
+
+def untouched_terms(package, lang):
+    """Files of a built English package that still say an old term (the kept rubric aside)."""
+    olds = [old for old, _ in TERM_RENAME.get(lang, ())]
+    return sorted(
+        str(p.relative_to(package))
+        for p in package.rglob("*")
+        if p.is_file()
+        and str(p.relative_to(package)) not in TERM_KEPT
+        and any(old.encode() in p.read_bytes() for old in olds)
+    )
 
 
 def build(output, content=CONTENT):
@@ -149,6 +221,7 @@ def build(output, content=CONTENT):
         company = json.loads((content / f"public/company.{lang}.json").read_text())
         name = rules["material_files"]["brief"]["1"]
         rename_company(package, name, lang)
+        rename_terms(package, rules, manifest, lang)
         original_brief = (package / name).read_text()
         company_text = (
             original_brief + "\n\n" + company["title"] + "\n" + company["status_label"] + "\n\n"
@@ -193,7 +266,8 @@ def build(output, content=CONTENT):
             yaml.safe_dump(rules, allow_unicode=True, sort_keys=True)
         )
         # Original trial snapshots and all original source spans are retained byte-for-byte,
-        # except the English company rename above, which shifts brief spans by its length.
+        # except the English company and person-days renames above, which shift the spans of
+        # the brief, approvals and technical materials by the length they change.
         # The new appendix is a draft in this NEW package, not a historical trial input.
         extra = []
         for member in present:
@@ -258,6 +332,7 @@ def build(output, content=CONTENT):
         module = ScenarioModule(package)
         assert module.registration().bindings == module.bindings
         assert snapshot(source) == before, "Installed source changed during build"
+        assert not untouched_terms(package, lang), untouched_terms(package, lang)
         assert loaded.bundle.domains == old.package.bundle.domains
         report["packages"][lang] = {
             "root": str(package),

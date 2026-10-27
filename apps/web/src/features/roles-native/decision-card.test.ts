@@ -393,7 +393,7 @@ it('shows approved terms as met in English without offering a re-application', (
     { 'approvals:1': "Manager's published resource-approval rules" },
   );
   expect(model.lines).toEqual([
-    { ok: true, text: 'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)' },
+    { ok: true, text: 'Person-days: 3 → 6 (plan needs 6 · ceiling 6)' },
   ]);
   expect(model.clauses[0].title).toBe("Manager's published resource-approval rules");
   expect(model.ceiling).toBeNull();
@@ -551,7 +551,7 @@ it('names each resource as the request panel and the recorded decisions do', () 
   setPreference('en');
   expect(lines().map((line) => line.text)).toEqual([
     'Seats: 30 → 45 (plan needs 40 · ceiling 60)',
-    'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)',
+    'Person-days: 3 → 6 (plan needs 6 · ceiling 6)',
     'Deadline day: day 7 → day 9 (plan needs day 9 · ceiling day 10)',
   ]);
   const names = resourceNames();
