@@ -361,6 +361,14 @@ describe('answer chain: flagged or left as is, then and now', () => {
   });
 });
 
+describe('answer chain: expanded rows', () => {
+  it('counts one passage in the singular', () => {
+    const one = answerChain(run({ recognition: [scope('in'), retrieval('rrf', false, 1)] }), 'en');
+    expect(one.rows[1]).toContain('1 passage cleared 0.35');
+    expect(answerChain(run(), 'en').rows[1]).toContain('3 passages cleared 0.35');
+  });
+});
+
 describe('answer chain adapters', () => {
   it('reads a workbench run', () => {
     const input = fromWorkbenchRun({

@@ -290,7 +290,7 @@ function rowsFor(
     if (!['dense', 'rrf', 'bm25'].includes(String(out.method)))
       return [methodText(null, false, language)];
     return [
-      t('row_found', {
+      t(out.passing === 1 ? 'row_found_one' : 'row_found', {
         method: methodText(out.method, fallback, language),
         passing: num(out.passing) ? out.passing : '–',
         min_score: num(out.min_score)
