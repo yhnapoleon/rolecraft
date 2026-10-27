@@ -940,8 +940,10 @@ function afterRender() {
   const registered = registeredRoute(ui.route);
   const stageRoot = registered && document.getElementById('ws-stage');
   if (stageRoot) registered.mount?.(stageRoot);
-  if (ui.route === 'review' && current() && L.nativeWorkspace(current()))
+  if (ui.route === 'review' && current() && L.nativeWorkspace(current())) {
     loadRecognitionSummary(current());
+    void mountSectionStatesSlot(current());
+  }
   // Only the workbench's own scroll regions move; browser focus must not shift
   // the entire fixed-height workspace (especially after viewport changes).
   if (WS.includes(ui.route) && window.scrollY) window.scrollTo(0, 0);
@@ -4264,6 +4266,7 @@ function renderReview() {
         <h1 class="sr-only">${T('结果', 'Result')}</h1>
         <div class="result-main" data-v4-feedback data-v4-region="feedback" data-result-layout="true"></div>
         <section class="result-after" aria-label="${esc(T('接下来', 'What next'))}">
+          ${aipmHere(a) ? '<section data-aipm-section-states></section>' : ''}
           ${behaviorSection(a)}
           ${practiceOriginNote(a)}
           <section class="review-practice" data-v4-practice aria-live="polite">
@@ -4547,6 +4550,20 @@ function fillBehavior(box, a) {
   const html = behaviorInner(a);
   box.innerHTML = html;
   box.hidden = !html;
+}
+// "Judgements you improved before delivery" (S2): the result line's module, when it is built in.
+// A failed read leaves the section empty; the result page does not depend on it.
+const sectionStates = import.meta.glob('../features/aipm-result/section-states.ts');
+async function mountSectionStatesSlot(a) {
+  const load = Object.values(sectionStates)[0];
+  const prd = Aipm.prdOf(a);
+  if (!load || !prd || !document.querySelector('[data-aipm-section-states]')) return;
+  const list = await L.v4Host(a)?.query('submissions.list').catch(() => null);
+  const submission = (Array.isArray(list) ? list : list?.items ?? []).at(-1);
+  const el = document.querySelector('[data-aipm-section-states]');
+  if (!submission || !el || current()?.id !== a.id) return;
+  const { mountSectionStates } = await load();
+  mountSectionStates(el, { client: Aipm.host.getClient(), submission, prdId: prd.id, language: workLang(a) ?? locale(), openReview: (step, ref) => Aipm.host.openReview(step, ref) });
 }
 async function loadRecognitionSummary(a) {
   const last = recognitionReads.get(a.id) ?? 0;
