@@ -25,7 +25,14 @@ export function agentLine(
     return agentStatus(connection).text;
   }
   const exp = (a.exports || []).length;
-  const back = a.artifacts.filter((x) => !x.removedAt && x.source !== 'user').length;
+  // A design draft handed back for confirmation is a return too, once per draft (QA G-4).
+  const drafts = new Set(
+    events
+      .filter((event) => event.status === 'ok' && event.tool === 'aipm.design.draft')
+      .map((event) => event.object?.id ?? event.id),
+  ).size;
+  const back = a.artifacts.filter((x) => !x.removedAt && x.source !== 'user').length + drafts;
   if (!exp && !back) return T('还没交出任务', 'Nothing handed over yet');
+  if (!exp) return T(`带回 ${back} 份`, `${back} returned`);
   return T(`交出 ${exp} 次，带回 ${back} 份`, `${exp} handed over, ${back} returned`);
 }

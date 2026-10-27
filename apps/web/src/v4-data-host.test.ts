@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { V4DataHost, type V4HostPorts } from './v4-data-host';
+import { RECOVER_TIMEOUT_MS, V4DataHost, type V4HostPorts } from './v4-data-host';
 
 const point = { business_seq: 8, workspace_revision: 3, storage_revision: 11 };
 const state = { ...point, session_id: 's', status: 'active' };
@@ -100,6 +100,35 @@ describe('v4 single host persistence and recovery', () => {
     });
     expect(posts(fetcher)).toHaveLength(0);
     expect(host.snapshot().storageError).toBe(true);
+  });
+  it('treats a recovery read with no answer after 15 seconds as unconfirmed and frees the lock', async () => {
+    const { host, fetcher } = setup();
+    fetcher.mockImplementation(async (_url, init) => {
+      if (!init?.body) return reply({ schema_version: 2, state });
+      throw Error('disconnected after commit');
+    });
+    const pending = await host.command('turns.create', { role_id: 'supervisor', text: 'Question' });
+    vi.useFakeTimers();
+    try {
+      fetcher.mockImplementation(() => new Promise<Response>(() => {}));
+      const waiting = host.recover(pending.requestId);
+      const settled = expect(waiting).rejects.toMatchObject({ code: 'response_unconfirmed' });
+      await vi.advanceTimersByTimeAsync(RECOVER_TIMEOUT_MS);
+      await settled;
+      fetcher.mockImplementation(async () =>
+        reply({
+          schema_version: 2,
+          session_id: 's',
+          request_id: pending.requestId,
+          operation: 'turns.create',
+          status: 'pending',
+          read_only: true,
+        }),
+      );
+      expect((await host.recover(pending.requestId)).status).toBe('pending');
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('preserves an ambiguous original command across reload and only GETs during recovery', async () => {
     const { host, ports, fetcher, map } = setup();

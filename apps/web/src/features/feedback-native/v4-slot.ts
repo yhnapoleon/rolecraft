@@ -12,6 +12,7 @@ import type {
 import type { SubmissionRuleCheck } from '../../contracts-v2';
 import type { ObjectRef } from '../workspace/contract-types';
 import { exactRefKey } from './exact-ref';
+import { sheetNames, unsavedSheets } from '../aipm-design/unsaved';
 import type { SentenceResult } from './presubmit';
 import { readCatalog } from '../../reference-catalog';
 import {
@@ -860,6 +861,11 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     rememberedChoice: () => {
       const picked = sid ? rememberedChoices.get(sid) : undefined;
       return picked && structuredClone(picked);
+    },
+    // AIPM worksheets keep unsaved text in this browser; other practices have none.
+    unsavedWork: async (products) => {
+      const steps = await unsavedSheets(host, products);
+      return steps.length ? sheetNames(steps, state.workLanguage === 'en' ? 'en' : 'zh') : '';
     },
     readDraft: (key) => {
       valid();

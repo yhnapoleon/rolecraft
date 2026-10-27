@@ -298,7 +298,7 @@ async function run(language, reduced, width, flow) {
       assert.equal(decisions.length, 2, 'the heading line, then the one recorded decision');
       const line = decisions[1];
       assert.ok(
-        line.startsWith(text('开发人日：申请 6 · ', 'Developer-days: requested 6 · ')),
+        line.startsWith(text('开发人日：申请 6 · ', 'Person-days: requested 6 · ')),
         line,
       );
       const status = text(

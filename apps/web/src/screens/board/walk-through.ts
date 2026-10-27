@@ -183,14 +183,15 @@ export function startTour(id: string) {
     const w = card.offsetWidth;
     const h = card.offsetHeight;
     const below = r.bottom + 14 + h < innerHeight - 8;
-    const left = Math.min(Math.max(16, r.left + r.width / 2 - w / 2), innerWidth - w - 16);
+    // A bar across the page (the seven points) is pointed at from its start: centred, the card
+    // would sit on the brief's readings just below it.
+    const wide = r.width > w * 2;
+    const anchor = wide ? r.left + 40 : r.left + r.width / 2;
+    const left = Math.min(Math.max(16, anchor - (wide ? 40 : w / 2)), innerWidth - w - 16);
     card.style.left = `${left}px`;
     card.style.top = `${below ? r.bottom + 14 : Math.max(8, r.top - 14 - h)}px`;
     card.dataset.side = below ? 'below' : 'above';
-    card.style.setProperty(
-      '--arrow',
-      `${Math.min(Math.max(18, r.left + r.width / 2 - left), w - 18)}px`,
-    );
+    card.style.setProperty('--arrow', `${Math.min(Math.max(18, anchor - left), w - 18)}px`);
   };
   const draw = () => {
     const s = list[i];
@@ -228,8 +229,13 @@ export function startTour(id: string) {
     if (e.key === 'Escape') close('skipped');
   };
   const onMove = () => requestAnimationFrame(place);
+  // The tour belongs to the workbench: opening a sheet or another screen (no route change
+  // needed) puts it away instead of carrying it along.
+  const HOME = '.kanban, [data-step="reproduce"]';
+  const home = !!document.querySelector(HOME);
   const surfaces = new MutationObserver(() => {
-    if (!target?.isConnected) onMove();
+    if (home && !document.querySelector(HOME)) close('skipped');
+    else if (!target?.isConnected) onMove();
   });
   surfaces.observe(document.getElementById('app') || document.body, {
     childList: true,

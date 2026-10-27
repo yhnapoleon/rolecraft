@@ -37,6 +37,16 @@
       "id": "access",
       "scope": "access",
       "request": "准备权限申请草稿"
+    },
+    {
+      "id": "hotel_cap_today",
+      "scope": "expense",
+      "request": "出差住宿上限今天是多少"
+    },
+    {
+      "id": "over_cap_claim",
+      "scope": "expense",
+      "request": "这张超标的住宿能不能报"
     }
   ],
   "source_requirements": {
@@ -255,7 +265,7 @@
     "boundary": {
       "order": 4,
       "segment": "design",
-      "goal": "每类请求：要回答还是要动手，谁最后批准。",
+      "goal": "每类请求：AI 做到哪一步，谁最后拍板。",
       "angles": [
         {
           "id": "act",
@@ -300,7 +310,7 @@
     "solution": {
       "order": 5,
       "segment": "design",
-      "goal": "比较可行做法，分清方案和实际配置。",
+      "goal": "设计助手的回答链，分清方案和实际生效的设置。",
       "angles": [
         {
           "id": "two",
@@ -326,8 +336,8 @@
         },
         {
           "id": "gap",
-          "label": "方案和实际配置差在哪",
-          "hint": "请求参数、实际参数和未生效原因。",
+          "label": "回答链上哪一环没生效",
+          "hint": "看方案图里标「未生效」的那一环和原因。",
           "materials": [
             "technical"
           ]
@@ -348,7 +358,7 @@
     "assurance": {
       "order": 6,
       "segment": "verify",
-      "goal": "用明确预期验证风险，留下观察和退路。",
+      "goal": "定义什么算答对，找出错在哪一环，留好观察和退路。",
       "angles": [
         {
           "id": "disprove",
@@ -369,7 +379,7 @@
         {
           "id": "signal",
           "label": "上线后看什么信号",
-          "hint": "咨询登记里能看到哪些量。",
+          "hint": "转人工、过期提醒、政策更新到索引重建的时间，各由谁看。",
           "materials": [
             "demand"
           ]

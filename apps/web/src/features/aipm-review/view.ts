@@ -53,13 +53,9 @@ export type ReviewViewInput = {
   /** The PRD version's seven section texts, as saved. */
   sections: Partial<Record<StepId, string>>;
   sentences: Sentences;
-  /** The latest saved PRD version, to say "you have edited since". */
-  currentPrdVersion?: number | null;
   previousVersion?: number | null;
   /** Whether a launch decision has been chosen on ⑦ (⑤⑥ rubric lines need it). */
   hasDecision?: boolean;
-  /** The progress sheet says the section changed after this review. */
-  edited?: boolean;
   onAsk?: (who: Colleague) => void;
   onBack?: () => void;
   /** What this screen showed for the same review just before, so changes can move. */
@@ -326,7 +322,7 @@ export function renderReview(doc: Document, input: ReviewViewInput): HTMLElement
     if(found.length) sheet.append(summary);
   }
 
-  const stale = staleNote(review, language, input.currentPrdVersion, input.edited);
+  const stale = staleNote(review, language);
   if (stale) {
     const banner = el('p', stale.text, 'aipm-review__stale');
     banner.dataset.kind = stale.kind;

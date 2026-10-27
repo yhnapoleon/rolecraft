@@ -90,7 +90,7 @@
     },
     {
       "id": "tool_capability",
-      "revision": "aipm-design-1",
+      "revision": "aipm-design-2",
       "applies_when": {
         "scopes": [
           "expense",
@@ -104,12 +104,12 @@
       "predicate": "tool_unavailable",
       "severity": "improve",
       "zh_feedback": {
-        "message": "这个工具流程目前只作为方案保存，没有执行。",
+        "message": "这个工具流程现在只能作为方案，还没写谁在什么时点确认。",
         "checked_scope": "仅核对当前已安装的动作；不评价架构想法是否合理。",
         "next_action": "写清确认人和确认时点，再和 Daniel 核对工具接入。"
       },
       "en_feedback": {
-        "message": "This tool workflow is saved as a proposal; it has not run.",
+        "message": "This tool workflow can only be a proposal for now, and it does not say who confirms and when.",
         "checked_scope": "Installed actions only; this does not judge the architecture idea.",
         "next_action": "Name the confirmer and confirmation point, then check tool availability with Daniel."
       },
@@ -117,6 +117,11 @@
         {
           "target_action": "prepare_draft",
           "confirmation_point": "manager before submission",
+          "expected": "plan_only_not_violation"
+        },
+        {
+          "target_action": "execute_change",
+          "confirmation_point": "IT admin before the change is applied",
           "expected": "plan_only_not_violation"
         }
       ]

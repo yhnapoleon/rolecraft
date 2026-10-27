@@ -122,9 +122,13 @@ def evaluate_design(
                 if predicate == "ai_final_approval":
                     matches = row["target_action"] == "approve" and row["final_authority"] == "ai"
                 else:
+                    # A tool the assistant cannot run yet is a fair proposal (the server marks it
+                    # plan_only; nothing structured can claim it runs). The gap is a proposal that
+                    # names no one to confirm, and when, before anything runs.
                     matches = (
                         row["route"] == "agent_confirmation"
                         and row["execution_support"] != "supported"
+                        and not (row.get("confirmation_point") or "").strip()
                     )
                 if matches and available:
                     emit(rule, row["id"], "boundary", basis)

@@ -26,6 +26,8 @@ import {
 } from './v4-data';
 
 const roles: RoleId[] = ['supervisor', 'business_lead', 'tech_lead'];
+// While a reply is awaited, a host notification may prompt a fresh read this often at most.
+const AWAIT_READ_MS = 1500;
 const errorText = () =>
   T(
     '操作尚未确认，文字已保留。请使用原请求恢复。',
@@ -195,6 +197,11 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   }
   let reading: Promise<RolesView> | undefined;
   let readAgain = false;
+  // A reply still awaited, and when the last read finished. A job that fails without writing
+  // anything (a retried reply refused at once) leaves the snapshot unchanged, so while a reply
+  // is awaited the host's request polling is what tells this thread to read again.
+  let awaiting = false;
+  let readAt = 0;
   const readOnce = async (): Promise<RolesView> => {
     const ticket = ++readTicket;
     const s = session(host, sid);
@@ -397,9 +404,11 @@ export function mount(context: V4SlotContext): V4SlotHandle {
           readAgain = false;
           next = await readOnce();
         } while (readAgain && !destroyed);
+        awaiting = next.turns.some((t) => t.status === 'queued' || t.status === 'running');
         return next;
       })().finally(() => {
         reading = undefined;
+        readAt = Date.now();
       }));
     },
     async send({ roleId, text }) {
@@ -547,7 +556,8 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     // Both the host subscription and V4Mounts call update. Recovery emits too,
     // but an unchanged snapshot/request set is not new dialogue evidence.
     const key = readSignal(snapshot);
-    if (key === lastSnapshot) return;
+    if (key === lastSnapshot && !(awaiting && !reading && Date.now() - readAt >= AWAIT_READ_MS))
+      return;
     lastSnapshot = key;
     if (reading) readAgain = true;
     void view.refresh().catch(fail);

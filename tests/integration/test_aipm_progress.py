@@ -28,7 +28,7 @@ def content_for(env):
     binding = env["app"].state.v2_store.view(env["owner"]).bindings
     return AipmContent(
         scenario_hash=binding.scenario.sha256,
-        content_revision="aipm-phase1-draft-1",
+        content_revision="aipm-phase1-draft-2",
         work_language="en",
         guide=AipmGuide.model_validate_json((CONTENT / "public/guide.en.json").read_bytes()),
         design_public=json.loads((CONTENT / "public/design.en.json").read_text()),
@@ -168,6 +168,36 @@ def test_focus_link_design_and_submission_shape_progress(enabled):
     assert by_id["decision"]["work_status"] == "recorded"
     assert by_id["solution"]["work_status"] == "uncovered"
     assert result(get(enabled, "progress"))["submission_feedback"][0]["status"] == "not_ready"
+
+
+def test_a_later_design_save_does_not_send_triage_back_to_recheck(enabled):
+    post(enabled, "enrollment", "aipm.enroll")
+    row = TriageRow(
+        id="row1",
+        need_ref="expenses",
+        user_request="Final expense approval",
+        target_action="approve",
+        route="agent_confirmation",
+        rationale="",
+        final_authority="ai",
+    )
+    design = AipmDesign(id="design", session_id=enabled["sid"], revision=1, rows=(row,))
+    for revision in (1, 2):
+        # The second save is another sheet's: the rows are the same and the rules run again.
+        saved = post(
+            enabled,
+            "designs",
+            "aipm.design.save",
+            {
+                "design": design.model_copy(update={"revision": revision}).model_dump(mode="json"),
+                "expected_revision": revision - 1,
+            },
+        )
+        assert saved.status_code == 200, saved.text
+    boundary = steps(result(get(enabled, "progress")))["boundary"]
+    assert boundary["work_status"] == "recorded"
+    assert not any(m["code"] == "recheck" for m in boundary["missing"])
+    assert all(f["input_ref"]["version"] == 2 for f in boundary["open_feedback"])
 
 
 def test_limited_agent_sees_partial_projection_without_private_detail(enabled):

@@ -245,3 +245,35 @@ def test_a_busy_ticket_detail_stays_within_the_result_limit(eng: tuple[Eng, Test
     assert detail["latest_draft"]["id"] == drafts[-1]
     assert detail["experiment_budget"] == {"used": 22, "limit": 50}
     assert detail["draft_budget"] == {"used": 12, "limit": 50}
+
+
+def test_a_product_managers_agent_is_offered_no_engineer_tool(
+    eng: tuple[Eng, TestClient],
+) -> None:
+    """QA G-5: in a product manager's practice engineering goes to Daniel, so an Agent there is
+    never offered engineer tools (it would read as if the person could run code or trials)."""
+    person, loopback = eng
+    person.advance_world()
+    person.ok(
+        person.call(
+            "/engineer/tickets", "engineer.tickets.create", {"from": "role", "role": "pm"}, "pm"
+        )
+    )
+    token = person.grant("broad-pm", ["read", "act", "submit"], None)
+    agent = Agent(person, loopback, token)
+    names = agent.tools()
+    assert "observation" in names and "tools" in names
+    assert not {name for name in names if name.startswith("engineer.")}
+    catalogue = agent.call("tools", {})["result"]["result"]["tools"]
+    engineer = [tool for tool in catalogue if tool["name"].startswith("engineer.")]
+    assert engineer and all(
+        not tool["available"] and tool["unavailable_code"] == "engineer_tools_not_in_pm_practice"
+        for tool in engineer
+    )
+    refused = agent.rpc(
+        "tools/call",
+        {"name": "engineer.tickets.read", "arguments": {"query": {}}},
+        "engineer.tickets.read",
+    )["result"]
+    assert refused["isError"] is True
+    assert "engineer_tools_not_in_pm_practice" in refused["content"][0]["text"]

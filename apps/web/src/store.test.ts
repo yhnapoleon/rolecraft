@@ -262,6 +262,20 @@ describe('live workspace request and recovery boundaries', () => {
     expect(store.getSnapshot().error).toContain('不支持重新执行');
   });
 
+  it('lets the next poll run after a v2 poll ends in a timed-out read', async () => {
+    const { store } = fixture();
+    await store.create('pm_pilot');
+    store.update(store.active()?.id ?? '', { protocol: 2 } as Partial<LocalSession>);
+    const poll = vi
+      .fn<(session: LocalSession) => Promise<void>>()
+      .mockRejectedValueOnce(new ApiError('unconfirmed', 0, 'response_unconfirmed'))
+      .mockResolvedValue(undefined);
+    store.installV2({ sync: async () => {}, write: async () => undefined, poll, awaiting: () => true });
+    await expect(store.poll()).rejects.toMatchObject({ code: 'response_unconfirmed' });
+    await store.poll();
+    expect(poll).toHaveBeenCalledTimes(2);
+  });
+
   it('retains a terminal failed role question for a deliberate new attempt', async () => {
     const { store, transport } = fixture();
     await store.create('pm_pilot');

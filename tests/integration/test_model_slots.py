@@ -105,18 +105,21 @@ def test_slot_01_unset_slot_variables_keep_shared_configuration_and_main_request
     assert [role["status"], assistant["status"]] == golden["statuses"]
     assert provider.kinds() == golden["kinds"]
     expected = list(golden["body_sha256"])
-    # Recorded on b07ec765: cooperative-help-v3 and artifact-review-v2
-    # (e9ba052f, 9b50d0f5, f3b67b9d), then the colleague-voice line in the role
-    # prompt (dd9cb8f5). Reverting only those policy/review/voice inputs
-    # reproduces the frozen role digests; all other request bytes are unchanged.
+    # Recorded on the integration of 82203cbb with colleague-help-v4 and cooperative-help-v5
+    # (on the learner's own work, two sentences: one restated assumption, one question; a
+    # colleague holds their own position until the learner brings the evidence). Earlier
+    # changes in the same inputs: cooperative-help-v4, cooperative-help-v3 and
+    # artifact-review-v2 (e9ba052f, 9b50d0f5, f3b67b9d) and the colleague-voice line
+    # (dd9cb8f5). Only the colleague turn and its review change; all other request bytes
+    # are unchanged.
     role_digest, review_digest = {
         "zh": (
-            "b3fc8d9164594125f480dead810e5334701b47e082853fecc4e211ed065f64bc",
-            "be67a615da2a782035b3be8c1a18574d9585d4249924ff7dc7c30b4ca7a9c153",
+            "ec1670b948857ae310b1899f2f3cce734321da91216559bc0bee9979529239a1",
+            "229c32469ba286e494d71f0677c8b39a7c48d65fb20d9d1b3ea64a3a0d996cca",
         ),
         "en": (
-            "398d928978e4120afcf19f05628447720b1a3f51e21a7be8e2e98542257eab5d",
-            "1243e7692a8ec2718ee152a012d4c1fa18f15c91d30ceac14716ba5ba59b6c6e",
+            "73b02a0082fecf8e33683d84e8a013b16d96c7e43f77364e6a6f6aba4f1a436d",
+            "e61b1257be3bb2916d310789954d04785bd8b756d51cdadd1db05ee046ea91d4",
         ),
     }[language]
     expected[golden["kinds"].index("role")] = role_digest

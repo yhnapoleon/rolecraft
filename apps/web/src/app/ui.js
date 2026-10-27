@@ -83,6 +83,7 @@ import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
 import { testSetView, testSetPreview, caseState, testRunView } from './test-set-view.js';
 import {
+  answerModeLabel,
   answerModeLine,
   assistantText,
   generatorField,
@@ -108,6 +109,10 @@ import {
 import './pilot-config.css';
 import './document-motion.css';
 import { markdownHtml } from './markdown';
+import { assessedName, chainText } from '../features/answer-chain/copy';
+import { answerChain, fromWorkbenchRun } from '../features/answer-chain/model';
+import { answerChainHtml, chevron } from '../features/answer-chain/view';
+import { holdsStageUnderDocument, selectSettled } from '../features/answer-chain/arrival';
 import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
@@ -261,12 +266,16 @@ const ui = {
   menu: null,
   scopeAll: false,
   benchAll: false,
+  // The question Daniel took, while the bench is opened from his report to run it again.
+  benchTarget: null,
   reviewFor: null,
   notesCache: [],
   behaviorStepsOpen: new Set(),
   intake: { text: '', result: null, open: false },
   busy: false,
   lastRun: null,
+  // A queued test that settled in the background and has not been drawn yet.
+  settledRun: null,
   importDrafts: {},
   chatQuotes: {},
   practice: {},
@@ -935,8 +944,10 @@ function afterRender() {
   const registered = registeredRoute(ui.route);
   const stageRoot = registered && document.getElementById('ws-stage');
   if (stageRoot) registered.mount?.(stageRoot);
-  if (ui.route === 'review' && current() && L.nativeWorkspace(current()))
+  if (ui.route === 'review' && current() && L.nativeWorkspace(current())) {
     loadRecognitionSummary(current());
+    void mountSectionStatesSlot(current());
+  }
   // Only the workbench's own scroll regions move; browser focus must not shift
   // the entire fixed-height workspace (especially after viewport changes).
   if (WS.includes(ui.route) && window.scrollY) window.scrollTo(0, 0);
@@ -2609,7 +2620,10 @@ function productBar(a) {
           '',
           sources.length ? `<span class="sr-only">${esc(sources.join(T('、', ', ')))}</span>` : '',
         ),
-        gauge(T('索引方式', 'Index'), read('index', UPDATE_SHORT(c.update))),
+        (() => {
+          const index = indexReading(a);
+          return gauge(T('索引方式', 'Index'), read('index', index.value), '', index.note);
+        })(),
       ]
     : [`<li class="pb-gauge muted">${T('还没有试点设置', 'No pilot settings yet')}</li>`];
   gauges.push(
@@ -2627,6 +2641,20 @@ function productBar(a) {
       <div class="pb-keys">${btn(`${icon('flask', 'i-sm')}<span class="pb-key-label">${T('测试台', 'Test bench')}</span>${a.tests.length ? `<span class="btn-count">${a.tests.length}</span>` : ''}`, 'open-bench', 'small', `aria-label="${esc(T('测试台', 'Test bench'))}"`)}${btn(`${icon('gear', 'i-sm')}<span class="pb-key-label">${T('设置', 'Settings')}</span>`, 'config', configured ? 'small quiet' : 'small primary', `aria-label="${esc(T('设置', 'Settings'))}"`)}${btn(`${icon('hand', 'i-sm')}<span class="pb-key-label">${T('申请', 'Requests')}</span>`, 'resources', 'small quiet', `aria-label="${esc(T('申请', 'Requests'))}"`)}</div></div>
     <ul class="pb-state">${gauges.join('')}</ul>${configUseLine(use)}
   </section>`;
+}
+// The index as tests run it. A requested strategy that is not in effect is named under it, the
+// way ⑤'s answer path says it: "Daily (requested Real-time · not approved)".
+function indexReading(a) {
+  const requested = a.config.update;
+  const resolved = a.effectiveConfig;
+  const now = resolved?.effective?.update_strategy === 'manual_policy' ? 'manual' : resolved?.effective?.update_strategy;
+  if (!resolved?.differences?.update_strategy || !now || now === requested)
+    return { value: UPDATE_SHORT(requested), note: '' };
+  const why = configUse(resolved, a.world.devDays)?.unfunded ? T('未获批', 'not approved') : T('未生效', 'not in effect');
+  return {
+    value: UPDATE_SHORT(now),
+    note: `<span class="pb-k">${esc(T(`（请求：${UPDATE_SHORT(requested)} · ${why}）`, `(requested ${UPDATE_SHORT(requested)} · ${why})`))}</span>`,
+  };
 }
 const UPDATE_SHORT = (k) =>
   ({
@@ -3552,7 +3580,7 @@ function bench(a, t) {
                   T('知识来源', 'Sources'),
                   `${c.domains.length}<span class="sr-only">${esc(c.domains.map(DOMAIN).join(T('、', ', ')))}</span>`,
                 ],
-                [T('索引方式', 'Index'), UPDATE_SHORT(c.update)],
+                [T('索引方式', 'Index'), indexReading(a).value, '', indexReading(a).note],
                 [T('政策', 'Policy'), `v${a.world.policyVersion}`],
                 [
                   T('索引基于', 'Index built on'),
@@ -3560,7 +3588,7 @@ function bench(a, t) {
                   stale ? 'warn' : '',
                 ],
               ]
-                .map(([k, v, cls = '']) => `<li class="pb-gauge ${cls}"><span class="pb-k">${k}</span> <span class="pb-v">${v}</span></li>`)
+                .map(([k, v, cls = '', extra = '']) => `<li class="pb-gauge ${cls}"><span class="pb-k">${k}</span> <span class="pb-v">${v}</span>${extra}</li>`)
                 .join('')}</ul>`
             : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`
         }
@@ -3570,7 +3598,12 @@ function bench(a, t) {
         <label class="sr-only" for="lab-q">${T('你想问助手什么', 'Your question for the assistant')}</label>
         <textarea id="lab-q" name="question" class="console-q" rows="2" required maxlength="4000" placeholder="${esc(T('像员工那样问它一个问题…', 'Ask what an employee would ask…'))}">${esc(s?.inputs.question || ui.labPrefill)}</textarea>
         <div class="console-row"><label class="sr-only" for="lab-e">${T('想确认什么（选填）', 'What are you checking? (optional)')}</label><input id="lab-e" name="expectation" class="input" maxlength="5000" value="${esc(s?.inputs.expected || '')}" placeholder="${esc(T('想确认什么？选填', 'What are you checking? Optional'))}"><button type="submit" class="btn primary run-btn" ${ui.busy || !configured ? 'disabled' : ''}>${icon('play', 'i-sm')}${ui.busy ? T('运行中', 'Running') : T('运行', 'Run')}</button></div>
-        <p class="console-file">${icon('note', 'i-xs')}${t ? esc(T(`结果记在「${taskTitle(t)}」下`, `Results are filed under “${taskTitle(t)}”`)) : T('这些结果不归入事项；从事项里打开测试台才会归档。', 'These results aren’t filed under a task. Open the bench from a task to file them.')}</p>
+        ${
+          // A seven-step practice's tests count without a task, so the unfiled note is noise there.
+          t || !aipmHere(a)
+            ? `<p class="console-file">${icon('note', 'i-xs')}${t ? esc(T(`结果记在「${taskTitle(t)}」下`, `Results are filed under “${taskTitle(t)}”`)) : T('这些结果不归入事项；从事项里打开测试台才会归档。', 'These results aren’t filed under a task. Open the bench from a task to file them.')}</p>`
+            : ''
+        }
       </form>
     </section>
     ${t ? `<div class="runs-head"><div class="segmented" role="group"><span class="thumb"></span><button type="button" aria-pressed="${!ui.benchAll}" data-action="bench-scope" data-all="0">${T('这件事的测试', 'This task')}</button><button type="button" aria-pressed="${!!ui.benchAll}" data-action="bench-scope" data-all="1">${T('全部测试', 'All tests')}</button></div></div>` : ''}
@@ -3609,31 +3642,126 @@ function groupRuns(a) {
 function runGroup(a, runs) {
   const r = runs[0];
   const comparison = comparisonFor(r, a.tests);
-  const paired = comparison.referenced ? [r, ...(comparison.previous ? [comparison.previous] : [])] : runs.slice(0, 2);
+  // The first run of the question, the run the latest is compared with, and the latest: up to
+  // three columns in time order, so "broke → fixed → retested" reads left to right.
+  const second = comparison.referenced ? comparison.previous : runs[1];
+  const first = runs.length > 2 ? runs[runs.length - 1] : null;
+  const paired = [first, second, r].filter((x, i, list) => x && list.indexOf(x) === i);
   const ordinal = (x) => a.tests.findIndex((t) => t.id === x.id) + 1;
   // `stale` is the server's own flag: the cited version differs from the current source.
   const old = (x) => (x.stale !== undefined ? !!x.stale : x.indexVersion < x.policyVersion);
   const tk = r.taskId && a.tasks.find((t) => t.id === r.taskId);
-  return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}" id="run-${esc(r.id)}">
+  const caption = (x) =>
+    x === r
+      ? T('最新', 'Latest')
+      : x === first
+        ? T('第一次', 'First')
+        : comparison.referenced
+          ? T('识别基准', 'Recognition baseline')
+          : T('上一次', 'Previous');
+  // "Rerun needed" only while the latest run predates the policy; after a rerun the chain's own
+  // reason says what is still out of date.
+  const age = r.policyVersion < a.world.policyVersion ? testAgeText(r, a.world.policyVersion, locale()) : '';
+  const cols = paired.length === 3 ? 'three' : paired.length === 2 ? 'two' : '';
+  return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}${ui.benchTarget === r.question.trim() ? ' is-target' : ''}" id="run-${esc(r.id)}">
     <header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(r.question)}>${esc(r.question)}</h3>${runs.length > 1 ? `<span class="meta">${T(runs.length + ' 次', runs.length + ' runs')}</span>` : ''}${tk && ui.route !== 'task' ? `<button type="button" class="run-task" data-action="open-task" data-id="${tk.id}">${icon('note', 'i-xs')}${esc(taskTitle(tk))}</button>` : ''}</header>
     ${r.expectation ? `<p class="run-expect">${icon('eye', 'i-xs')}<span${zhAttr(r.expectation)}>${esc(r.expectation)}</span></p>` : ''}
-    ${testAgeText(r, a.world.policyVersion, locale()) ? `<p class="rc-test-age">${esc(testAgeText(r, a.world.policyVersion, locale()))}</p>` : ''}
-    <div class="run-cols ${paired.length > 1 ? 'two' : ''}">${paired
+    ${age ? `<p class="rc-test-age">${esc(age)}</p>` : ''}
+    <div class="run-cols ${cols}">${paired
       .map(
-        (
-          x,
-          i,
-        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${(i === 0 ? T('最新', 'Latest') : comparison.referenced ? T('识别基准', 'Recognition baseline') : T('上一次', 'Previous')) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
-      <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
+        (x) => `<div class="run-col${x === r ? ' is-latest' : ''}">${runs.length > 1 ? `<p class="col-cap">${caption(x) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
+      <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${runModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
+      ${runChain(a, x)}
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
-    ${testMomentHtml(r, a.tests, locale(), materialNameOf(a))}
-    <div class="run-lens">${runSignals(a, r)}${paired[1] ? `<details class="run-baseline-signals"><summary>${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, paired[1])}</details>` : ''}</div>
+    ${namedRecordLinks(testMomentHtml(r, a.tests, locale(), materialNameOf(a)), r)}
+    <div class="run-lens">${runSignals(a, r)}${second ? `<details class="run-baseline-signals"><summary>${chevron('down')}${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, second)}</details>` : ''}</div>
     ${comparison.referenced && !comparison.previous ? `<p class="meta">${T('识别记录指定的比较对象未载入；没有用上一次测试代替。', 'The recorded comparison baseline is not loaded; the previous run has not been substituted.')}</p>` : ''}
-    ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
     <div class="run-actions">${btn(icon('layers', 'i-xs') + T('看依据', 'Check sources'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;
+}
+
+// The tests last handed to Daniel, per practice: kept so his report can lead back to them.
+const handedTests = new Map();
+function rememberHanded(sessionId, ids) {
+  handedTests.set(sessionId, [...ids]);
+  try {
+    localStorage.setItem(`rc-handed:${sessionId}`, JSON.stringify(ids));
+  } catch {}
+}
+function handedRun(a) {
+  let ids = handedTests.get(a.id);
+  if (!ids)
+    try {
+      ids = JSON.parse(localStorage.getItem(`rc-handed:${a.id}`) || '[]');
+    } catch {
+      ids = [];
+    }
+  // The latest run of the first handed question that is still on the bench.
+  const handed = (a.tests || []).find((t) => ids.includes(t.id));
+  if (!handed) return null;
+  const q = handed.question.trim();
+  return a.tests.filter((t) => t.question.trim() === q).at(-1) ?? handed;
+}
+/** Bring the target card into view and put focus on its "Run again", once it is drawn. */
+function focusRerun(a, target, tries = 20) {
+  const find = () => {
+    const latest = a.tests.filter((t) => t.question.trim() === target.question.trim()).at(-1) ?? target;
+    const card = document.getElementById(`run-${latest.id}`);
+    return { card, key: card?.querySelector('[data-action="rerun"]') };
+  };
+  // At once, not smoothly: the whole card when it fits, else its "Run again" in the middle.
+  const land = () => {
+    const { card, key } = find();
+    if (!key) return false;
+    key.focus({ preventScroll: true });
+    (card.offsetHeight <= innerHeight - 160 ? card : key).scrollIntoView({ block: 'center' });
+    return true;
+  };
+  requestAnimationFrame(() => {
+    if (!land()) {
+      if (tries > 0) setTimeout(() => focusRerun(a, target, tries - 1), 50);
+      return;
+    }
+    // Opening the bench resets its scroll once it has drawn (about 250 ms later, after the
+    // report closes): land again if that moved "Run again" out of view or took its focus.
+    for (const ms of [300, 700])
+      setTimeout(() => {
+        const { key } = find();
+        const r = key?.getBoundingClientRect();
+        if (r && (r.top < 0 || r.bottom > innerHeight || document.activeElement !== key)) land();
+      }, ms);
+  });
+}
+
+// A question stopped before an answer reads "Not answered"; the chain says where and why.
+function runModeLine(x) {
+  if (answerModeLabel(x).mode !== 'gate') return answerModeLine(x);
+  return `<p class="answer-mode" data-answer-mode="gate">${esc(chainText(locale(), 'not_answered'))}</p>`;
+}
+// Each record link under the card names what it judged ("How scope was assessed"), in the order
+// testMomentHtml draws the records; the cards and their opening are unchanged.
+function namedRecordLinks(html, run) {
+  const tasks = (run.recognition || []).map((x) => x.task).filter((t) => ['scope', 'retrieval', 'drift'].includes(t));
+  let i = 0;
+  return html.replace(/(<button type="button" class="rc-signature"[^>]*>[\s\S]*?<\/svg>)(系统如何判断|How this was assessed)/g, (_, head, label) => {
+    const task = tasks[i++];
+    return head + (task ? esc(assessedName(task, locale())) : label);
+  });
+}
+
+// Which of the assistant's five steps this run passed and where it stopped. The record links
+// under the card open each step's record, so the expanded steps carry no links of their own.
+function runChain(a, x) {
+  const handover =
+    !!L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && roleOf(a.id) === 'pm' && !sealedSession(a);
+  const currentVersions = Object.fromEntries(E.getMaterials(a).map((m) => [m.id, m.version]));
+  return answerChainHtml(
+    answerChain({ ...fromWorkbenchRun(x), currentVersions }, locale()),
+    x.id,
+    { language: locale(), handover, fresh: x.id === ui.lastRun },
+  );
 }
 
 /* the rail: people, and what needs you. A chat pushes in where the people were. */
@@ -3800,11 +3928,24 @@ function prdSees(a, role) {
     : [];
   const latest = versions.length ? Math.max(...versions) : 0;
   const name = PEOPLE[role].name;
+  // The chip is on: the version goes with the next message, so say that first (the line is
+  // cut at the rail's edge) rather than "not attached".
+  const sending = prdShared(a, role, prd) === false && prdAttached(a, role, prd);
   // One line that opens: what this colleague has, and on request what they do not.
   return `<details class="aipm-sees"><summary><b>${T(`${name} 能看到：`, `${PEOPLE[role].ref} can see: `)}</b><span class="aipm-sees__what">${
-    latest
-      ? T(`试点 PRD 第 ${latest} 版 · 你的消息`, `pilot PRD version ${latest} · your messages`)
-      : T('你消息里写的内容（还没附上 PRD）', 'what your messages say (no PRD attached yet)')
+    sending
+      ? latest
+        ? T(
+            `发送后附 PRD 第 ${prd.version} 版 · 已看过第 ${latest} 版`,
+            `PRD version ${prd.version} once sent · has version ${latest}`,
+          )
+        : T(
+            `你的消息；发送后附 PRD 第 ${prd.version} 版`,
+            `your messages; PRD version ${prd.version} once sent`,
+          )
+      : latest
+        ? T(`试点 PRD 第 ${latest} 版 · 你的消息`, `pilot PRD version ${latest} · your messages`)
+        : T('你消息里写的内容（这条不附 PRD）', 'what your messages say (PRD not attached)')
   }</span><span class="aipm-sees__i" aria-hidden="true">ⓘ</span></summary><p>${T('看不到：没附上的版本、你的 Agent 对话、批改单里的其余内容', 'Cannot see: versions you did not attach, your agent’s conversation, the rest of a review')}</p></details>`;
 }
 // Sending with the chip on: share that exact PRD version first, then let the message go as usual
@@ -4245,6 +4386,7 @@ function renderReview() {
         <h1 class="sr-only">${T('结果', 'Result')}</h1>
         <div class="result-main" data-v4-feedback data-v4-region="feedback" data-result-layout="true"></div>
         <section class="result-after" aria-label="${esc(T('接下来', 'What next'))}">
+          ${aipmHere(a) ? '<section data-aipm-section-states></section>' : ''}
           ${behaviorSection(a)}
           ${practiceOriginNote(a)}
           <section class="review-practice" data-v4-practice aria-live="polite">
@@ -4528,6 +4670,20 @@ function fillBehavior(box, a) {
   const html = behaviorInner(a);
   box.innerHTML = html;
   box.hidden = !html;
+}
+// "Judgements you improved before delivery" (S2): the result line's module, when it is built in.
+// A failed read leaves the section empty; the result page does not depend on it.
+const sectionStates = import.meta.glob('../features/aipm-result/section-states.ts');
+async function mountSectionStatesSlot(a) {
+  const load = Object.values(sectionStates)[0];
+  const prd = Aipm.prdOf(a);
+  if (!load || !prd || !document.querySelector('[data-aipm-section-states]')) return;
+  const list = await L.v4Host(a)?.query('submissions.list').catch(() => null);
+  const submission = (Array.isArray(list) ? list : list?.items ?? []).at(-1);
+  const el = document.querySelector('[data-aipm-section-states]');
+  if (!submission || !el || current()?.id !== a.id) return;
+  const { mountSectionStates } = await load();
+  mountSectionStates(el, { client: Aipm.host.getClient(), submission, prdId: prd.id, language: workLang(a) ?? locale(), openReview: (step, ref) => Aipm.host.openReview(step, ref) });
 }
 async function loadRecognitionSummary(a) {
   const last = recognitionReads.get(a.id) ?? 0;
@@ -5320,10 +5476,14 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     parts = parts.filter((p) => p !== 'stage');
   }
   // Under an open document the board stays as it is (B1); it catches up when the sheet closes.
-  if (parts.includes('stage') && ui.docSheet && WS.includes(ui.route) && !routeTask(a)) {
+  // A queued test that has just arrived is drawn once anyway (276-07).
+  const underDocument = !!ui.docSheet && WS.includes(ui.route) && !routeTask(a);
+  if (parts.includes('stage') && holdsStageUnderDocument(ui, a.tests || [], underDocument)) {
     ui.stageStale = true;
     parts = parts.filter((p) => p !== 'stage');
   }
+  if (parts.includes('stage') && (a.tests || []).some((t) => t.id === ui.settledRun))
+    ui.settledRun = null;
   if (parts.includes('stage') && dirty) flush();
   ui.notesCache = Coach.notes(a, E);
   const key = focusKey();
@@ -5794,12 +5954,14 @@ function resetAttemptUi() {
     menu: null,
     scopeAll: false,
     benchAll: false,
+    benchTarget: null,
     reviewFor: null,
     pendingRequestId: null,
     lastUndo: null,
     compare: false,
     editPending: null,
     lastRun: null,
+    settledRun: null,
     reviewTab: 'rules',
     practice: {},
   });
@@ -6365,6 +6527,7 @@ async function act(el, ev = new Event('rc-action')) {
           colleague: {
             taskId: routeTask(a)?.id ?? null,
             done: async (ticket) => {
+              rememberHanded(a.id, ticket.origin?.test_ids ?? ticket.target_tests?.map((t) => t.test_id) ?? []);
               const failed = await colleagueReported(L.gatewayTransport(a), a.id, ticket, () =>
                 L.load(a),
               ).catch((e) => e?.message || String(e));
@@ -6588,6 +6751,7 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     }
     case 'rerun': {
+      ui.benchTarget = null;
       const r = a.tests.find((x) => x.id === id);
       if (r) await runQuestion(r.question, r.expectation);
       break;
@@ -7099,8 +7263,14 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     case 'open-bench': {
       const t = task();
+      // Opened from Daniel's report ("Rerun on the test bench"), not from a button on the page:
+      // land on the question he took, ready to run again.
+      const target = el.isConnected ? null : handedRun(a);
+      ui.benchTarget = target ? target.question.trim() : null;
+      if (target && t && target.taskId !== t.id) ui.benchAll = true;
       if (t) setObj({ type: 'bench' });
       else go('bench', { transition: true });
+      if (target) focusRerun(a, target);
       break;
     }
     case 'pick-doc': {
@@ -7697,6 +7867,13 @@ function evidenceView(a, value) {
 }
 
 /* ---------- events ---------- */
+// A queued test settled in the background: select it where it was asked and redraw, without
+// waiting for the person to leave and come back.
+window.addEventListener('v4-test-settled', (e) => {
+  if (!e.detail?.testId) return;
+  selectSettled(ui, { caseId: e.detail.caseId ?? null, testId: e.detail.testId });
+  if (current() && WS.includes(ui.route)) refreshWS(['stage', 'rail']);
+});
 document.addEventListener('rolecraft:open-chat', (e) => {
   const role = ROLE_OF[e.detail?.roleId];
   if (role && current()) openChat(role);

@@ -588,3 +588,145 @@ def test_model_generated_retest_stays_pending_while_extractive_retest_passes(gen
     assert f["passing_dynamic_test_ids"] == [extractive["id"]]
     assert f["adjustment_appropriate_verified"] is True
     assert (item.label, item.source) == ("MET", "verified_rule")
+
+
+def rule(h, at, product, criterion):
+    """The current rule result of one change criterion over the adapter's actual facts."""
+    window = h.adapter.window(h.auth, at)
+    snap = h.adapter._snapshot(
+        h.auth, at, (product,), ref_for("config", window.snapshot.config), True
+    )
+    context = {
+        "facts": facts(snap),
+        "fact_refs": {
+            f.name: [
+                h.adapter.source_reader(h.auth, r, at).ref.model_dump(mode="json")
+                for r in f.sources
+            ]
+            for f in snap.facts
+        },
+        "logs_complete": snap.logs_complete,
+        "test_sources_complete": True,
+        "config_version": snap.config_version,
+        "tests": [
+            {"record": t.model_dump(mode="json"), "ref": r.model_dump(mode="json")}
+            for t, r in zip(snap.tests, snap.test_refs, strict=True)
+        ],
+        "technical_failures": list(snap.technical_failures),
+        "decision": "launch",
+        "mechanism": "v2." + criterion.split(".", 1)[1],
+    }
+    item = SimpleNamespace(
+        rule_context=context, purpose="commitment", as_of=at, criterion=criterion
+    )
+    return facts(snap), run_rules_v2(item, work_language=h.module.work_language)
+
+
+OFF_TOPIC = {"zh": "火星今天天气怎么样？", "en": "What is the weather on Mars today?"}
+
+
+@pytest.mark.parametrize("recognized", [True, False])
+def test_an_off_topic_question_after_the_update_leaves_the_retest_decidable(
+    history, monkeypatch, recognized
+):
+    """A question the scope recognizer stopped is not a policy retest, so asking one after
+    the update no longer turns the latest retest unknown. Without its record it stays unknown."""
+    h = history
+    if recognized:
+        from career_lab.contracts.v2.recognition import RecognitionRecord
+        from career_lab.recognition import assistant as recognizers
+
+        real = recognizers.scope_check
+
+        # The trained scope recognizer, as the installed weights would answer: the off-topic
+        # question is out of scope; every other question goes through its rule fallback.
+        def scope_check(package, query, cfg, *, rule_hit, as_of=None):
+            if query != OFF_TOPIC[h.module.work_language]:
+                return real(package, query, cfg, rule_hit=rule_hit, as_of=as_of)
+            return "out", RecognitionRecord(
+                recognizer_id="scope.mahalanobis",
+                revision="fit-test",
+                task="scope",
+                input_hash="0" * 64,
+                label="out",
+                score=4.0,
+                threshold=2.8,
+                as_of=as_of,
+            )
+
+        monkeypatch.setattr("career_lab.scenarios.v2.module.recognition_enabled", lambda: True)
+        monkeypatch.setattr(recognizers, "scope_check", scope_check)
+    h.run(question(h))
+    h.apply(freshness_guard="warn")
+    h.run(question(h))
+    product = h.product("The pilot covers travel questions after the policy update.")
+    before, decided = rule(h, h.capture(), product, "R4.staleness_test")
+    assert before["dynamic_classification_complete"] is True
+    assert decided.source == "verified_rule" and decided.label == "PARTIAL"
+    off = h.run(OFF_TOPIC[h.module.work_language])
+    assert not off["citations"] and not off["execution"]["chunks"]
+    after, retest = rule(h, h.capture(), product, "R4.staleness_test")
+    assert off["id"] not in after["dynamic_test_ids"]
+    if recognized:
+        assert off["error_code"] in {"outside_scope_ood", "outside_scope"}
+        assert after["dynamic_classification_complete"] is True
+        assert (retest.source, retest.label) == ("verified_rule", "PARTIAL")
+    else:
+        assert after["dynamic_classification_complete"] is False
+        assert retest.source == "pending"
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_the_evaluation_desks_regression_question_is_a_checkable_hotel_question(language):
+    """The policy-change regression case the AIPM evaluation desk offers asks the hotel
+    question, so a run of it can be checked against the current fact, as the bench's is."""
+    from career_lab.scenarios.v2.evaluation_facts import hotel_question
+
+    content = ROOT / f"scenarios/pm_pilot/aipm-phase1/public/evaluation.{language}.json"
+    query = json.loads(content.read_text(encoding="utf-8"))["regression"]["query"]
+    assert hotel_question(query, language)
+    assert not hotel_question(query, "en" if language == "zh" else "zh")
+
+
+def trained_scope(h, monkeypatch):
+    """The trained scope recognizer, as installed weights answer: the off-topic question is
+    out of scope, every other one in scope (never the rule fallback)."""
+    from career_lab.contracts.v2.recognition import RecognitionRecord
+    from career_lab.recognition import assistant as recognizers
+
+    def scope_check(package, query, cfg, *, rule_hit, as_of=None):
+        label = "out" if query == OFF_TOPIC[h.module.work_language] else "in"
+        return label, RecognitionRecord(
+            recognizer_id="scope.mahalanobis",
+            revision="fit-test",
+            task="scope",
+            input_hash="0" * 64,
+            label=label,
+            score=4.0 if label == "out" else 1.0,
+            threshold=2.8,
+            as_of=as_of,
+        )
+
+    monkeypatch.setattr("career_lab.scenarios.v2.module.recognition_enabled", lambda: True)
+    monkeypatch.setattr(recognizers, "scope_check", scope_check)
+
+
+@pytest.mark.parametrize("refreshed", [True, False])
+def test_functional_tests_read_their_categories_off_the_runs(history, monkeypatch, refreshed):
+    """A current answer and a handed-over off-topic question are the definition's two example
+    categories; an answer from an outdated source does not meet the acceptance."""
+    h = history
+    trained_scope(h, monkeypatch)
+    h.run(question(h))
+    h.apply(freshness_guard="warn")
+    if refreshed:
+        h.post("actions", "refresh_index", {"tool": "refresh_index"})
+    h.run(question(h))
+    h.run(OFF_TOPIC[h.module.work_language])
+    product = h.product("The pilot covers travel questions after the policy update.")
+    found, result = rule(h, h.capture(), product, "R4.functional_tests")
+    assert found["functional_classification_complete"] is True
+    assert found["functional_categories_verified"] == ["normal", "out_of_scope"]
+    assert found["acceptance_criteria_verified"] is refreshed
+    assert result.source == "verified_rule"
+    assert result.label == ("MET" if refreshed else "PARTIAL")

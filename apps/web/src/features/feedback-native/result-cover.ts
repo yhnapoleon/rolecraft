@@ -192,8 +192,15 @@ export function coverView(
     const product = products.find(
       (p) => p.product_id === ref.object_id && p.version === ref.version,
     );
+    // A delivered version may no longer be the one listed (a later revision replaced it); its
+    // work keeps the same name, as reference labels already read it.
+    const titles = state.references?.products ?? {};
     const title =
-      product?.title ?? state.references?.products?.[`${ref.object_id}:${ref.version}`] ?? '';
+      product?.title ??
+      titles[`${ref.object_id}:${ref.version}`] ??
+      products.find((p) => p.product_id === ref.object_id && p.title)?.title ??
+      Object.entries(titles).find(([key]) => key.startsWith(`${ref.object_id}:`))?.[1] ??
+      '';
     const shown = { title, version: ref.version, purpose: product?.purpose };
     return { ref, line: attachmentLine(shown, language), product: shown };
   });

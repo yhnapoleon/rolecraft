@@ -528,6 +528,8 @@ class SectionReviewRead(V2):
     step_id: StepId | None = None
     cursor: int = Field(default=0, ge=0)
     limit: int = Field(default=10, ge=1, le=20)
+    # Staleness against this PRD version (a delivered one) instead of the current head.
+    prd_version: int | None = Field(default=None, ge=1)
 
 
 # Private authored grading files: server only. L2 writes the content, L4 reads it.

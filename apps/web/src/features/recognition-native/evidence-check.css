@@ -224,6 +224,14 @@ rc-evidence-list[data-expanded="true"] .ec-sentence:not([open]) .ec-expand {
   display: flex;
   flex-direction: column;
 }
+/* Opened from the submission dialog, the inspector borrows #sheet, whose own size rule is an id
+   rule; this keeps the inspector's one size there too. */
+dialog#sheet.rc-inspector {
+  width: min(960px, calc(100vw - 64px));
+  height: auto;
+  max-height: calc(100dvh - 112px);
+  margin: auto;
+}
 .rc-inspector::backdrop {
   background: var(--overlay, rgba(0, 0, 0, 0.42));
 }
@@ -351,7 +359,8 @@ rc-evidence-list[data-expanded="true"] .ec-sentence:not([open]) .ec-expand {
     width: 100%;
     box-sizing: border-box;
   }
-  .rc-inspector {
+  .rc-inspector,
+  dialog#sheet.rc-inspector {
     width: calc(100vw - 16px);
     max-height: calc(100dvh - 32px);
   }

@@ -17,6 +17,8 @@ import {
   outcomeSentence,
   reviewResult,
   reviewDetails,
+  targetNote,
+  withTargetCheck,
 } from './hand-back';
 
 afterEach(() => setPreference('zh'));
@@ -258,4 +260,94 @@ it('keeps public new failures out of the hidden regression count', () => {
  const rows=reviewDetails(record,'en');
  expect(rows.find(r=>r.label==='Public regression')?.text).toContain('2 recorded new failures');
  expect(rows.find(r=>r.label==='Hidden regression')?.text).toContain('0 new failures');
+});
+
+describe('Daniel’s report · the target read from his rule check (QA S-3)', () => {
+  const ROOT = rootCauseEn as unknown as EngineerReviewRecord;
+  // The signed review cannot verify a handed-over question that carries no expectation.
+  const unverified = {
+    ...ROOT,
+    report: {
+      ...ROOT.report,
+      findings: ROOT.report.findings.map((f) =>
+        f.kind === 'target_fix' ? { ...f, status: 'unverified' as const } : f,
+      ),
+      hidden_comparison: { new_failures: 0, fixed: 2, still_failing: 0, unverified: 0 },
+    },
+  } as EngineerReviewRecord;
+  const stale = (cleared: number, questions = 1) => ({
+    failures: ['stale_unwarned' as const],
+    questions,
+    cleared,
+  });
+
+  it('a pick that cleared the failure reads as verified and adoptable, never "not recommended"', () => {
+    setPreference('en');
+    const review = reviewResult(unverified, 'en');
+    expect(review.target).toBe('unknown');
+    const r = withTargetCheck(review, stale(1));
+    expect(r.target).toBe('fixed');
+    expect(outcomeClean(r)).toBe(true);
+    expect(outcomeSentence(r)).toBe(
+      'Target: no longer cites an outdated source without a warning · verified',
+    );
+    expect(targetNote(r, true)).toBe(
+      "Whether the answer's content is right is beyond a rule check: judge it with a regression case on the evaluation bench.",
+    );
+    expect(outcomeCaution(r)).toBe('');
+    const rows = reviewDetails(unverified, 'en', stale(1));
+    expect(rows.find((x) => x.label === 'Target verification')?.text).toBe(
+      'Verified by rule: no longer cites an outdated source without a warning; answer content not verified',
+    );
+    const adoption = rows.find((x) => x.label === 'Adoption')?.text ?? '';
+    expect(adoption).toMatch(/^Supports adoption: the target no longer fails as before/);
+    expect(adoption).toContain('regression case on the evaluation bench');
+    expect(JSON.stringify(rows)).not.toContain('not recommended');
+    expect(handBackSignal({ at: 'now', ticketId: 't', title: 'tests', clean: true, newFailures: 0, result: r, colleague: 'Daniel' }).text).toBe(
+      'The handed-over tests: failure cleared · nothing new fails',
+    );
+  });
+
+  it('says the same in Chinese', () => {
+    setPreference('zh');
+    const r = withTargetCheck(reviewResult(unverified, 'zh'), stale(1));
+    expect(outcomeSentence(r)).toBe('目标：不再在不提醒的情况下引用过期资料 · 已核实');
+    expect(targetNote(r, true)).toBe('答案内容对不对，规则核实不了：在评测台写一道回归题来判。');
+    const rows = reviewDetails(unverified, 'zh', stale(1));
+    expect(rows[0].text).toBe('已核实（规则）：不再在不提醒的情况下引用过期资料；答案内容未核实');
+    expect(rows[3].text.startsWith('可以采用：目标原来的问题已消除，没有新增失败。')).toBe(true);
+  });
+
+  it('a failure still there is "not fixed" with its reason, and the caution says so', () => {
+    setPreference('en');
+    const r = withTargetCheck(reviewResult(unverified, 'en'), stale(0));
+    expect(r.target).toBe('not_fixed');
+    expect(outcomeSentence(r)).toBe('Target: still cites an outdated source without a warning');
+    expect(outcomeCaution(r)).toBe(
+      'In this trial the target still cites an outdated source without a warning; updating the pilot does not clear it.',
+    );
+    expect(reviewDetails(unverified, 'en', stale(0))[3].text).toBe(
+      'Adoption not recommended yet: the target still cites an outdated source without a warning',
+    );
+    const partial = withTargetCheck(reviewResult(unverified, 'en'), stale(1, 2));
+    expect(outcomeSentence(partial)).toBe(
+      'Target: 1 of 2 handed-over questions no longer cite an outdated source without a warning',
+    );
+  });
+
+  it('a review that verified the target itself keeps its own reading; no check keeps "unknown" with a reason', () => {
+    setPreference('en');
+    const fixed = reviewResult(ROOT, 'en');
+    expect(withTargetCheck(fixed, stale(0))).toBe(fixed);
+    const unknown = withTargetCheck(reviewResult(unverified, 'en'), null);
+    expect(unknown.target).toBe('unknown');
+    expect(targetNote(unknown, true)).toContain('judge whether the target is fixed with a regression case');
+    // The engineer's own report has no note.
+    expect(targetNote(unknown, false)).toBe('');
+    // Daniel's re-execution answered differently (say, retrieved nothing): no rule check, and
+    // the note says why rather than claiming the failure is gone.
+    expect(targetNote(unknown, true, { matched: 0, total: 1 })).toBe(
+      'Daniel re-ran the handed-over questions on their original snapshot and got a different result from yours, so no rule can check their original failure; judge whether the target is fixed with a regression case on the evaluation bench.',
+    );
+  });
 });

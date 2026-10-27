@@ -7,6 +7,7 @@ scenario hash has no installed AIPM content keeps its original meaning (409).
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,6 +19,7 @@ from career_lab.storage.v2_store import Mutation, ObjectWrite
 from .projection import feedback_page, heads, project
 from .types import (
     EXPERIENCE_REVISION,
+    STEP_IDS,
     AipmFocus,
     AipmGuide,
     AipmProfile,
@@ -319,3 +321,151 @@ def design_facts(content):
         return DesignFacts(public_sources=sources, need_scopes=scopes)
 
     return provider
+
+
+BRIEF_REVISION = "aipm-brief-v1"
+BRIEF_LIMIT = 300
+# Short sheet names as the compass shows them (apps/web aipm-guide/sheets.ts).
+BRIEF_WORDS = {
+    "zh": {
+        "short": {
+            "business": "看懂业务",
+            "stakeholders": "相关方",
+            "need": "真需求",
+            "boundary": "AI 边界",
+            "solution": "方案",
+            "assurance": "评测与回退",
+            "decision": "上线决策",
+        },
+        "status": {
+            "not_started": "未开始",
+            "draft": "草稿",
+            "based": "有依据",
+            "solid": "站得住",
+            "recheck": "需重新核对",
+        },
+        "edited": "批改后改过",
+        "gaps": "还要再看",
+        "join": "；",
+        "quote": "「{}」",
+    },
+    "en": {
+        "short": {
+            "business": "Business",
+            "stakeholders": "Stakeholders",
+            "need": "Real need",
+            "boundary": "AI boundary",
+            "solution": "Solution",
+            "assurance": "Evals & rollback",
+            "decision": "Launch call",
+        },
+        "status": {
+            "not_started": "not started",
+            "draft": "draft",
+            "based": "supported",
+            "solid": "holds up",
+            "recheck": "recheck",
+        },
+        "edited": "edited since review",
+        "gaps": "still to look at ",
+        "join": "; ",
+        "quote": "“{}”",
+    },
+}
+# Internal source ids such as SD-120 or BC-01; the brief names no source at all.
+SOURCE_ID = re.compile(r"(?<![\w-])[A-Z]{2,}-\d+(?![\w-])")
+
+
+def _numbered(order, language):
+    return "①②③④⑤⑥⑦"[order - 1] if language == "zh" else str(order)
+
+
+def _sheet_runs(states, words, language):
+    """Consecutive sheets with the same state collapse into one run: ①②站得住；④–⑦未开始."""
+    runs = []
+    for order, step in enumerate(STEP_IDS, 1):
+        state = states.get(step)
+        word = words["status"][state.status if state else "not_started"]
+        if state is not None and state.edited_since_review:
+            word += f"（{words['edited']}）" if language == "zh" else f" ({words['edited']})"
+        if runs and runs[-1][2] == word and runs[-1][1] == order - 1:
+            runs[-1][1] = order
+        else:
+            runs.append([order, order, word])
+    parts = []
+    for first, last, word in runs:
+        span = _numbered(first, language)
+        if last > first:
+            sep = "" if language == "zh" and last == first + 1 else "–"
+            span += sep + _numbered(last, language)
+        parts.append(span + ("" if language == "zh" else " ") + word)
+    return words["join"].join(parts)
+
+
+def colleague_brief(view, auth, language):
+    """Where the learner is, for the colleagues' learner_state (YH's recognition hook).
+
+    The step in focus, each sheet's state and the short gap labels of the latest review,
+    in at most BRIEF_LIMIT characters. The review's findings, the answers it points to and
+    source ids are never included. Read only; None outside an AI PM session or on error.
+    """
+    try:
+        from .projection import heads, pending, scoped
+        from .review import SEVERITY, reviews_of, sheets
+
+        profile = profile_of(view, auth)
+        if profile is None:
+            return None
+        # The colleague writes in the session's work language; the hook passes "en" for all.
+        language = profile.work_language
+        words = BRIEF_WORDS[language]
+        objects = scoped(view, auth) if auth is not None else view.objects
+        latest = heads(objects).values()
+        designs = [r for r in latest if r.ref.kind == "aipm_design"]
+        design = max(
+            designs, key=lambda r: (r.created_storage_revision, r.ref.version), default=None
+        )
+        focuses = [r for r in latest if r.ref.kind == "aipm_focus"]
+        focus_row = max(focuses, key=lambda r: r.ref.version, default=None)
+        focus = focus_row.content["step_id"] if focus_row else STEP_IDS[0]
+        drafts = {step for draft in pending(objects) for step in draft.steps}
+        states, _ = sheets(view, objects, design.content if design else None, drafts)
+
+        def name(step):
+            return _numbered(STEP_IDS.index(step) + 1, language) + " " + words["short"][step]
+
+        brief = {
+            "revision": BRIEF_REVISION,
+            "step": name(focus),
+            "sheets": _sheet_runs(states, words, language),
+        }
+        row = next(iter(reviews_of(objects)), None)
+        if row is not None:
+            review = row.content
+            open_marks = sorted(
+                (m for m in review.get("coverage") or () if m["mark"] != "covered"),
+                key=lambda m: SEVERITY[m["severity"]],
+            )
+            labels = []
+            for mark in open_marks:
+                label = str(mark["label"]).strip()
+                if label and label not in labels and not SOURCE_ID.search(label):
+                    labels.append(label)
+            for keep in (2, 1, 0):
+                line = name(review["step_id"])
+                if labels[:keep]:
+                    quoted = ("、" if language == "zh" else ", ").join(
+                        words["quote"].format(label) for label in labels[:keep]
+                    )
+                    line += ("：" if language == "zh" else ": ") + words["gaps"] + quoted
+                brief["latest_review"] = line
+                if _size(brief) <= BRIEF_LIMIT:
+                    break
+        return brief if _size(brief) <= BRIEF_LIMIT else None
+    except Exception:  # noqa: BLE001 - the brief is an annotation, never a reason to fail
+        return None
+
+
+def _size(brief):
+    """Characters the brief adds to the colleague's context, keys included."""
+    return len(json.dumps(brief, ensure_ascii=False, separators=(",", ":")))

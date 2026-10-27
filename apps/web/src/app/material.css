@@ -73,6 +73,8 @@
 }
 .product-bar .pb-gauge {
   display: grid;
+  /* A note under one reading (the requested index) hangs below; values stay on one line. */
+  align-content: start;
   gap: 1px;
   height: auto;
   padding: 0;

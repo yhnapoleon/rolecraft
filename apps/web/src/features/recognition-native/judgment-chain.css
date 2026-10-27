@@ -94,12 +94,48 @@
   border-block: 1px solid var(--line);
   margin: 24px 0;
 }
+/* Reads like the distribution table above: what was retrieved on the left, how on the right. */
 .jc-hits summary {
   min-height: 44px;
   display: flex;
   align-items: center;
+  gap: 12px;
   cursor: pointer;
-  font-weight: 500;
+  list-style: none;
+}
+.jc-hits summary::-webkit-details-marker {
+  display: none;
+}
+.jc-hits-count {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.jc-retrieval {
+  font: 600 13px / 1.4 var(--sans);
+  color: var(--ink);
+  text-align: right;
+}
+.jc-retrieval[data-kind="none"],
+.jc-retrieval[data-kind="unrecorded"],
+.jc-retrieval-note {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.jc-chev {
+  flex: none;
+  color: var(--ink-3);
+  transition: transform 160ms var(--ease-out);
+}
+.jc-hits[open] .jc-chev {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .jc-chev {
+    transition: none;
+  }
 }
 .jc-hits blockquote {
   margin: 12px 0;

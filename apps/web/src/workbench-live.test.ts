@@ -1252,6 +1252,17 @@ describe('batch 1 server authority and legacy recovery', () => {
       { id: 'policy', version: 1, title: '差旅住宿与交通政策' },
     ]);
   });
+  it('passes the raw result status through for the answer chain; old records keep null', async () => {
+    const { live } = fixture();
+    const a = await live.start('pilot');
+    live.store.update('s', {
+      // A raw field the store keeps as it came; TestRun does not declare it.
+      tests: [Object.assign(testRecord('warned'), { status: 'answered_with_warning' }), testRecord('old')],
+    });
+    const status = (id: string) => a.tests.find((t: { id: string }) => t.id === id).status;
+    expect(status('warned')).toBe('answered_with_warning');
+    expect(status('old')).toBeNull();
+  });
   it('keeps legacy local questions, task links and observed times when fields are missing or null', async () => {
     const { live, data } = fixture();
     const a = await live.start('pilot');
