@@ -645,6 +645,8 @@ class EngineerService:
                         "trial_id": t["id"],
                         "changes": t["changes"],
                         "counts": t["counts"],
+                        # As the trial recorded it: requested settings not in effect, and why.
+                        "effective_differences": t.get("effective_differences", {}),
                     }
                     for r, t in tried
                 ],
