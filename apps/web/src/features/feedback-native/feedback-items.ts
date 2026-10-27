@@ -162,14 +162,10 @@ export function feedbackItemsView(report: Report, input: ItemsViewInput): ItemsV
     met: [],
     na: [],
   };
-  let verified = 0;
-  let applicable = 0;
   // Items the model advised on, counted the way the coverage line counts them (2026-10-12 item 3).
   let advised = 0;
   for (const item of items) {
     const kind = feedbackClass(item);
-    if (kind === 'verified') verified++;
-    if (kind === 'verified' || kind === 'pending') applicable++;
     if (kind === 'pending') {
       const registered = report.model_advice?.filter((entry) => entry.criterion === item.criterion);
       if (
@@ -250,8 +246,15 @@ export function feedbackItemsView(report: Report, input: ItemsViewInput): ItemsV
       view.na.push(row);
     }
   }
+  // Counted as the rows are shown (QA G-10): a rule-checked item the rules left as a range sits
+  // with the ones not known yet, so the two counts always add up to the total.
+  const decided = view.met.length + view.unmet.length;
   view.count =
-    T('itemsCount', { verified, total: applicable, pending: view.unknown.length }) +
+    T('itemsCount', {
+      verified: decided,
+      total: decided + view.unknown.length,
+      pending: view.unknown.length,
+    }) +
     (advised ? T('itemsCountModel', { model: advised }) : '');
   const range = scoreRangeLine(report, language);
   if (range) view.range = range;
