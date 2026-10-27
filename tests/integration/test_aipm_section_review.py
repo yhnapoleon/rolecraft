@@ -84,11 +84,11 @@ def call(env, name, payload):
     )
 
 
-def prd(env, text, head=None):
+def prd(env, text, head=None, **others):
     payload = {
         "kind": "plan",
         "purpose": "plan",
-        "structured_payload": {"type": "plan", "sections": {"need": text}},
+        "structured_payload": {"type": "plan", "sections": {"need": text, **others}},
     }
     if head is None:
         out = call(env, "work_products.create", payload)
@@ -98,7 +98,7 @@ def prd(env, text, head=None):
     return next(r for r in out["objects"] if r["kind"] == "product")
 
 
-def design(env, prd_ref, revision=1, cite=True):
+def design(env, prd_ref, revision=1, cite=True, claim="hypothesis"):
     material = {**fixture_material(env), "observed_at_seq": 0}
     value = AipmDesign(
         id="design",
@@ -109,7 +109,7 @@ def design(env, prd_ref, revision=1, cite=True):
             NeedDeclaration(
                 id="n1",
                 problem="Slow answers",
-                claim_status="hypothesis",
+                claim_status=claim,
                 counterevidence_or_unknown="",
                 next_validation="",
             ),
@@ -186,6 +186,31 @@ def test_review_is_rules_only_idempotent_and_drives_the_sheet(enabled):
     newer = review(enabled, second, design_ref).json()["result"]["review"]
     assert newer["status"] == "draft"  # high-severity citation now missing
     assert newer["delta"] == {"citations": [1, 0], "gaps": [0, 1], "wrong": [0, 0]}
+
+
+def test_saving_another_section_keeps_this_review(enabled):
+    words = "Tickets take 429 minutes."
+    first = prd(enabled, words)
+    assert review(enabled, first, design(enabled, first)).status_code == 200
+    # Another section is written: the shared PRD version moves; this section's text, quotes and
+    # choice do not, so the review still stands on the compass, the pile and the review sheet.
+    second = prd(enabled, words, head=first, boundary="Policy questions only.")
+    design(enabled, second, revision=2)
+    sheet = steps(result(get(enabled, "progress")))["need"]["sheet"]
+    assert sheet["status"] == "solid" and sheet["edited_since_review"] is False
+    page = result(get(enabled, "section-reviews?step_id=need"))
+    assert page["items"][0]["review"]["stale"] is None
+
+    # The same words with another claim: what the review judged has changed.
+    third = prd(enabled, words, head=second, boundary="Policy questions only, cited.")
+    design(enabled, third, revision=3, claim="supported")
+    sheet = steps(result(get(enabled, "progress")))["need"]["sheet"]
+    assert sheet["status"] == "draft" and sheet["edited_since_review"] is True
+    page = result(get(enabled, "section-reviews?step_id=need"))
+    assert page["items"][0]["review"]["stale"]["reason"] == "edited"
+    # Read against the delivered version 2, the review still matched what was delivered.
+    page = result(get(enabled, "section-reviews?step_id=need&prd_version=2"))
+    assert page["items"][0]["review"]["stale"] is None
 
 
 def test_only_the_owner_reviews_and_agents_read_the_same_state(enabled):

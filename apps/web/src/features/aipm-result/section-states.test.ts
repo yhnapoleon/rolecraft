@@ -105,19 +105,35 @@ describe('section states', () => {
     expect(html).toMatch(/data-states-step="need" data-rise="true"/);
   });
 
-  it('keeps the first review when the delivered version was not reviewed again', () => {
-    const states = sectionStates(newestFirst(item('boundary', 2, 'draft')), 3);
+  it('says the delivered version was not reviewed again when the section changed after its review', () => {
+    const edited = { stale: { reason: 'edited' as const, detail: 'v2 -> v3' } };
+    const states = sectionStates(newestFirst(item('boundary', 2, 'draft', edited)), 3);
     const boundary = stepOf(states, 'boundary');
     expect(boundary.delivered).toBeNull();
     expect(boundary.open?.object_id).toBeTruthy();
     expect(rowSentence(boundary, 'zh')).toBe('划定 AI 边界：第一次批改 草稿（第 2 版），交付版没有再批改');
   });
 
-  it("does not drop earlier reviews for their 'edited' flag", () => {
-    const edited = { stale: { reason: 'edited' as const, detail: 'v3 -> v4' } };
-    const items = newestFirst(item('need', 3, 'draft', edited), item('need', 4, 'solid'));
-    const need = stepOf(sectionStates(items, 4), 'need');
-    expect(need.first).toMatchObject({ status: 'draft', version: 3 });
+  it('carries a review over while only other sections moved the PRD version (QA S-1)', () => {
+    // ③ reviewed to Holds up on v2; ④–⑦ saved v3–v7; ③'s words and choice never changed.
+    const edited = { stale: { reason: 'edited' as const, detail: 'v1 -> v7' } };
+    const items = newestFirst(item('need', 1, 'draft', edited), item('need', 2, 'solid'));
+    const need = stepOf(sectionStates(items, 7), 'need');
+    expect(need.first).toMatchObject({ status: 'draft', version: 1 });
+    expect(need.delivered).toMatchObject({ status: 'solid', version: 2, carried: true });
+    expect(need.open).toBe(items[0].ref);
+    expect(rowSentence(need, 'en')).toBe(
+      'Validate the need: first review Draft (v1), delivered Holds up (unchanged since v2)',
+    );
+    expect(rowSentence(need, 'zh')).toBe('验证真需求：第一次批改 草稿（第 1 版），交付版 站得住（第 2 版起未改）');
+    const html = sectionStatesHtml([need], 'en');
+    expect(html).toContain('data-rise="true"');
+  });
+
+  it('reads the reviews against the delivered version', async () => {
+    const sectionReviews = vi.fn(() => Promise.resolve({ items: [], next_cursor: null }));
+    await readAllReviews({ sectionReviews } as never, 7);
+    expect(sectionReviews).toHaveBeenCalledWith(undefined, 0, 20, 7);
   });
 
   it('never shows Holds up while the model part is still running', () => {

@@ -43,14 +43,15 @@
       renderReview(document, {
         review: params.get('model')
           ? fixtureModelReview(language, params.get('model'))
-          : fixtureReview(language),
+          : params.get('edited')
+            ? { ...fixtureReview(language), stale: { reason: 'edited', detail: 'v4 -> v5' } }
+            : fixtureReview(language),
         language,
         sections: params.get('blocks')
           ? { ...FIXTURE_PRD[language], need: BLOCKS[language] }
           : FIXTURE_PRD[language],
         sentences,
         previousVersion: 3,
-        currentPrdVersion: params.get('edited') ? 5 : 4,
       }),
     );
     if (params.get('probe')) {

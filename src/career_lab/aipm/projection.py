@@ -93,7 +93,11 @@ def complete_for(auth):
 
 
 def feedback_rows(objects, latest):
-    """Process feedback with staleness relative to the current head of its input."""
+    """Process feedback with staleness relative to the current head of its input.
+
+    The third value marks feedback that was superseded, not overtaken: every design save
+    evaluates the rules again, so an older design's feedback gives way to the newer evaluation
+    and nothing needs rechecking. Saving one section must not send the others back (QA S-1)."""
     found = []
     for row in objects:
         if row.ref.kind != "aipm_process_feedback":
@@ -101,11 +105,11 @@ def feedback_rows(objects, latest):
         item = dict(row.content)
         source = C.ObjectRef.model_validate(item["input_ref"])
         head = latest.get((source.kind, source.object_id))
-        item["stale"] = bool(item.get("stale")) or (
-            head is not None and head.ref.version > source.version
-        )
-        found.append((row, item))
-    found.sort(key=lambda pair: (pair[0].created_storage_revision, pair[0].ref.object_id))
+        newer = head is not None and head.ref.version > source.version
+        superseded = newer and source.kind == "aipm_design" and not item.get("stale")
+        item["stale"] = bool(item.get("stale")) or newer
+        found.append((row, item, superseded))
+    found.sort(key=lambda found: (found[0].created_storage_revision, found[0].ref.object_id))
     return found
 
 
@@ -226,8 +230,11 @@ def project(view, auth, content, registry, *, focus_default="business"):
         status.setdefault(step, "recorded")
 
     feedback = defaultdict(list)
-    for _row, item in feedback_rows(objects, latest):
+    overtaken = set()
+    for _row, item, superseded in feedback_rows(objects, latest):
         feedback[item["step_id"]].append(item)
+        if item["stale"] and not superseded:
+            overtaken.add(item["step_id"])
 
     guide = {step.id: step for step in content.guide.steps}
     from .review import sheets
@@ -243,7 +250,7 @@ def project(view, auth, content, registry, *, focus_default="business"):
         items = feedback[step_id]
         live = [item for item in items if not item["stale"]]
         work = status.get(step_id, "not_started")
-        if work in {"recorded", "working"} and any(item["stale"] for item in items):
+        if work in {"recorded", "working"} and step_id in overtaken:
             work = "recheck"
             missing[step_id].append(gap("recheck", language))
         if work == "not_started" and submissions:
@@ -361,7 +368,7 @@ def _suggest(steps, focus):
 
 def feedback_page(view, auth, *, cursor=0, limit=20, step_id=None):
     objects = scoped(view, auth)
-    rows = [item for _, item in feedback_rows(objects, heads(objects))]
+    rows = [item for _, item, _ in feedback_rows(objects, heads(objects))]
     if step_id is not None:
         rows = [item for item in rows if item["step_id"] == step_id]
     rows.reverse()  # newest first

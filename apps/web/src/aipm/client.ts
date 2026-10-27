@@ -34,9 +34,10 @@ export class AipmClient {
   listDrafts = this.drafts;
   /** Owner-only; reviews a saved PRD version. The result's `review` is a SectionReview. */
   createSectionReview = (command: Command) => this.write('section-reviews', 'aipm.section_review.create', command);
-  /** Newest first; repeated reads never recompute. */
-  sectionReviews = (stepId?: StepId, cursor = 0, limit = 10) =>
-    this.read<SectionReviewPage>(`section-reviews?${stepId ? `step_id=${stepId}&` : ''}cursor=${cursor}&limit=${limit}`);
+  /** Newest first; repeated reads never recompute. `prdVersion` judges staleness against that
+   * PRD version (a delivered one) instead of the current head. */
+  sectionReviews = (stepId?: StepId, cursor = 0, limit = 10, prdVersion?: number) =>
+    this.read<SectionReviewPage>(`section-reviews?${stepId ? `step_id=${stepId}&` : ''}cursor=${cursor}&limit=${limit}${prdVersion ? `&prd_version=${prdVersion}` : ''}`);
   resolveDraft = (id: string, command: Command) => this.write(`drafts/${encodeURIComponent(id)}/state`, 'aipm.design_drafts.resolve', command);
 }
 export const createAipmClient = (sessionId: string, transport: AipmTransport) => new AipmClient(sessionId, transport);

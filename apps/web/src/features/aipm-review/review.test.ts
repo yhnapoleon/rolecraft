@@ -57,14 +57,13 @@ describe('review content (L4 shared fixture)', () => {
     );
   });
 
-  it('says when the review is out of date, and why', () => {
+  it('says when the review is out of date, and why; a newer PRD version alone is not an edit', () => {
     const review = fixtureReview('zh');
-    expect(staleNote(review, 'zh', 4)).toBeNull();
-    expect(staleNote(review, 'zh', 5)?.text).toBe('这份批改对应第 4 版，你已改动。');
-    expect(staleNote(review, 'zh', 4, true)?.kind).toBe('edited');
+    expect(staleNote(review, 'zh')).toBeNull();
+    const edited = { ...review, stale: { reason: 'edited' as const, detail: 'v4 -> v5' } };
+    expect(staleNote(edited, 'zh')?.text).toBe('这份批改对应第 4 版，你已改动。');
     expect(
-      staleNote({ ...review, stale: { reason: 'policy_changed', detail: '政策 v2' } }, 'zh', 4)
-        ?.kind,
+      staleNote({ ...review, stale: { reason: 'policy_changed', detail: '政策 v2' } }, 'zh')?.kind,
     ).toBe('recheck');
   });
 
@@ -419,7 +418,8 @@ describe('installAipmReview', () => {
           return { enabled: false, recognition: null };
         },
       }),
-      readProgress: async () => ({ steps: [{ id: 'need', sheet: { edited_since_review: true } }] }),
+      // A snapshot read before this review landed still describes the previous one (QA G-11).
+      readProgress: vi.fn(async () => ({ steps: [{ id: 'need', sheet: { edited_since_review: true } }] })),
       registerFeature: register,
       currentScreen: () => ({ kind: 'review', step: 'need' }),
       openWorksheet: vi.fn(),
@@ -430,7 +430,8 @@ describe('installAipmReview', () => {
     expect(register).toHaveBeenCalledWith('review', installed.feature);
     await installed.open('need');
     expect(installed.state.review?.id).toBe('review-need-4-en');
-    expect(installed.state.edited).toBe(true);
+    expect(host.readProgress).not.toHaveBeenCalled();
+    expect(installed.state.review && staleNote(installed.state.review, 'en')).toBeNull();
     // No decision chosen: the sentence check still runs, with the fixed placeholder.
     expect(installed.state.sentences.kind).toBe('off');
     expect(asked).toContainEqual({

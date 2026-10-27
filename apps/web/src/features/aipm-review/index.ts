@@ -97,8 +97,6 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     review: SectionReview | null;
     sections: Partial<Record<StepId, string>>;
     sentences: Sentences;
-    currentPrdVersion: number | null;
-    edited: boolean;
     modelTimedOut: boolean;
     error: string | null;
     loading: boolean;
@@ -107,8 +105,6 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     review: null,
     sections: {},
     sentences: { kind: 'off' },
-    currentPrdVersion: null,
-    edited: false,
     modelTimedOut: false,
     error: null,
     loading: false,
@@ -142,8 +138,6 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
           language,
           sections: state.sections,
           sentences: state.sentences,
-          currentPrdVersion: state.currentPrdVersion,
-          edited: state.edited,
           modelTimedOut: state.modelTimedOut,
           hasDecision: !!decision(),
           onAsk: (who) => void ask(who),
@@ -197,20 +191,6 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
     }
   }
 
-  /** Where the review stands in the progress projection: the latest PRD and whether it moved on. */
-  async function readSheet(step: StepId) {
-    const progress = await host.readProgress().catch(() => null);
-    const steps =
-      dig(progress, (v) => (Array.isArray(v.steps) ? (v.steps as Loose[]) : undefined)) ?? [];
-    const sheet = steps.find((s) => s.id === step)?.sheet as
-      | { edited_since_review?: boolean; prd_ref?: ObjectRef | null }
-      | undefined;
-    const top = dig(progress, (v) =>
-      v.prd_ref && typeof v.prd_ref === 'object' ? (v.prd_ref as ObjectRef) : undefined,
-    );
-    return { prd: sheet?.prd_ref ?? top ?? null, edited: !!sheet?.edited_since_review };
-  }
-
   /** Shows a sheet's review; the same version reads its saved result, never a rerun. */
   async function open(step: StepId, ref?: ObjectRef) {
     const mine = ++token;
@@ -230,11 +210,8 @@ export function installAipmReview(host: ReviewHost, options: ReviewOptions = {})
       const client = host.getClient() as ReviewClient | null;
       if (!client?.sectionReviews) throw new Error('review_client_unavailable');
       const review = pickReview(await client.sectionReviews(step), ref);
-      const sheet = await readSheet(step);
       if (mine !== token) return;
       state.review = review;
-      state.currentPrdVersion = sheet.prd?.version ?? null;
-      state.edited = sheet.edited;
       if (review) {
         const sections = await readSections(review.prd_ref).catch(() => ({}));
         if (mine !== token) return;
