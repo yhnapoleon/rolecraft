@@ -102,6 +102,21 @@ def product_text(product, *, work_language="zh") -> str:
     raise ProtocolError("unsupported_product_projection")
 
 
+def product_texts(product, *, work_language) -> tuple[str, ...]:
+    """Every projection a stored quote of this version may have been taken from: the current
+    one first, then the Chinese-labelled one that English sessions were projected as before
+    2026-10-27. A Chinese session has only the one."""
+    current = product_text(product, work_language=work_language)
+    legacy = product_text(product)
+    return (current,) if legacy == current else (current, legacy)
+
+
+def quotes(text: str, ref) -> bool:
+    if ref.span_start is not None:
+        return ref.span_end <= len(text) and text[ref.span_start : ref.span_end] == ref.quote
+    return ref.quote in text
+
+
 def applicable(policy: CriterionPolicy, purpose: str, decision: str | None):
     stage = purpose_of(purpose)
     if stage is None:
@@ -201,13 +216,7 @@ class EvidenceAssemblerV2:
         chosen = ref if isinstance(ref, EvidenceRefV2) and ref.quote is not None else source.ref
         text = source.text
         if chosen.quote is not None:
-            if chosen.span_start is not None:
-                if (
-                    chosen.span_end > len(text)
-                    or text[chosen.span_start : chosen.span_end] != chosen.quote
-                ):
-                    raise ProtocolError("evidence_quote_mismatch")
-            elif chosen.quote not in text:
+            if not any(quotes(t, chosen) for t in (text, *source.earlier_texts)):
                 raise ProtocolError("evidence_quote_mismatch")
             text = chosen.quote
         else:

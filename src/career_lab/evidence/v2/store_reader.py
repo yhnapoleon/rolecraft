@@ -20,9 +20,9 @@ from .ports import (
     model_generated,
     record_text,
 )
-from .assembler import base_ref, product_text
+from .assembler import base_ref, product_texts
 from .history import before
-from .localization import message
+from .localization import message, validate_language
 
 
 class StoreEvidenceReader:
@@ -36,6 +36,7 @@ class StoreEvidenceReader:
         rule_provider=None,
         submission_rule_provider=None,
         capture_at=None,
+        work_language="zh",
     ):
         if auth.actor_id != "learner" or auth.executor.kind not in {"human", "external_agent"}:
             raise C.ProtocolError("public_actor_required", status=403)
@@ -45,6 +46,9 @@ class StoreEvidenceReader:
         self.source_reader = source_reader
         self.rule_provider = rule_provider
         self.submission_rule_provider = submission_rule_provider
+        # The session's fixed work language (its scenario module's), as the module's own
+        # evidence check projects the same work; default zh preserves legacy callers.
+        self.work_language = validate_language(work_language)
         if not self._policies:
             raise ValueError("frozen evaluation policies required")
         self.records = {}
@@ -94,9 +98,10 @@ class StoreEvidenceReader:
                 target = None
                 other = None
                 origin = "record"
+                earlier = ()
                 if row.ref.kind == "product":
                     product = C.WorkProductVersion.model_validate(row.content)
-                    text = product_text(product)
+                    text, *earlier = product_texts(product, work_language=self.work_language)
                     refs = tuple(C.EvidenceRefV2.model_validate(x) for x in self._declared(product))
                     author = product.author
                     executor = product.executor
@@ -164,6 +169,7 @@ class StoreEvidenceReader:
                     if row.ref.kind == "product" and product.content.strip()
                     else "explicit_only",
                     origin=origin,
+                    earlier_texts=tuple(earlier),
                 )
                 self.records[self.key(ref)] = record
                 if activity and born is not None and executor is not None:

@@ -415,6 +415,7 @@ def create_installed_reader(
         source_reader=source_reader,
         rule_provider=rule_provider,
         submission_rule_provider=submission_rule_provider,
+        work_language=work_language,
     )
     if reader.evaluation != evaluation:
         raise C.ProtocolError("evaluation_binding_changed")

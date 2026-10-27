@@ -316,6 +316,7 @@ def create_feedback_handler(
             source_reader=source.source,
             rule_provider=source.rules,
             submission_rule_provider=source.submission_rules,
+            work_language=module.work_language,
         )
         from career_lab.recognition import registry as recognizers
 
@@ -534,6 +535,7 @@ class SubmissionRuleChecks:
             rule_provider=source.rules,
             submission_rule_provider=submission_rules,
             capture_at=capture_at,
+            work_language=self.module.work_language,
         )
 
     def _check(self, auth, source, reader, submission, basis):
