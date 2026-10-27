@@ -108,6 +108,9 @@ import {
 import './pilot-config.css';
 import './document-motion.css';
 import { markdownHtml } from './markdown';
+import { answerChain, fromWorkbenchRun } from '../features/answer-chain/model';
+import { answerChainHtml } from '../features/answer-chain/view';
+import { holdsStageUnderDocument, selectSettled } from '../features/answer-chain/arrival';
 import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
@@ -267,6 +270,8 @@ const ui = {
   intake: { text: '', result: null, open: false },
   busy: false,
   lastRun: null,
+  // A queued test that settled in the background and has not been drawn yet.
+  settledRun: null,
   importDrafts: {},
   chatQuotes: {},
   practice: {},
@@ -935,8 +940,10 @@ function afterRender() {
   const registered = registeredRoute(ui.route);
   const stageRoot = registered && document.getElementById('ws-stage');
   if (stageRoot) registered.mount?.(stageRoot);
-  if (ui.route === 'review' && current() && L.nativeWorkspace(current()))
+  if (ui.route === 'review' && current() && L.nativeWorkspace(current())) {
     loadRecognitionSummary(current());
+    void mountSectionStatesSlot(current());
+  }
   // Only the workbench's own scroll regions move; browser focus must not shift
   // the entire fixed-height workspace (especially after viewport changes).
   if (WS.includes(ui.route) && window.scrollY) window.scrollTo(0, 0);
@@ -3625,6 +3632,7 @@ function runGroup(a, runs) {
           i,
         ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${(i === 0 ? T('最新', 'Latest') : comparison.referenced ? T('识别基准', 'Recognition baseline') : T('上一次', 'Previous')) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
+      ${runChain(a, x, i === 0)}
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
@@ -3634,6 +3642,19 @@ function runGroup(a, runs) {
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
     <div class="run-actions">${btn(icon('layers', 'i-xs') + T('看依据', 'Check sources'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;
+}
+
+// Which of the assistant's five steps this run passed and where it stopped. Only the latest
+// column carries its recognition cards on the page, so only it links to them.
+function runChain(a, x, latest) {
+  const handover =
+    !!L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && roleOf(a.id) === 'pm' && !sealedSession(a);
+  return answerChainHtml(
+    answerChain(fromWorkbenchRun(x), locale()),
+    x.id,
+    { language: locale(), handover, inspect: latest, fresh: x.id === ui.lastRun },
+    (x.recognition || []).map((r) => r.task),
+  );
 }
 
 /* the rail: people, and what needs you. A chat pushes in where the people were. */
@@ -4245,6 +4266,7 @@ function renderReview() {
         <h1 class="sr-only">${T('结果', 'Result')}</h1>
         <div class="result-main" data-v4-feedback data-v4-region="feedback" data-result-layout="true"></div>
         <section class="result-after" aria-label="${esc(T('接下来', 'What next'))}">
+          ${aipmHere(a) ? '<section data-aipm-section-states></section>' : ''}
           ${behaviorSection(a)}
           ${practiceOriginNote(a)}
           <section class="review-practice" data-v4-practice aria-live="polite">
@@ -4528,6 +4550,20 @@ function fillBehavior(box, a) {
   const html = behaviorInner(a);
   box.innerHTML = html;
   box.hidden = !html;
+}
+// "Judgements you improved before delivery" (S2): the result line's module, when it is built in.
+// A failed read leaves the section empty; the result page does not depend on it.
+const sectionStates = import.meta.glob('../features/aipm-result/section-states.ts');
+async function mountSectionStatesSlot(a) {
+  const load = Object.values(sectionStates)[0];
+  const prd = Aipm.prdOf(a);
+  if (!load || !prd || !document.querySelector('[data-aipm-section-states]')) return;
+  const list = await L.v4Host(a)?.query('submissions.list').catch(() => null);
+  const submission = (Array.isArray(list) ? list : list?.items ?? []).at(-1);
+  const el = document.querySelector('[data-aipm-section-states]');
+  if (!submission || !el || current()?.id !== a.id) return;
+  const { mountSectionStates } = await load();
+  mountSectionStates(el, { client: Aipm.host.getClient(), submission, prdId: prd.id, language: workLang(a) ?? locale(), openReview: (step, ref) => Aipm.host.openReview(step, ref) });
 }
 async function loadRecognitionSummary(a) {
   const last = recognitionReads.get(a.id) ?? 0;
@@ -5320,10 +5356,14 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     parts = parts.filter((p) => p !== 'stage');
   }
   // Under an open document the board stays as it is (B1); it catches up when the sheet closes.
-  if (parts.includes('stage') && ui.docSheet && WS.includes(ui.route) && !routeTask(a)) {
+  // A queued test that has just arrived is drawn once anyway (276-07).
+  const underDocument = !!ui.docSheet && WS.includes(ui.route) && !routeTask(a);
+  if (parts.includes('stage') && holdsStageUnderDocument(ui, a.tests || [], underDocument)) {
     ui.stageStale = true;
     parts = parts.filter((p) => p !== 'stage');
   }
+  if (parts.includes('stage') && (a.tests || []).some((t) => t.id === ui.settledRun))
+    ui.settledRun = null;
   if (parts.includes('stage') && dirty) flush();
   ui.notesCache = Coach.notes(a, E);
   const key = focusKey();
@@ -5800,6 +5840,7 @@ function resetAttemptUi() {
     compare: false,
     editPending: null,
     lastRun: null,
+    settledRun: null,
     reviewTab: 'rules',
     practice: {},
   });
@@ -7697,6 +7738,13 @@ function evidenceView(a, value) {
 }
 
 /* ---------- events ---------- */
+// A queued test settled in the background: select it where it was asked and redraw, without
+// waiting for the person to leave and come back.
+window.addEventListener('v4-test-settled', (e) => {
+  if (!e.detail?.testId) return;
+  selectSettled(ui, { caseId: e.detail.caseId ?? null, testId: e.detail.testId });
+  if (current() && WS.includes(ui.route)) refreshWS(['stage', 'rail']);
+});
 document.addEventListener('rolecraft:open-chat', (e) => {
   const role = ROLE_OF[e.detail?.roleId];
   if (role && current()) openChat(role);

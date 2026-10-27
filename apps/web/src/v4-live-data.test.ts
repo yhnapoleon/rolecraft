@@ -110,10 +110,20 @@ describe('background polling of a v2 practice', () => {
     const queued: LocalTestRun = { taskId: 'task-1', sessionId: 's', requestId: 'r-1', query: 'Hotel limit?', expectation: 'Cite policy', config: null, createdAt: '2026-10-27T00:00:00Z' };
     const practice = polledPractice({ queuedTestRuns: { 'r-1': queued } });
     practice.host.recover.mockResolvedValue({ requestId: 'r-1', status: 'confirmed', result: { status: 'completed', response: { result: { status: 'queued' } }, jobs: [{status: 'completed', effect: {result: {test: {id: 'answer-1'}}}}] } });
-    await practice.store.poll();
+    const settled = vi.fn();
+    vi.stubGlobal('dispatchEvent', settled);
+    try {
+      await practice.store.poll();
+    } finally {
+      vi.unstubAllGlobals();
+    }
     expect(practice.store.active()?.queuedTestRuns).toEqual({});
     expect(practice.store.active()?.testRunMeta?.['answer-1']?.requestId).toBe('r-1');
     expect(practice.host.recover).toHaveBeenCalledTimes(1);
+    expect(settled).toHaveBeenCalledTimes(1);
+    const event = settled.mock.calls[0][0] as CustomEvent;
+    expect(event.type).toBe('v4-test-settled');
+    expect(event.detail).toEqual({ caseId: null, testId: 'answer-1' });
   });
   it('a dropped read resolves and shows the connection as lost, without an error message', async () => {
     const practice = polledPractice();
@@ -248,6 +258,12 @@ describe('v2 test results shown in the workbench', () => {
       ['old-policy', true],
       ['current-policy', false],
       ['no-answer', false],
+    ]);
+    expect(session.tests.map((t) => (t as { status?: string }).status)).toEqual([
+      'answered',
+      'answered',
+      'answered',
+      'fallback',
     ]);
     expect(session.tests[0].source_versions).toEqual({ faq: 1, policy: 2 });
     expect(session.tests[1].citations).toEqual([{ material_id: 'policy', version: 1 }]);

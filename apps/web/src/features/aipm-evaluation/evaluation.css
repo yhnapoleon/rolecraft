@@ -224,6 +224,63 @@
   color: var(--ink-3);
   font-size: 12.5px;
 }
+/* S1: the run's answer and its compact answer chain, under the question. */
+.aipm-eval__answer {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 4px;
+  min-width: 0;
+}
+.aipm-eval__answer-short,
+.aipm-eval__answer-full p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.aipm-eval__answer:has(.aipm-eval__answer-full[open]) .aipm-eval__answer-short {
+  display: none;
+}
+.aipm-eval__answer-full summary {
+  width: fit-content;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  cursor: pointer;
+  list-style: none;
+}
+.aipm-eval__answer-full summary::-webkit-details-marker {
+  display: none;
+}
+.aipm-eval__answer-full[open] summary {
+  order: 2;
+}
+.aipm-eval__answer-full[open] {
+  display: flex;
+  flex-direction: column;
+}
+.aipm-eval__answer-full summary:focus-visible {
+  outline: none;
+  border-radius: var(--r-row);
+  box-shadow: var(--focus-ring);
+}
+.aipm-eval__answer .ac {
+  margin-top: 6px;
+}
+.aipm-eval__unmet {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
 .aipm-eval__judge {
   display: grid;
   gap: 6px;

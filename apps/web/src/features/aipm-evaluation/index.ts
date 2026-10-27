@@ -2,6 +2,8 @@
  * Writes go through explicit host commands; the server owns batches, results and counts.
  * Running uses the host's `sendPreparedTest`, which sends the saved original command verbatim. */
 import type { AipmDesign, MonitoringPlan, ObjectRef } from '../../aipm/types';
+import type * as C from '../../contracts-v2';
+import { fromTestResult } from '../answer-chain/model';
 import {
   blockSummary,
   type BatchView,
@@ -41,7 +43,11 @@ export interface EvaluationHost {
   command(operation: string, payload: Record<string, unknown>): Promise<unknown>;
   createWorkVersion(input: never): Promise<unknown>;
   registerFeature(id: 'evaluation', feature: Feature): () => void;
-  getDataHost?(): { openReference(ref: ObjectRef): Promise<void> } | null;
+  getDataHost?(): {
+    openReference(ref: ObjectRef): Promise<void>;
+    /** Saved test results and material titles, for each case's answer and answer chain. */
+    query?(operation: 'tests.list' | 'workbench.read'): Promise<unknown>;
+  } | null;
   /** Sends a stored `tests.create` Command unchanged: same request_id, no journal, no retry. */
   sendPreparedTest(command: Record<string, unknown>): Promise<unknown>;
   /** The bound package's `public/evaluation.<work language>.json`. */
@@ -109,6 +115,7 @@ export function createEvaluationDesk(
     busy: false,
     notice: null,
     judging: {},
+    runs: {},
   };
   const t = (zh: string, en: string) => text(language, zh, en);
   const requireBoundPractice = () => {
@@ -168,6 +175,7 @@ export function createEvaluationDesk(
       const batchRef = latestRef(progress, 'aipm_batch');
       if (batchRef) await readView(batchRef.object_id);
       state.notice = null;
+      if (state.tab === 'run') void readRuns();
     } catch {
       state.notice = {
         kind: 'error',
@@ -207,8 +215,48 @@ export function createEvaluationDesk(
   const live = (batch: RunnerBatch | undefined) => {
     if (batch && state.view) state.view = { ...state.view, batch: batch as EvaluationBatch };
     paint();
+    // A case that just finished has a run this desk has not read yet.
+    if (unreadRuns()) void readRuns();
     return batch;
   };
+
+  // Each run's answer and answer chain, from the saved test results. Read when the run tab
+  // opens and when a case finishes; never polled. Without the reads the desk shows states only.
+  const asked = new Set<string>();
+  const unreadRuns = () =>
+    (state.view?.batch.cases ?? []).some(
+      (row) => row.run_ref && !state.runs[row.run_ref.object_id] && !asked.has(row.run_ref.object_id),
+    );
+  let reading: Promise<void> | null = null;
+  function readRuns() {
+    reading ??= (async () => {
+      try {
+        const data = host.getDataHost?.();
+        if (!data?.query) return;
+        for (const row of state.view?.batch.cases ?? [])
+          if (row.run_ref) asked.add(row.run_ref.object_id);
+        const [listed, context] = await Promise.all([
+          data.query('tests.list'),
+          data.query('workbench.read').catch(() => null),
+        ]);
+        requireBoundPractice();
+        const workspace = (context as { timeline?: { workspace?: Loose } } | null)?.timeline
+          ?.workspace;
+        const titles = (workspace?.material_titles ?? {}) as Record<string, string>;
+        const tests = (listed as { tests?: C.TestResultV2[] } | null)?.tests ?? [];
+        const runs = { ...state.runs };
+        for (const test of tests)
+          runs[test.id] = { answer: test.answer ?? '', chain: fromTestResult(test, titles) };
+        state.runs = runs;
+        paint();
+      } catch {
+        // Unreadable results leave the case states as they are.
+      } finally {
+        reading = null;
+      }
+    })();
+    return reading;
+  }
 
   const port: EvaluationRunnerPort = {
     read: async (id) => (await readView(id)).batch as RunnerBatch,
@@ -408,7 +456,9 @@ export function createEvaluationDesk(
     if (tab) {
       state.tab = tab;
       state.notice = null;
-      return paint();
+      paint();
+      if (tab === 'run') void readRuns();
+      return;
     }
     const content = state.content;
     switch (target.dataset.evalAction) {
@@ -557,7 +607,7 @@ export function createEvaluationDesk(
       };
     },
   };
-  return { feature, state, load, run, sendAgain };
+  return { feature, state, load, run, sendAgain, readRuns };
 }
 
 export function installAipmEvaluation(host: EvaluationHost, options: InstallOptions = {}) {

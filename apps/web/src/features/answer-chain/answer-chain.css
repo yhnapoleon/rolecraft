@@ -1,0 +1,250 @@
+/* The answer chain: drawn straight on the run card — no card, fill or shadow of its own.
+   Colours are the five semantic tokens only; "answered" is never green. */
+.ac {
+  container-type: inline-size;
+  margin: 12px 0 0 34px;
+  min-width: 0;
+}
+.ac[data-compact] {
+  margin-left: 0;
+}
+.ac-path {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ac-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  grid-template-rows: 10px auto auto;
+  row-gap: 6px;
+  min-width: 0;
+  text-align: center;
+}
+/* The connector from the previous dot to this one; dashed where the run did not get here. */
+.ac-step + .ac-step::before {
+  content: "";
+  position: absolute;
+  top: 4.5px;
+  right: calc(50% + 9px);
+  left: calc(-50% + 9px);
+  border-top: 1px solid var(--line-2);
+}
+.ac-step[data-state="skipped"]::before,
+.ac-step[data-state="skipped"] + .ac-step::before {
+  border-top-style: dashed;
+}
+.ac-dot {
+  align-self: center;
+  box-sizing: border-box;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+.ac-step[data-state="stop"] .ac-dot {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--ink);
+  background: var(--ink);
+}
+.ac-step[data-state="warn"] .ac-dot {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--warn);
+  background: var(--warn-tint);
+}
+.ac-step[data-state="skipped"] .ac-dot {
+  border: 1px solid var(--line-2);
+  background: transparent;
+}
+.ac-step[data-state="unrecorded"] .ac-dot {
+  border: 1px dashed var(--ink-3);
+  background: transparent;
+}
+.ac-name {
+  max-width: 100%;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.ac-step[data-state="stop"] .ac-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ac-step[data-state="warn"] .ac-name {
+  color: var(--warn);
+  font-weight: 600;
+}
+.ac-step[data-state="skipped"] .ac-name,
+.ac-step[data-state="unrecorded"] .ac-name {
+  color: var(--ink-3);
+}
+.ac-who {
+  max-width: 100%;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ac-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-top: 12px;
+}
+.ac-reason {
+  flex: 1 1 260px;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.ac[data-tone="warn"] .ac-reason {
+  padding-left: 8px;
+  border-left: 2px solid var(--warn);
+  color: var(--warn);
+}
+.ac-keys {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: auto;
+}
+/* 30px keys with a 44px hit area. */
+.ac-key,
+.ac-inspect {
+  position: relative;
+}
+.ac-key::after,
+.ac-inspect::after {
+  content: "";
+  position: absolute;
+  inset: -7px 0;
+}
+.ac-key:focus-visible,
+.ac-inspect:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.ac-rows {
+  display: grid;
+  gap: 2px;
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+.ac-rows[hidden] {
+  display: none;
+}
+.ac-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding: 4px 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.ac-row-text {
+  flex: 1 1 280px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ac-row strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ac-inspect {
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-row);
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ac-inspect:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+/* A result that just arrived: the dots come in left to right (40ms apart, 280ms in all). */
+.ac[data-arriving] .ac-step {
+  animation: ac-in 160ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 40ms);
+}
+.ac[data-arriving] .ac-foot {
+  animation: ac-fade 160ms var(--ease-out) both;
+}
+@keyframes ac-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+@keyframes ac-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac[data-arriving] .ac-step,
+  .ac[data-arriving] .ac-foot {
+    animation: none;
+  }
+  .ac[data-arriving] {
+    animation: ac-fade 160ms var(--ease-out) both;
+  }
+}
+
+/* Narrow: one step per line, dot + name + identity, a vertical line between. */
+@container (max-width: 519px) {
+  .ac-path {
+    grid-template-columns: 1fr;
+  }
+  .ac-step {
+    grid-template-columns: 10px auto 1fr;
+    grid-template-rows: none;
+    justify-items: start;
+    align-items: center;
+    column-gap: 10px;
+    min-height: 28px;
+    text-align: start;
+  }
+  .ac-step + .ac-step::before {
+    top: calc(-50% + 6px);
+    bottom: calc(50% + 6px);
+    left: 4.5px;
+    right: auto;
+    border-top: 0;
+    border-left: 1px solid var(--line-2);
+  }
+  .ac-step[data-state="skipped"]::before,
+  .ac-step[data-state="skipped"] + .ac-step::before {
+    border-left-style: dashed;
+  }
+  .ac-dot {
+    justify-self: center;
+  }
+  .ac-who::before {
+    content: "· ";
+  }
+}

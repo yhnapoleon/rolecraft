@@ -1,5 +1,8 @@
 /** Evaluation desk markup. Every interpolated value passes `esc`; one screen per tab. */
 import type { AipmDesign, MonitoringPlan } from '../../aipm/types';
+import { stageName, type StageKey } from '../answer-chain/copy';
+import { answerChain, type ChainInput, type ChainView } from '../answer-chain/model';
+import { answerChainHtml } from '../answer-chain/view';
 import {
   type BatchView,
   buckets,
@@ -36,7 +39,39 @@ export type DeskState = {
   busy: boolean;
   notice: { kind: 'status' | 'error'; message: string } | null;
   judging: Record<string, string>;
+  /** Saved test results by test id: the answer and its chain input. */
+  runs: Record<string, { answer: string; chain: ChainInput }>;
 };
+
+const ANSWER_PREVIEW = 140;
+const runOf = (state: DeskState, row: EvaluationCase) =>
+  row.run_ref ? state.runs?.[row.run_ref.object_id] : undefined;
+const chainOf = (state: DeskState, row: EvaluationCase) => {
+  const run = runOf(state, row);
+  return run ? answerChain(run.chain, state.language) : null;
+};
+/** Where a run ended up on the chain: the amber step when it carried a problem through. */
+const endedAt = (view: ChainView): StageKey =>
+  (view.stages.find((s) => s.state === 'warn') ?? view.stages[view.stopAt]).key;
+
+/** The answer (140 characters, the rest on request) and the compact answer chain. */
+function runBlock(state: DeskState, row: EvaluationCase) {
+  const t = (zh: string, en: string) => text(state.language, zh, en);
+  const run = runOf(state, row);
+  const view = chainOf(state, row);
+  if (!run || !view || !row.run_ref) return '';
+  const answer = run.answer.trim();
+  const long = [...answer].length > ANSWER_PREVIEW;
+  const short = long ? `${[...answer].slice(0, ANSWER_PREVIEW).join('').trimEnd()}…` : answer;
+  const text_ = answer
+    ? `<p class="aipm-eval__answer-short">${esc(short)}</p>${long ? `<details class="aipm-eval__answer-full"><summary>${esc(t('展开全文', 'Show the full answer'))}</summary><p>${esc(answer)}</p></details>` : ''}`
+    : '';
+  return `<div class="aipm-eval__answer">${text_}${answerChainHtml(view, row.run_ref.object_id, {
+    language: state.language,
+    compact: true,
+    handover: !state.readOnly,
+  })}</div>`;
+}
 
 const routeLabel = (state: DeskState, route: Route) =>
   state.content?.routes.find((r) => r.id === route)?.label ?? route;
@@ -188,6 +223,7 @@ function caseLine(state: DeskState, row: EvaluationCase, extra = '') {
     : '';
   return `<li class="aipm-eval__case" data-status="${esc(row.status ?? 'pending')}">
   <div class="aipm-eval__case-head"><span class="aipm-eval__q">${esc(caseQuery(state, row))}</span><span class="aipm-eval__state">${esc(statusLabel(state.language, row, recovery))}</span></div>
+  ${runBlock(state, row)}
   <div class="aipm-eval__meta"><span>${esc(routeLabel(state, row.route))}</span>${abandoned}${open}${act}</div>${extra}
 </li>`;
 }
@@ -223,8 +259,31 @@ function summaryBlock(state: DeskState, view: BatchView) {
       )}</span></li>`;
     })
     .join('');
-  return `<dl class="aipm-eval__stats">${lines}</dl><ul class="aipm-eval__routes">${byRoute}</ul>
+  return `<dl class="aipm-eval__stats">${lines}</dl><ul class="aipm-eval__routes">${byRoute}</ul>${unmetBlock(state, view)}
 <p class="aipm-eval__muted">${esc(t('本期由你本人判定，不做自动语义评分。', 'You judge every result in this release; there is no automatic semantic scoring.'))}</p>`;
+}
+
+/** Cases judged "does not meet", grouped by where they stopped on the answer chain. */
+export function unmetByStage(state: DeskState, view: BatchView) {
+  const latest = latestAssessments(view.assessments);
+  const counts = new Map<StageKey, number>();
+  for (const row of view.batch.cases) {
+    if (latest.get(row.id)?.result !== 'not_satisfied') continue;
+    const chain = chainOf(state, row);
+    if (!chain || chain.tone === 'unknown') continue;
+    const key = endedAt(chain);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function unmetBlock(state: DeskState, view: BatchView) {
+  const t = (zh: string, en: string) => text(state.language, zh, en);
+  const groups = unmetByStage(state, view);
+  if (!groups.length) return '';
+  return `<p class="aipm-eval__unmet"><span>${esc(t('不满足的题停在哪一环', 'Where the unmet cases stopped'))}</span><span>${esc(
+    groups.map(([key, n]) => `${stageName(key, state.language)} ${n}`).join(' · '),
+  )}</span></p>`;
 }
 
 function runScreen(state: DeskState) {
