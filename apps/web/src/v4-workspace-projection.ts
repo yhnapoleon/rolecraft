@@ -1,5 +1,30 @@
 /** Native slot projection; the host activates it with the W03 mount, never over v1/local-only input. */
 import type { LocalSession } from './types';
+import type { WorkProductVersion } from './contracts-v2';
+
+/** The stored sections and quotes remain verbatim; only section names are localized. */
+export function productBody(p: WorkProductVersion, language: string): string {
+  if (p.content?.trim()) return p.content;
+  const payload = p.structured_payload;
+  if (!payload) return p.content || '';
+  if (payload.type === 'text') return payload.body;
+  if (payload.type === 'plan') {
+    const names: Record<string, [string, string]> = {
+      business: ['看懂业务', 'Understand the business'],
+      stakeholders: ['用户与相关方', 'Users and stakeholders'],
+      need: ['需求与依据', 'Needs and evidence'],
+      boundary: ['能力与边界', 'Capabilities and boundaries'],
+      solution: ['方案', 'Approach'],
+      assurance: ['验证与保障', 'Evaluation and assurance'],
+      decision: ['试点决定', 'Pilot decision'],
+    };
+    const keys = [...Object.keys(names).filter((k) => k in payload.sections),
+      ...Object.keys(payload.sections).filter((k) => !(k in names))];
+    return keys.map((key) => `## ${names[key]?.[language === 'en' ? 1 : 0] ?? key}\n\n${payload.sections[key]}`).join('\n\n');
+  }
+  if (payload.type === 'options') return (payload.options ?? []).map((o) => [o.title, o.rationale, ...(o.tradeoffs ?? [])].join('\n')).join('\n\n');
+  return p.content || '';
+}
 export function projectNativeWorkspace(a: any, s: LocalSession) {
   if (s.protocol === 2 && s.v2NativeWorkspace && s.v2Workspace) {
     a.tasks = s.v2Workspace.tasks
@@ -17,7 +42,7 @@ export function projectNativeWorkspace(a: any, s: LocalSession) {
     a.artifacts = s.v2Workspace.products.map((p) => ({
       id: p.product_id,
       taskId: p.task?.object_id ?? null,
-      title: p.title,
+      title: p.title || (p.kind === 'plan' ? (s.v2Binding?.workLanguage === 'en' ? 'Pilot PRD' : '试点 PRD') : ''),
       purpose:
         (
           {
@@ -25,11 +50,12 @@ export function projectNativeWorkspace(a: any, s: LocalSession) {
             test_plan: '测试计划',
             option: '方案比较',
             commitment: '试点决定',
+            plan: '方案',
             freeform: '自由作品',
             free_form: '自由作品',
           } as Record<string, string>
         )[p.purpose] ?? p.purpose,
-      body: p.content,
+      body: productBody(p, s.v2Binding?.workLanguage ?? 'zh'),
       revision: p.version,
       kind:
         p.kind === 'test_plan' ? 'test_set' : p.kind === 'investigation' ? 'investigation' : 'text',

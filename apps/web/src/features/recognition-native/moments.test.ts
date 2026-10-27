@@ -3,6 +3,13 @@ import { signatureHtml, signatureText } from './signature';
 import { retrievalHit, testAgeText, testMomentHtml, type MomentRun } from './test-moment';
 const run = { id: 'r', question: 'cap?', answer: 'CNY 400', indexVersion: 2, policyVersion: 2, configVersion: 1, citations: [{ id: 'policy', title: 'Policy', version: 2 }], recognition: [{ task: 'retrieval', recognizer_id: 'retrieval-c2', revision: 'dense', fallback: false, outputs: { method: 'dense', top: [{ material_id: 'policy', rank: 2, quote: 'CNY 400 per night.' }] } }] } satisfies MomentRun;
 describe('normal working moments', () => {
+  it.each(['zh', 'en'] as const)('distinguishes age from source impact in %s', (language) => {
+    const older = { ...run, policyVersion: 1, indexVersion: 1 };
+    const unrelated = testAgeText({ ...older, citations: [] }, 2, language);
+    expect(unrelated).toContain(language === 'en' ? 'impact not established' : '是否受影响尚未核实');
+    expect(unrelated).not.toContain(language === 'en' ? 'rerun needed' : '待重测');
+    expect(testAgeText({ ...older, citations: [{id: 'policy', version: 1}] }, 2, language)).toContain(language === 'en' ? 'rerun needed' : '待重测');
+  });
   it('signs actual rank and method, and never calls a fallback semantic inference', () => {
     const r = run.recognition[0];
     expect(signatureText(r, 'en')).toBe('Semantic retrieval match · rank 2');

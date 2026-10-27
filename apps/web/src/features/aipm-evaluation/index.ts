@@ -111,6 +111,11 @@ export function createEvaluationDesk(
     judging: {},
   };
   const t = (zh: string, en: string) => text(language, zh, en);
+  const requireBoundPractice = () => {
+    const now = host.getSessionContext();
+    if (!context || now?.sessionId !== context.sessionId || now.workLanguage !== language)
+      throw new Error('evaluation_practice_changed');
+  };
   let root: HTMLElement | null = null;
   let sequence = 0;
   const key = () => `draft-${Date.now().toString(36)}-${++sequence}`;
@@ -124,9 +129,11 @@ export function createEvaluationDesk(
   };
 
   async function readView(id: string) {
+    requireBoundPractice();
     const c = client();
     if (!c) throw new Error('aipm_client_unavailable');
     const response = await c.readBatch<unknown>(id);
+    requireBoundPractice();
     const view = dig(response, (v) =>
       v.batch && v.summary ? (v as unknown as BatchView) : undefined,
     );
@@ -140,12 +147,19 @@ export function createEvaluationDesk(
     state.busy = true;
     paint();
     try {
-      if (!state.content) state.content = asContent(await host.readContent('evaluation'), language);
+      requireBoundPractice();
+      if (!state.content) {
+        const content = await host.readContent('evaluation');
+        requireBoundPractice();
+        state.content = asContent(content, language);
+      }
       const progress = await host.readProgress();
+      requireBoundPractice();
       const designRef = latestRef(progress, 'aipm_design');
       const c = client();
       if (designRef && c) {
         const response = await c.readDesign<unknown>(designRef.object_id);
+        requireBoundPractice();
         state.design =
           dig(response, (v) =>
             Array.isArray(v.rows) ? (v as unknown as AipmDesign) : undefined,
@@ -169,7 +183,9 @@ export function createEvaluationDesk(
   }
 
   async function write(operation: string, payload: Record<string, unknown>) {
+    requireBoundPractice();
     const response = await host.command(operation, payload);
+    requireBoundPractice();
     if (failure(response)) throw new Error(failure(response));
     return response;
   }
@@ -545,9 +561,29 @@ export function createEvaluationDesk(
 }
 
 export function installAipmEvaluation(host: EvaluationHost, options: InstallOptions = {}) {
-  const desk = createEvaluationDesk(host, options);
-  const unregister = host.registerFeature('evaluation', desk.feature);
-  return { ...desk, unregister };
+  const desks = new Map<string, ReturnType<typeof createEvaluationDesk>>();
+  const current = () => {
+    const context = host.getSessionContext();
+    const key = `${context?.sessionId ?? ''}:${context?.workLanguage ?? ''}`;
+    let desk = desks.get(key);
+    if (!desk) {
+      desk = createEvaluationDesk(host, options);
+      desks.set(key, desk);
+    }
+    return desk;
+  };
+  const feature: Feature = {
+    render: () => current().feature.render(),
+    mount: (root) => current().feature.mount?.(root),
+  };
+  const unregister = host.registerFeature('evaluation', feature);
+  return {
+    feature, unregister,
+    get state() { return current().state; },
+    load: () => current().load(),
+    run: () => current().run(),
+    sendAgain: (caseId: string) => current().sendAgain(caseId),
+  };
 }
 
 /** ⑥'s structure block on the sheet (v2 spec §5.1): one summary line, folded by default; opening

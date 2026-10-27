@@ -177,6 +177,7 @@ const PURPOSE_EN = {
   探索笔记: 'Exploration note',
   测试计划: 'Test plan',
   方案比较: 'Option comparison',
+  方案: 'Plan',
   试点决定: 'Pilot decision',
   自由作品: 'Free-form',
 };
@@ -184,6 +185,7 @@ const V2_PURPOSES = {
   exploration: ['探索笔记', 'Exploration note'],
   test_plan: ['测试计划', 'Test plan'],
   option: ['方案比较', 'Option comparison'],
+  plan: ['方案', 'Plan'],
   commitment: ['试点决定', 'Pilot decision'],
   free_form: ['自由作品', 'Free-form'],
 };

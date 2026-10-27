@@ -14,6 +14,7 @@ export function screenFromHistory(value: unknown, session: string): AipmScreen {
     return {
       kind: 'worksheet',
       sheet: screen.sheet,
+      ...(screen.sheet === 'assurance' && screen.feature === 'evaluation' ? { feature: 'evaluation' as const } : {}),
       ...(typeof screen.material === 'string' ? { material: screen.material } : {}),
     };
   }

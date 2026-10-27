@@ -87,7 +87,11 @@ export function fromText(text: string, refs: readonly EvidenceRefV2[] = []): Blo
       else blocks.push({ id: blockId(), type: 'p', text: quote });
     } else if (chunk.trim()) blocks.push({ id: blockId(), type: 'p', text: chunk });
   }
-  return blocks.length ? blocks : emptyBlocks();
+  if (!blocks.length) return emptyBlocks();
+  // Empty writing space is not serialized, so restore it around edge quotes.
+  if (blocks[0].type === 'quote') blocks.unshift(...emptyBlocks());
+  if (blocks[blocks.length - 1].type === 'quote') blocks.push(...emptyBlocks());
+  return blocks;
 }
 export const quoteRefs = (blocks: Block[]) =>
   blocks.flatMap((b) => (b.type === 'quote' ? [b.ref] : []));

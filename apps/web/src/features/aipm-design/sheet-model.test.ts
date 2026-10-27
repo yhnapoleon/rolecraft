@@ -29,6 +29,13 @@ const base: SheetDesign = { id: 'aipm-design', session_id: 's', revision: 1 };
 const strip = (blocks: Block[]) => blocks.map(({ id: _id, ...rest }) => rest);
 
 describe('worksheet text', () => {
+  it('keeps writing space before and after a quote-only saved sheet', () => {
+    const text = toText([{ id: 'q', type: 'quote', text: ref.quote ?? '', label: 'Source', ref }]);
+    const blocks = fromText(text, [ref]);
+    expect(blocks.map((b) => b.type)).toEqual(['p', 'quote', 'p']);
+    expect(quoteRefs(blocks)).toEqual([ref]);
+    expect(toText(blocks)).toBe(text);
+  });
   it('round-trips headings, paragraphs and exact quotes through plain PRD text', () => {
     const blocks: Block[] = [
       { id: '1', type: 'p', text: '新员工反复来问报销怎么办。' },

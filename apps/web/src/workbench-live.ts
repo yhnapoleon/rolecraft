@@ -313,8 +313,8 @@ export class LiveWorkbench {
           version: c.version,
           // One name per document: its current title, whichever version the test cited.
           title:
-            s.materials.find((m) => m.id === c.material_id)?.title ||
             s.v2MaterialTitles?.[`${c.material_id}:${c.version}`] ||
+            s.materials.find((m) => m.id === c.material_id && m.version === c.version)?.title ||
             c.material_id,
         })),
         expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '',

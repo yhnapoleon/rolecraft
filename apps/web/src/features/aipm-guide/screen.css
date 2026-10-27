@@ -196,6 +196,27 @@
   .aipm-main {
     width: calc(100% - 28px);
   }
+  .aipm-main[data-split="true"] {
+    display: block;
+  }
+  .aipm-main[data-split="true"] .aipm-main__body {
+    display: none;
+  }
+  .aipm-main__aside {
+    position: static;
+    max-height: none;
+    width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .aipm-main__split {
+    width: 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+  .aipm-main__aside-quote {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
   .aipm-compass {
     padding: 0 14px;
   }

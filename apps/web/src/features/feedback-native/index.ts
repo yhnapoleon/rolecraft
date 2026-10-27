@@ -293,6 +293,12 @@ export function feedbackNotice(state: FeedbackNativeState, language: FeedbackLan
     ? T('本次提交已保存，正在读取反馈…', 'Submission saved. Reading feedback…')
     : T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.');
 }
+
+export function revisionVisible(state: FeedbackNativeState): boolean {
+  // A restored browser may not have the failed request pointer. The saved submission
+  // is enough to show the recovery path; pending work still disables the action below.
+  return state.status === 'submitted';
+}
 export type FeedbackMountOptions = {
   surface?: 'all' | 'submission' | 'feedback';
   /** The result page (206): the stamped result sheet first, the detail by status or colleague. */
@@ -1708,9 +1714,7 @@ export function mountNativeFeedback(
         );
     }
     // On the result page the note waits for the result sheet (it is the page's last step).
-    revisions.hidden =
-      state.status !== 'submitted' ||
-      (options.layout === 'result' && !coverHost.querySelector('.result-paper[data-state="ready"]'));
+    revisions.hidden = !revisionVisible(state);
     const round = state.submission
       ? state.references?.deliveries?.[state.submission.ref.object_id]
       : undefined;

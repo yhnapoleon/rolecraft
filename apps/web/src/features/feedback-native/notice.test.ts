@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { feedbackNotice, type FeedbackNativeState, type Report } from './index';
+import { feedbackNotice, revisionVisible, type FeedbackNativeState, type Report } from './index';
 
 const submission = {
   ref: { session_id: 's', kind: 'submission', object_id: 'sub-2', version: 1 },
@@ -19,6 +19,11 @@ const submitted = (extra: Partial<FeedbackNativeState> = {}): FeedbackNativeStat
 });
 
 describe('status line after a submission', () => {
+  it('opens the revision form after failed feedback while keeping active work out of revision', () => {
+    expect(revisionVisible(submitted({failedFeedback: true}))).toBe(true);
+    expect(revisionVisible(submitted())).toBe(true);
+    expect(revisionVisible(submitted({status: 'active', failedFeedback: true}))).toBe(false);
+  });
   it('says the feedback is being generated until the latest submission has it', () => {
     expect(feedbackNotice(submitted(), 'zh')).toBe('本次提交已保存，反馈正在生成…');
     expect(feedbackNotice(submitted({ awaitingFeedback: true }), 'en')).toBe(

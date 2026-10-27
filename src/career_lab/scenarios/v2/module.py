@@ -37,8 +37,12 @@ from career_lab.contracts.v2 import (
     TestRequestV2,
     TestResultV2,
     VersionPoint,
+    WorkProductVersion,
     read_file,
 )
+from career_lab.evidence.v2.assembler import product_text
+from career_lab.recognition.assistant import with_drift
+from career_lab.recognition.registry import root as recognizer_root
 from career_lab.runtime.model_adapter import ModelAdapter
 from career_lab.storage.v2_store import (
     EventDraft,
@@ -49,8 +53,6 @@ from career_lab.storage.v2_store import (
 )
 
 from .engine import ScenarioEngine, ScenarioSnapshot
-from career_lab.recognition.assistant import with_drift
-from career_lab.recognition.registry import root as recognizer_root
 from .loader import load_package
 from .localization import text as localized_text
 from .policy import evaluate_request
@@ -249,7 +251,11 @@ class ScenarioModule:
             )
             record = view.get(bare)
             if ref.quote is not None:
-                text = record.content.get("content", record.content.get("answer"))
+                text = (
+                    product_text(WorkProductVersion.model_validate(record.content))
+                    if ref.kind == "product"
+                    else record.content.get("content", record.content.get("answer"))
+                )
                 if (
                     not isinstance(text, str)
                     or ref.span_start is None

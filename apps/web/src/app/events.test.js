@@ -175,7 +175,7 @@ describe('one name per document across the workbench', () => {
     [
       'zh',
       { 'policy:1': '差旅住宿与交通政策', 'policy:2': '费用管理通知：差旅住宿标准' },
-      '读了《费用管理通知：差旅住宿标准》v1',
+      '读了《差旅住宿与交通政策》v1',
       '费用管理通知：差旅住宿标准',
     ],
     [
@@ -184,7 +184,7 @@ describe('one name per document across the workbench', () => {
         'policy:1': 'Travel policy: hotels and taxis',
         'policy:2': 'Expense-management notice: hotel allowance',
       },
-      'Read “Expense-management notice: hotel allowance” v1',
+      'Read “Travel policy: hotels and taxis” v1',
       'Expense-management notice: hotel allowance',
     ],
   ])(
@@ -194,7 +194,7 @@ describe('one name per document across the workbench', () => {
       const { a, catalog } = practice(titles);
       expect(materialTitle(a.backend.materials[0])).toBe(name);
       expect(eventLine(a, a.events[0]).text).toBe(read);
-      expect(referenceLabel(policy(1), catalog, language).full).toBe(`${name} · v1`);
+      expect(referenceLabel(policy(1), catalog, language).full).toBe(`${titles['policy:1']} · v1`);
       expect(referenceLabel(policy(2), catalog, language).full).toBe(`${name} · v2`);
       expect(eventLine(a, a.events[1]).text).toBe(referenceLabel(history, catalog, language).full);
     },

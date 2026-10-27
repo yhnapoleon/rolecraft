@@ -13,6 +13,7 @@ import type {
   StepId,
 } from '../../aipm/types';
 import { copy } from './copy';
+import { patterns } from '../aipm-guide/content';
 import { DESIGN_ID, type DesignRead, DiagramBlock, type DraftItem, Triage } from './desk';
 import { type AgentDraft, type Language, failure, findRef, mergeDraft, nextDesign } from './model';
 import {
@@ -52,7 +53,7 @@ export type WorksheetHost = AipmHost<
   askColleague?(input: { colleague: Role; prefill: string; attachPrd?: boolean }): Promise<void>;
   openPatterns?(): unknown;
 };
-export type Prd = { ref: ObjectRef; sections: Partial<Record<StepId, string>> };
+export type Prd = { ref: ObjectRef; title?: string; sections: Partial<Record<StepId, string>> };
 type Loaded = {
   content: DesignContent;
   saved: DesignRead | null;
@@ -88,6 +89,17 @@ export function sendQuote(ref: EvidenceRefV2, label: string) {
   return true;
 }
 
+export function PatternCards({ language }: { language: Language }) {
+  const content = patterns(language);
+  return <aside className="aipm-sheet__patterns" aria-label={language === 'en' ? 'Public pattern cards' : '公开做法卡'}>
+    <p>{content.label}</p><p>{content.note}</p>
+    {content.cards.map((card) => <article key={card.id}>
+      <h3>{card.title}</h3><p>{card.when}</p><p>{card.cost}</p><p>{card.whenNot}</p>
+      <a href={card.source.url} target="_blank" rel="noreferrer">{card.source.title}</a>
+    </article>)}
+  </aside>;
+}
+
 async function loadSheet(host: WorksheetHost, step: StepId): Promise<Loaded> {
   const client = host.getClient();
   const content = (await host.readContent('design')) as DesignContent;
@@ -110,7 +122,7 @@ async function loadSheet(host: WorksheetHost, step: StepId): Promise<Loaded> {
       | { sections?: Partial<Record<StepId, string>> }
       | undefined;
     if (latest)
-      prd = { ref: { ...ref, version: latest.version }, sections: payload?.sections ?? {} };
+      prd = { ref: { ...ref, version: latest.version }, title: latest.title, sections: payload?.sections ?? {} };
   }
   let drafts: DraftItem[] = [];
   try {
@@ -187,6 +199,7 @@ export function Worksheet({
   const [loadFailed, setLoadFailed] = useState(false);
   const [caret, setCaret] = useState<{ id: string; offset: number } | null>(null);
   const [angle, setAngle] = useState<string | null>(null);
+  const [showPatterns, setShowPatterns] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [menu, setMenu] = useState(false);
@@ -272,6 +285,7 @@ export function Worksheet({
             kind: 'plan',
             product_id: prd.ref.object_id,
             expected_head: prd.ref.version,
+            title: prd.title || c.t('试点 PRD', 'Pilot PRD'),
             structured_payload: payload,
             purpose: 'plan',
             evidence_refs,
@@ -542,12 +556,12 @@ export function Worksheet({
                       {c.t('并排打开', 'Open alongside')}《{loaded.titles[m] ?? m}》
                     </button>
                   ))}
-                  {a.patterns && host.openPatterns && (
+                  {a.patterns && (
                     <button
                       type="button"
                       role="menuitem"
                       onClick={() => {
-                        void host.openPatterns?.();
+                        setShowPatterns(true);
                         setAngle(null);
                       }}
                     >
@@ -560,6 +574,10 @@ export function Worksheet({
           ))}
         </div>
       </div>
+      {showPatterns && <section>
+        <button type="button" className="aipm-sheet__patterns-close" onClick={() => setShowPatterns(false)}>{c.t('收起做法卡', 'Close pattern cards')}</button>
+        <PatternCards language={language} />
+      </section>}
 
       {content.choice && (
         <fieldset className="aipm-sheet__choice" disabled={readOnly}>

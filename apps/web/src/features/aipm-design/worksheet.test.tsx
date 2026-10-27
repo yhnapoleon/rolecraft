@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { StepId } from '../../aipm/types';
 import type { DesignContent } from './sheet-model';
-import { sendQuote, Worksheet, type WorksheetHost } from './worksheet';
+import { PatternCards, sendQuote, Worksheet, type WorksheetHost } from './worksheet';
 
 const content = (language: 'zh' | 'en') =>
   JSON.parse(
@@ -53,6 +53,13 @@ const STEPS: StepId[] = [
   'assurance',
   'decision',
 ];
+
+it.each(['zh', 'en'] as const)('renders the existing public pattern cards and their sources in %s', (language) => {
+  const page = html(<PatternCards language={language} />);
+  expect(page).toContain('https://www.anthropic.com/research/building-effective-agents');
+  expect(page).toContain(language === 'en' ? 'not market-share findings' : '非市场占有率结论');
+  expect(page).toContain(language === 'en' ? 'Deterministic workflow' : '确定性流程');
+});
 
 describe('worksheet', () => {
   it.each(STEPS)(

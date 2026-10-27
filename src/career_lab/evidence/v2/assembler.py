@@ -451,9 +451,45 @@ class EvidenceAssemblerV2:
 
             whole = {"e-" + digest(ref) for ref in subject_refs if ref is not None}
             work = "\n\n".join(c.text for key, c in candidates.items() if key in whole)
+            bounded = []
+            for candidate in candidates.values():
+                if candidate.ref.kind != "material":
+                    bounded.append(candidate)
+                    continue
+                source = self.reader.read(auth, candidate.ref, as_of)
+                fragments = getattr(source, "public_fragments", None)
+                if fragments is None:
+                    raise ProtocolError("public_material_fragments_unavailable", status=503)
+                # An explicit excerpt stays within its original extent; a document
+                # candidate expands into public fragments, never file furniture.
+                start = candidate.ref.span_start if candidate.ref.span_start is not None else 0
+                end = (
+                    candidate.ref.span_end
+                    if candidate.ref.span_end is not None
+                    else len(source.text)
+                )
+                for fragment in fragments:
+                    if (
+                        fragment.span_start is None
+                        or fragment.span_end is None
+                        or source.text[fragment.span_start : fragment.span_end] != fragment.quote
+                    ):
+                        raise ProtocolError("evidence_quote_mismatch")
+                    left, right = max(start, fragment.span_start), min(end, fragment.span_end)
+                    if left >= right:
+                        continue
+                    ref = candidate.ref.model_copy(
+                        update={
+                            "span_start": left,
+                            "span_end": right,
+                            "quote": source.text[left:right],
+                        }
+                    )
+                    bounded.append(
+                        CandidateEvidenceV2(id="e-" + digest(ref), text=ref.quote, ref=ref)
+                    )
             candidates = {
-                c.id: c
-                for c in unitize_candidates(candidates.values(), keep_whole=whole, query=work)
+                c.id: c for c in unitize_candidates(bounded, keep_whole=whole, query=work)
             }
         selected = []
         dropped = []

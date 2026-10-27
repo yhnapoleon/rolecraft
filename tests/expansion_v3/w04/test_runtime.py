@@ -93,7 +93,11 @@ def test_public_reply_has_no_prompt_unsaid_material_or_private_mapping(
     snap = assemble_context(catalog, frame(package, catalog, role))
     req = request(owner(), role_id=role)
     model = ScriptedModel([ModelReply(text="我需要先看更多证据。")])
-    public, private = generate(snap, owner(), req, model)
+    model.provider = "recorded-test-provider"
+    attempts = []
+    public, private = generate(snap, owner(), req, model, sink=attempts)
+    assert attempts[0][0].provider == model.provider
+    assert attempts[0][0].model_revision == model.revision
     raw = public.model_dump(mode="json")
     assert not PRIVATE_REPLY_FIELDS.intersection(raw)
     assert raw["text"] == "我需要先看更多证据。" and not raw["spoken_evidence"]
