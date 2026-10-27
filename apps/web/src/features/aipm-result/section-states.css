@@ -1,0 +1,148 @@
+/* "Judgements you improved before delivery": an instrument panel between the detail and the
+   work replay. Only "Holds up" is green; "Grounded" is an ink outline; "Draft" stays grey. */
+.aipm-states {
+  container-type: inline-size;
+  min-width: 0;
+  padding: 18px 20px 12px;
+  border-radius: var(--r-panel, 14px);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  font: 400 14px / 1.5 var(--sans);
+  color: var(--ink);
+}
+.aipm-states[hidden] {
+  display: none;
+}
+.aipm-states[data-arriving="true"] {
+  animation: aipm-states-in 280ms var(--ease-out) both;
+}
+@keyframes aipm-states-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.aipm-states__title {
+  margin: 0;
+  font: 600 17px / 1.35 var(--sans);
+}
+.aipm-states__lead {
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.aipm-states__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aipm-states__list > li + li {
+  border-top: 1px solid var(--line);
+}
+.aipm-states__row {
+  display: grid;
+  grid-template-columns: minmax(9em, 14em) minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: var(--r-row, 7px);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+button.aipm-states__row {
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out);
+}
+button.aipm-states__row:hover {
+  background: var(--fill);
+}
+button.aipm-states__row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.aipm-states__name {
+  font-weight: 500;
+}
+.aipm-states__path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+  font-size: 13px;
+}
+.aipm-states__tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.aipm-states__tag[data-status="solid"] {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.aipm-states__tag[data-status="based"] {
+  border: 1px solid color-mix(in srgb, var(--ink) 38%, transparent);
+  color: var(--ink);
+}
+.aipm-states__tag[data-status="draft"] {
+  background: var(--fill);
+  color: var(--ink-3);
+}
+.aipm-states__ver {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.aipm-states__arrow {
+  flex: none;
+  margin: 0 2px;
+  color: var(--ink-3);
+}
+.aipm-states__none {
+  color: var(--ink-3);
+}
+.aipm-states__open {
+  color: var(--ink-3);
+  font-size: 16px;
+  line-height: 1;
+}
+@container (max-width: 520px) {
+  .aipm-states__row {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    gap: 4px 12px;
+    padding: 8px;
+  }
+  .aipm-states__path {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .aipm-states__open {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aipm-states[data-arriving="true"] {
+    animation: aipm-states-fade 160ms linear both;
+  }
+  button.aipm-states__row {
+    transition: none;
+  }
+}
+@keyframes aipm-states-fade {
+  from {
+    opacity: 0;
+  }
+}
