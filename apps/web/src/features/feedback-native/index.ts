@@ -211,6 +211,9 @@ export interface FeedbackNativeAdapter {
   /** Presentation only: the panel's last choice, kept in this page's memory, never stored. */
   rememberChoice?(choice: RememberedChoice | null): void;
   rememberedChoice?(): RememberedChoice | undefined;
+  /** Read-only: names of work kept unsaved in this browser that the chosen versions do not
+   * contain ("" when none). The panel warns before submitting; nothing is blocked. */
+  unsavedWork?(products: ObjectRef[]): Promise<string>;
   respond(input: {
     feedback_id: string;
     feedback_version: number;
@@ -464,6 +467,32 @@ export function mountNativeFeedback(
       if (!destroyed) render();
     }
   }
+  // Unsaved worksheet text is not in the versions being submitted: say so above the button.
+  const unsaved = el('p', '', 'inline-alert delivery-unsaved');
+  unsaved.setAttribute('role', 'status');
+  unsaved.hidden = true;
+  let unsavedKey = '';
+  function checkUnsaved() {
+    const products = [...selected.values()];
+    const key = JSON.stringify(products);
+    if (!adapter.unsavedWork || adapter.snapshot().status !== 'active' || key === unsavedKey) return;
+    unsavedKey = key;
+    void adapter
+      .unsavedWork(products)
+      .then((names) => {
+        if (destroyed || key !== unsavedKey) return;
+        unsaved.textContent = names
+          ? T(
+              `${names} 还有没保存的文字，不在这次要交付的版本里。要交付它们，先回工作纸点「保存这一版」。`,
+              `${names} ${names.includes(',') ? 'have' : 'has'} unsaved text that is not in the version you are submitting. To include it, go back to the sheet and press "Save version" first.`,
+            )
+          : '';
+        unsaved.hidden = !names;
+      })
+      .catch(() => {
+        unsaved.hidden = true;
+      });
+  }
   let submitting = false;
   const submit = button(
     T('提交选中的版本', 'Submit selected versions'),
@@ -671,6 +700,7 @@ export function mountNativeFeedback(
     el('p', T('你的决定', 'Your decision'), 'delivery-label'),
     choice.element,
     ...(preview ? [preview.element] : []),
+    unsaved,
     submit,
     recover,
     receipt,
@@ -1346,6 +1376,7 @@ export function mountNativeFeedback(
   }
   function renderSelected() {
     syncSubmit();
+    checkUnsaved();
     // The button says what it will do: which version, or how many.
     submit.textContent = submitLabel([...selected.values()], language);
     selectedSummary.replaceChildren(
