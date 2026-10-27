@@ -1847,4 +1847,6 @@ def install_engineer_operations(
         ),
     ):
         registry.register(operation)
+    # The tool catalogue reads the practice's role from here (delegations/service.py).
+    registry.learner_role = service.learner_role
     return service

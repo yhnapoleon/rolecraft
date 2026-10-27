@@ -69,6 +69,10 @@ class ToolService:
         if "read" not in auth.capabilities:
             raise C.ProtocolError("capability_forbidden", status=403)
         output = []
+        # A product manager's practice hands engineering to Daniel: an Agent there is offered
+        # no engineer tool, so it never reads as if the person could run code or trials.
+        role_of = getattr(self.gateway.registry, "learner_role", None)
+        pm = callable(role_of) and role_of(auth.session_id) == "pm"
         for name, b in sorted(bindings(self.gateway.registry).items()):
             code = None
             if b.capability not in auth.capabilities:
@@ -79,6 +83,8 @@ class ToolService:
                 and name not in auth.allowed_actions
             ):
                 code = "action_forbidden"
+            elif pm and b.operation.startswith("engineer."):
+                code = "engineer_tools_not_in_pm_practice"
             elif b.operation == "work_products.adopt" and auth.executor.kind != "human":
                 code = "human_adoption_required"
             elif not self.gateway.registry.availability(b.operation).ready:
@@ -128,7 +134,12 @@ class ToolService:
                 schema.unavailable_code,
                 status=403
                 if schema.unavailable_code
-                in {"capability_forbidden", "action_forbidden", "human_adoption_required"}
+                in {
+                    "capability_forbidden",
+                    "action_forbidden",
+                    "human_adoption_required",
+                    "engineer_tools_not_in_pm_practice",
+                }
                 else 503,
             )
         expected = {"session_id", "command"} if b.mutates else {"session_id", "query"}

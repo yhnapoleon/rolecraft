@@ -160,6 +160,9 @@ class ExtensionRegistry:
         self.contextual_reference_resolvers = set()
         # Read-only submission rule checks, keyed by the canonical session bindings they serve.
         self.rule_checks = {}
+        # The role a practice's learner plays ("pm", "engineer" or None before one is chosen),
+        # set by the engineer operations; tools that belong to the other role are not offered.
+        self.learner_role = None
 
     def register_rule_check(self, bindings, checks):
         key = canonical(bindings)
