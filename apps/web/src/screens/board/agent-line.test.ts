@@ -45,3 +45,19 @@ it('214 product-manager package and return counts stay intact', () => {
   ).toBe('1 handed over, 1 returned');
   expect(agentLine(empty, 'pm', { state: 'none' }, [])).toBe('Nothing handed over yet');
 });
+it('a design draft handed back counts as a return, once per draft (QA G-4)', () => {
+  setPreference('en');
+  const draft = (id: string, object: string, status: AgentEvent['status'] = 'ok'): AgentEvent => ({
+    id,
+    at: '2026-10-27T01:00:00Z',
+    tool: 'aipm.design.draft',
+    direction: 'to_workspace',
+    status,
+    verb: ['交回', 'Handed back'],
+    object: { kind: 'other', id: object },
+  });
+  const feed = [draft('1', 'qa-launch'), draft('2', 'qa-launch'), draft('3', 'other', 'error')];
+  expect(agentLine(empty, 'pm', { state: 'connected' }, feed)).toBe('1 returned');
+  setPreference('zh');
+  expect(agentLine(empty, 'pm', { state: 'connected' }, feed)).toBe('带回 1 份');
+});

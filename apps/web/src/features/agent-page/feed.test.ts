@@ -87,7 +87,13 @@ describe('agent activity feed', () => {
     expect(input.allowed_actions).toContain('materials.list');
     expect(input.allowed_actions).toContain('engineer.trial');
     expect(input.allowed_actions).toContain('engineer.code.read');
-    expect(refusal('version_conflict').tell[1]).toMatch(/versions\.list/);
+    // The command's version point and a work product's head are two different refusals.
+    expect(refusal('version_conflict', 'aipm.design.draft').tell[1]).toMatch(
+      /observation.*expected_version and expected_workspace_revision/,
+    );
+    expect(refusal('version_conflict').tell[1]).not.toMatch(/expected_head/);
+    expect(refusal('object_version_conflict').tell[1]).toMatch(/versions\.list.*expected_head/);
+    expect(refusal('aipm_draft_revision_conflict').tell[1]).toMatch(/expected_revision/);
     // One code, two refusals: the tool tells them apart, and neither sentence hedges.
     const stale = refusal('lifecycle_permission_unavailable', 'work_products.versions.create');
     const removal = refusal('lifecycle_permission_unavailable', 'work_products.remove');
