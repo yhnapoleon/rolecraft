@@ -4,7 +4,7 @@
   "content_revision": "aipm-evaluation-1",
   "language": "zh",
   "title": "评测、监控与回退",
-  "intro": "先写下你期望助手怎样回答，再运行。运行结果由你本人判定；系统只记录，不替你打分。",
+  "intro": "先写下你期望助手怎样回答，再运行。每条结果会显示它在回答链上停在哪一环；满足与否由你本人判定。",
   "routes": [
     {
       "id": "deterministic",
