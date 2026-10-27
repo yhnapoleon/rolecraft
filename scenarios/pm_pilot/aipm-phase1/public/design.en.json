@@ -358,7 +358,7 @@
     "assurance": {
       "order": 6,
       "segment": "verify",
-      "goal": "Define a right answer, find the failing step, plan watching and rollback.",
+      "goal": "Define a right answer, find the failing step, and plan monitoring and rollback.",
       "angles": [
         {
           "id": "disprove",
