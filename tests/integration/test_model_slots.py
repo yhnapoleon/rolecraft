@@ -105,19 +105,21 @@ def test_slot_01_unset_slot_variables_keep_shared_configuration_and_main_request
     assert [role["status"], assistant["status"]] == golden["statuses"]
     assert provider.kinds() == golden["kinds"]
     expected = list(golden["body_sha256"])
-    # Recorded on the integration of c1bcdd99 with cooperative-help-v4 (one observation,
-    # one question when the learner asks about their own work). Earlier changes in the
-    # same inputs: cooperative-help-v3 and artifact-review-v2 (e9ba052f, 9b50d0f5,
-    # f3b67b9d) and the colleague-voice line (dd9cb8f5). Only the colleague turn and its
-    # review change; all other request bytes are unchanged.
+    # Recorded on the integration of 82203cbb with colleague-help-v4 and cooperative-help-v5
+    # (on the learner's own work, two sentences: one restated assumption, one question; a
+    # colleague holds their own position until the learner brings the evidence). Earlier
+    # changes in the same inputs: cooperative-help-v4, cooperative-help-v3 and
+    # artifact-review-v2 (e9ba052f, 9b50d0f5, f3b67b9d) and the colleague-voice line
+    # (dd9cb8f5). Only the colleague turn and its review change; all other request bytes
+    # are unchanged.
     role_digest, review_digest = {
         "zh": (
-            "5a33efd864332c37047513c47dc0b1cea46beffed73681c82be74e2f7e97c445",
-            "bcddccb51690c7e068da85f11429db618b3b584c0a02cf71756db14812ceb4d0",
+            "ec1670b948857ae310b1899f2f3cce734321da91216559bc0bee9979529239a1",
+            "229c32469ba286e494d71f0677c8b39a7c48d65fb20d9d1b3ea64a3a0d996cca",
         ),
         "en": (
-            "6ebe831e688adb2682c54a144289fc6d4b2546bad4144ec0594bf1efed465504",
-            "84b76c6499ddf8d3105446b9d6587f97842fa5a2f4182d69b22475200ef0542a",
+            "73b02a0082fecf8e33683d84e8a013b16d96c7e43f77364e6a6f6aba4f1a436d",
+            "e61b1257be3bb2916d310789954d04785bd8b756d51cdadd1db05ee046ea91d4",
         ),
     }[language]
     expected[golden["kinds"].index("role")] = role_digest

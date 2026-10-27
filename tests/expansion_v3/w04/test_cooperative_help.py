@@ -529,16 +529,18 @@ def test_help_audit_distinguishes_normal_multi_part_facts_and_unsafe_replies(
         dialogue.close()
 
 
-@pytest.mark.parametrize("recognition_on", [False, True])
-@pytest.mark.parametrize("coaching,one_question", [(False, True), (True, False)])
-def test_shared_work_coaching_gate_applies_with_recognition(
-    monkeypatch, recognition_on, coaching, one_question
-):
+def shared_work_check(monkeypatch, review, *, recognition_on=True, receipts=("now",)):
+    """One CooperativeHelpVerifier check of a reply to a turn made at business_seq 5, with the
+    learner's work in context. ``receipts`` says when each share was first received: "now" for
+    this turn (seq 5 or later), "before" for an earlier turn (seq 2)."""
     from types import SimpleNamespace
 
-    from career_lab.contracts.v2 import ProtocolError
+    from career_lab.contracts.v2 import VersionPoint
     from career_lab.recognition import roles
     from career_lab.runtime.roles_v2 import CooperativeHelpVerifier
+
+    def at(seq):
+        return VersionPoint(business_seq=seq, workspace_revision=seq, storage_revision=seq)
 
     monkeypatch.setattr(roles, "active", lambda: object() if recognition_on else None)
     context = {
@@ -555,31 +557,46 @@ def test_shared_work_coaching_gate_applies_with_recognition(
             None,
             None,
         ),
+        received_shares=tuple(
+            SimpleNamespace(received_at=at(6 if when == "now" else 2)) for when in receipts
+        ),
+        stance_state=None,
+        context=SimpleNamespace(as_of=at(6)),
     )
-    model = ScriptedModel(
-        [
-            assessment(
-                kinds=("business_judgment",),
-                no_complete_solution=coaching,
-                one_main_question=one_question,
-            )
-        ]
-    )
+    review = {"kinds": ("business_judgment",), **review}
+    model = ScriptedModel([assessment(**review)])
     verifier = CooperativeHelpVerifier(model)
     request = SimpleNamespace(
         id="test",
         session_id="s",
+        as_of=at(5),
         input=SimpleNamespace(role_id="business_owner", text="Is my attached PRD right?"),
     )
+    check = lambda: verifier.check(  # noqa: E731
+        snapshot,
+        None,
+        request,
+        "Consider the duration definition. What would you check?",
+        record_attempt=lambda *a: None,
+        begin_call=lambda *a: None,
+    )
+    return check, model, verifier
+
+
+@pytest.mark.parametrize("recognition_on", [False, True])
+@pytest.mark.parametrize("coaching,one_question", [(False, True), (True, False)])
+def test_shared_work_coaching_gate_applies_with_recognition(
+    monkeypatch, recognition_on, coaching, one_question
+):
+    from career_lab.contracts.v2 import ProtocolError
+
+    check, model, verifier = shared_work_check(
+        monkeypatch,
+        {"no_complete_solution": coaching, "one_main_question": one_question},
+        recognition_on=recognition_on,
+    )
     with pytest.raises(ProtocolError) as error:
-        verifier.check(
-            snapshot,
-            None,
-            request,
-            "Consider the duration definition. What would you check?",
-            record_attempt=lambda *a: None,
-            begin_call=lambda *a: None,
-        )
+        check()
     assert error.value.code == "role_help_unverified"
     assert len(model.calls) == 1 and verifier.retries == 0
     assert "artifact-review-v2" in verifier.revision
@@ -588,6 +605,64 @@ def test_shared_work_coaching_gate_applies_with_recognition(
     assert "SD-120 has no field for minutes of active staff work" in prompt
     assert "a single corrective fact can already give away the answer" in prompt
     assert json.loads(model.calls[0][1]["content"])["shared_work_present"] is True
+
+
+# The stricter shared-work gate belongs to the turn that brings the work (2026-10-26 decision;
+# scope confirmed by 192 on 2026-10-27). A later ordinary turn keeps only the safety flags.
+ORDINARY_REVIEW = {
+    "facts_answered": False,
+    "citations_supported": False,
+    "one_main_question": False,
+    "decision": "unsupported",
+}
+
+
+def test_turn_that_brings_the_work_takes_the_stricter_gate(monkeypatch):
+    from career_lab.contracts.v2 import ProtocolError
+
+    check, _, _ = shared_work_check(monkeypatch, ORDINARY_REVIEW, receipts=("now",))
+    with pytest.raises(ProtocolError) as error:
+        check()
+    assert error.value.code == "role_help_unverified"
+
+
+def test_factual_question_that_brings_the_work_by_default_keeps_only_the_safety_flags(
+    monkeypatch,
+):
+    # The PRD goes with a colleague's first question by default; "what is the pilot limit?"
+    # is not a check of the learner's work.
+    check, _, _ = shared_work_check(
+        monkeypatch, {**ORDINARY_REVIEW, "kinds": ("fact",)}, receipts=("now",)
+    )
+    assert check().decision == "consistent"
+
+
+def test_later_ordinary_turn_with_the_work_in_context_keeps_only_the_safety_flags(monkeypatch):
+    check, model, _ = shared_work_check(monkeypatch, ORDINARY_REVIEW, receipts=("before",))
+    assert check().decision == "consistent"
+    # The review still sees that shared work is present; only the gate moved.
+    assert json.loads(model.calls[0][1]["content"])["shared_work_present"] is True
+
+
+def test_later_turn_that_gives_the_answer_is_still_held(monkeypatch):
+    from career_lab.contracts.v2 import ProtocolError
+
+    check, _, _ = shared_work_check(
+        monkeypatch, {"no_complete_solution": False}, receipts=("before",)
+    )
+    with pytest.raises(ProtocolError) as error:
+        check()
+    assert error.value.code == "role_help_unverified"
+
+
+def test_reattached_new_version_takes_the_stricter_gate_again(monkeypatch):
+    from career_lab.contracts.v2 import ProtocolError
+
+    # The old version was received on an earlier turn; the edited one comes with this turn.
+    check, _, _ = shared_work_check(monkeypatch, ORDINARY_REVIEW, receipts=("before", "now"))
+    with pytest.raises(ProtocolError) as error:
+        check()
+    assert error.value.code == "role_help_unverified"
 
 
 def test_material_internal_ids_are_held_but_display_titles_are_allowed():
@@ -600,3 +675,7 @@ def test_material_internal_ids_are_held_but_display_titles_are_allowed():
     )
     assert _material_identifier_in_reply(snapshot, "See brief and business_case.")
     assert not _material_identifier_in_reply(snapshot, "See Manager brief and Business case.")
+    # An id that is an ordinary word counts only where it is written as an id.
+    assert not _material_identifier_in_reply(snapshot, "In brief: the index lags a day.")
+    for written in ("See material:brief.", "See brief@1.", "See `brief`.", "See [brief]."):
+        assert _material_identifier_in_reply(snapshot, written), written

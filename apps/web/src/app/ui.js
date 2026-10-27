@@ -3928,11 +3928,24 @@ function prdSees(a, role) {
     : [];
   const latest = versions.length ? Math.max(...versions) : 0;
   const name = PEOPLE[role].name;
+  // The chip is on: the version goes with the next message, so say that first (the line is
+  // cut at the rail's edge) rather than "not attached".
+  const sending = prdShared(a, role, prd) === false && prdAttached(a, role, prd);
   // One line that opens: what this colleague has, and on request what they do not.
   return `<details class="aipm-sees"><summary><b>${T(`${name} 能看到：`, `${PEOPLE[role].ref} can see: `)}</b><span class="aipm-sees__what">${
-    latest
-      ? T(`试点 PRD 第 ${latest} 版 · 你的消息`, `pilot PRD version ${latest} · your messages`)
-      : T('你消息里写的内容（还没附上 PRD）', 'what your messages say (no PRD attached yet)')
+    sending
+      ? latest
+        ? T(
+            `发送后附 PRD 第 ${prd.version} 版 · 已看过第 ${latest} 版`,
+            `PRD version ${prd.version} once sent · has version ${latest}`,
+          )
+        : T(
+            `你的消息；发送后附 PRD 第 ${prd.version} 版`,
+            `your messages; PRD version ${prd.version} once sent`,
+          )
+      : latest
+        ? T(`试点 PRD 第 ${latest} 版 · 你的消息`, `pilot PRD version ${latest} · your messages`)
+        : T('你消息里写的内容（这条不附 PRD）', 'what your messages say (PRD not attached)')
   }</span><span class="aipm-sees__i" aria-hidden="true">ⓘ</span></summary><p>${T('看不到：没附上的版本、你的 Agent 对话、批改单里的其余内容', 'Cannot see: versions you did not attach, your agent’s conversation, the rest of a review')}</p></details>`;
 }
 // Sending with the chip on: share that exact PRD version first, then let the message go as usual

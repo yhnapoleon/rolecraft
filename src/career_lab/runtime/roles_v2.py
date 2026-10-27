@@ -52,6 +52,7 @@ from career_lab.storage.role_memory import (
     RoleTurn,
     object_write,
     parse_public_reply,
+    point_at_or_before,
     resolve_stance,
     stance_digest,
 )
@@ -304,7 +305,7 @@ def _readable_source(source, language):
                 and value.get("kind") == "plan"
                 and isinstance(value.get("sections"), list)
             ):
-                # A shared plan (context_v2.shared_work): its sections in written order.
+                # A shared plan (storage.shared_work): its sections in written order.
                 parts = [str(value.get("title") or "")]
                 parts += [str(s.get("text", "")) for s in value["sections"] if isinstance(s, dict)]
                 return "\n".join(p for p in parts if p.strip())
@@ -1471,15 +1472,25 @@ class HelpAssessment(BaseModel):
 
 
 def _material_identifier_in_reply(snapshot, text):
-    # Titles are learner-facing; bare source ids and material:id@version are not.
+    # Titles are learner-facing; bare source ids and material:id@version are not. An id that is
+    # also an ordinary word ("policy", "brief", "technical") is an id only where it is written as
+    # one: material:policy, policy@1, `policy` or [policy]. Read as a bare word it held every
+    # English reply that said "policy" or "technical" (QA 2026-10-27).
     visible = text
     for _, _, title in sorted(snapshot.source_titles, key=lambda row: len(row[2]), reverse=True):
         visible = visible.replace(title, "")
-    return any(
-        re.search(r"(?<![\w-])" + re.escape(mid) + r"(?![\w-])", visible)
-        for mid, _, title in snapshot.source_titles
-        if mid != title
-    )
+    for mid, _, title in snapshot.source_titles:
+        if mid == title:
+            continue
+        name = re.escape(mid)
+        pattern = (
+            rf"material:{name}(?![\w-])|(?<![\w-]){name}@\d|`{name}`|\[{name}\]"
+            if re.fullmatch(r"[A-Za-z]+", mid)
+            else rf"(?<![\w-]){name}(?![\w-])"
+        )
+        if re.search(pattern, visible):
+            return True
+    return False
 
 
 class RuleReplyVerifier:
@@ -1659,8 +1670,21 @@ class CooperativeHelpVerifier:
         except ValidationError:
             audit.validation("technical_failure", "role_help_review_invalid")
             raise ProtocolError("role_help_review_invalid", status=409) from None
+        # The stricter gate is for the turn that brings the work and asks about it (user decision
+        # 2026-10-26: the learner attaches their own work and asks whether it is right): a share
+        # first received for this request, its retry included, with more than a factual or tool
+        # question. A PRD goes with a colleague's first question by default, so a plain factual
+        # question is not a correctness check. Every other turn keeps the safety flags,
+        # no_complete_solution among them.
+        brings_work = any(
+            source.get("channel") == "attachment" for source in context["sources"]
+        ) or any(
+            point_at_or_before(request.as_of, receipt.received_at)
+            for receipt in snapshot.received_shares
+        )
+        asks_about_it = not set(review.request_kinds) <= {"fact", "tool_instruction"}
         permitted = review.permits_publication(relaxed) and (
-            not shared_work
+            not (brings_work and asks_about_it)
             or (
                 review.no_complete_solution
                 and review.one_main_question
