@@ -8,6 +8,7 @@ import {
   blockSummary,
   type BatchView,
   type CaseDraft,
+  draftReady,
   emptyMonitoring,
   type EvaluationBatch,
   type EvaluationContent,
@@ -24,7 +25,14 @@ import {
   SerialEvaluationRunner,
   type TestCommand,
 } from './runner';
-import { type DeskState, renderDesk, type Tab } from './view';
+import {
+  type DeskState,
+  monitoringComplete,
+  monitoringLine,
+  readyLine,
+  renderDesk,
+  type Tab,
+} from './view';
 import './evaluation.css';
 
 type Feature = { render(): string; mount?(root: HTMLElement): undefined | (() => void) };
@@ -66,6 +74,19 @@ function dig<T>(value: unknown, pick: (v: Loose) => T | undefined, depth = 5): T
     if (inner !== undefined) return inner;
   }
   return undefined;
+}
+/** A saved work product answers `{ object: version, ref }`, possibly inside a command envelope. */
+export function savedPlanOf(response: unknown) {
+  return dig(response, (v) => {
+    const version = [v.object, v.content, v].find(
+      (x): x is Loose => !!x && typeof x === 'object' && !!(x as Loose).structured_payload,
+    );
+    const payload = version?.structured_payload as { cases?: { id: string }[] } | undefined;
+    const ref = (v.ref ?? v.product_ref) as ObjectRef | undefined;
+    return payload?.cases && ref?.object_id
+      ? { ref, ids: payload.cases.map((c) => c.id) }
+      : undefined;
+  });
 }
 const failure = (value: unknown) =>
   dig(
@@ -129,6 +150,35 @@ export function createEvaluationDesk(
   const client = () => host.getClient() as EvaluationClient | null;
   const paint = () => {
     if (root) root.innerHTML = renderDesk(state);
+  };
+  /** Repaint, then give focus back to the same control. */
+  const repaintKeeping = (input: HTMLElement) => {
+    const { evalDraft, field } = input.dataset;
+    paint();
+    if (evalDraft && field)
+      root
+        ?.querySelector<HTMLElement>(
+          `[data-eval-draft="${CSS.escape(evalDraft)}"][data-field="${CSS.escape(field)}"]`,
+        )
+        ?.focus();
+  };
+  const syncDrafts = () => {
+    if (!root) return;
+    for (const item of root.querySelectorAll<HTMLElement>('.aipm-eval__draft[data-draft]')) {
+      const draft = state.drafts.find((d) => d.key === item.dataset.draft);
+      if (draft) item.dataset.ready = String(draftReady(draft));
+    }
+    const count = root.querySelector('[data-eval-ready]');
+    if (count) count.textContent = readyLine(state);
+    const save = root.querySelector<HTMLButtonElement>('[data-eval-action="save-plan"]');
+    if (save) save.disabled = state.readOnly || state.busy || !state.drafts.some(draftReady);
+  };
+  const syncMonitoring = () => {
+    const line = root?.querySelector('[data-eval-complete]');
+    if (line) line.textContent = monitoringLine(state);
+    const save = root?.querySelector<HTMLButtonElement>('[data-eval-action="save-monitoring"]');
+    if (save)
+      save.disabled = state.readOnly || !state.view || state.busy || !monitoringComplete(state);
   };
   const say = (kind: 'status' | 'error', message: string) => {
     state.notice = { kind, message };
@@ -225,7 +275,8 @@ export function createEvaluationDesk(
   const asked = new Set<string>();
   const unreadRuns = () =>
     (state.view?.batch.cases ?? []).some(
-      (row) => row.run_ref && !state.runs[row.run_ref.object_id] && !asked.has(row.run_ref.object_id),
+      (row) =>
+        row.run_ref && !state.runs[row.run_ref.object_id] && !asked.has(row.run_ref.object_id),
     );
   let reading: Promise<void> | null = null;
   function readRuns() {
@@ -330,25 +381,29 @@ export function createEvaluationDesk(
     }
   }
 
+  let savedPlan: { drafted: string; ref: ObjectRef; ids: string[] } | null = null;
   async function savePlan() {
     const design = state.design;
     if (!design) return;
     state.busy = true;
     paint();
     try {
-      const product = await host.createWorkVersion({
-        kind: 'test_plan',
-        title: t('评测计划', 'Evaluation plan'),
-        structured_payload: planPayload(state.drafts),
-      } as never);
-      if (failure(product)) throw new Error('plan_not_saved');
-      const saved = dig(product, (v) => {
-        const content = (v.content ?? v) as Loose;
-        const payload = content.structured_payload as { cases?: { id: string }[] } | undefined;
-        const ref = (v.ref ?? v.product_ref) as ObjectRef | undefined;
-        return payload?.cases && ref ? { ref, ids: payload.cases.map((c) => c.id) } : undefined;
-      });
-      if (!saved) throw new Error('plan_ref_unavailable');
+      const payload = planPayload(state.drafts);
+      const drafted = JSON.stringify(payload);
+      // A retry of the same cases reuses the plan already saved, so a failed batch never leaves
+      // a second copy of the plan behind.
+      if (savedPlan?.drafted !== drafted) {
+        const product = await host.createWorkVersion({
+          kind: 'test_plan',
+          title: t('评测计划', 'Evaluation plan'),
+          structured_payload: payload,
+        } as never);
+        if (failure(product)) throw new Error('plan_not_saved');
+        const found = savedPlanOf(product);
+        if (!found) throw new Error('plan_ref_unavailable');
+        savedPlan = { drafted, ...found };
+      }
+      const saved = savedPlan;
       const designRef: ObjectRef = {
         session_id: design.session_id,
         kind: 'aipm_design',
@@ -362,6 +417,7 @@ export function createEvaluationDesk(
       });
       const batch = batchOf(created);
       if (!batch) throw new Error('batch_unconfirmed');
+      savedPlan = null;
       await readView(batch.id);
       state.tab = 'run';
       state.notice = {
@@ -569,7 +625,11 @@ export function createEvaluationDesk(
       if (!draft) return;
       if (field === 'answerOnly') draft.answerOnly = input.checked;
       else (draft as Record<string, unknown>)[field as keyof CaseDraft] = input.value;
-      if (event.type === 'change') paint();
+      // Text fields update the ready count and Save in place: a repaint while the field loses
+      // focus would replace the button being clicked and throw inside the blur.
+      if (input.type === 'checkbox' || input.tagName === 'SELECT') {
+        if (event.type === 'change') repaintKeeping(input);
+      } else syncDrafts();
     } else if (input.dataset.evalJudge) {
       const before = !!state.judging[input.dataset.evalJudge]?.trim();
       state.judging[input.dataset.evalJudge] = input.value;
@@ -582,7 +642,7 @@ export function createEvaluationDesk(
     } else if (input.dataset.evalMonitor && field) {
       const plan = state.monitoring[Number(input.dataset.evalMonitor)];
       if (plan) plan[field as keyof MonitoringPlan] = input.value;
-      if (event.type === 'change') paint();
+      syncMonitoring();
     }
   }
 
@@ -607,7 +667,7 @@ export function createEvaluationDesk(
       };
     },
   };
-  return { feature, state, load, run, sendAgain, readRuns };
+  return { feature, state, load, run, sendAgain, readRuns, savePlan };
 }
 
 export function installAipmEvaluation(host: EvaluationHost, options: InstallOptions = {}) {
@@ -628,8 +688,11 @@ export function installAipmEvaluation(host: EvaluationHost, options: InstallOpti
   };
   const unregister = host.registerFeature('evaluation', feature);
   return {
-    feature, unregister,
-    get state() { return current().state; },
+    feature,
+    unregister,
+    get state() {
+      return current().state;
+    },
     load: () => current().load(),
     run: () => current().run(),
     sendAgain: (caseId: string) => current().sendAgain(caseId),
