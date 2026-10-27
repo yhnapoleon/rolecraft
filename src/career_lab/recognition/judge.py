@@ -130,6 +130,8 @@ def analyze_support(package: EvidencePackageV2, language: str) -> dict[str, Any]
         "duration_ms": clock.ms,
         "deferred_queue": [r["index"] for r in deferred],
         "candidates": len(candidates),
+        # One retrieval method per pass: every sentence ranks the same candidates alike.
+        "retrieval": rows[0]["retrieval"] if rows else None,
     }
 
 
@@ -461,6 +463,7 @@ class RecognitionFeedback:
                             "decision",
                             "expected_cost",
                             "branches",
+                            "retrieval",
                         )
                     }
                     for r in rows
@@ -472,18 +475,22 @@ class RecognitionFeedback:
             duration_ms=analysis["duration_ms"],
             fallback=analysis["fallback"],
         )
+        searched = analysis["retrieval"] or {"method": None, "fallback": False}
         retrieval_record = record(
             "retrieval-c2",
-            "rrf",
+            FALLBACK_REVISION if searched["fallback"] else searched["method"] or "rrf",
             "retrieval",
             {"units": [r["unit_hash"] for r in rows]},
             label=None,
             outputs={
+                "method": searched["method"],
+                "requested_method": "rrf",
                 "per_sentence_top": [{"index": r["index"], "top": r["top"]} for r in rows],
                 "k": relation.TOP_K,
                 "candidates": analysis["candidates"],
             },
             as_of=as_of,
+            fallback=searched["fallback"],
         )
         lift = decision.lift()
         decision_record = record(
