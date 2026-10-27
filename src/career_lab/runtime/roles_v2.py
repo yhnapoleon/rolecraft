@@ -111,12 +111,12 @@ _LOCAL_TEXT = {
         ),
         "resources": {
             "capacity": "Capacity",
-            "dev_days": "Developer-days",
+            "dev_days": "Person-days",
             "deadline_day": "Pilot deadline day",
         },
         "amounts": {
             "capacity": "Capacity {} people",
-            "dev_days": "Developer-days {}",
+            "dev_days": "Person-days {}",
             "deadline_day": "Pilot deadline day {}",
         },
     },
