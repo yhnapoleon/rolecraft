@@ -74,6 +74,8 @@ describe('the retrieved passage', () => {
     expect(passageText(cut)).not.toContain('manag…');
     expect(passageText('CNY 400 per night.')).toBe('CNY 400 per night.');
     expect(passageText('出'.repeat(120))).toBe(`${'出'.repeat(120)}…`);
+    const sentence = `${'Keep the receipt. '.repeat(7)}Book early.`.slice(-120);
+    expect(passageText(sentence)).toBe(sentence.trim());
   });
   it('says a passage found for an out-of-scope or handed-over question was not used', () => {
     const out = { ...run, fallback: true, citations: [], recognition: [{ task: 'scope', recognizer_id: 's', revision: 'fit', label: 'out', score: 4, threshold: 2.8 }, ...run.recognition] } satisfies MomentRun;

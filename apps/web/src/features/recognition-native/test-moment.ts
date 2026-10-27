@@ -9,7 +9,8 @@ export type MomentRun = Omit<TestRecord, 'citations'> & { citations?: Citation[]
 const QUOTE_LIMIT = 120;
 export function passageText(quote: string) {
   const text = quote.trim();
-  if ([...quote].length < QUOTE_LIMIT) return text;
+  // A passage that already ends a sentence reads as complete, so it needs no ellipsis.
+  if ([...quote].length < QUOTE_LIMIT || /[.!?。！？]$/.test(text)) return text;
   const space = text.lastIndexOf(' ');
   const cut = /[A-Za-z0-9]$/.test(text) && space > QUOTE_LIMIT / 2 ? text.slice(0, space) : text;
   return `${cut.replace(/[\s,;:，；：、]+$/, '')}…`;
