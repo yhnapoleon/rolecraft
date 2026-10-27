@@ -686,3 +686,47 @@ def test_the_evaluation_desks_regression_question_is_a_checkable_hotel_question(
     query = json.loads(content.read_text(encoding="utf-8"))["regression"]["query"]
     assert hotel_question(query, language)
     assert not hotel_question(query, "en" if language == "zh" else "zh")
+
+
+def trained_scope(h, monkeypatch):
+    """The trained scope recognizer, as installed weights answer: the off-topic question is
+    out of scope, every other one in scope (never the rule fallback)."""
+    from career_lab.contracts.v2.recognition import RecognitionRecord
+    from career_lab.recognition import assistant as recognizers
+
+    def scope_check(package, query, cfg, *, rule_hit, as_of=None):
+        label = "out" if query == OFF_TOPIC[h.module.work_language] else "in"
+        return label, RecognitionRecord(
+            recognizer_id="scope.mahalanobis",
+            revision="fit-test",
+            task="scope",
+            input_hash="0" * 64,
+            label=label,
+            score=4.0 if label == "out" else 1.0,
+            threshold=2.8,
+            as_of=as_of,
+        )
+
+    monkeypatch.setattr("career_lab.scenarios.v2.module.recognition_enabled", lambda: True)
+    monkeypatch.setattr(recognizers, "scope_check", scope_check)
+
+
+@pytest.mark.parametrize("refreshed", [True, False])
+def test_functional_tests_read_their_categories_off_the_runs(history, monkeypatch, refreshed):
+    """A current answer and a handed-over off-topic question are the definition's two example
+    categories; an answer from an outdated source does not meet the acceptance."""
+    h = history
+    trained_scope(h, monkeypatch)
+    h.run(question(h))
+    h.apply(freshness_guard="warn")
+    if refreshed:
+        h.post("actions", "refresh_index", {"tool": "refresh_index"})
+    h.run(question(h))
+    h.run(OFF_TOPIC[h.module.work_language])
+    product = h.product("The pilot covers travel questions after the policy update.")
+    found, result = rule(h, h.capture(), product, "R4.functional_tests")
+    assert found["functional_classification_complete"] is True
+    assert found["functional_categories_verified"] == ["normal", "out_of_scope"]
+    assert found["acceptance_criteria_verified"] is refreshed
+    assert result.source == "verified_rule"
+    assert result.label == ("MET" if refreshed else "PARTIAL")
