@@ -65,6 +65,7 @@ const ZH = {
   reason_answered_with_warning: '作答并提醒：用的是旧版本资料，回答前加了「资料可能已更新」。',
   reason_answered_stale: '作答，但资料过期：《{title}》现行是 v{cur}，回答引用了 v{n}。',
   reason_answered_current: '作答：引用《{title}》v{n}，与现行版本一致。',
+  reason_answered_then_current: '作答：引用《{title}》v{n}，当时的现行版本。',
   reason_answered_uncited: '作答：这次回答没有附引用。',
   reason_no_fallback: '没开人工兜底，所以这次失败。',
   reason_generation_failed: '找到了资料，但模型生成没有通过校验，没有回答。',
@@ -85,6 +86,7 @@ const ZH = {
   state_not_found: '没找到足够相关的段落',
   state_current: '与现行版本一致',
   state_outdated: '资料过期',
+  state_warned: '已提醒',
   state_no_citation: '没有引用，无法核对版本',
   state_manual: '转人工核验',
   state_stale_guard: '资料过期，转人工',
@@ -113,6 +115,11 @@ const ZH = {
   hide_steps: '收起每一步',
   handover: '交给 Daniel 试修',
   how_judged: '系统如何判断 ›',
+  // The run card's links to its recognition records, one per record.
+  assessed_scope: '范围检测如何判断',
+  assessed_retrieval: '检索如何判断',
+  assessed_drift: '前后变化如何判断',
+  not_answered: '没有作答',
 } as const;
 
 export type ChainCopyKey = keyof typeof ZH;
@@ -172,6 +179,7 @@ const EN: Record<ChainCopyKey, string> = {
   reason_answered_stale:
     'Answered from an outdated source: {title} is now v{cur}, but the answer cites v{n}.',
   reason_answered_current: 'Answered from {title} v{n}, the current version.',
+  reason_answered_then_current: 'Answered from {title} v{n}, the current version at the time.',
   reason_answered_uncited: 'Answered without a citation.',
   reason_no_fallback: 'Human fallback is off, so this run failed.',
   reason_generation_failed:
@@ -193,6 +201,7 @@ const EN: Record<ChainCopyKey, string> = {
   state_not_found: 'nothing relevant enough found',
   state_current: 'matches the current version',
   state_outdated: 'source out of date',
+  state_warned: 'warned',
   state_no_citation: 'no citation, so the version cannot be checked',
   state_manual: 'sent to manual checking',
   state_stale_guard: 'source out of date, handed over',
@@ -219,6 +228,10 @@ const EN: Record<ChainCopyKey, string> = {
   hide_steps: 'Hide steps',
   handover: 'Hand to Daniel',
   how_judged: 'How this was assessed ›',
+  assessed_scope: 'How scope was assessed',
+  assessed_retrieval: 'How retrieval was assessed',
+  assessed_drift: 'How the change was assessed',
+  not_answered: 'Not answered',
 };
 
 export const CHAIN_COPY: CopyTable<ChainCopyKey> = { zh: ZH, en: EN };
@@ -228,6 +241,12 @@ export const chainText = (
   key: ChainCopyKey,
   values: Readonly<Record<string, string | number>> = {},
 ) => copyText(CHAIN_COPY, language, key, values);
+
+/** The link to one recognition record, named for what it judged. */
+export const assessedName = (task: string, language: Language) =>
+  task === 'scope' || task === 'retrieval' || task === 'drift'
+    ? chainText(language, `assessed_${task}`)
+    : chainText(language, 'how_judged').replace(/ ?›$/, '');
 
 /** Name of an online step; `design` names the fifth step "Who takes over". */
 export const stageName = (key: StageKey, language: Language, design = false) =>

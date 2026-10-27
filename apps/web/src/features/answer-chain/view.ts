@@ -24,6 +24,10 @@ const esc = (value: unknown) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
   );
 
+/** Lucide chevron-down at 12px; it turns 180° when its control is expanded (answer-chain.css). */
+export const chevron = (direction: 'down' | 'right' = 'down') =>
+  `<svg class="ac-chev" data-dir="${direction}" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="${direction === 'down' ? 'm6 9 6 6 6-6' : 'm9 18 6-6-6-6'}"/></svg>`;
+
 // Memory only: which chains are expanded, and which fresh results already came in once.
 const open = new Set<string>();
 const arrived = new Set<string>();
@@ -45,7 +49,7 @@ export function answerChainHtml(
   const steps = view.stages
     .map(
       (s, i) =>
-        `<li class="ac-step" data-state="${s.state}"${i === view.stopAt ? ' data-decides=""' : ''} style="--i:${i}"><span class="ac-dot" aria-hidden="true"></span><span class="ac-name" aria-hidden="true">${esc(s.label)}</span>${options.compact ? '' : `<span class="ac-who" aria-hidden="true">${esc(s.identity)}</span>`}<span class="sr-only">${esc(s.sr)}</span></li>`,
+        `<li class="ac-step" data-state="${s.state}"${i === view.stopAt ? ' data-decides=""' : ''}${s.handled ? ' data-handled=""' : ''} style="--i:${i}"><span class="ac-dot" aria-hidden="true"></span><span class="ac-name" aria-hidden="true">${esc(s.label)}</span>${options.compact ? '' : `<span class="ac-who" aria-hidden="true">${esc(s.identity)}</span>`}<span class="sr-only">${esc(s.sr)}</span></li>`,
     )
     .join('');
   const handover =
@@ -54,7 +58,7 @@ export function answerChainHtml(
       : '';
   const toggle = options.compact
     ? ''
-    : `<button type="button" class="btn small quiet ac-key" data-action="chain-steps" aria-expanded="${expanded}" aria-controls="${rowsId}" data-show="${t('show_steps')}" data-hide="${t('hide_steps')}">${t(expanded ? 'hide_steps' : 'show_steps')}</button>`;
+    : `<button type="button" class="btn small quiet ac-key ac-toggle" data-action="chain-steps" aria-expanded="${expanded}" aria-controls="${rowsId}" data-show="${t('show_steps')}" data-hide="${t('hide_steps')}">${chevron()}<span class="ac-key-label">${t(expanded ? 'hide_steps' : 'show_steps')}</span></button>`;
   const order = inspectOrder.filter((task) => INSPECT_TASKS.includes(task));
   const rows = options.compact
     ? ''
@@ -72,7 +76,8 @@ export function answerChainHtml(
           return `<li class="ac-row"><span class="ac-row-text"><strong>${esc(stage.label)}</strong> · ${esc(rest)}</span>${link}</li>`;
         })
         .join('')}</ul>`;
-  return `<div class="ac" data-answer-chain data-run="${esc(runId)}" data-tone="${view.tone}"${options.compact ? ' data-compact=""' : ''}${animate ? ' data-arriving=""' : ''}><ol class="ac-path" aria-label="${t('path_label')}">${steps}</ol><div class="ac-foot"><p class="ac-reason">${esc(view.reason)}</p>${handover || toggle ? `<span class="ac-keys">${handover}${toggle}</span>` : ''}</div>${rows}</div>`;
+  // The reason has its own line and the keys sit under it, so side-by-side chains align row by row.
+  return `<div class="ac" data-answer-chain data-run="${esc(runId)}" data-tone="${view.tone}"${options.compact ? ' data-compact=""' : ''}${animate ? ' data-arriving=""' : ''}><ol class="ac-path" aria-label="${t('path_label')}">${steps}</ol><p class="ac-reason">${esc(view.reason)}</p>${handover || toggle ? `<span class="ac-keys">${toggle}${handover}</span>` : ''}${rows}</div>`;
 }
 
 /** Expand or fold one chain in place; the choice lasts for this page only. */
@@ -86,7 +91,8 @@ function toggleSteps(el: HTMLElement) {
   if (next) open.add(runId);
   else open.delete(runId);
   el.setAttribute('aria-expanded', String(next));
-  el.textContent = (next ? el.dataset.hide : el.dataset.show) ?? el.textContent;
+  const label = el.querySelector('.ac-key-label');
+  if (label) label.textContent = (next ? el.dataset.hide : el.dataset.show) ?? label.textContent;
 }
 
 /** Open the existing technical card of the same record, in the same run; no new inspector. */
