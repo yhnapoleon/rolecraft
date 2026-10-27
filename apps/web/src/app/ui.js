@@ -3694,8 +3694,10 @@ function focusRerun(a, target, tries = 20) {
       if (tries > 0) setTimeout(() => focusRerun(a, target, tries - 1), 50);
       return;
     }
-    card.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     key.focus({ preventScroll: true });
+    // At once, not smoothly: a redraw of the board would cut a smooth scroll short. The whole
+    // card when it fits, else its "Run again" in the middle.
+    (card.offsetHeight <= innerHeight - 160 ? card : key).scrollIntoView({ block: 'center' });
   });
 }
 
