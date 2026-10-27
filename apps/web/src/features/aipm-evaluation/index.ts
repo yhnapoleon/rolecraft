@@ -158,8 +158,39 @@ export function createEvaluationDesk(
   let sequence = 0;
   const key = () => `draft-${Date.now().toString(36)}-${++sequence}`;
   const client = () => host.getClient() as EvaluationClient | null;
+  // The field the person is typing in. A redraw, the desk's own or the sheet's around it (it
+  // remounts the desk after each judgement), would drop focus and the next keystrokes with it.
+  let typing: { selector: string; start: number | null; end: number | null } | null = null;
+  const fieldSelector = (el: HTMLElement) => {
+    const { evalJudge, evalDraft, evalMonitor, field } = el.dataset;
+    if (evalJudge) return `[data-eval-judge="${CSS.escape(evalJudge)}"]`;
+    if (evalDraft && field)
+      return `[data-eval-draft="${CSS.escape(evalDraft)}"][data-field="${CSS.escape(field)}"]`;
+    if (evalMonitor && field)
+      return `[data-eval-monitor="${CSS.escape(evalMonitor)}"][data-field="${CSS.escape(field)}"]`;
+    return null;
+  };
+  const remember = (event: Event) => {
+    const el = event.target as HTMLInputElement;
+    const selector = el instanceof HTMLElement ? fieldSelector(el) : null;
+    typing = selector
+      ? { selector, start: el.selectionStart ?? null, end: el.selectionEnd ?? null }
+      : null;
+  };
+  /** Give the field back its focus and caret, only when the redraw took them, never when the
+   * person has moved on to something else. */
+  const keepTyping = () => {
+    const active = document.activeElement;
+    if (!root || !typing || (active && active !== document.body && active.isConnected)) return;
+    const el = root.querySelector<HTMLInputElement>(typing.selector);
+    if (!el || el.disabled) return;
+    el.focus({ preventScroll: true });
+    if (typing.start !== null) el.setSelectionRange?.(typing.start, typing.end ?? typing.start);
+  };
   const paint = () => {
-    if (root) root.innerHTML = renderDesk(state);
+    if (!root) return;
+    root.innerHTML = renderDesk(state);
+    keepTyping();
   };
   /** Repaint, then give focus back to the same control. */
   const repaintKeeping = (input: HTMLElement) => {
@@ -698,6 +729,10 @@ export function createEvaluationDesk(
       element.addEventListener('click', onClick);
       element.addEventListener('input', onInput);
       element.addEventListener('change', onInput);
+      element.addEventListener('focusin', remember);
+      element.addEventListener('input', remember);
+      element.addEventListener('keyup', remember);
+      keepTyping();
       // Closing the page stops new cases; reopening asks the person to continue.
       const stop = () => runner.stop();
       window.addEventListener('pagehide', stop);
@@ -708,6 +743,9 @@ export function createEvaluationDesk(
         element.removeEventListener('click', onClick);
         element.removeEventListener('input', onInput);
         element.removeEventListener('change', onInput);
+        element.removeEventListener('focusin', remember);
+        element.removeEventListener('input', remember);
+        element.removeEventListener('keyup', remember);
         root = null;
       };
     },

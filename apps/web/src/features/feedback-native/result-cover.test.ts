@@ -91,6 +91,22 @@ describe('results cover of a delivery', () => {
     expect(view.when).toMatch(/^\d{2}:\d{2}$/);
     expect(view.attachments.map((a) => a.line)).toEqual(['《试点决定草稿》 · 第 2 版 · 试点决定']);
   });
+  it('names a delivered version by its work after a later version replaced it in the list', () => {
+    const later = state({
+      products: [
+        {
+          session_id: 's',
+          product_id: 'p',
+          version: 3,
+          title: 'Pilot PRD',
+          purpose: 'commitment',
+          author: { kind: 'human', id: 'learner' },
+        } as FeedbackNativeState['products'][number],
+      ],
+    });
+    expect(cover(later, 'en').attachments[0].product.title).toBe('Pilot PRD');
+    expect(cover(later, 'en').attachments[0].line).not.toContain('Untitled');
+  });
   it('sorts what holds up, what is not known with its reason, and what is unmet', () => {
     const view = cover(state(), 'zh');
     expect(view.met.map((r) => r.name)).toEqual(['人数与容量']);

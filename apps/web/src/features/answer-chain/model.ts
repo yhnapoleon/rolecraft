@@ -104,7 +104,8 @@ function currency(input: ChainInput): 'current' | 'superseded' | 'unchecked' {
   if (!cited || !num(now)) return 'unchecked';
   return now > cited.version ? 'superseded' : 'current';
 }
-const three = (value: number) => value.toFixed(3);
+// Two decimals, as the technical view writes the same distance.
+const two = (value: number) => value.toFixed(2);
 
 /** Which step decided the result, and what each step looked like. */
 function walk(input: ChainInput) {
@@ -273,8 +274,8 @@ function rowsFor(
     else
       detection = t('row_scope_real', {
         state: t(scope.label === 'out' ? 'state_out_of_scope' : 'state_in_scope'),
-        score: three(scope.score as number),
-        threshold: num(scope.threshold) ? three(scope.threshold) : '–',
+        score: two(scope.score as number),
+        threshold: num(scope.threshold) ? two(scope.threshold) : '–',
       });
     return [
       w.code === 'prohibited_topic' && t('row_prohibited'),
@@ -375,7 +376,10 @@ export function answerChain(input: ChainInput, language: Language): ChainView {
     stopAt: w.stopAt,
     tone: !w.known ? 'unknown' : w.amber ? 'warn' : 'plain',
     reason: reasonFor(input, w, language),
-    handover: w.known && (w.stopAt === 1 || w.stopAt === 2 || w.amber),
+    // An outdated source already flagged to the employee is the fix at work, not a new case.
+    handover:
+      w.known &&
+      (w.stopAt === 1 || w.stopAt === 2 || (w.amber && input.status !== 'answered_with_warning')),
     rows: rowsFor(input, stages, words, w, language),
   };
 }

@@ -65,6 +65,8 @@ def hotel_question(query, locale):
             "国内出差住宿每晚的报销上限",
             "出差住宿报销一晚能报多少",
             "住宿报销金额",
+            # The AIPM evaluation desk's policy-change regression question.
+            "国内出差住宿每晚能报多少",
             # it_ticket_pilot: the same dynamic-policy question about the P2 SLA.
             "p2工单的响应时限是多少",
             "p2工单的响应时限",
@@ -76,6 +78,8 @@ def hotel_question(query, locale):
             "whatisthehotelreimbursementlimitpernight",
             "whatisthehotelreimbursementlimit",
             "whatisthemaximumhotelreimbursementpernight",
+            # The AIPM evaluation desk's policy-change regression question.
+            "howmuchcaniclaimpernightforadomesticbusiness-triphotel",
             "whatisthep2ticketresponsetime",
             "whatistheresponsetimeforp2tickets",
         )
@@ -86,6 +90,73 @@ def hotel_question(query, locale):
 def test_materials(test):
     """Materials the test answer cited or retrieved from."""
     return {c.object_id for c in test.citations} | {c.material_id for c in test.execution.chunks}
+
+
+def away_from_policy(test):
+    """A test without materials that its own recognition records place away from the policy:
+    the scope recognizer (not its rule fallback) stopped it as out of scope, or the nearest
+    retrieved passages all come from other material. Without such a record it stays unknown."""
+    for record in test.recognition or ():
+        if record.task == "scope" and record.label == "out" and not record.fallback:
+            return True
+        if record.task == "retrieval":
+            top = record.outputs.get("top")
+            rows = top if isinstance(top, list) else []
+            ids = [row.get("material_id") for row in rows if isinstance(row, dict)]
+            if ids and all(isinstance(i, str) for i in ids) and "policy" not in ids:
+                return True
+    return False
+
+
+def functional_coverage(tests):
+    """Observed categories of the actual runs on one configuration and whether their
+    observable acceptance holds, for R4.functional_tests.
+
+    This puts the frozen definition's two example categories ("normal and out-of-scope
+    requests") on what each run's own records show, never on a declared category, case type,
+    expectation or learner judgement; rules_v2 and the frozen definition are unchanged.
+    Only the latest run of each question counts.
+      - normal: the scope recognizer (not its rule fallback) placed it in scope and it
+        answered with citations; accepted when every citation was the current version when
+        it ran (not answered from an outdated source).
+      - out_of_scope: the scope recognizer stopped it, or the area was closed
+        (``outside_scope``); accepted when it gave no answer and handed over to a person.
+    Returns None (unknown) when a latest run has no record to place it by.
+    """
+    latest = {}
+    for test in tests:
+        if test.status == "failed":
+            continue
+        key = " ".join(test.query.split()).casefold()
+        if key not in latest or test.as_of.storage_revision >= latest[key].as_of.storage_revision:
+            latest[key] = test
+    if not latest:
+        return None
+    met = {}
+    for test in latest.values():
+        scope = next(
+            (r for r in test.recognition or () if r.task == "scope" and not r.fallback), None
+        )
+        if test.error_code == "outside_scope" or (
+            scope is not None and scope.label == "out" and test.error_code == "outside_scope_ood"
+        ):
+            ok = test.status == "fallback" and not test.citations
+            met["out_of_scope"] = met.get("out_of_scope", True) and ok
+        elif scope is None:
+            return None
+        elif (
+            scope.label == "in"
+            and test.status in {"answered", "answered_with_warning"}
+            and test.citations
+        ):
+            versions = test.execution.source_versions
+            ok = test.status == "answered" and all(
+                versions.get(c.object_id) == c.version for c in test.citations
+            )
+            met["normal"] = met.get("normal", True) and ok
+        # Any other recorded run (no hit, handed over for a version check, ...) is placed but
+        # belongs to neither category.
+    return sorted(met), (all(met.values()) if met else None)
 
 
 def relevant_to_policy(test, locale):
@@ -372,6 +443,13 @@ class ScenarioFactAdapter:
         if config is None:
             return RuleSnapshot(at, tuple(facts), False, tuple(tests), tuple(test_refs))
         add("test_ledger_complete", window.tests_complete, config_source, *test_refs)
+        coverage = functional_coverage(tests) if window.tests_complete else None
+        if coverage is not None:
+            categories, accepted = coverage
+            add("functional_classification_complete", True, config_source, *test_refs)
+            add("functional_categories_verified", categories, config_source, *test_refs)
+            if accepted is not None:
+                add("acceptance_criteria_verified", accepted, config_source, *test_refs)
         add("current_obligation_verified", committed, config_source, *subjects)
         # Resources are checked against the initial public allocation and actual
         # approved decisions before producing resource numbers.
@@ -474,7 +552,7 @@ class ScenarioFactAdapter:
                             and test.execution.used_versions.get("policy") == policy_version
                         ):
                             passing.append(test.id)
-                elif not test_materials(test):
+                elif not test_materials(test) and not away_from_policy(test):
                     classified = False
             add("dynamic_test_ids", dynamic, config_source, *test_refs)
             add("dynamic_classification_complete", classified, config_source, *test_refs)

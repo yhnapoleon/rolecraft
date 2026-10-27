@@ -46,6 +46,14 @@ export type DeskState = {
 };
 
 const ANSWER_PREVIEW = 140;
+/** The first 140 characters, ending on a word in a Latin script, with an ellipsis. */
+export function preview(answer: string) {
+  const cut = [...answer].slice(0, ANSWER_PREVIEW).join('');
+  const space = cut.lastIndexOf(' ');
+  const word = /[A-Za-z0-9]$/.test(cut) && /[A-Za-z0-9]/.test(answer[cut.length] ?? '');
+  const kept = word && space > ANSWER_PREVIEW / 2 ? cut.slice(0, space) : cut;
+  return `${kept.replace(/[\s,;:，；：、]+$/, '')}…`;
+}
 const runOf = (state: DeskState, row: EvaluationCase) =>
   row.run_ref ? state.runs?.[row.run_ref.object_id] : undefined;
 const chainOf = (state: DeskState, row: EvaluationCase) => {
@@ -64,7 +72,7 @@ function runBlock(state: DeskState, row: EvaluationCase) {
   if (!run || !view || !row.run_ref) return '';
   const answer = run.answer.trim();
   const long = [...answer].length > ANSWER_PREVIEW;
-  const short = long ? `${[...answer].slice(0, ANSWER_PREVIEW).join('').trimEnd()}…` : answer;
+  const short = long ? preview(answer) : answer;
   const text_ = answer
     ? `<p class="aipm-eval__answer-short">${esc(short)}</p>${long ? `<details class="aipm-eval__answer-full"><summary>${esc(t('展开全文', 'Show the full answer'))}</summary><p>${esc(answer)}</p></details>` : ''}`
     : '';

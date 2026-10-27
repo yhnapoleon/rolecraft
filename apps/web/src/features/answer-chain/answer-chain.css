@@ -275,16 +275,16 @@
 .run-cols.three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-/* Side by side, the identity line is left out: every column is one ~32px line of dots. */
-.run-cols:is(.two, .three) .ac-who {
-  display: none;
-}
 /* Columns align row by row: caption, answer, dots, reason, keys, steps, stamps. */
 @media (min-width: 721px) {
   .run-cols:is(.two, .three) .ac {
     container-type: normal;
   }
-  /* Small multiples share one legend: the step names show under the latest column only and
+  /* Side by side, the identity line is left out: every column is one ~32px line of dots. */
+  .run-cols:is(.two, .three) .ac-who {
+    display: none;
+  }
+  /* Small multiples share one legend: the step names show under the first (leftmost) column and
      keep their height elsewhere, so the dots stay level. Each dot keeps its sr-only sentence. */
   .run-cols:is(.two, .three) > .run-col:not(:first-child) .ac-name {
     visibility: hidden;
@@ -325,6 +325,14 @@
   .run-col > .run-meta {
     grid-row: 7;
     align-self: start;
+  }
+  /* Columns run in time order; the latest, on the right, carries the emphasis. */
+  .run-cols:is(.two, .three) > .run-col.is-latest > .col-cap {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .run-cols:is(.two, .three) > .run-col:not(.is-latest) .answer-body {
+    color: var(--ink-2);
   }
 }
 @media (max-width: 720px) {

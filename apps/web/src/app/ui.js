@@ -2620,7 +2620,10 @@ function productBar(a) {
           '',
           sources.length ? `<span class="sr-only">${esc(sources.join(T('、', ', ')))}</span>` : '',
         ),
-        gauge(T('索引方式', 'Index'), read('index', UPDATE_SHORT(c.update))),
+        (() => {
+          const index = indexReading(a);
+          return gauge(T('索引方式', 'Index'), read('index', index.value), '', index.note);
+        })(),
       ]
     : [`<li class="pb-gauge muted">${T('还没有试点设置', 'No pilot settings yet')}</li>`];
   gauges.push(
@@ -2638,6 +2641,20 @@ function productBar(a) {
       <div class="pb-keys">${btn(`${icon('flask', 'i-sm')}<span class="pb-key-label">${T('测试台', 'Test bench')}</span>${a.tests.length ? `<span class="btn-count">${a.tests.length}</span>` : ''}`, 'open-bench', 'small', `aria-label="${esc(T('测试台', 'Test bench'))}"`)}${btn(`${icon('gear', 'i-sm')}<span class="pb-key-label">${T('设置', 'Settings')}</span>`, 'config', configured ? 'small quiet' : 'small primary', `aria-label="${esc(T('设置', 'Settings'))}"`)}${btn(`${icon('hand', 'i-sm')}<span class="pb-key-label">${T('申请', 'Requests')}</span>`, 'resources', 'small quiet', `aria-label="${esc(T('申请', 'Requests'))}"`)}</div></div>
     <ul class="pb-state">${gauges.join('')}</ul>${configUseLine(use)}
   </section>`;
+}
+// The index as tests run it. A requested strategy that is not in effect is named under it, the
+// way ⑤'s answer path says it: "Daily (requested Real-time · not approved)".
+function indexReading(a) {
+  const requested = a.config.update;
+  const resolved = a.effectiveConfig;
+  const now = resolved?.effective?.update_strategy === 'manual_policy' ? 'manual' : resolved?.effective?.update_strategy;
+  if (!resolved?.differences?.update_strategy || !now || now === requested)
+    return { value: UPDATE_SHORT(requested), note: '' };
+  const why = configUse(resolved, a.world.devDays)?.unfunded ? T('未获批', 'not approved') : T('未生效', 'not in effect');
+  return {
+    value: UPDATE_SHORT(now),
+    note: `<span class="pb-k">${esc(T(`（请求：${UPDATE_SHORT(requested)} · ${why}）`, `(requested ${UPDATE_SHORT(requested)} · ${why})`))}</span>`,
+  };
 }
 const UPDATE_SHORT = (k) =>
   ({
@@ -3563,7 +3580,7 @@ function bench(a, t) {
                   T('知识来源', 'Sources'),
                   `${c.domains.length}<span class="sr-only">${esc(c.domains.map(DOMAIN).join(T('、', ', ')))}</span>`,
                 ],
-                [T('索引方式', 'Index'), UPDATE_SHORT(c.update)],
+                [T('索引方式', 'Index'), indexReading(a).value, '', indexReading(a).note],
                 [T('政策', 'Policy'), `v${a.world.policyVersion}`],
                 [
                   T('索引基于', 'Index built on'),
@@ -3571,7 +3588,7 @@ function bench(a, t) {
                   stale ? 'warn' : '',
                 ],
               ]
-                .map(([k, v, cls = '']) => `<li class="pb-gauge ${cls}"><span class="pb-k">${k}</span> <span class="pb-v">${v}</span></li>`)
+                .map(([k, v, cls = '', extra = '']) => `<li class="pb-gauge ${cls}"><span class="pb-k">${k}</span> <span class="pb-v">${v}</span>${extra}</li>`)
                 .join('')}</ul>`
             : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`
         }
@@ -3581,7 +3598,12 @@ function bench(a, t) {
         <label class="sr-only" for="lab-q">${T('你想问助手什么', 'Your question for the assistant')}</label>
         <textarea id="lab-q" name="question" class="console-q" rows="2" required maxlength="4000" placeholder="${esc(T('像员工那样问它一个问题…', 'Ask what an employee would ask…'))}">${esc(s?.inputs.question || ui.labPrefill)}</textarea>
         <div class="console-row"><label class="sr-only" for="lab-e">${T('想确认什么（选填）', 'What are you checking? (optional)')}</label><input id="lab-e" name="expectation" class="input" maxlength="5000" value="${esc(s?.inputs.expected || '')}" placeholder="${esc(T('想确认什么？选填', 'What are you checking? Optional'))}"><button type="submit" class="btn primary run-btn" ${ui.busy || !configured ? 'disabled' : ''}>${icon('play', 'i-sm')}${ui.busy ? T('运行中', 'Running') : T('运行', 'Run')}</button></div>
-        <p class="console-file">${icon('note', 'i-xs')}${t ? esc(T(`结果记在「${taskTitle(t)}」下`, `Results are filed under “${taskTitle(t)}”`)) : T('这些结果不归入事项；从事项里打开测试台才会归档。', 'These results aren’t filed under a task. Open the bench from a task to file them.')}</p>
+        ${
+          // A seven-step practice's tests count without a task, so the unfiled note is noise there.
+          t || !aipmHere(a)
+            ? `<p class="console-file">${icon('note', 'i-xs')}${t ? esc(T(`结果记在「${taskTitle(t)}」下`, `Results are filed under “${taskTitle(t)}”`)) : T('这些结果不归入事项；从事项里打开测试台才会归档。', 'These results aren’t filed under a task. Open the bench from a task to file them.')}</p>`
+            : ''
+        }
       </form>
     </section>
     ${t ? `<div class="runs-head"><div class="segmented" role="group"><span class="thumb"></span><button type="button" aria-pressed="${!ui.benchAll}" data-action="bench-scope" data-all="0">${T('这件事的测试', 'This task')}</button><button type="button" aria-pressed="${!!ui.benchAll}" data-action="bench-scope" data-all="1">${T('全部测试', 'All tests')}</button></div></div>` : ''}
@@ -3620,16 +3642,17 @@ function groupRuns(a) {
 function runGroup(a, runs) {
   const r = runs[0];
   const comparison = comparisonFor(r, a.tests);
-  // Latest, the run it is compared with, and the first run of the question: up to three columns.
+  // The first run of the question, the run the latest is compared with, and the latest: up to
+  // three columns in time order, so "broke → fixed → retested" reads left to right.
   const second = comparison.referenced ? comparison.previous : runs[1];
   const first = runs.length > 2 ? runs[runs.length - 1] : null;
-  const paired = [r, second, first].filter((x, i, list) => x && list.indexOf(x) === i);
+  const paired = [first, second, r].filter((x, i, list) => x && list.indexOf(x) === i);
   const ordinal = (x) => a.tests.findIndex((t) => t.id === x.id) + 1;
   // `stale` is the server's own flag: the cited version differs from the current source.
   const old = (x) => (x.stale !== undefined ? !!x.stale : x.indexVersion < x.policyVersion);
   const tk = r.taskId && a.tasks.find((t) => t.id === r.taskId);
-  const caption = (x, i) =>
-    i === 0
+  const caption = (x) =>
+    x === r
       ? T('最新', 'Latest')
       : x === first
         ? T('第一次', 'First')
@@ -3646,10 +3669,7 @@ function runGroup(a, runs) {
     ${age ? `<p class="rc-test-age">${esc(age)}</p>` : ''}
     <div class="run-cols ${cols}">${paired
       .map(
-        (
-          x,
-          i,
-        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${caption(x, i) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
+        (x) => `<div class="run-col${x === r ? ' is-latest' : ''}">${runs.length > 1 ? `<p class="col-cap">${caption(x) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${runModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
       ${runChain(a, x)}
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,

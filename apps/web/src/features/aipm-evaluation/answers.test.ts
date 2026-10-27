@@ -5,7 +5,7 @@ import type * as C from '../../contracts-v2';
 import { answerChain, fromTestResult } from '../answer-chain/model';
 import { createEvaluationDesk } from './index';
 import type { BatchView, EvaluationCase } from './model';
-import { type DeskState, renderDesk, unmetByStage } from './view';
+import { type DeskState, preview, renderDesk, unmetByStage } from './view';
 
 const ref = (kind: string, id: string): ObjectRef =>
   ({ session_id: 's', kind, object_id: id, version: 1 }) as ObjectRef;
@@ -111,6 +111,15 @@ describe('evaluation desk: answers and answer chains', () => {
     const c = caseHtml(renderDesk(desk()), 't-ok');
     expect(c).toContain(`${'x'.repeat(140)}…`);
     expect(c).toContain('<summary>Show the full answer</summary>');
+  });
+
+  it('cuts a long English answer on a word, and Chinese at 140 characters', () => {
+    const english = `${'Keep the receipt. '.repeat(7)}Obtain written manager approval before booking a hotel.`;
+    expect([...english].length).toBeGreaterThan(140);
+    expect(preview(english)).toMatch(/ [A-Za-z]+…$/);
+    expect(english.startsWith(preview(english).slice(0, -1))).toBe(true);
+    expect(english.charAt(preview(english).length - 1)).toBe(' ');
+    expect(preview('出'.repeat(200))).toBe(`${'出'.repeat(140)}…`);
   });
 
   it('renders nothing extra for a case without a run, or before results are read', () => {
