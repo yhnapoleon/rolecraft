@@ -99,7 +99,9 @@ def test_a_trial_clears_the_target_only_when_its_failure_is_gone() -> None:
     # A row that could not run clears nothing; questions that showed no failure are not counted.
     broken = target_check(failing, [_row(None, [], "error")], sources)
     assert broken is not None and broken["cleared"] == 0
-    assert target_check(failing, [_row("answered", [("policy", 1)], query="other")], sources) is None
+    assert (
+        target_check(failing, [_row("answered", [("policy", 1)], query="other")], sources) is None
+    )
     assert target_check({}, [_row("answered", [("policy", 1)])], sources) is None
 
 
