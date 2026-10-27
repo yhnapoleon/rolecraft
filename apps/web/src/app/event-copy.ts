@@ -22,7 +22,7 @@ export type ServerEvent = {
 };
 export type EventLookups = {
   /** The document's one name (see reference-catalog `documentName`), whichever version is meant. */
-  materialTitle(id: string): string | undefined;
+  materialTitle(id: string, version?: number): string | undefined;
   testQuery(id: string): string | undefined;
   /** Which delivery of this practice a submission was (1-based), when known. */
   deliveryNumber(submissionId: string): number | undefined;
@@ -90,7 +90,7 @@ export function describeServerEvent(
   const documents = (list: { id: string; version: number }[]) =>
     list
       .map(({ id, version }) => {
-        const title = lookups.materialTitle(id);
+        const title = lookups.materialTitle(id, version);
         return title ? versioned(title, version) : '';
       })
       .filter(Boolean)
@@ -106,7 +106,7 @@ export function describeServerEvent(
     case 'read_material': {
       const id = typeof data.material_id === 'string' ? data.material_id : '';
       const version = count(data.version);
-      const title = id ? lookups.materialTitle(id) : undefined;
+      const title = id ? lookups.materialTitle(id, version) : undefined;
       return {
         text: title
           ? say(['读了', 'Read ']) + versioned(title, version)

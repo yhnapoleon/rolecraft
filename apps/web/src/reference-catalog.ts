@@ -129,7 +129,7 @@ export function catalogMaterialTitle(catalog: ReferenceCatalog, id: string, vers
 
 export function catalogLookups(catalog: ReferenceCatalog): EventLookups {
   return {
-    materialTitle: (id) => catalogMaterialTitle(catalog, id),
+    materialTitle: (id, version) => catalogMaterialTitle(catalog, id, version),
     testQuery: (id) => catalog.tests[id]?.query,
     deliveryNumber: (id) => catalog.deliveries[id],
   };
