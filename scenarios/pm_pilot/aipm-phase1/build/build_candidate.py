@@ -15,7 +15,7 @@ from career_lab.scenarios.v2.release import GENERATED, business_metadata
 ROOT = Path(__file__).resolve().parents[4]
 CONTENT = Path(__file__).resolve().parents[1]
 STEP_IDS = ("business", "stakeholders", "need", "boundary", "solution", "assurance", "decision")
-REVISION = "aipm-phase1-draft-1"
+REVISION = "aipm-phase1-draft-2"
 EXPERIENCE = "aipm-phase1-v1"
 
 
@@ -39,6 +39,64 @@ def file_ref(root, name):
 
 def snapshot(root):
     return {str(p.relative_to(root)): sha(p.read_bytes()) for p in root.rglob("*") if p.is_file()}
+
+
+# The published English brief predates the company name; only English candidates are renamed.
+COMPANY_RENAME = {"en": ("Xingqiao Digital", "Starbridge Digital")}
+
+
+def shift_span(ref, at, delta, old, new):
+    """Move one source span across a replacement of ``old`` at offset ``at``."""
+    start, end = ref["span_start"], ref["span_end"]
+    if start >= at + len(old):
+        ref["span_start"], ref["span_end"] = start + delta, end + delta
+    elif end > at:
+        if not (start <= at and at + len(old) <= end):
+            raise ValueError("Company name replacement splits a source span")
+        ref["quote"] = ref["quote"].replace(old, new, 1)
+        ref["span_end"] = end + delta
+
+
+def rename_company(package, name, lang):
+    """Rename the company in the copied brief and keep every brief span exact."""
+    if lang not in COMPANY_RENAME:
+        return
+    old, new = COMPANY_RENAME[lang]
+    path = package / name
+    text = path.read_text()
+    delta = len(new) - len(old)
+    materials = json.loads((package / "materials.json").read_text())
+    facts = json.loads((package / "facts.json").read_text())
+    brief = next(m for m in materials if m["id"] == "brief" and m["version"] == 1)
+    sources = [f["source"] for f in facts if f["source"]["object_id"] == "brief"]
+    # Right to left keeps earlier offsets valid while each occurrence is replaced.
+    hits = []
+    at = text.find(old)
+    while at >= 0:
+        hits.append(at)
+        at = text.find(old, at + len(old))
+    if not hits:
+        raise ValueError("English brief no longer contains the old company name")
+    for at in reversed(hits):
+        text = text[:at] + new + text[at + len(old) :]
+        for fragment in brief["fragments"]:
+            shift_span(fragment["ref"], at, delta, old, new)
+            fragment["text"] = fragment["ref"]["quote"]
+        for source in sources:
+            shift_span(source, at, delta, old, new)
+    for fragment in brief["fragments"]:
+        ref = fragment["ref"]
+        assert text[ref["span_start"] : ref["span_end"]] == ref["quote"] == fragment["text"]
+    keys = ("span_start", "span_end", "quote")
+    for source in sources:
+        assert text[source["span_start"] : source["span_end"]] == source["quote"]
+        assert any(all(f["ref"][k] == source[k] for k in keys) for f in brief["fragments"]), (
+            "Fact source left the brief"
+        )
+    assert old not in text
+    path.write_text(text)
+    write(package / "materials.json", materials)
+    write(package / "facts.json", facts)
 
 
 def build(output, content=CONTENT):
@@ -90,6 +148,7 @@ def build(output, content=CONTENT):
         # Public company context stays outside the assistant's answerable knowledge domains.
         company = json.loads((content / f"public/company.{lang}.json").read_text())
         name = rules["material_files"]["brief"]["1"]
+        rename_company(package, name, lang)
         original_brief = (package / name).read_text()
         company_text = (
             original_brief + "\n\n" + company["title"] + "\n" + company["status_label"] + "\n\n"
@@ -133,7 +192,8 @@ def build(output, content=CONTENT):
         (package / "scenario.yaml").write_text(
             yaml.safe_dump(rules, allow_unicode=True, sort_keys=True)
         )
-        # Original trial snapshots and all original source spans are retained byte-for-byte.
+        # Original trial snapshots and all original source spans are retained byte-for-byte,
+        # except the English company rename above, which shifts brief spans by its length.
         # The new appendix is a draft in this NEW package, not a historical trial input.
         extra = []
         for member in present:

@@ -4,7 +4,7 @@
   "content_revision": "aipm-evaluation-1",
   "language": "en",
   "title": "Evaluation, monitoring and rollback",
-  "intro": "Write down how you expect the assistant to answer, then run. You judge each result yourself; the system records it and does not score for you.",
+  "intro": "Write how you expect the assistant to answer, then run it. Each result shows where it stopped on the answer path; you judge whether it meets your expectation.",
   "routes": [
     {
       "id": "deterministic",

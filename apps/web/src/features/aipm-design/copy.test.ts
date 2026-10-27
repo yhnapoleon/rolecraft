@@ -24,6 +24,15 @@ describe('AIPM design copy', () => {
       STARTER_NEEDS.map((n) => ({ id: n.id, scope: n.scope, request: n.request[index] })),
     );
   });
+  it('offers four starter needs; the two new ones follow access and reuse the expense scope', () => {
+    expect(STARTER_NEEDS.map((n) => [n.id, n.scope])).toEqual([
+      ['expenses', 'expense'],
+      ['access', 'access'],
+      ['hotel_cap_today', 'expense'],
+      ['over_cap_claim', 'expense'],
+    ]);
+    expect(/[一-鿿]/.test(JSON.stringify(STARTER_NEEDS.map((n) => n.request[1])))).toBe(false);
+  });
   it('keeps English copy free of Chinese characters', () => {
     const english = JSON.stringify(
       Object.values(ROUTES).map((r) => [r.label[1], r.description[1]]),

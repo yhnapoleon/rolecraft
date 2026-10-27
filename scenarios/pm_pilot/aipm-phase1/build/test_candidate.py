@@ -42,3 +42,26 @@ def test_tampered_candidate_rejected(tmp_path):
     (package / "aipm/public/guide.en.json").write_text("{}")
     with pytest.raises(ValueError):
         BUILDER.ScenarioModule(package)
+
+
+def test_english_brief_uses_one_company_name(tmp_path):
+    report = BUILDER.build(tmp_path / "candidate")
+    installed = json.loads(
+        (BUILDER.ROOT / "scenarios/pm_pilot/v2/installed/current.json").read_text()
+    )
+    for lang, identity in report["packages"].items():
+        package = Path(identity["root"])
+        brief = (package / "materials/brief-v1.md").read_text()
+        source = (
+            BUILDER.ROOT / installed["main"][lang]["root"] / "materials/brief-v1.md"
+        ).read_text()
+        materials = json.loads((package / "materials.json").read_text())
+        fragments = next(m for m in materials if m["id"] == "brief")["fragments"]
+        assert all(
+            brief[f["ref"]["span_start"] : f["ref"]["span_end"]] == f["text"] for f in fragments
+        )
+        if lang == "en":
+            assert "Xingqiao" not in brief and "Xingqiao Digital" in source
+            assert brief.startswith(source.replace("Xingqiao Digital", "Starbridge Digital"))
+        else:
+            assert brief.startswith(source)

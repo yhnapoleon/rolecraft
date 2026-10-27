@@ -213,7 +213,7 @@ def test_pending_rubric_criteria_go_through_the_installed_judge(tmp_path):
             [
                 AipmContent(
                     scenario_hash=store.view(auth).bindings.scenario.sha256,
-                    content_revision="aipm-phase1-draft-1",
+                    content_revision="aipm-phase1-draft-2",
                     work_language="zh",
                     guide=AipmGuide.model_validate_json(
                         (root / "scenarios/pm_pilot/aipm-phase1/public/guide.zh.json").read_bytes()

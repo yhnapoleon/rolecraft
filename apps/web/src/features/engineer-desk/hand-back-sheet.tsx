@@ -3,11 +3,12 @@
 // which confirms in a dialog and sends the existing configuration.apply. The engineer never applies
 // anything; the product manager decides. A delivered practice first opens a revision.
 import { Dialog } from 'radix-ui';
-import { useRef } from 'react';
+import { type Ref, useRef } from 'react';
 import { T } from '../../app/i18n';
 import { Button, Sheet, SheetContent, SheetDescription, SheetTitle } from '../../ui-kit';
+import { WORK_COST } from '../../app/vocab';
 import type { HandBackRow } from './hand-back';
-import type { DiffRow } from './model';
+import type { DiffRow, TicketDetail } from './model';
 
 export interface HandBackView {
   readonly open: boolean;
@@ -46,6 +47,8 @@ export interface HandBackView {
   readonly decided: string;
   onAsk(): void;
   onReturn(): void;
+  /** After applying Daniel's report: close and rerun on the test bench. */
+  onRerun(): void;
   onOpenChange(open: boolean): void;
   onConfirmChange(open: boolean): void;
   onApply(): void;
@@ -57,63 +60,252 @@ export interface ColleagueRun {
   readonly name: string;
   /** Why the chosen change, in the rule's own words. */
   readonly why: string;
-  /** Each candidate he tried, with its changes and the public checks it passed. */
-  readonly tried: readonly { label: string; changes: string; passed: number; total: number; chosen: boolean }[];
-  /** Candidates the rule table offered that could not be used here, and why. */
-  readonly skipped: readonly string[];
+  /** Each candidate he tried: its rule, the settings it changed ('' when none) and its checks. */
+  readonly tried: readonly {
+    rule: string;
+    changes: string;
+    passed: number;
+    total: number;
+    chosen: boolean;
+  }[];
+  /** Candidates the rule table offered that could not be tried here, with the server's code. */
+  readonly skipped: readonly { rule: string; code: string }[];
   readonly reviewStatus: string;
   readonly budget: { readonly used: number; readonly limit: number };
 }
 
-/** Daniel's run, after the fact: reproduced, then each candidate tried, then signed and reviewed.
- * A completed log, not a live animation: the request already finished. */
-function RunLog({ run }: { run: ColleagueRun }) {
-  const row = 'tw:grid tw:grid-cols-[18px_1fr] tw:gap-x-2 tw:items-baseline tw:text-[13px] tw:leading-snug';
-  const tick = <span className="tw:text-ink-3 tw:font-mono tw:text-[12px]">✓</span>;
+type Pair = readonly [string, string];
+const t2 = (p: Pair) => T(p[0], p[1]);
+const NO_WORK: Pair = ['不需要新工作项', 'No new work item'];
+const SAME_LOAD: Pair = ['不变', 'Unchanged'];
+
+/** What each of Daniel's candidate fixes costs, by rule id: the same for every practice. */
+export const FIXES: Record<
+  string,
+  { name: Pair; step: Pair; days: () => string; staff: Pair; load: Pair }
+> = {
+  freshness_warn: {
+    name: ['索引落后时提醒', 'Warn when the index lags'],
+    step: ['资料新不新', 'Up to date?'],
+    days: () => t2(NO_WORK),
+    staff: [
+      '旧答案，前面加一句「资料可能已更新」',
+      'The old answer, prefixed with "the source may have changed"',
+    ],
+    load: SAME_LOAD,
+  },
+  realtime_index: {
+    name: ['源文件一变就重建索引', 'Rebuild the index on every source change'],
+    step: ['资料新不新 · 离线', 'Up to date? · offline'],
+    days: () =>
+      T(`实时同步 ${WORK_COST.realtime} 人日`, `Real-time sync, ${WORK_COST.realtime} person-days`),
+    staff: ['按最新资料回答', 'Answers from the latest source'],
+    load: SAME_LOAD,
+  },
+  freshness_fallback: {
+    name: ['索引落后时转人工', 'Hand over when the index lags'],
+    step: ['资料新不新 → 答不了谁接', 'Up to date? → Who takes over'],
+    days: () => t2(NO_WORK),
+    staff: ['不自动回答，转给人工', 'No automatic answer; handed to a person'],
+    load: [
+      '增加：索引落后期间这类问题都转人工',
+      'Higher: these questions go to people while the index lags',
+    ],
+  },
+  lower_min_score: {
+    name: ['降低最低相关分', 'Lower the minimum relevance score'],
+    step: ['找到什么', 'Found'],
+    days: () => t2(NO_WORK),
+    staff: [
+      '更容易找到段落，也更可能找到不相关的',
+      'Finds passages more often, including less relevant ones',
+    ],
+    load: ['转人工可能减少，错答风险上升', 'Fewer handovers, more risk of wrong answers'],
+  },
+};
+export const ruleName = (id: string) => (FIXES[id] ? t2(FIXES[id].name) : id);
+
+/** Why a candidate was not tried, from the server's error code. */
+export function skippedText(code: string): string {
+  if (code === 'engineer_setting_not_editable')
+    return T('没试：这张委托不允许改这项设置。', 'Not tried: this ticket does not allow changing this setting.');
+  if (code === 'engineer_setting_value_invalid')
+    return T('没试：这个取值在当前场景无效。', 'Not tried: this value is not valid here.');
+  return T(`没试：${code}`, `Not tried: ${code}`);
+}
+
+/** Daniel's run as the sheet shows it, from his ticket's handover record. Trial counts are the
+ * public checks: rows that only re-ask a handed-over question are unchecked and left out. */
+export function colleagueRun(
+  h: NonNullable<TicketDetail['handover']>,
+  budget: ColleagueRun['budget'],
+  said: (c: Readonly<Record<string, { before: unknown; after: unknown }>>) => string,
+): ColleagueRun {
+  return {
+    name: h.actor?.name ?? 'Daniel',
+    why: h.rule?.why ?? '',
+    tried: (h.tried ?? []).map((t) => ({
+      rule: t.rule,
+      changes: said(t.changes),
+      passed: t.counts.passed,
+      total: t.counts.passed + t.counts.failed + t.counts.errors,
+      chosen: t.rule === h.rule?.id,
+    })),
+    skipped: (h.skipped ?? []).map((x) => ({ rule: x.rule, code: x.code })),
+    reviewStatus: h.review_status ?? '',
+    budget,
+  };
+}
+
+interface FixRow {
+  readonly rule: string;
+  readonly chosen: boolean;
+  /** The trial reading, or why it was not tried. */
+  readonly trial: string;
+  /** A tried candidate that changed nothing: the settings already request its value. */
+  readonly note: string;
+  readonly skipped: boolean;
+}
+
+function fixRows(run: ColleagueRun): FixRow[] {
+  return [
+    ...run.tried.map((t) => ({
+      rule: t.rule,
+      chosen: t.chosen,
+      trial: T(`公开检查 ${t.passed}/${t.total}`, `Public checks ${t.passed}/${t.total}`),
+      note: t.changes
+        ? ''
+        : T('没有改动：设置里已经请求了这个值', 'No change: the settings already request this value'),
+      skipped: false,
+    })),
+    ...run.skipped.map((x) => ({
+      rule: x.rule,
+      chosen: false,
+      trial: skippedText(x.code),
+      note: '',
+      skipped: true,
+    })),
+  ];
+}
+
+const Pick = () => (
+  <span className="tw:block tw:text-[11.5px] tw:font-semibold tw:text-ink">
+    <span aria-hidden="true">● </span>
+    {T('Daniel 选这个', "Daniel's pick")}
+  </span>
+);
+
+/** Daniel's report, opened on what he tried: each fix with the step it changes, what it costs in
+ * person-days, what staff will see, the load on people and its trial. A wide panel reads it as a
+ * table; a narrow one as one card per fix. The choice of fix stays with the person. */
+export function FixTable({ run }: { run: ColleagueRun }) {
+  const rows = fixRows(run);
+  const fix = (r: FixRow) => FIXES[r.rule];
+  const cell = (r: FixRow, pick: (f: (typeof FIXES)[string]) => string) => {
+    const f = fix(r);
+    return f ? pick(f) : '—';
+  };
+  const head = [
+    T('修法', 'Fix'),
+    T('改哪一环', 'Changes'),
+    T('人日', 'Person-days'),
+    T('员工会看到', 'Staff will see'),
+    T('人工负担', 'Load on people'),
+    T('试跑', 'Trial'),
+  ];
+  const th = 'tw:px-2 tw:pb-2 tw:text-left tw:align-bottom tw:text-[11.5px] tw:font-semibold tw:text-ink-3';
+  const td = 'tw:px-2 tw:py-2.5 tw:align-top';
   return (
-    <section className="tw:grid tw:gap-2 tw:p-4 tw:rounded-panel tw:bg-fill">
-      <h3 className="tw:m-0 tw:text-[12.5px] tw:font-semibold tw:text-ink-2">
-        {T(`${run.name} 的处理记录 · 规则编排`, `What ${run.name} did · rule orchestration`)}
-      </h3>
-      <p className="tw:m-0 tw:text-[12px] tw:text-ink-2">
-        {T('尝试检查包含交来的目标测试和公开探针；下方公开回归只统计复核报告的公开探针。', 'Trial checks include the handed-over target tests and public probes. The public-regression count below covers only the signed review’s public probes.')}
-      </p>
-      <ol className="tw:m-0 tw:p-0 tw:list-none tw:grid tw:gap-1.5">
-        <li className={row}>
-          {tick}
-          <span>{T('在原快照上复现了交来的测试', 'Reproduced the handed-over tests on their original snapshot')}</span>
-        </li>
-        {run.tried.map((t) => (
-          <li key={t.label} className={row}>
-            <span className={t.chosen ? 'tw:text-ink tw:font-mono tw:text-[12px]' : 'tw:text-ink-3 tw:font-mono tw:text-[12px]'}>
-              {t.chosen ? '●' : '○'}
-            </span>
-            <span>
-              {T(`试了「${t.label}」`, `Tried “${t.label}”`)}
-              <span className="tw:text-ink-3"> · {t.changes} · </span>
-              <span className="tw:tabular-nums">
-                {T(`尝试检查（含目标）${t.passed}/${t.total} 通过`, `trial checks (including targets): ${t.passed}/${t.total} passed`)}
+    <section className="tw:@container tw:grid tw:gap-3 tw:p-4 tw:rounded-panel tw:bg-fill">
+      <header className="tw:grid tw:gap-0.5">
+        <h3 className="tw:m-0 tw:text-[13px] tw:font-semibold tw:text-ink">
+          {T(`${run.name} 试了这几种修法`, `What ${run.name} tried`)}
+        </h3>
+        <p className="tw:m-0 tw:text-[12.5px] tw:text-ink-2">
+          {T(
+            '用哪一个由你决定。试跑包含交出的题和公开检查。',
+            'You decide which to use. Trials include the tests you handed over and public checks.',
+          )}
+        </p>
+      </header>
+      <table className="tw:@max-[720px]:hidden tw:w-full tw:border-collapse tw:text-[13px] tw:leading-snug">
+        <caption className="tw:sr-only">
+          {T(`${run.name} 试过的修法及各自的代价`, `The fixes ${run.name} tried and what each costs`)}
+        </caption>
+        <thead>
+          <tr>
+            {head.map((h, i) => (
+              <th key={h} scope="col" className={i === 5 ? `${th} tw:text-right` : th}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr
+              key={r.rule}
+              className={`tw:h-10 tw:border-0 tw:border-t tw:border-solid tw:border-line ${r.skipped ? 'tw:text-ink-3' : 'tw:text-ink-2'}`}
+            >
+              <th
+                scope="row"
+                className={`${td} tw:text-left tw:font-normal ${r.chosen ? 'tw:shadow-[inset_2px_0_0_var(--ink)] tw:font-semibold tw:text-ink' : ''}`}
+              >
+                {ruleName(r.rule)}
+                {r.chosen && <Pick />}
+              </th>
+              <td className={td}>{cell(r, (f) => t2(f.step))}</td>
+              <td className={td}>{cell(r, (f) => f.days())}</td>
+              <td className={td}>{cell(r, (f) => t2(f.staff))}</td>
+              <td className={td}>{cell(r, (f) => t2(f.load))}</td>
+              <td className={`${td} tw:text-right tw:tabular-nums`}>
+                {r.trial}
+                {r.note && (
+                  <span className="tw:block tw:text-[11.5px] tw:text-ink-3">{r.note}</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul className="tw:hidden tw:@max-[720px]:grid tw:m-0 tw:p-0 tw:list-none tw:gap-2">
+        {rows.map((r) => (
+          <li
+            key={r.rule}
+            className={`tw:grid tw:gap-2 tw:p-3 tw:rounded-[7px] tw:bg-inst ${r.chosen ? 'tw:shadow-[inset_2px_0_0_var(--ink)]' : ''} ${r.skipped ? 'tw:text-ink-3' : 'tw:text-ink-2'}`}
+          >
+            <div className="tw:flex tw:flex-wrap tw:items-baseline tw:justify-between tw:gap-x-4">
+              <span className={r.chosen ? 'tw:text-[13px] tw:font-semibold tw:text-ink' : 'tw:text-[13px]'}>
+                {ruleName(r.rule)}
+                {r.chosen && <Pick />}
               </span>
-              {t.chosen && <b className="tw:font-semibold">{T(' · 选这个', ' · chosen')}</b>}
-            </span>
+              <span className="tw:text-[12.5px] tw:tabular-nums">
+                {r.trial}
+                {r.note && <span className="tw:block tw:text-[11.5px] tw:text-ink-3">{r.note}</span>}
+              </span>
+            </div>
+            <dl className="tw:m-0 tw:grid tw:grid-cols-2 tw:gap-x-4 tw:gap-y-1.5 tw:text-[12px]">
+              {[
+                [head[1], cell(r, (f) => t2(f.step))],
+                [head[2], cell(r, (f) => f.days())],
+                [head[3], cell(r, (f) => t2(f.staff))],
+                [head[4], cell(r, (f) => t2(f.load))],
+              ].map(([k, v]) => (
+                <div key={k} className="tw:grid tw:gap-0.5">
+                  <dt className="tw:text-[11px] tw:text-ink-3">{k}</dt>
+                  <dd className="tw:m-0">{v}</dd>
+                </div>
+              ))}
+            </dl>
           </li>
         ))}
-        {run.skipped.map((s) => (
-          <li key={s} className={row}>
-            <span className="tw:text-ink-3 tw:font-mono tw:text-[12px]">–</span>
-            <span className="tw:text-ink-3">{s}</span>
-          </li>
-        ))}
-        <li className={row}>
-          {tick}
-          <span>
-            {T('起草并以 Daniel 的名义签字，交给同一个可信复核', 'Drafted and signed as Daniel, reviewed by the same trusted review')}
-            <span className="tw:text-ink-3 tw:tabular-nums">
-              {T(` · 复核 ${run.budget.used}/${run.budget.limit} 次`, ` · review ${run.budget.used} of ${run.budget.limit}`)}
-            </span>
-          </span>
-        </li>
-      </ol>
+      </ul>
+      <p className="tw:m-0 tw:text-[12px] tw:text-ink-3">
+        {T(
+          `${run.name}（规则编排）先在原快照上复现了交来的题，试跑后以自己的名义签字，交给同一个可信复核 · 复核 ${run.budget.used}/${run.budget.limit} 次`,
+          `${run.name} (rule orchestration) reproduced the handed-over tests on their original snapshot, ran the trials, then signed as ${run.name} for the same trusted review · review ${run.budget.used} of ${run.budget.limit}`,
+        )}
+      </p>
       <p className="tw:m-0 tw:text-[13px] tw:text-ink-2">
         <span className="tw:text-ink-3">{T('为什么选这个改动：', 'Why this change: ')}</span>
         {run.why}
@@ -157,15 +349,82 @@ function Diff({ rows }: { rows: readonly { name: string; before: string; after: 
   );
 }
 
+/** The decision under the report: update from it (after confirming), or for Daniel's report ask
+ * or return it; once applied, the new version and, for Daniel's, the way back to rerun. */
+export function Decision({ v, trigger }: { v: HandBackView; trigger?: Ref<HTMLButtonElement> }) {
+  const nothing = v.rows !== null && v.rows.length === 0;
+  return (
+    <footer className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:pt-2 tw:border-0 tw:border-t tw:border-solid tw:border-line">
+      {v.colleague && v.appliedVersion === null && (
+        <p className="tw:m-0 tw:basis-full tw:pb-1 tw:text-[13px] tw:text-ink-2">
+          {T(
+            '应用后会生成新的配置版本；回测试台同题重测，前后对照。',
+            'Applying creates a new configuration version. Rerun the same question on the test bench to compare.',
+          )}
+        </p>
+      )}
+      {v.appliedVersion !== null ? (
+        <>
+          <p className="tw:m-0 tw:text-good tw:text-[14px] tw:font-medium">
+            ✓{' '}
+            {T(
+              `已按这份改动更新试点 · 配置 v${v.appliedVersion}`,
+              `Pilot updated from this review · configuration v${v.appliedVersion}`,
+            )}
+          </p>
+          {v.colleague && (
+            <Button variant="secondary" onClick={v.onRerun}>
+              {T('回测试台重测', 'Rerun on the test bench')}
+            </Button>
+          )}
+        </>
+      ) : (
+        <>
+          <Button
+            ref={trigger}
+            variant="primary"
+            disabled={v.rows === null || nothing}
+            reason={
+              nothing
+                ? T('试点已经是这组设置', 'The pilot already has these settings')
+                : undefined
+            }
+            onClick={() => v.onConfirmChange(true)}
+          >
+            {T('按这份改动更新试点设置', 'Update pilot settings from this review')}
+          </Button>
+          {v.colleague ? (
+            <>
+              <Button variant="secondary" onClick={v.onAsk}>
+                {T('追问 Daniel', 'Ask Daniel')}
+              </Button>
+              <Button variant="ghost" disabled={v.decided === 'return'} onClick={v.onReturn}>
+                {v.decided === 'return' ? T('已退回', 'Returned') : T('退回', 'Return it')}
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" onClick={() => v.onOpenChange(false)}>
+              {T('先不更新', 'Not now')}
+            </Button>
+          )}
+        </>
+      )}
+    </footer>
+  );
+}
+
 export function HandBackSheet(v: HandBackView) {
   const trigger = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const nextVersion = (v.fromVersion ?? 1) + 1;
   const title = v.title;
-  const nothing = v.rows !== null && v.rows.length === 0;
   return (
     <Sheet open={v.open} onOpenChange={v.onOpenChange}>
-      <SheetContent side="right" className="tw:w-[min(640px,100%)] tw:overflow-y-auto">
+      <SheetContent
+        side="right"
+        // Daniel's report leads with a six-column table of fixes; it needs the wider panel.
+        className={`${v.colleague ? 'tw:w-[min(880px,100%)]' : 'tw:w-[min(640px,100%)]'} tw:overflow-y-auto`}
+      >
         <div className="tw:grid tw:gap-6 tw:p-8 tw:max-sm:p-5">
           <header className="tw:grid tw:gap-1">
             <SheetDescription className="tw:m-0 tw:text-[12px] tw:text-ink-3">
@@ -197,7 +456,7 @@ export function HandBackSheet(v: HandBackView) {
             </div>
           ) : (
             <>
-              {v.colleague && <RunLog run={v.colleague} />}
+              {v.colleague && <FixTable run={v.colleague} />}
               <section className="tw:grid tw:gap-2">
                 <h3 className="tw:m-0 tw:text-[12.5px] tw:font-semibold tw:text-ink-2">
                   {T('改动', 'The change')}
@@ -207,47 +466,7 @@ export function HandBackSheet(v: HandBackView) {
               <dl className="rc-report-facts">
                 {(v.details ?? []).map(row => <div key={row.label}><dt>{row.label}</dt><dd>{row.text}</dd></div>)}
               </dl>
-              <footer className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:pt-2 tw:border-0 tw:border-t tw:border-solid tw:border-line">
-                {v.appliedVersion !== null ? (
-                  <p className="tw:m-0 tw:text-good tw:text-[14px] tw:font-medium">
-                    ✓{' '}
-                    {T(
-                      `已按这份改动更新试点 · 配置 v${v.appliedVersion}`,
-                      `Pilot updated from this review · configuration v${v.appliedVersion}`,
-                    )}
-                  </p>
-                ) : (
-                  <>
-                    <Button
-                      ref={trigger}
-                      variant="primary"
-                      disabled={v.rows === null || nothing}
-                      reason={
-                        nothing
-                          ? T('试点已经是这组设置', 'The pilot already has these settings')
-                          : undefined
-                      }
-                      onClick={() => v.onConfirmChange(true)}
-                    >
-                      {T('按这份改动更新试点设置', 'Update pilot settings from this review')}
-                    </Button>
-                    {v.colleague ? (
-                      <>
-                        <Button variant="secondary" onClick={v.onAsk}>
-                          {T('追问 Daniel', 'Ask Daniel')}
-                        </Button>
-                        <Button variant="ghost" disabled={v.decided === 'return'} onClick={v.onReturn}>
-                          {v.decided === 'return' ? T('已退回', 'Returned') : T('退回', 'Return it')}
-                        </Button>
-                      </>
-                    ) : (
-                      <Button variant="ghost" onClick={() => v.onOpenChange(false)}>
-                        {T('先不更新', 'Not now')}
-                      </Button>
-                    )}
-                  </>
-                )}
-              </footer>
+              <Decision v={v} trigger={trigger} />
             </>
           )}
         </div>

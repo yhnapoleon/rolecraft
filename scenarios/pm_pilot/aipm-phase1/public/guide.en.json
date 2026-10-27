@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "experience_revision": "aipm-phase1-v1",
-  "content_revision": "aipm-phase1-draft-1",
+  "content_revision": "aipm-phase1-draft-2",
   "work_language": "en",
   "steps": [
     {
@@ -36,7 +36,7 @@
           },
           "why": "Separate what the company sells from whom this tool serves first, so choosing users and scope later stays on track.",
           "feedback": "After saving, the audience you name (internal or external) is checked against the company sources and any conflict is pointed out; next, Users and stakeholders is suggested.",
-          "example": "Example: “Starbridge sells implementation and operations services to companies; this assistant serves only internal new staff and admin support, not customers.”",
+          "example": "Example: “Starbridge Digital sells implementation and operations services to companies; this assistant serves only internal new staff and admin support, not customers.”",
           "agent_brief": "Using this practice’s company brief and Grace’s assignment, write two or three sentences: what the company sells to its customers; whom this assistant directly serves (internal or external); and the goal of this assignment. Write only what the sources support and mark anything uncertain as “to confirm”."
         },
         {
@@ -165,7 +165,7 @@
       "id": "boundary",
       "order": 4,
       "label": "Set AI boundaries",
-      "goal": "Specify the answer, the action and who can approve it.",
+      "goal": "Decide how far the AI goes for each kind of request, and who has the final say.",
       "segment": "design",
       "icon": "ShieldHalf",
       "expected_outputs": [
@@ -174,8 +174,8 @@
       "help": [
         {
           "level": "direction",
-          "text": "Specify the answer, the action and who can approve it.",
-          "summary": "Split a request into an answer, calculation, draft or real action. Establish human authority and available tools before choosing an approach.",
+          "text": "Decide how far the AI goes for each kind of request, and who has the final say.",
+          "summary": "You are setting the boundaries of an AI assistant. Split each request into answering, calculating, drafting or acting: what the sources can answer goes to the assistant; anything with a formula goes to rules; actions are drafted by an Agent and confirmed by a person; approvals and exceptions stay with people.",
           "source": "authored_guidance",
           "questions": [
             {
@@ -191,8 +191,8 @@
             "id": "open_design",
             "label": "Split and triage requests"
           },
-          "why": "Split each need into rule-based handling, retrieval answers, agent plus confirmation, or human handling, so you know what the assistant may take and what a person must own.",
-          "feedback": "Each saved row is checked by rule for its handling and final authority; for example, giving final expense approval to the AI is pointed out at once. Next, System design and market patterns is suggested.",
+          "why": "AI answers are probabilistic. Before it touches anything with real consequences, decide who confirms.",
+          "feedback": "Each saved row is checked by rule for its handling and final authority; for example, giving final expense approval to the AI is pointed out at once. Next, Solution and reference patterns is suggested.",
           "example": "Example: “Explain the expense process → retrieval answer, the assistant may answer; final expense approval → human handling, decided by the finance manager.”",
           "agent_brief": "Split this practice’s employee requests into target actions and choose a handling for each (deterministic rule, retrieval answer, agent with human confirmation, human handling), naming who holds final authority. Draft only."
         },
@@ -218,7 +218,7 @@
       "id": "solution",
       "order": 5,
       "label": "Solution and reference patterns",
-      "goal": "Compare feasible approaches; separate plans from applied settings.",
+      "goal": "Design the assistant: where its knowledge comes from, how often it updates, when it should not answer, and who takes over.",
       "segment": "design",
       "icon": "Workflow",
       "expected_outputs": [
@@ -227,8 +227,8 @@
       "help": [
         {
           "level": "direction",
-          "text": "Compare feasible approaches; separate plans from applied settings.",
-          "summary": "Compare at least two substantive approaches using your triage. Reference cards describe public methods. Saving a plan does not apply settings or request resources.",
+          "text": "Design the assistant: where its knowledge comes from, how often it updates, when it should not answer, and who takes over.",
+          "summary": "The diagram is the assistant's real answer path: how each step is set now, what you requested, and what is not in effect yet. Compare at least two approaches, with the person-days each needs and who takes over when it is wrong. Saving never applies settings for you.",
           "source": "authored_guidance",
           "questions": [
             {
@@ -244,9 +244,9 @@
             "id": "open_design",
             "label": "Compare and save approaches"
           },
-          "why": "With the boundary set, compare at least two approaches so you can say what the chosen one needs and what it costs.",
+          "why": "Whether a retrieval assistant is right depends first on which sources are open, how often the index updates and what happens when it is out of date. Those are your design choices.",
           "feedback": "After saving, the plan is compared with the current configuration and resources, and differences are pointed out; saving never changes settings. Next, Evaluation, monitoring and rollback is suggested.",
-          "example": "Example: “Option A: office FAQ retrieval only, daily index. Option B: add a repair-draft agent, 2 developer-days. Choose A: only 3 developer-days are available.”",
+          "example": "Example: “Option A: open office FAQs only, daily index. Option B: also open travel policy, which needs a way to handle updates. Start with A because… (write your reason and its cost).”",
           "agent_brief": "Using the triage, the technical notes and the current configuration, compare two workable approaches: components, resources and dependencies, main costs; recommend one with reasons. Do not change any settings."
         },
         {
@@ -270,7 +270,7 @@
       "id": "assurance",
       "order": 6,
       "label": "Evaluation, monitoring and rollback",
-      "goal": "Test risks against expectations and plan observation and recovery.",
+      "goal": "Define what a right answer is, find which step got it wrong, and plan how to watch and roll back.",
       "segment": "verify",
       "icon": "ListChecks",
       "expected_outputs": [
@@ -279,8 +279,8 @@
       "help": [
         {
           "level": "direction",
-          "text": "Test risks against expectations and plan observation and recovery.",
-          "summary": "Save each expectation and its basis before running supported tests. Separate execution, quality assessments and unsupported cases. Name monitoring owners and rollback triggers.",
+          "text": "Define what a right answer is, find which step got it wrong, and plan how to watch and roll back.",
+          "summary": "Save each case's expectation and basis, then run it. Each result shows its answer path: stopped by scope, nothing found, outdated source, or answered. Hand wrong answers to Daniel to try fixes. For monitoring and rollback, name the signal and the owner.",
           "source": "authored_guidance",
           "questions": [
             {
@@ -296,7 +296,7 @@
             "id": "open_evaluation",
             "label": "Open the evaluation plan"
           },
-          "why": "Write down what you expect before launch and check it with real questions, so you know where the plan fails and who catches it.",
+          "why": "Define a right answer before launch and know which step failed, so you can decide what to fix and what it costs.",
           "feedback": "After a run, each question shows met, not met or unsupported separately, judged by you with a reason; monitoring and rollback plans are marked “planned, not executed”. Next, Launch decision is suggested.",
           "example": "Example: “Question: what is the hotel limit for travel? Expected: the exact amount from policy v2; hand over to a person if it cannot answer.”",
           "agent_brief": "Using my saved triage, write one acceptance question for each handling type: the question, the key points and source of the expected answer, and the fallback if it is not met. Questions and expectations only; do not run them."

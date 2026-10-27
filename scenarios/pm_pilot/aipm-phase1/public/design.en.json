@@ -37,6 +37,16 @@
       "id": "access",
       "scope": "access",
       "request": "Prepare an access request draft"
+    },
+    {
+      "id": "hotel_cap_today",
+      "scope": "expense",
+      "request": "What is today's hotel cap for business travel?"
+    },
+    {
+      "id": "over_cap_claim",
+      "scope": "expense",
+      "request": "Can I claim this hotel bill that is over the cap?"
     }
   ],
   "source_requirements": {
@@ -255,7 +265,7 @@
     "boundary": {
       "order": 4,
       "segment": "design",
-      "goal": "For each kind of request: answer or act, and who gives final approval.",
+      "goal": "For each request: how far the AI goes, and who has the final say.",
       "angles": [
         {
           "id": "act",
@@ -300,7 +310,7 @@
     "solution": {
       "order": 5,
       "segment": "design",
-      "goal": "Compare workable approaches; keep the proposal apart from actual settings.",
+      "goal": "Design the assistant's answer path; keep proposals apart from settings in effect.",
       "angles": [
         {
           "id": "two",
@@ -326,8 +336,8 @@
         },
         {
           "id": "gap",
-          "label": "Where the proposal and settings differ",
-          "hint": "Requested values, actual values and why some are not in effect.",
+          "label": "Which step is not in effect",
+          "hint": "Check the step marked “not in effect” and why.",
           "materials": [
             "technical"
           ]
@@ -348,7 +358,7 @@
     "assurance": {
       "order": 6,
       "segment": "verify",
-      "goal": "Test the risks against clear expectations; keep a watch and a way back.",
+      "goal": "Define a right answer, find the failing step, plan watching and rollback.",
       "angles": [
         {
           "id": "disprove",
@@ -369,7 +379,7 @@
         {
           "id": "signal",
           "label": "What signals to watch after launch",
-          "hint": "What the request log can measure.",
+          "hint": "Handovers, outdated-source warnings, time from a policy change to reindexing: who watches each.",
           "materials": [
             "demand"
           ]

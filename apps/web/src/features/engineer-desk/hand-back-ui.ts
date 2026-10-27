@@ -19,16 +19,9 @@ import {
   reviewDetails,
   revisionReason,
 } from './hand-back';
-import { type ColleagueRun, HandBackSheet, type HandBackView } from './hand-back-sheet';
+import { type ColleagueRun, colleagueRun, HandBackSheet, type HandBackView } from './hand-back-sheet';
 import { fieldName, valueText } from './copy';
 
-const RULES: Record<string, [string, string]> = {
-  freshness_warn: ['索引落后时提醒', 'Warn when the index lags'],
-  realtime_index: ['源文件一变就重建索引', 'Rebuild the index on every source change'],
-  freshness_fallback: ['索引落后时转人工', 'Hand over when the index lags'],
-  lower_min_score: ['降低最低相关分', 'Lower the minimum relevance score'],
-};
-const ruleName = (id: string) => (RULES[id] ? T(RULES[id][0], RULES[id][1]) : id);
 import { engineerLocal, recordHandBack } from './local-state';
 import { clock, settingsDiff, type Change } from './model';
 
@@ -88,24 +81,7 @@ export function openHandBackSheet(options: {
           .map(([k, v]) => `${fieldName(k)} ${valueText(k, v.before)} → ${valueText(k, v.after)}`)
           .join('；');
       const colleague: ColleagueRun | null =
-        colleagueTicket && h
-          ? {
-              name: h.actor?.name ?? 'Daniel',
-              why: h.rule?.why ?? '',
-              tried: (h.tried ?? []).map((t) => ({
-                label: ruleName(t.rule),
-                changes: said(t.changes),
-                passed: t.counts.passed,
-                total: t.counts.passed + t.counts.failed + t.counts.errors + t.counts.unchecked,
-                chosen: t.rule === h.rule?.id,
-              })),
-              skipped: (h.skipped ?? []).map((x) =>
-                T(`跳过「${ruleName(x.rule)}」：这个场景不允许`, `Skipped “${ruleName(x.rule)}”: not allowed here`),
-              ),
-              reviewStatus: h.review_status ?? '',
-              budget: ticket.review_budget,
-            }
-          : null;
+        colleagueTicket && h ? colleagueRun(h, ticket.review_budget, said) : null;
       const last = [...(h?.decisions ?? [])].reverse().find((d) => typeof d.decision === 'string');
       const results = record.report.public_results;
       const hidden = record.report.hidden;
@@ -255,6 +231,10 @@ export function openHandBackSheet(options: {
           toast(T('已退回给 Daniel', 'Returned to Daniel'));
         })
         .catch((error) => set({ applyError: failureText(error) }));
+    },
+    onRerun: () => {
+      close();
+      void runAction('open-bench');
     },
     onOpenChange: (open) => (open ? set({ open }) : close()),
     onConfirmChange: (confirm) => set({ confirm, applyError: '' }),

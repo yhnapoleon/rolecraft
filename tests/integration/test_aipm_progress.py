@@ -28,7 +28,7 @@ def content_for(env):
     binding = env["app"].state.v2_store.view(env["owner"]).bindings
     return AipmContent(
         scenario_hash=binding.scenario.sha256,
-        content_revision="aipm-phase1-draft-1",
+        content_revision="aipm-phase1-draft-2",
         work_language="en",
         guide=AipmGuide.model_validate_json((CONTENT / "public/guide.en.json").read_bytes()),
         design_public=json.loads((CONTENT / "public/design.en.json").read_text()),
