@@ -5,7 +5,9 @@ a list item is one ``item`` unit; paragraphs are cut into sentences by the produ
 R2.support splitter (``models/v3/units.split_sentences``, reused unchanged); a unit with
 fewer than 4 non-space characters joins the previous one; a unit longer than 160
 characters is cut again at commas. Spans are offsets into the source text, so every unit
-is an exact ``EvidenceRefV2`` quote of the source it came from.
+is an exact ``EvidenceRefV2`` quote of the source it came from. ``layout_sentence`` tells
+the work's headings and quote source lines from its claims; ``work_units`` plans the work's
+R2.support sentences without them.
 """
 
 from __future__ import annotations
@@ -16,8 +18,10 @@ from dataclasses import dataclass
 from typing import Literal
 
 from career_lab.contracts.v2.core import EvidenceRefV2, digest
-from career_lab.contracts.v2.evaluation import CandidateEvidenceV2
-from career_lab.models.v3.units import split_sentences
+from career_lab.contracts.v2.evaluation import CandidateEvidenceV2, EvidencePackageV2
+from career_lab.models.v3 import units as support
+from career_lab.models.v3.projection import subject_texts
+from career_lab.models.v3.units import SupportUnit, split_sentences, unit_hash
 
 MIN_CHARACTERS = 4
 MAX_CHARACTERS = 160
@@ -26,6 +30,11 @@ MAX_CANDIDATES = 80
 
 UnitKind = Literal["heading", "item", "sentence", "state"]
 _HEADING = re.compile(r"[ \t]*#{1,6}[ \t]+\S")
+# The source line under a quote, as the worksheet writes it: "> — <material title> v1".
+_QUOTE_SOURCE = re.compile(r"[ \t]*>[ \t]*[—–][ \t]*\S")
+# The work-text projection (``evidence/v2/assembler.product_text``) writes each section's
+# key on its own line above the section, so a section's opening heading carries it.
+_SECTION_LABEL = re.compile(r"[a-z][a-z_]*")
 _LIST_ITEM = re.compile(r"[ \t]*(?:[-*•]|\d+\.)[ \t]+")
 _COMMAS = "，,、"
 
@@ -49,6 +58,59 @@ class Unit:
     domain: str | None = None
     valid_from_seq: int = 0
     valid_until_seq: int | None = None
+
+
+def layout_sentence(text: str) -> bool:
+    """True when every line of a work sentence is a heading or a quote source line, apart
+    from a section label line it may open with.
+
+    Such a sentence is page layout, not a claim to check against evidence. A sentence that
+    mixes either with prose or quoted text is kept.
+    """
+    lines = [line for line in text.splitlines() if line.strip()]
+    if len(lines) > 1 and _SECTION_LABEL.fullmatch(lines[0].strip()):
+        lines = lines[1:]
+    return bool(lines) and all(_HEADING.match(line) or _QUOTE_SOURCE.match(line) for line in lines)
+
+
+def work_units(package: EvidencePackageV2) -> tuple[list[SupportUnit], dict[str, int]]:
+    """The product's R2.support units of a package without the work's page layout, and the
+    sentence counts (total, judged, layout, short, over_budget); the cap applies after the skip.
+
+    The loop lives here, not in ``models/v3/units``: ``models/**`` is the registered relation
+    model's pinned inference source (``models/v3/registry.INFERENCE_CLOSURE``).
+    """
+    units: list[SupportUnit] = []
+    short = layout = over = 0
+    for ref, text in subject_texts(package):
+        base = ref.span_start or 0
+        for sentence in split_sentences(text):
+            if _visible(sentence.text) < support.MIN_CHARACTERS:
+                short += 1
+                continue
+            if layout_sentence(sentence.text):
+                layout += 1
+                continue
+            if len(units) >= support.MAX_UNITS:
+                over += 1
+                continue
+            subject = EvidenceRefV2.model_validate(
+                ref.model_dump(mode="json")
+                | {
+                    "span_start": base + sentence.start,
+                    "span_end": base + sentence.end,
+                    "quote": sentence.text,
+                }
+            )
+            units.append(SupportUnit(len(units), subject, unit_hash(subject)))
+    counts = {
+        "total": len(units) + layout + short + over,
+        "judged": len(units),
+        "layout": layout,
+        "short": short,
+        "over_budget": over,
+    }
+    return units, counts
 
 
 def _visible(text: str) -> int:

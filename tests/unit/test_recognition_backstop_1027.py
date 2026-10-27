@@ -4,6 +4,9 @@
    the retrieval record names the method and whether it fell back to BM25.
 2. The work replay keeps questions asked at the same business point in the order they were
    asked (asking does not advance the point; the store lists objects by id).
+3. The whole-PRD check counts headings and quote source lines as page layout instead of
+   judging them; every other sentence is the same unit as before, and the cap counts only
+   the sentences judged.
 """
 
 from __future__ import annotations
@@ -15,8 +18,10 @@ import pytest
 
 from career_lab.contracts.v2.core import EvidenceRefV2, VersionPoint, digest
 from career_lab.contracts.v2.evaluation import CandidateEvidenceV2, EvidencePackageV2
+from career_lab.models.v3.units import MAX_UNITS, SupportUnit, support_units
 from career_lab.recognition import behavior, judge, retrieval
 from career_lab.recognition.base import FALLBACK_REVISION
+from career_lab.recognition.units import layout_sentence, work_units
 
 
 @pytest.fixture(autouse=True)
@@ -204,3 +209,130 @@ def test_questions_still_sit_just_after_the_event_of_their_business_point() -> N
         "daniel question t-y",
         "grace question t-late",
     ]
+
+
+# 3. headings and quote source lines are layout, not claims
+
+
+@pytest.mark.parametrize(
+    ("text", "layout"),
+    [
+        ("### 背景与目标", True),
+        ("## Goals and scope", True),
+        ("> — 《经理委托：内部知识助手试点》v1", True),
+        ("> – Travel policy v1", True),
+        ("### 证据\n> — 《差旅政策》v1", True),
+        # The section label the work-text projection writes above a section's heading.
+        ("solution\n### Option A: office FAQ and onboarding only, daily index", True),
+        ("solution\n### A.", True),
+        ("need\nHypothesis: repeated questions take real effort.", False),
+        ("need\n> Field dictionary: duration_minutes = closed_at - accepted_at.", False),
+        ("solution", False),
+        ("### A\nsolution", False),
+        # A quote merged with its source line in one sentence is quoted text: kept.
+        ("> 试点只开放给人工复核过的团队\n> — 《经理委托：内部知识助手试点》v1", False),
+        ("> 引文原文。", False),
+        ("预算是3人日，容量30人。", False),
+        ("—— 我的看法", False),
+        ("— Travel policy v1", False),
+        ("#1 priority is the pilot.", False),
+        ("###No space after the hashes", False),
+        ("> —", False),
+        ("", False),
+    ],
+)
+def test_layout_sentences_are_headings_and_quote_source_lines_only(text: str, layout: bool) -> None:
+    assert layout_sentence(text) is layout
+
+
+def worksheet_text(prose: list[str]) -> str:
+    """A PRD as the worksheet saves it: heading, quote with its source line, prose."""
+    return "\n\n".join(
+        [
+            "### 背景",
+            "> 试点只开放给人工复核过的团队。\n> — 《经理委托：内部知识助手试点》v1",
+            "### 方案",
+            "".join(prose),
+        ]
+    )
+
+
+def spans(units) -> list[tuple]:
+    return [(u.subject.span_start, u.subject.span_end, u.text, u.unit_hash) for u in units]
+
+
+def without_layout(units: tuple[SupportUnit, ...]) -> list[tuple]:
+    return [row for row in spans(units) if not layout_sentence(row[2])]
+
+
+def test_the_product_plan_still_cuts_layout_sentences_as_units() -> None:
+    package = support_package(worksheet_text(["预算是3人日。", "容量30人。", "好。"]), POLICY)
+    plain = support_units(package)
+    assert [u.text for u in plain.units] == [
+        "### 背景",
+        "> 试点只开放给人工复核过的团队。",
+        "> — 《经理委托：内部知识助手试点》v1",
+        "### 方案",
+        "预算是3人日。",
+        "容量30人。",
+    ]
+    assert (plain.skipped_short, plain.over_budget) == (1, 0)
+
+
+def test_work_units_are_the_product_units_without_layout() -> None:
+    package = support_package(worksheet_text(["预算是3人日。", "容量30人。", "好。"]), POLICY)
+    units, counts = work_units(package)
+    assert counts == {"total": 7, "judged": 3, "layout": 3, "short": 1, "over_budget": 0}
+    assert [u.index for u in units] == [0, 1, 2]
+    assert spans(units) == without_layout(support_units(package).units)
+
+
+def test_a_section_heading_under_its_projected_label_is_layout() -> None:
+    # As the work-text projection joins plan sections: key line, then the section text.
+    text = (
+        "need\n"
+        + "预算是3人日。容量30人。"
+        + "\n\n"
+        + "solution\n"
+        + "### 方案A\n\n"
+        + "先开放给10人。"
+    )
+    package = support_package(text, POLICY)
+    plain = support_units(package)
+    assert [u.text for u in plain.units] == [
+        "need\n预算是3人日。",
+        "容量30人。",
+        "solution\n### 方案A",
+        "先开放给10人。",
+    ]
+    units, counts = work_units(package)
+    assert counts["layout"] == 1
+    assert [u.text for u in units] == ["need\n预算是3人日。", "容量30人。", "先开放给10人。"]
+    assert spans(units) == without_layout(plain.units)
+
+
+def test_the_unit_cap_counts_only_the_sentences_judged() -> None:
+    prose = [f"第{i}项预算是{i}人日。" for i in range(MAX_UNITS + 2)]
+    package = support_package(worksheet_text(prose), POLICY)
+    plain = support_units(package)
+    units, counts = work_units(package)
+    # 4 front sentences (3 of them layout) + 26 prose: the layout lines took 3 cap slots.
+    assert plain.over_budget == 6
+    assert (counts["layout"], counts["over_budget"], counts["judged"]) == (3, 3, MAX_UNITS)
+    assert counts["total"] == 30
+    assert [u.text for u in units] == ["> 试点只开放给人工复核过的团队。", *prose[: MAX_UNITS - 1]]
+    assert spans(units)[:21] == without_layout(plain.units)
+
+
+def test_the_pass_reports_how_many_sentences_it_judged() -> None:
+    prose = ["住宿每晚500元。", "超过上限需要经理审批。", "好。"]
+    package = support_package(worksheet_text(prose), POLICY)
+    analysis = judge.analyze_support(package, "zh")
+    sentences = analysis["sentences"]
+    assert sentences == {"total": 7, "judged": 3, "layout": 3, "short": 1, "over_budget": 0}
+    assert sentences == work_units(package)[1]
+    assert len(analysis["rows"]) == sentences["judged"]
+    assert not any(layout_sentence(row["quote"]) for row in analysis["rows"])
+    relation_record, _ = stored_records(package)
+    assert relation_record["outputs"]["sentences"] == sentences
+    assert "sentences" not in judge.summary(analysis, [], None)

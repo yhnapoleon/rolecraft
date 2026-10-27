@@ -70,7 +70,7 @@ def _subject_keys(package: EvidencePackageV2) -> set[str]:
 
 def analyze_support(package: EvidencePackageV2, language: str) -> dict[str, Any]:
     from career_lab.contracts.v2.core import ObjectRef
-    from career_lab.models.v3.units import support_units
+    from career_lab.recognition.units import work_units
 
     subjects = _subject_keys(package)
     candidates = [
@@ -79,13 +79,13 @@ def analyze_support(package: EvidencePackageV2, language: str) -> dict[str, Any]
         if canonical(c.ref.model_dump(mode="json", include=set(ObjectRef.model_fields)))
         not in subjects
     ]
-    plan = support_units(package)
+    units, sentences = work_units(package)
     rows = []
     fallback = True
     revision = FALLBACK_REVISION
     recognizer = relation.RULE_ID
     with stopwatch() as clock:
-        for unit in plan.units:
+        for unit in units:
             found = relation.judge(
                 unit.text, candidates, language=language, as_of=package.as_of.business_seq
             )
@@ -130,6 +130,7 @@ def analyze_support(package: EvidencePackageV2, language: str) -> dict[str, Any]
         "duration_ms": clock.ms,
         "deferred_queue": [r["index"] for r in deferred],
         "candidates": len(candidates),
+        "sentences": sentences,
         # One retrieval method per pass: every sentence ranks the same candidates alike.
         "retrieval": rows[0]["retrieval"] if rows else None,
     }
@@ -470,6 +471,7 @@ class RecognitionFeedback:
                 ],
                 "counts": analysis["counts"],
                 "candidates": analysis["candidates"],
+                "sentences": analysis["sentences"],
             },
             as_of=as_of,
             duration_ms=analysis["duration_ms"],
