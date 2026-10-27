@@ -139,7 +139,7 @@ export function methodsHtml(language: Language, task = 'relation') {
           );
   const rows = task === 'behavior' ? [
     [t('无监督学习', 'Unsupervised learning'), t('离散观测 HMM 从动作序列拟合隐状态，再解码工作阶段；阶段名称由训练序列的规则阶段对应命名。', 'A categorical HMM fits latent states from action sequences and decodes work phases; states are named from their correspondence with rule phases in training sequences.')],
-    [t('机器学习 · 序列距离', 'Machine learning · sequence distance'), t('DTW 计算动作序列距离，用最近参考做法作对照；距离不是概率，也没有提供逐步对应记录。', 'DTW measures action-sequence distance to select a nearest reference approach; distance is not probability, and no step-by-step alignment is recorded.')],
+    [t('机器学习 · 序列距离', 'Machine learning · sequence distance'), t('DTW 计算动作序列距离，用最近参考做法作对照；距离不是概率。记录带对齐路径时，「本次记录」逐步画出本局与这条参考的对应。', 'DTW measures action-sequence distance to select a nearest reference approach; distance is not probability. When the record includes the alignment path, This record shows the step-by-step match with that reference.')],
   ] : task === 'intent' ? [
     [t('监督学习', 'Supervised learning'), t('从带意图标签的问题学习分类，识别本次提问的类别。', 'Learn from intent-labelled questions to classify the current question.')],
     [t('经典机器学习', 'Classical machine learning'), t('字符 TF-IDF 表示问题，逻辑回归输出意图分数；前端只按展示门槛提供可选入口。', 'Character TF-IDF represents the question; logistic regression outputs intent scores. The interface uses a display threshold to offer an optional entry point.')],
