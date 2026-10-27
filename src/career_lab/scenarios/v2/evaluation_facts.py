@@ -88,6 +88,22 @@ def test_materials(test):
     return {c.object_id for c in test.citations} | {c.material_id for c in test.execution.chunks}
 
 
+def away_from_policy(test):
+    """A test without materials that its own recognition records place away from the policy:
+    the scope recognizer (not its rule fallback) stopped it as out of scope, or the nearest
+    retrieved passages all come from other material. Without such a record it stays unknown."""
+    for record in test.recognition or ():
+        if record.task == "scope" and record.label == "out" and not record.fallback:
+            return True
+        if record.task == "retrieval":
+            top = record.outputs.get("top")
+            rows = top if isinstance(top, list) else []
+            ids = [row.get("material_id") for row in rows if isinstance(row, dict)]
+            if ids and all(isinstance(i, str) for i in ids) and "policy" not in ids:
+                return True
+    return False
+
+
 def relevant_to_policy(test, locale):
     """The test checks the policy: it asked the hotel question or used the policy."""
     return "policy" in test_materials(test) or hotel_question(test.query, locale)
@@ -474,7 +490,7 @@ class ScenarioFactAdapter:
                             and test.execution.used_versions.get("policy") == policy_version
                         ):
                             passing.append(test.id)
-                elif not test_materials(test):
+                elif not test_materials(test) and not away_from_policy(test):
                     classified = False
             add("dynamic_test_ids", dynamic, config_source, *test_refs)
             add("dynamic_classification_complete", classified, config_source, *test_refs)
