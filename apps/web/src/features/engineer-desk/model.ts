@@ -231,6 +231,14 @@ export type CodeAttachment = Pick<
   'id' | 'executor' | 'code_sha256' | 'status' | 'counts' | 'hidden' | 'all_passed'
 >;
 /** A colleague's run and what became of its report (engineer/session.py run_daniel, decide). */
+/** Daniel's rule check of a trial (engineer/colleague.py `target_check`): whether the failure
+ * the handed-over questions showed is gone. It cannot say whether an answer's content is right. */
+export interface TargetCheck {
+  readonly failures: readonly ('stale_unwarned' | 'no_hit')[];
+  readonly questions: number;
+  readonly cleared: number;
+}
+
 export interface Handover {
   readonly state:
     | 'queued'
@@ -251,6 +259,8 @@ export interface Handover {
     readonly id: string;
     readonly why: string;
     readonly changes: Readonly<Record<string, { before: unknown; after: unknown }>>;
+    /** The chosen trial's target check; absent on records from before it was kept. */
+    readonly target?: TargetCheck | null;
   };
   readonly tried?: readonly {
     readonly rule: string;
@@ -258,6 +268,7 @@ export interface Handover {
     readonly changes: Readonly<Record<string, { before: unknown; after: unknown }>>;
     /** Requested settings the trial's configuration could not put into effect, and why. */
     readonly effective_differences?: Readonly<Record<string, string>>;
+    readonly target?: TargetCheck | null;
     readonly counts: {
       readonly passed: number;
       readonly failed: number;
@@ -267,6 +278,8 @@ export interface Handover {
     };
   }[];
   readonly skipped?: readonly { readonly rule: string; readonly code: string }[];
+  /** How many handed-over questions Daniel's re-execution answered as recorded. */
+  readonly reproduced?: { readonly matched: number; readonly total: number };
   readonly review_id?: string;
   readonly review_status?: string;
   readonly failed_reason?: string;

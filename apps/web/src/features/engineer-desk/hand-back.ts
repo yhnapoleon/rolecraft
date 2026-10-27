@@ -12,7 +12,7 @@ import { reviewViewOptions } from '../engineer-report/page';
 import { failureText } from './api';
 import { fieldName, valueText } from './copy';
 import type { HandedBack } from './local-state';
-import type { Change, JsonValue } from './model';
+import type { Change, JsonValue, TargetCheck } from './model';
 
 /** Why the product manager reopens a delivered practice to take the review in: their own words,
  * since the board's revision note quotes it back ("You said: '…'"). */
@@ -27,6 +27,69 @@ export interface ReviewResult {
   readonly target: 'fixed' | 'not_fixed' | 'partial' | 'unknown';
   readonly newFailures: number;
   readonly compared: boolean;
+  /** Daniel's rule check, when the target was read from it: the review alone had no expectation
+   * to check handed-over questions by. It covers their failure, not whether an answer is right. */
+  readonly check?: TargetCheck;
+}
+
+/** Daniel's report: a target the review could not verify is read from his rule check of the
+ * failure the handed-over questions showed. A target the review did verify stays as it is. */
+export function withTargetCheck(r: ReviewResult, check?: TargetCheck | null): ReviewResult {
+  if (r.target !== 'unknown' || !check || !check.questions) return r;
+  const target =
+    check.cleared === check.questions ? 'fixed' : check.cleared > 0 ? 'partial' : 'not_fixed';
+  return { ...r, target, check };
+}
+
+/** The failure the target showed, as a verb phrase after "no longer" / "still"; English takes
+ * the plural for a count of questions. */
+function failureWords(check: TargetCheck, plural = false): string {
+  const [only, ...more] = check.failures;
+  const en = (one: string, many: string) => (plural ? many : one);
+  if (more.length || !only) return T('出现原来的问题', en('fails as before', 'fail as before'));
+  return only === 'no_hit'
+    ? T('检索不到资料', en('finds no source', 'find no source'))
+    : T(
+        '在不提醒的情况下引用过期资料',
+        en('cites an outdated source without a warning', 'cite an outdated source without a warning'),
+      );
+}
+
+/** The headline's lead for a target read from Daniel's rule check. */
+function checkedLead(r: ReviewResult & { check: TargetCheck }): string {
+  const { check } = r;
+  const words = failureWords(check);
+  if (r.target === 'fixed') return T(`目标：不再${words} · 已核实`, `Target: no longer ${words} · verified`);
+  if (r.target === 'partial')
+    return T(
+      `目标：交来的 ${check.questions} 道题里 ${check.cleared} 道不再${words}`,
+      `Target: ${check.cleared} of ${check.questions} handed-over questions no longer ${failureWords(check, true)}`,
+    );
+  return T(`目标：仍${words}`, `Target: still ${words}`);
+}
+
+/** The line under a colleague's headline: what the rule check cannot tell, and what can. */
+export function targetNote(
+  r: ReviewResult,
+  colleague: boolean,
+  reproduced?: { readonly matched: number; readonly total: number },
+): string {
+  if (!colleague) return '';
+  if (r.check)
+    return T(
+      '答案内容对不对，规则核实不了：在评测台写一道回归题来判。',
+      "Whether the answer's content is right is beyond a rule check: judge it with a regression case on the evaluation bench.",
+    );
+  if (r.target !== 'unknown') return '';
+  if (reproduced && reproduced.matched < reproduced.total)
+    return T(
+      'Daniel 在原快照上重跑交来的题，结果和你测到的不一样，规则核实不了它原来的问题；目标是否修好，用评测台的回归题来判。',
+      'Daniel re-ran the handed-over questions on their original snapshot and got a different result from yours, so no rule can check their original failure; judge whether the target is fixed with a regression case on the evaluation bench.',
+    );
+  return T(
+    '交来的题没有你写的期望，也没有规则能核实的失败（如过期引用、检索不到）；目标是否修好，用评测台的回归题来判。',
+    'The handed-over questions carry no expectation of yours and no failure a rule can check (such as an outdated citation or nothing found); judge whether the target is fixed with a regression case on the evaluation bench.',
+  );
 }
 
 export function reviewResult(record: EngineerReviewRecord, language: 'zh' | 'en'): ReviewResult {
@@ -53,6 +116,14 @@ const failures = (n: number) => (n === 1 ? 'failure' : 'failures');
 
 /** The one sentence (the report's headline says the same). */
 export function outcomeSentence(r: ReviewResult): string {
+  if (r.check) {
+    const lead = checkedLead({ ...r, check: r.check });
+    const n = r.newFailures;
+    if (n > 0) return T(`${lead}；另有 ${n} 处新增失败`, `${lead}; ${n} new ${failures(n)}`);
+    if (r.target === 'fixed' && !r.compared)
+      return T(`${lead}；还不知道有没有新增失败`, `${lead}; not yet known whether anything new fails`);
+    return lead;
+  }
   const lead = {
     fixed: T('目标修好了', 'Target fixed'),
     partial: T('目标部分修好', 'Target partly fixed'),
@@ -79,6 +150,11 @@ export function outcomeCaution(r: ReviewResult): string {
       `This review has ${r.newFailures} new ${failures(r.newFailures)}; updating brings it into the pilot.`,
     );
   if (r.target === 'unknown') return T('目标是否修好仍未决；更新设置不能证明目标已修复。', 'The target is still unverified; applying settings does not prove it is fixed.');
+  if (r.check && r.target !== 'fixed')
+    return T(
+      `这次试跑里，目标仍${failureWords(r.check)}；更新试点消除不了它。`,
+      `In this trial the target still ${failureWords(r.check)}; updating the pilot does not clear it.`,
+    );
   if (r.target !== 'fixed')
     return T(
       '这份复核里目标没修好，更新试点也修不好它。',
@@ -125,8 +201,13 @@ export function handBackSignal(back: HandedBack): {
     return { kicker, text: T(`${subject}：没有全过`, `${subject}: not all clear`), tone: 'warn' };
   const n = r.newFailures;
   const news = T(`新增 ${n} 处失败`, `${n} new ${failures(n)}`);
-  const state =
-    r.target === 'fixed'
+  const state = r.check
+    ? r.target === 'fixed'
+      ? T(`${subject}：原来的问题已消除`, `${subject}: failure cleared`)
+      : r.target === 'partial'
+        ? T(`${subject}：原来的问题部分消除`, `${subject}: failure partly cleared`)
+        : T(`${subject}：原来的问题还在`, `${subject}: still fails as before`)
+    : r.target === 'fixed'
       ? T(`${subject}已修好`, `${subject} fixed`)
       : r.target === 'partial'
         ? T(`${subject}部分修好`, `${subject} partly fixed`)
@@ -214,10 +295,15 @@ export function handBackCommand(pilot: Pilot, rows: readonly HandBackRow[]): Set
   };
 }
 
-/** Read the target and two regression scopes independently; a missing comparison is not zero. */
-export function reviewDetails(record: EngineerReviewRecord, language: 'zh' | 'en') {
+/** Read the target and two regression scopes independently; a missing comparison is not zero.
+ * Daniel's report passes his rule check, which the target is read from (`withTargetCheck`). */
+export function reviewDetails(
+  record: EngineerReviewRecord,
+  language: 'zh' | 'en',
+  check?: TargetCheck | null,
+) {
   const t = (zh: string, en: string) => (language === 'zh' ? zh : en);
-  const result = reviewResult(record, language);
+  const result = withTargetCheck(reviewResult(record, language), check);
   const rows = record.report.public_results;
   const publicNew = new Set(
     record.report.findings
@@ -225,12 +311,32 @@ export function reviewDetails(record: EngineerReviewRecord, language: 'zh' | 'en
       .flatMap((f) => f.probe_ids),
   ).size;
   const hidden = record.report.hidden_comparison;
-  const target = {
-    fixed: t('已修好', 'Fixed'),
-    partial: t('部分修好', 'Partly fixed'),
-    not_fixed: t('未修好', 'Not fixed'),
-    unknown: t('未决；现有复核不能确认', 'Unverified by this review'),
-  }[result.target];
+  const words = result.check ? failureWords(result.check) : '';
+  const target = result.check
+    ? {
+        fixed: t(
+          `已核实（规则）：不再${words}；答案内容未核实`,
+          `Verified by rule: no longer ${words}; answer content not verified`,
+        ),
+        partial: t(
+          `部分（规则）：${result.check.cleared}/${result.check.questions} 道题不再${words}`,
+          `Partly (by rule): ${result.check.cleared} of ${result.check.questions} questions no longer ${failureWords(result.check, true)}`,
+        ),
+        not_fixed: t(`未消除（规则）：仍${words}`, `Not cleared (by rule): still ${words}`),
+        unknown: '',
+      }[result.target]
+    : {
+        fixed: t('已修好', 'Fixed'),
+        partial: t('部分修好', 'Partly fixed'),
+        not_fixed: t('未修好', 'Not fixed'),
+        unknown: t('未决；现有复核不能确认', 'Unverified by this review'),
+      }[result.target];
+  // Why not to adopt yet, in a few words.
+  const short = result.check
+    ? result.target === 'partial'
+      ? t('交来的题只有一部分不再出错', 'only some handed-over questions no longer fail')
+      : t(`目标仍${words}`, `the target still ${words}`)
+    : target;
   return [
     { label: t('目标核验', 'Target verification'), text: target },
     {
@@ -252,13 +358,18 @@ export function reviewDetails(record: EngineerReviewRecord, language: 'zh' | 'en
     {
       label: t('是否采用', 'Adoption'),
       text: outcomeClean(result)
-        ? t(
-            '复核支持采用；仍由你确认更新设置',
-            'Review supports adoption; you still confirm the settings update',
-          )
+        ? result.check
+          ? t(
+              '可以采用：目标原来的问题已消除，没有新增失败。答案内容用评测台的回归题确认；设置更新仍由你确认',
+              'Supports adoption: the target no longer fails as before, and nothing new fails. Confirm the answer content with a regression case on the evaluation bench; you still confirm the settings update',
+            )
+          : t(
+              '复核支持采用；仍由你确认更新设置',
+              'Review supports adoption; you still confirm the settings update',
+            )
         : t('暂不建议采用：', 'Adoption not recommended yet: ') +
           (result.target !== 'fixed'
-            ? target
+            ? short
             : result.newFailures > 0
               ? t('存在新增失败', 'new regressions exist')
               : t('回归比较未完成', 'regression comparison incomplete')),

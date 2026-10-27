@@ -111,6 +111,13 @@ def test_daniel_reproduces_tries_and_signs_by_rule_under_his_own_name(eng: Eng) 
     assert handover["rule"]["id"] == "freshness_warn"
     assert handover["rule"]["why"]
     assert handover["tried"][0]["counts"]["failed"] == 0
+    # The handed-over question cited an outdated source with no warning; every trial checks by
+    # rule whether that failure is gone. Warning clears it; so does handing over to a person.
+    cleared = {"failures": ["stale_unwarned"], "questions": 1, "cleared": 1}
+    assert handover["rule"]["target"] == cleared
+    tried = {t["rule"]: t["target"] for t in handover["tried"]}
+    assert tried["freshness_warn"] == cleared
+    assert tried["freshness_fallback"] == cleared
     (review,) = ticket["reviews"]
     assert review["signed_by"]["id"] == "colleague-tech-lead"
     assert review["signed_by"]["kind"] == "system"
@@ -123,6 +130,39 @@ def test_daniel_reproduces_tries_and_signs_by_rule_under_his_own_name(eng: Eng) 
     # The person never signs engineering work in this practice.
     refused = sign(eng, ticket, ticket["latest_draft"]["id"], "pm-sign")
     assert refused.status_code == 409 and "learner_role_cannot_sign" in refused.text
+
+
+def test_a_failure_daniel_cannot_reproduce_is_not_verified_by_rule(
+    eng: Eng, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QA S-3, found on the real stack: a handed-over question Daniel's re-execution answers
+    differently (it retrieved nothing) must never read as its failure cleared."""
+    from career_lab.engineer.session import EngineerService
+
+    original = EngineerService.reproduce
+
+    def differs(self: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        out = original(self, *args, **kwargs)
+        for row in out["reproduction"]["rows"]:
+            row["matches_record"] = False
+            row["reproduced"] = {
+                **row["reproduced"],
+                "status": "fallback",
+                "error_code": "no_retrieval_hit",
+                "citations": [],
+            }
+        out["reproduction"]["counts"] = {"matched": 0, "changed": 1, "total": 1}
+        return out
+
+    monkeypatch.setattr(EngineerService, "reproduce", differs)
+    eng.ok(role(eng, "pm"))
+    ids = pm_tests(eng)
+    body = {"from": "tests", "test_ids": ids, "assignee": "colleague"}
+    handover = eng.ok(eng.call(TICKETS, CREATE, body, "daniel-differs"))["ticket"]["handover"]
+    assert handover["state"] == "reported"
+    assert handover["rule"]["target"] is None
+    assert all(t["target"] is None for t in handover["tried"])
+    assert handover["reproduced"] == {"matched": 0, "total": 1}
 
 
 def test_daniels_trials_carry_the_settings_not_in_effect(eng: Eng) -> None:
@@ -164,6 +204,10 @@ def test_daniels_trials_carry_the_settings_not_in_effect(eng: Eng) -> None:
         "update_strategy": "realtime_sync_not_provisioned"
     }
     assert "freshness_guard" not in tried["freshness_warn"]["effective_differences"]
+    # Real-time not in effect leaves the stale answer as it was: the target is not cleared.
+    assert tried["realtime_index"]["target"]["cleared"] == 0
+    assert tried["freshness_warn"]["target"]["cleared"] == 1
+    assert ticket["handover"]["rule"]["id"] == "freshness_warn"
 
 
 def test_the_product_manager_decides_and_apply_is_their_own_configuration_apply(eng: Eng) -> None:

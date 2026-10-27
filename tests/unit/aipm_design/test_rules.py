@@ -218,3 +218,21 @@ def test_shared_fixture_boundary_cases():
         assert any(f["finding"] == "violation" for f in findings) is (outcome == "violation")
         if outcome == "plan_only":
             assert rows[0]["execution_support"] == "plan_only"
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_a_proposed_tool_is_a_gap_only_without_who_confirms_and_when(language):
+    """QA S-7: a tool the assistant cannot run yet is a fair proposal. Only a proposal that names
+    no one to confirm before anything runs is flagged; naming them is never a misconception."""
+    proposal = {"route": "agent_confirmation", "target_action": "prepare_draft"}
+    rows, findings = assess({**proposal, "confirmation_point": ""}, language=language)
+    assert rows[0]["execution_support"] == "plan_only"
+    flagged = [f for f in findings if f["finding"] == "improve"]
+    assert len(flagged) == 1
+    assert ("确认" if language == "zh" else "who confirms and when") in flagged[0]["message"]
+    rows, findings = assess(
+        {**proposal, "confirmation_point": "the finance approver before submission"},
+        language=language,
+    )
+    assert rows[0]["execution_support"] == "plan_only"
+    assert all(f["finding"] not in {"improve", "violation"} for f in findings)

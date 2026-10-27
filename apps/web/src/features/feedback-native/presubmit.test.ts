@@ -123,7 +123,7 @@ describe('pre-submission preview view', () => {
     expect(view.count?.text).toBe('2/5 met');
     expect(lines(view)).toEqual([
       [true, '20 participants ≤ capacity 30', null],
-      [true, 'Dev-days 2 ≤ 3; launch day 7 ≤ deadline day 7', null],
+      [true, 'Person-days 2 ≤ 3; launch day 7 ≤ deadline day 7', null],
       [false, 'Config v2 not tested yet (config v1: 1 run)', 'Run a test'],
       [false, 'No retest on config v2 since the policy update (1 retest on config v1)', 'Retest'],
       [false, '1 adjustment since the policy update; config v2 not retested yet', 'Retest'],
@@ -165,7 +165,7 @@ describe('pre-submission preview view', () => {
     ]);
     expect(lines(presubmitView(over, 'en'))[2]).toEqual([
       false,
-      'Needs 7 dev-days > 3 available; launch day 9 > deadline day 7',
+      'Needs 7 person-days > 3 available; launch day 9 > deadline day 7',
       'Request resources',
     ]);
   });

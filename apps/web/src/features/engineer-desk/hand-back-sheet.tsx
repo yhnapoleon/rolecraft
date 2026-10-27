@@ -8,7 +8,7 @@ import { T } from '../../app/i18n';
 import { Button, Sheet, SheetContent, SheetDescription, SheetTitle } from '../../ui-kit';
 import { WORK_COST } from '../../app/vocab';
 import type { HandBackRow } from './hand-back';
-import type { DiffRow, TicketDetail } from './model';
+import type { DiffRow, TargetCheck, TicketDetail } from './model';
 
 export interface HandBackView {
   readonly open: boolean;
@@ -21,6 +21,8 @@ export interface HandBackView {
   readonly clean: boolean;
   /** What the review came to: the report headline's sentence. */
   readonly title: string;
+  /** Under a colleague's headline: what his rule check cannot tell, and what can ('' if none). */
+  readonly note?: string;
   /** What comes with updating from a review that is not clean ('' when clean). */
   readonly caution: string;
   readonly details?: readonly {label: string; text: string}[];
@@ -66,6 +68,8 @@ export interface ColleagueRun {
     changes: string;
     /** Why the setting this fix changes was not in effect in its trial (a server code), or null. */
     notInEffect: string | null;
+    /** Whether the trial cleared the handed-over questions' failure, by rule; null if unknown. */
+    target: TargetCheck | null;
     passed: number;
     total: number;
     chosen: boolean;
@@ -164,6 +168,7 @@ export function colleagueRun(
       rule: t.rule,
       changes: said(t.changes),
       notInEffect: t.effective_differences?.[FIXES[t.rule]?.field ?? ''] ?? null,
+      target: t.target?.questions ? t.target : null,
       passed: t.counts.passed,
       total: t.counts.passed + t.counts.failed + t.counts.errors,
       chosen: t.rule === h.rule?.id,
@@ -179,6 +184,8 @@ interface FixRow {
   readonly chosen: boolean;
   /** The trial reading ("Public checks 3/4"), or a dash when it was not tried. */
   readonly trial: string;
+  /** Above it: whether the handed-over questions' failure is gone ('' when not checked). */
+  readonly target: string;
   /** The line under the fix: why it was not tried, its setting not in effect, or that it changed
    * nothing because the settings already request its value. */
   readonly note: string;
@@ -187,12 +194,24 @@ interface FixRow {
   readonly inert: boolean;
 }
 
+/** A trial's target reading: whether the handed-over questions' failure is gone, by rule. */
+export function targetText(check: TargetCheck | null): string {
+  if (!check) return '';
+  if (check.cleared === check.questions) return T('目标：已消除', 'Target: cleared');
+  if (!check.cleared) return T('目标：仍出错', 'Target: still fails');
+  return T(
+    `目标：${check.cleared}/${check.questions} 已消除`,
+    `Target: ${check.cleared} of ${check.questions} cleared`,
+  );
+}
+
 function fixRows(run: ColleagueRun): FixRow[] {
   return [
     ...run.tried.map((t) => ({
       rule: t.rule,
       chosen: t.chosen,
       trial: T(`公开检查 ${t.passed}/${t.total}`, `Public checks ${t.passed}/${t.total}`),
+      target: targetText(t.target),
       note: t.notInEffect
         ? notInEffectText(t.notInEffect)
         : t.changes
@@ -206,6 +225,7 @@ function fixRows(run: ColleagueRun): FixRow[] {
       rule: x.rule,
       chosen: false,
       trial: '—',
+      target: '',
       note: skippedText(x.code),
       skipped: true,
       inert: false,
@@ -265,8 +285,8 @@ export function FixTable({ run }: { run: ColleagueRun }) {
         </h3>
         <p className="tw:m-0 tw:text-[12.5px] tw:text-ink-2">
           {T(
-            '用哪一个由你决定。试跑包含交出的题和公开检查。',
-            'You decide which to use. Trials include the tests you handed over and public checks.',
+            '用哪一个由你决定。每次试跑先用规则核实交来的题原来的问题还在不在，再跑公开检查。',
+            "You decide which to use. Each trial first checks by rule whether the handed-over questions still fail as before, then runs the public checks.",
           )}
         </p>
       </header>
@@ -307,6 +327,7 @@ export function FixTable({ run }: { run: ColleagueRun }) {
                 <td className={td(r)}>{staff(r)}</td>
                 <td className={td(r)}>{cell(r, (f) => t2(f.load))}</td>
                 <td className={`${td(r)} tw:text-right tw:tabular-nums tw:whitespace-nowrap`}>
+                  {r.target && <span className="tw:block">{r.target}</span>}
                   {r.trial}
                 </td>
               </tr>
@@ -336,7 +357,10 @@ export function FixTable({ run }: { run: ColleagueRun }) {
                 {ruleName(r.rule)}
                 {r.chosen && <Pick />}
               </span>
-              <span className="tw:text-[12.5px] tw:tabular-nums tw:whitespace-nowrap">{r.trial}</span>
+              <span className="tw:text-right tw:text-[12.5px] tw:tabular-nums tw:whitespace-nowrap">
+                {r.target && <span className="tw:block">{r.target}</span>}
+                {r.trial}
+              </span>
             </div>
             {r.note && <p className="tw:m-0 tw:text-[12.5px] tw:text-ink-3">{r.note}</p>}
             <dl className="tw:m-0 tw:grid tw:grid-cols-2 tw:items-start tw:gap-x-4 tw:gap-y-1.5 tw:text-[12px]">
@@ -501,6 +525,10 @@ export function HandBackSheet(v: HandBackView) {
                 {title}
               </SheetTitle>
             </div>
+            {v.note && (
+              // Under the mark's width, aligned with the headline.
+              <p className="tw:m-0 tw:pl-[50px] tw:text-[13.5px] tw:text-ink-2">{v.note}</p>
+            )}
           </header>
           {v.loading ? (
             <p className="tw:m-0 tw:text-ink-3">{T('正在读取复核…', 'Reading the review…')}</p>

@@ -109,13 +109,17 @@ describe('195 feedback item by item: the view', () => {
 
   it('counts by items, never a percentage, and names model advice only when there is some', () => {
     const plain = feedbackItemsView(report(), { language: 'zh', kind: 'submission' });
-    expect(plain.count).toBe('规则核实 5 项／共 6 项适用 · 还不知道 2 项');
+    // QA G-10: the rule-checked item left as a range is shown, and counted, as not known yet,
+    // so the two counts add up to the total.
+    expect(plain.count).toBe('规则核实 4 项／共 6 项适用 · 还不知道 2 项');
+    expect(plain.met.length + plain.unmet.length).toBe(4);
+    expect(plain.unknown.length).toBe(2);
     const advised = feedbackItemsView(report(), {
       language: 'en',
       kind: 'submission',
       legacyAdvice: [{ ...items[4], source: 'model_advice', label: 'SUPPORTED' }],
     });
-    expect(advised.count).toBe('5 of 6 checked by rules · 2 can’t tell yet (model advice on 1)');
+    expect(advised.count).toBe('4 of 6 checked by rules · 2 can’t tell yet (model advice on 1)');
     expect(advised.count).not.toMatch(/%/);
   });
 

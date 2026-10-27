@@ -27,6 +27,8 @@ const counts = (passed: number, failed: number, unchecked = 0) => ({
 // requested real-time updates without the person-days, so that candidate changed nothing and
 // every trial ran with real-time not in effect.
 const notInEffect = { update_strategy: 'realtime_sync_not_provisioned' };
+// Daniel's rule check of each trial: the handed-over question cited an outdated source unwarned.
+const cleared = (n: number) => ({ failures: ['stale_unwarned' as const], questions: 1, cleared: n });
 const handover: NonNullable<TicketDetail['handover']> = {
   state: 'reported',
   actor: { name: 'Daniel', role_id: 'tech_lead', orchestration: 'rule' },
@@ -41,6 +43,7 @@ const handover: NonNullable<TicketDetail['handover']> = {
       trial_id: 'trial-a',
       changes: { freshness_guard: { before: 'none', after: 'warn' } },
       effective_differences: notInEffect,
+      target: cleared(1),
       counts: counts(4, 0),
     },
     {
@@ -48,6 +51,7 @@ const handover: NonNullable<TicketDetail['handover']> = {
       trial_id: 'trial-b',
       changes: {},
       effective_differences: notInEffect,
+      target: cleared(0),
       counts: counts(3, 1),
     },
     {
@@ -55,6 +59,7 @@ const handover: NonNullable<TicketDetail['handover']> = {
       trial_id: 'trial-c',
       changes: { freshness_guard: { before: 'none', after: 'fallback' } },
       effective_differences: notInEffect,
+      target: cleared(1),
       counts: counts(3, 1, 1),
     },
   ],
@@ -143,16 +148,18 @@ describe('the fix table', () => {
     const html = renderToStaticMarkup(<FixTable run={run()} />);
     const table = text(tableOf(html));
     expect(html).toContain('What Daniel tried');
-    expect(html).toContain('You decide which to use.');
+    expect(decode(html)).toContain(
+      "You decide which to use. Each trial first checks by rule whether the handed-over questions still fail as before, then runs the public checks.",
+    );
     expect(table).toContain('Fix Changes Person-days Staff will see Load on people Trial');
     expect(table).toContain(
-      'Warn when the index lags ● Daniel\'s pick Up to date? No new work item The old answer, prefixed with "the source may have changed" Unchanged Public checks 4/4',
+      'Warn when the index lags ● Daniel\'s pick Up to date? No new work item The old answer, prefixed with "the source may have changed" Unchanged Target: cleared Public checks 4/4',
     );
     expect(table).toContain(
-      'Rebuild the index on every source change Up to date? · offline Real-time sync, 5 person-days Same as now: this change is not in effect Unchanged Public checks 3/4 Not in effect: real-time sync needs 5 person-days',
+      'Rebuild the index on every source change Up to date? · offline Real-time sync, 5 person-days Same as now: this change is not in effect Unchanged Target: still fails Public checks 3/4 Not in effect: real-time sync needs 5 person-days',
     );
     expect(table).toContain(
-      'Hand over when the index lags Up to date? → Who takes over No new work item No automatic answer; handed to a person Higher: these questions go to people while the index lags Public checks 3/4',
+      'Hand over when the index lags Up to date? → Who takes over No new work item No automatic answer; handed to a person Higher: these questions go to people while the index lags Target: cleared Public checks 3/4',
     );
     expect(table).toContain(
       'Lower the minimum relevance score Found No new work item Finds passages more often, including less relevant ones Fewer handovers, more risk of wrong answers — Not tried: this ticket does not allow changing this setting.',
@@ -166,10 +173,10 @@ describe('the fix table', () => {
     const table = text(tableOf(renderToStaticMarkup(<FixTable run={run()} />)));
     expect(table).toContain('修法 改哪一环 人日 员工会看到 人工负担 试跑');
     expect(table).toContain(
-      '索引落后时提醒 ● Daniel 选这个 资料新不新 不需要新工作项 旧答案，前面加一句「资料可能已更新」 不变 公开检查 4/4',
+      '索引落后时提醒 ● Daniel 选这个 资料新不新 不需要新工作项 旧答案，前面加一句「资料可能已更新」 不变 目标：已消除 公开检查 4/4',
     );
     expect(table).toContain(
-      '源文件一变就重建索引 资料新不新 · 离线 实时同步 5 人日 和现在一样：这项改动还没生效 不变 公开检查 3/4 还没生效：实时同步要 5 人日',
+      '源文件一变就重建索引 资料新不新 · 离线 实时同步 5 人日 和现在一样：这项改动还没生效 不变 目标：仍出错 公开检查 3/4 还没生效：实时同步要 5 人日',
     );
     expect(table).toContain(
       '索引落后时转人工 资料新不新 → 答不了谁接 不需要新工作项 不自动回答，转给人工 增加：索引落后期间这类问题都转人工',
@@ -187,7 +194,7 @@ describe('the fix table', () => {
       tableOf(renderToStaticMarkup(<FixTable run={colleagueRun(older, { used: 1, limit: 3 }, said)} />)),
     );
     expect(table).toContain(
-      'Answers from the latest source Unchanged Public checks 3/4 No change: the settings already request this value',
+      'Answers from the latest source Unchanged Target: still fails Public checks 3/4 No change: the settings already request this value',
     );
     expect(table).not.toContain('Not in effect');
   });
@@ -197,7 +204,8 @@ describe('the fix table', () => {
     const table = tableOf(renderToStaticMarkup(<FixTable run={run()} />));
     const at = table.indexOf('Rebuild the index on every source change');
     const row = table.slice(at, table.indexOf('</tr>', at));
-    expect(text(row.slice(row.lastIndexOf('<td')))).toBe(' Public checks 3/4 ');
+    // The trial column holds the target check and the public checks, nothing else.
+    expect(text(row.slice(row.lastIndexOf('<td')))).toBe(' Target: still fails Public checks 3/4 ');
     const next = table.slice(table.indexOf('</tr>', at));
     expect(next).toMatch(
       /^<\/tr><tr><td colSpan="6"[^>]*>Not in effect: real-time sync needs 5 person-days<\/td><\/tr>/,
@@ -223,7 +231,7 @@ describe('the fix table', () => {
     const at = cards.indexOf('Rebuild the index on every source change');
     const card = cards.slice(cards.lastIndexOf('<li', at), cards.indexOf('</li>', at));
     expect(text(card)).toMatch(
-      /^ Rebuild the index on every source change Public checks 3\/4 Not in effect: real-time sync needs 5 person-days Changes/,
+      /^ Rebuild the index on every source change Target: still fails Public checks 3\/4 Not in effect: real-time sync needs 5 person-days Changes/,
     );
     expect(card).toContain('tw:grid-cols-[minmax(0,1fr)_auto]');
     expect(card).toContain('tw:items-start');

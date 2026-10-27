@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "aipm-coverage-4",
+  "revision": "aipm-coverage-5",
   "note": "Server-only. Labels and look_again name topics and sources, never the expected conclusion.",
   "items": [
     {
@@ -450,8 +450,8 @@
       "severity": "medium",
       "owner": "tech",
       "label": {
-        "zh": "拟议工具没冒充已可执行",
-        "en": "Proposed tools not passed off as runnable"
+        "zh": "拟议工具写明谁确认、何时确认",
+        "en": "Proposed tools say who confirms and when"
       },
       "look_again": {
         "zh": "再看看当前能力与配置项",
@@ -468,8 +468,8 @@
         ]
       },
       "model_check": {
-        "zh": "这一节是否把助手现在没有的执行工具（直接提交、修改系统、调用外部系统）写成已经能做？写成已能执行判 wrong；明确标为计划或需要新工具判 covered；没谈执行能力判 missing。",
-        "en": "Does this section describe execution tools the assistant does not have now (submitting, changing systems, calling external systems) as already available? Claiming they already work is wrong; marking them as planned or needing new tools is covered; not addressing execution is missing."
+        "zh": "对于助手现在还没有的执行工具（直接提交、修改系统、调用外部系统），这一节是写成已经能做，还是标为方案并写明执行前由谁、在什么时点确认？写成已能执行判 wrong；标为方案并写明确认人和时点判 covered；没谈执行能力或确认判 missing。",
+        "en": "For execution tools the assistant does not have now (submitting, changing systems, calling external systems), does this section describe them as already available, or as a proposal that names who confirms, and when, before anything runs? Claiming they already work is wrong; a proposal naming who confirms and when is covered; not addressing execution or confirmation is missing."
       }
     },
     {

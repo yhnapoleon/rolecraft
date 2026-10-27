@@ -135,8 +135,7 @@ def test_a_deadline_reads_as_a_day(language, expected):
             "en",
             "approved",
             {"dev_days": 6, "deadline_day": 9},
-            "Deadline day: requested day 9 · approved day 9; "
-            "Person-days: requested 6 · approved 6",
+            "Deadline day: requested day 9 · approved day 9; Person-days: requested 6 · approved 6",
             id="en-approved",
         ),
         pytest.param(

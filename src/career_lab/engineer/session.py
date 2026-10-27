@@ -67,10 +67,12 @@ from .colleague import (
     GRACE_ACTOR,
     credential,
     facts_of,
+    failure_of,
     grace_reply,
     grace_rule,
     pick,
     rules_for,
+    target_check,
 )
 from .execution import matches, run_query, suite_probes
 from .files import encode, file_ref, publish, retained_documentation
@@ -546,7 +548,9 @@ class EngineerService:
         run = f"{request_id}-daniel-{len(ticket.get('handover', {}).get('runs', []))}"
         try:
             self.handover_state(sid, ticket_id, state="reproducing", started_at=now())
-            self.reproduce(store, TicketTarget(ticket_id=ticket_id), auth, run + "-reproduce")
+            reproduction = self.reproduce(
+                store, TicketTarget(ticket_id=ticket_id), auth, run + "-reproduce"
+            )["reproduction"]
             index, pack_files = verified_pack(
                 store,
                 module,
@@ -560,6 +564,24 @@ class EngineerService:
             rules = rules_for(facts_of(targets))
             if not rules:
                 return self.daniel_failed(module, sid, ticket_id, "no_rule")
+            # The failure each handed-over question showed, checked again in every trial. The
+            # trials run on the reproduced snapshot, so the targets' source versions hold. Only a
+            # failure Daniel's own reproduction shows again counts: a question his re-execution
+            # answers differently (say, retrieves nothing) cannot be verified by rule.
+            sources: dict[str, int] = {}
+            for test in targets:
+                for key, version in test.execution.source_versions.items():
+                    sources[key] = max(version, sources.get(key, version))
+
+            def failure(behavior: dict[str, Any]) -> str | None:
+                cited = [(c["object_id"], c["version"]) for c in behavior["citations"]]
+                return failure_of(behavior["status"], behavior["error_code"], cited, sources)
+
+            failing = {
+                row["query"]: shown
+                for row in reproduction["rows"]
+                if (shown := failure(row["recorded"])) and failure(row["reproduced"]) == shown
+            }
             self.handover_state(sid, ticket_id, state="trying")
             tried, skipped = [], []
             for rule in rules:
@@ -574,6 +596,7 @@ class EngineerService:
                     auth,
                     f"{run}-trial-{rule.id}",
                 )["trial"]
+                out["target"] = target_check(failing, out["rows"], sources)
                 tried.append((rule, out))
             if not tried:
                 return self.daniel_failed(module, sid, ticket_id, "no_valid_candidate", skipped)
@@ -638,7 +661,12 @@ class EngineerService:
                 ticket_id,
                 state="reported",
                 actor=DANIEL_ACTOR,
-                rule={"id": rule.id, "why": rule.why[language], "changes": changes},
+                rule={
+                    "id": rule.id,
+                    "why": rule.why[language],
+                    "changes": changes,
+                    "target": chosen["target"],
+                },
                 tried=[
                     {
                         "rule": r.id,
@@ -647,10 +675,17 @@ class EngineerService:
                         "counts": t["counts"],
                         # As the trial recorded it: requested settings not in effect, and why.
                         "effective_differences": t.get("effective_differences", {}),
+                        # Whether the handed-over questions' failure is gone, by rule.
+                        "target": t["target"],
                     }
                     for r, t in tried
                 ],
                 skipped=skipped,
+                # How many handed-over questions his re-execution answered as recorded.
+                reproduced={
+                    "matched": reproduction["counts"]["matched"],
+                    "total": reproduction["counts"]["total"],
+                },
                 review_id=signed["signoff"]["review_id"],
                 review_status=signed["review"]["status"],
                 reported_at=now(),
@@ -1819,4 +1854,6 @@ def install_engineer_operations(
         ),
     ):
         registry.register(operation)
+    # The tool catalogue reads the practice's role from here (delegations/service.py).
+    registry.learner_role = service.learner_role
     return service

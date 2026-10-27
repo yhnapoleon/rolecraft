@@ -1,7 +1,10 @@
 """English explanations of the same deterministic approval decisions."""
 
 REASONS = {
-    "unsupported_resource_request": "Only capacity, person-days and the pilot deadline can be requested here. Other suggestions may be discussed but do not count as executed changes.",
+    "unsupported_resource_request": (
+        "Only capacity, person-days and the pilot deadline can be requested here. "
+        "Other suggestions may be discussed but do not count as executed changes."
+    ),
     "request_reason_missing": "State the resource shortfall and the proposed work.",
     "request_evidence_invalid": "The citation is not available at this point, does not exist, or is outside the current permissions. Check the exact version before resubmitting.",
     "request_over_limit": "The request exceeds an approval ceiling or would reduce an existing allocation. Check the published approval rules.",

@@ -4,8 +4,8 @@
   "content_revision": "aipm-phase1-draft-2",
   "company_approval": "pending_user_confirmation",
   "files": {
-    "private/grading/coverage.json": "4690065a978d9745f6ccfa4b2c210f031edbcac0607ae47a9ef936ea6fe9b9f2",
-    "private/grading/design.json": "ddb86ba7f45071578aa319f39a4a8229ab6b7fa2992cf54f4a14ac0a6557f5e9",
+    "private/grading/coverage.json": "3e1c88cf2fea12341cbca351d99536d78e2e83b5b83f3f9e7fd03a8c59327d15",
+    "private/grading/design.json": "a3411f77cb94ba18301f475d165980d34526fddc6ab6cc31e875719c38b461b6",
     "private/grading/evaluation.json": "0ed824a0d2299e88af3f1fa474ec129c6e3c93f32005e447e4881a7a475792df",
     "private/grading/mentor.json": "33b1c29bbc0f99eca00a46a7ac2a39d626962bf930822c1587562a00a91a530b",
     "public/company.en.json": "a5aa0d251bed4b51b4bac154ac60e4c9dd7626ebc0735981d16a3ee86a9b6aba",

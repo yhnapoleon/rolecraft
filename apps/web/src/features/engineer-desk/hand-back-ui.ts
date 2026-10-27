@@ -18,6 +18,8 @@ import {
   reviewResult,
   reviewDetails,
   revisionReason,
+  targetNote,
+  withTargetCheck,
 } from './hand-back';
 import { type ColleagueRun, colleagueRun, HandBackSheet, type HandBackView } from './hand-back-sheet';
 import { fieldName, valueText } from './copy';
@@ -86,8 +88,10 @@ export function openHandBackSheet(options: {
       const results = record.report.public_results;
       const hidden = record.report.hidden;
       const comparison = record.report.hidden_comparison;
-      // The same reading as the report's headline and the board's signal.
-      const result = reviewResult(record, T('zh', 'en') as 'zh' | 'en');
+      // The same reading as the report's headline and the board's signal. Daniel's report reads
+      // the target from his rule check of the handed-over questions' failure.
+      const check = colleague ? h?.rule?.target : null;
+      const result = withTargetCheck(reviewResult(record, T('zh', 'en') as 'zh' | 'en'), check);
       const agent = record.draft_executor?.kind;
       set({
         loading: false,
@@ -95,8 +99,9 @@ export function openHandBackSheet(options: {
         fromAgent: agent === 'external_agent' || agent === 'reference_agent',
         clean: outcomeClean(result),
         title: outcomeSentence(result),
+        note: targetNote(result, !!colleague, h?.reproduced),
         caution: outcomeCaution(result),
-        details: reviewDetails(record, T('zh', 'en') as 'zh' | 'en'),
+        details: reviewDetails(record, T('zh', 'en') as 'zh' | 'en', check),
         newFailures: result.newFailures,
         fixed: comparison?.fixed ?? 0,
         publicPassed: results.filter((r) => r.result === 'pass').length,
@@ -196,6 +201,7 @@ export function openHandBackSheet(options: {
     fromAgent: false,
     clean: true,
     title: '',
+    note: '',
     caution: '',
     details: [],
     newFailures: 0,
