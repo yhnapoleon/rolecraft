@@ -3,7 +3,7 @@
 // which confirms in a dialog and sends the existing configuration.apply. The engineer never applies
 // anything; the product manager decides. A delivered practice first opens a revision.
 import { Dialog } from 'radix-ui';
-import { type Ref, useRef } from 'react';
+import { Fragment, type Ref, useRef } from 'react';
 import { T } from '../../app/i18n';
 import { Button, Sheet, SheetContent, SheetDescription, SheetTitle } from '../../ui-kit';
 import { WORK_COST } from '../../app/vocab';
@@ -177,9 +177,10 @@ export function colleagueRun(
 interface FixRow {
   readonly rule: string;
   readonly chosen: boolean;
-  /** The trial reading, or why it was not tried. */
+  /** The trial reading ("Public checks 3/4"), or a dash when it was not tried. */
   readonly trial: string;
-  /** A tried candidate that changed nothing: the settings already request its value. */
+  /** The line under the fix: why it was not tried, its setting not in effect, or that it changed
+   * nothing because the settings already request its value. */
   readonly note: string;
   readonly skipped: boolean;
   /** Its setting was not in effect in the trial, so staff would see what they see now. */
@@ -200,16 +201,29 @@ function fixRows(run: ColleagueRun): FixRow[] {
       skipped: false,
       inert: !!t.notInEffect,
     })),
+    // Not tried: no reading in the trial column; why it was not tried is the line under it.
     ...run.skipped.map((x) => ({
       rule: x.rule,
       chosen: false,
-      trial: skippedText(x.code),
-      note: '',
+      trial: '—',
+      note: skippedText(x.code),
       skipped: true,
       inert: false,
     })),
   ];
 }
+
+/** Person-days never break between the amount and its unit ("5 / person-days"). */
+const Days = ({ text }: { text: string }) => {
+  const m = /^(.*?)(\d+ \S+)$/.exec(text);
+  if (!m) return text;
+  return (
+    <>
+      {m[1]}
+      <span className="tw:whitespace-nowrap">{m[2]}</span>
+    </>
+  );
+};
 
 const Pick = () => (
   <span className="tw:block tw:text-[11.5px] tw:font-semibold tw:text-ink">
@@ -240,7 +254,9 @@ export function FixTable({ run }: { run: ColleagueRun }) {
     T('试跑', 'Trial'),
   ];
   const th = 'tw:px-2 tw:pb-2 tw:text-left tw:align-bottom tw:text-[11.5px] tw:font-semibold tw:text-ink-3';
-  const td = 'tw:px-2 tw:py-2.5 tw:align-top';
+  // A row with a note keeps its bottom padding for the note line under it.
+  const td = (r: FixRow) => `tw:px-2 tw:align-top ${r.note ? 'tw:pt-2.5 tw:pb-1' : 'tw:py-2.5'}`;
+  const bar = 'tw:shadow-[inset_2px_0_0_var(--ink)]';
   return (
     <section className="tw:@container tw:grid tw:gap-3 tw:p-4 tw:rounded-panel tw:bg-fill">
       <header className="tw:grid tw:gap-0.5">
@@ -261,7 +277,11 @@ export function FixTable({ run }: { run: ColleagueRun }) {
         <thead>
           <tr>
             {head.map((h, i) => (
-              <th key={h} scope="col" className={i === 5 ? `${th} tw:text-right` : th}>
+              <th
+                key={h}
+                scope="col"
+                className={i === 5 ? `${th} tw:text-right` : i === 2 ? `${th} tw:min-w-[9em]` : th}
+              >
                 {h}
               </th>
             ))}
@@ -269,28 +289,39 @@ export function FixTable({ run }: { run: ColleagueRun }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr
-              key={r.rule}
-              className={`tw:h-10 tw:border-0 tw:border-t tw:border-solid tw:border-line ${r.skipped ? 'tw:text-ink-3' : 'tw:text-ink-2'}`}
-            >
-              <th
-                scope="row"
-                className={`${td} tw:text-left tw:font-normal ${r.chosen ? 'tw:shadow-[inset_2px_0_0_var(--ink)] tw:font-semibold tw:text-ink' : ''}`}
+            <Fragment key={r.rule}>
+              <tr
+                className={`tw:h-10 tw:border-0 tw:border-t tw:border-solid tw:border-line ${r.skipped ? 'tw:text-ink-3' : 'tw:text-ink-2'}`}
               >
-                {ruleName(r.rule)}
-                {r.chosen && <Pick />}
-              </th>
-              <td className={td}>{cell(r, (f) => t2(f.step))}</td>
-              <td className={td}>{cell(r, (f) => f.days())}</td>
-              <td className={td}>{staff(r)}</td>
-              <td className={td}>{cell(r, (f) => t2(f.load))}</td>
-              <td className={`${td} tw:text-right tw:tabular-nums`}>
-                {r.trial}
-                {r.note && (
-                  <span className="tw:block tw:text-[11.5px] tw:text-ink-3">{r.note}</span>
-                )}
-              </td>
-            </tr>
+                <th
+                  scope="row"
+                  className={`${td(r)} tw:text-left tw:font-normal ${r.chosen ? `${bar} tw:font-semibold tw:text-ink` : ''}`}
+                >
+                  {ruleName(r.rule)}
+                  {r.chosen && <Pick />}
+                </th>
+                <td className={td(r)}>{cell(r, (f) => t2(f.step))}</td>
+                <td className={td(r)}>
+                  <Days text={cell(r, (f) => f.days())} />
+                </td>
+                <td className={td(r)}>{staff(r)}</td>
+                <td className={td(r)}>{cell(r, (f) => t2(f.load))}</td>
+                <td className={`${td(r)} tw:text-right tw:tabular-nums tw:whitespace-nowrap`}>
+                  {r.trial}
+                </td>
+              </tr>
+              {r.note && (
+                // The trial's note reads as a line of its own under the fix, across the row.
+                <tr>
+                  <td
+                    colSpan={6}
+                    className={`tw:px-2 tw:pt-0 tw:pb-2.5 tw:text-[13px] tw:text-ink-3 ${r.chosen ? bar : ''}`}
+                  >
+                    {r.note}
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>
@@ -298,26 +329,26 @@ export function FixTable({ run }: { run: ColleagueRun }) {
         {rows.map((r) => (
           <li
             key={r.rule}
-            className={`tw:grid tw:gap-2 tw:p-3 tw:rounded-[7px] tw:bg-inst ${r.chosen ? 'tw:shadow-[inset_2px_0_0_var(--ink)]' : ''} ${r.skipped ? 'tw:text-ink-3' : 'tw:text-ink-2'}`}
+            className={`tw:grid tw:gap-2 tw:p-3 tw:rounded-[7px] tw:bg-inst ${r.chosen ? bar : ''} ${r.skipped ? 'tw:text-ink-3' : 'tw:text-ink-2'}`}
           >
-            <div className="tw:flex tw:flex-wrap tw:items-baseline tw:justify-between tw:gap-x-4">
+            <div className="tw:grid tw:grid-cols-[minmax(0,1fr)_auto] tw:items-start tw:gap-x-4">
               <span className={r.chosen ? 'tw:text-[13px] tw:font-semibold tw:text-ink' : 'tw:text-[13px]'}>
                 {ruleName(r.rule)}
                 {r.chosen && <Pick />}
               </span>
-              <span className="tw:text-[12.5px] tw:tabular-nums">
-                {r.trial}
-                {r.note && <span className="tw:block tw:text-[11.5px] tw:text-ink-3">{r.note}</span>}
-              </span>
+              <span className="tw:text-[12.5px] tw:tabular-nums tw:whitespace-nowrap">{r.trial}</span>
             </div>
-            <dl className="tw:m-0 tw:grid tw:grid-cols-2 tw:gap-x-4 tw:gap-y-1.5 tw:text-[12px]">
-              {[
-                [head[1], cell(r, (f) => t2(f.step))],
-                [head[2], cell(r, (f) => f.days())],
-                [head[3], staff(r)],
-                [head[4], cell(r, (f) => t2(f.load))],
-              ].map(([k, v]) => (
-                <div key={k} className="tw:grid tw:gap-0.5">
+            {r.note && <p className="tw:m-0 tw:text-[12.5px] tw:text-ink-3">{r.note}</p>}
+            <dl className="tw:m-0 tw:grid tw:grid-cols-2 tw:items-start tw:gap-x-4 tw:gap-y-1.5 tw:text-[12px]">
+              {(
+                [
+                  [head[1], cell(r, (f) => t2(f.step))],
+                  [head[2], <Days key="days" text={cell(r, (f) => f.days())} />],
+                  [head[3], staff(r)],
+                  [head[4], cell(r, (f) => t2(f.load))],
+                ] as const
+              ).map(([k, v]) => (
+                <div key={k} className="tw:grid tw:content-start tw:gap-0.5">
                   <dt className="tw:text-[11px] tw:text-ink-3">{k}</dt>
                   <dd className="tw:m-0">{v}</dd>
                 </div>
@@ -328,8 +359,8 @@ export function FixTable({ run }: { run: ColleagueRun }) {
       </ul>
       <p className="tw:m-0 tw:text-[12px] tw:text-ink-3">
         {T(
-          `${run.name}（规则编排）先在原快照上复现了交来的题，试跑后以自己的名义签字，交给同一个可信复核 · 复核 ${run.budget.used}/${run.budget.limit} 次`,
-          `${run.name} (rule orchestration) reproduced the handed-over tests on their original snapshot, ran the trials, then signed as ${run.name} for the same trusted review · review ${run.budget.used} of ${run.budget.limit}`,
+          `${run.name}（规则编排）先在原快照上复现交来的题，再逐个试跑，最后签字。复核第 ${run.budget.used} 次，共 ${run.budget.limit} 次。`,
+          `${run.name} (rule orchestration) reproduced the handed-over tests on their original snapshot, ran each trial, then signed the review. Review ${run.budget.used} of ${run.budget.limit}.`,
         )}
       </p>
       <p className="tw:m-0 tw:text-[13px] tw:text-ink-2">
@@ -489,8 +520,17 @@ export function HandBackSheet(v: HandBackView) {
                 </h3>
                 <Diff rows={v.diff} />
               </section>
-              <dl className="rc-report-facts">
-                {(v.details ?? []).map(row => <div key={row.label}><dt>{row.label}</dt><dd>{row.text}</dd></div>)}
+              <dl className="tw:m-0 tw:grid tw:gap-3">
+                {(v.details ?? []).map((row) => (
+                  // Labels such as "Target verification" fit on one line; a narrow screen stacks.
+                  <div
+                    key={row.label}
+                    className="tw:grid tw:grid-cols-[160px_1fr] tw:gap-3 tw:text-[13px] tw:max-[720px]:grid-cols-1 tw:max-[720px]:gap-[3px]"
+                  >
+                    <dt className="tw:text-ink-2">{row.label}</dt>
+                    <dd className="tw:m-0">{row.text}</dd>
+                  </div>
+                ))}
               </dl>
               <Decision v={v} trigger={trigger} />
             </>

@@ -155,7 +155,7 @@ describe('the fix table', () => {
       'Hand over when the index lags Up to date? → Who takes over No new work item No automatic answer; handed to a person Higher: these questions go to people while the index lags Public checks 3/4',
     );
     expect(table).toContain(
-      'Lower the minimum relevance score Found No new work item Finds passages more often, including less relevant ones Fewer handovers, more risk of wrong answers Not tried: this ticket does not allow changing this setting.',
+      'Lower the minimum relevance score Found No new work item Finds passages more often, including less relevant ones Fewer handovers, more risk of wrong answers — Not tried: this ticket does not allow changing this setting.',
     );
     expect(html).toContain('<caption');
     expect(html).not.toMatch(/[一-鿿]/);
@@ -192,6 +192,54 @@ describe('the fix table', () => {
     expect(table).not.toContain('Not in effect');
   });
 
+  it('keeps the trial column to the reading and puts its note on a line across the row', () => {
+    setPreference('en');
+    const table = tableOf(renderToStaticMarkup(<FixTable run={run()} />));
+    const at = table.indexOf('Rebuild the index on every source change');
+    const row = table.slice(at, table.indexOf('</tr>', at));
+    expect(text(row.slice(row.lastIndexOf('<td')))).toBe(' Public checks 3/4 ');
+    const next = table.slice(table.indexOf('</tr>', at));
+    expect(next).toMatch(
+      /^<\/tr><tr><td colSpan="6"[^>]*>Not in effect: real-time sync needs 5 person-days<\/td><\/tr>/,
+    );
+    // A note never sits in the trial column, and the skipped fix's reason is a line of its own.
+    expect(table).toMatch(/<td colSpan="6"[^>]*>Not tried: this ticket does not allow changing this setting.<\/td>/);
+  });
+
+  it('never breaks between the person-days and their unit', () => {
+    setPreference('en');
+    const html = renderToStaticMarkup(<FixTable run={run()} />);
+    expect(html).toContain('Real-time sync, <span class="tw:whitespace-nowrap">5 person-days</span>');
+    setPreference('zh');
+    expect(renderToStaticMarkup(<FixTable run={run()} />)).toContain(
+      '实时同步 <span class="tw:whitespace-nowrap">5 人日</span>',
+    );
+  });
+
+  it('puts every card’s trial at the top right and its note under the name', () => {
+    setPreference('en');
+    const html = renderToStaticMarkup(<FixTable run={run()} />);
+    const cards = decode(html.slice(html.indexOf('<ul'), html.indexOf('</ul>')));
+    const at = cards.indexOf('Rebuild the index on every source change');
+    const card = cards.slice(cards.lastIndexOf('<li', at), cards.indexOf('</li>', at));
+    expect(text(card)).toMatch(
+      /^ Rebuild the index on every source change Public checks 3\/4 Not in effect: real-time sync needs 5 person-days Changes/,
+    );
+    expect(card).toContain('tw:grid-cols-[minmax(0,1fr)_auto]');
+    expect(card).toContain('tw:items-start');
+  });
+
+  it('signs off in one plain sentence with the review count', () => {
+    setPreference('en');
+    expect(text(renderToStaticMarkup(<FixTable run={run()} />))).toContain(
+      'Daniel (rule orchestration) reproduced the handed-over tests on their original snapshot, ran each trial, then signed the review. Review 1 of 3.',
+    );
+    setPreference('zh');
+    expect(text(renderToStaticMarkup(<FixTable run={run()} />))).toContain(
+      'Daniel（规则编排）先在原快照上复现交来的题，再逐个试跑，最后签字。复核第 1 次，共 3 次。',
+    );
+  });
+
   it('names what any other setting not in effect still needs', () => {
     setPreference('en');
     expect(notInEffectText('realtime_sync_not_provisioned')).toBe(
@@ -209,9 +257,9 @@ describe('the fix table', () => {
     const table = tableOf(renderToStaticMarkup(<FixTable run={run()} />));
     expect(table.match(/Daniel's pick/g)).toHaveLength(1);
     expect(table.match(/inset_2px_0_0_var\(--ink\)/g)).toHaveLength(1);
-    const skipped = table.slice(table.lastIndexOf('<tr'));
+    const at = table.indexOf('Lower the minimum relevance score');
+    const skipped = table.slice(table.lastIndexOf('<tr', at), table.indexOf('</tr>', at));
     expect(skipped).toContain('tw:text-ink-3');
-    expect(skipped).toContain('Lower the minimum relevance score');
   });
 
   it('says why a fix was not tried, never "not allowed here"', () => {
