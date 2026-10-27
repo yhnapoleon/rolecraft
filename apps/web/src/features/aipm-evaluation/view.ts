@@ -41,6 +41,8 @@ export type DeskState = {
   judging: Record<string, string>;
   /** Saved test results by test id: the answer and its chain input. */
   runs: Record<string, { answer: string; chain: ChainInput }>;
+  /** Each saved case's question by case id, from the saved test plan. */
+  queries?: Record<string, string>;
 };
 
 const ANSWER_PREVIEW = 140;
@@ -206,10 +208,10 @@ function statusLabel(language: Language, row: EvaluationCase, recovery?: Recover
   }
 }
 
+/** The case's own question: the sent command, else the saved plan; never another case's draft. */
 function caseQuery(state: DeskState, row: EvaluationCase) {
-  const draft = state.drafts.find((d) => d.rowId === row.triage_row_id && d.query);
   const command = row.original_command as { payload?: { query?: string } } | null | undefined;
-  return command?.payload?.query ?? draft?.query ?? row.id.slice(0, 8);
+  return command?.payload?.query ?? state.queries?.[row.id] ?? row.id.slice(0, 8);
 }
 
 function caseLine(state: DeskState, row: EvaluationCase, extra = '') {

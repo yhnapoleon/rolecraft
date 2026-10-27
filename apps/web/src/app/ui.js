@@ -3686,16 +3686,32 @@ function handedRun(a) {
 }
 /** Bring the target card into view and put focus on its "Run again", once it is drawn. */
 function focusRerun(a, target, tries = 20) {
-  requestAnimationFrame(() => {
+  const find = () => {
     const latest = a.tests.filter((t) => t.question.trim() === target.question.trim()).at(-1) ?? target;
     const card = document.getElementById(`run-${latest.id}`);
-    const key = card?.querySelector('[data-action="rerun"]');
-    if (!key) {
+    return { card, key: card?.querySelector('[data-action="rerun"]') };
+  };
+  // At once, not smoothly: the whole card when it fits, else its "Run again" in the middle.
+  const land = () => {
+    const { card, key } = find();
+    if (!key) return false;
+    key.focus({ preventScroll: true });
+    (card.offsetHeight <= innerHeight - 160 ? card : key).scrollIntoView({ block: 'center' });
+    return true;
+  };
+  requestAnimationFrame(() => {
+    if (!land()) {
       if (tries > 0) setTimeout(() => focusRerun(a, target, tries - 1), 50);
       return;
     }
-    card.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-    key.focus({ preventScroll: true });
+    // Opening the bench resets its scroll once it has drawn (about 250 ms later, after the
+    // report closes): land again if that moved "Run again" out of view or took its focus.
+    for (const ms of [300, 700])
+      setTimeout(() => {
+        const { key } = find();
+        const r = key?.getBoundingClientRect();
+        if (r && (r.top < 0 || r.bottom > innerHeight || document.activeElement !== key)) land();
+      }, ms);
   });
 }
 

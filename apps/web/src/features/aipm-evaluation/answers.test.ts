@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ObjectRef } from '../../aipm/types';
 import type * as C from '../../contracts-v2';
-import { fromTestResult } from '../answer-chain/model';
+import { answerChain, fromTestResult } from '../answer-chain/model';
 import { createEvaluationDesk } from './index';
 import type { BatchView, EvaluationCase } from './model';
 import { type DeskState, renderDesk, unmetByStage } from './view';
@@ -119,6 +119,18 @@ describe('evaluation desk: answers and answer chains', () => {
     expect(renderDesk(desk({ runs: {} }))).not.toContain('data-answer-chain');
   });
 
+  it('shows each case its own saved question, not the first draft of its request', () => {
+    const html = renderDesk(
+      desk({
+        queries: { a: 'Hotel cap after the change?', b: 'Weather on Mars?' },
+        drafts: [{ key: 'k', rowId: 'r1', query: 'First draft' } as never],
+      }),
+    );
+    expect(html).toContain('<span class="aipm-eval__q">Hotel cap after the change?</span>');
+    expect(html).toContain('<span class="aipm-eval__q">Weather on Mars?</span>');
+    expect(html).not.toContain('First draft</span>');
+  });
+
   it('hides "Hand to Daniel" on a read-only practice', () => {
     expect(renderDesk(desk({ readOnly: true }))).not.toContain('engineer-handover');
   });
@@ -165,6 +177,37 @@ describe('evaluation desk: reading the saved results', () => {
     expect(query.mock.calls.map(([op]) => op).sort()).toEqual(['tests.list', 'workbench.read']);
     expect(Object.keys(d.state.runs).sort()).toEqual(['t-miss', 't-stale']);
     expect(d.state.runs['t-stale'].chain.citations[0].title).toBe('Travel lodging');
+  });
+
+  it('says "current" only against today’s versions, and never without them', async () => {
+    const before = test('t-before');
+    const read = (workspace: Record<string, unknown>) =>
+      vi.fn(async (op: string) =>
+        op === 'tests.list' ? { tests: [before] } : { timeline: { workspace } },
+      );
+    const titles = { material_titles: { 'policy:1': 'Travel lodging' } };
+    const changed = createEvaluationDesk(host(read({ ...titles, source_versions: { policy: 2 } })));
+    changed.state.view = view([]);
+    await changed.readRuns();
+    const chain = (d: typeof changed) => d.state.runs['t-before'].chain;
+    expect(answerChain(chain(changed), 'en').reason).toBe(
+      'Answered from Travel lodging v1, the current version at the time.',
+    );
+    const same = createEvaluationDesk(host(read({ ...titles, source_versions: { policy: 1 } })));
+    same.state.view = view([]);
+    await same.readRuns();
+    expect(answerChain(chain(same), 'en').reason).toBe(
+      'Answered from Travel lodging v1, the current version.',
+    );
+    const unread = createEvaluationDesk(
+      host(async (op: string) => {
+        if (op === 'workbench.read') throw new Error('offline');
+        return { tests: [before] };
+      }),
+    );
+    unread.state.view = view([]);
+    await unread.readRuns();
+    expect(answerChain(chain(unread), 'en').reason).toContain('was not checked');
   });
 
   it('leaves the desk as it was when results cannot be read', async () => {
