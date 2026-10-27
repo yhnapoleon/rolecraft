@@ -25,8 +25,8 @@ describe('retrieval method actually run', () => {
     [
       { method: 'bm25', fallback: true },
       'keyword_fallback',
-      '关键词检索（语义模型未加载）',
-      'Keyword retrieval (semantic model not loaded)',
+      '关键词检索',
+      'Keyword retrieval',
     ],
     [{ method: null, fallback: false }, 'none', '没有候选段落', 'No candidate passages'],
     [
@@ -36,8 +36,19 @@ describe('retrieval method actually run', () => {
       'This record does not say which retrieval method ran',
     ],
   ])('reads %j as %s in both languages', (field, kind, zh, en) => {
-    expect(retrievalMethod(unit(field), null, 'zh')).toEqual({ kind, label: zh });
-    expect(retrievalMethod(unit(field), null, 'en')).toEqual({ kind, label: en });
+    expect(retrievalMethod(unit(field), null, 'zh')).toMatchObject({ kind, label: zh });
+    expect(retrievalMethod(unit(field), null, 'en')).toMatchObject({ kind, label: en });
+  });
+
+  it('says why a keyword fallback ran as a separate aside, and only then', () => {
+    const fallback = unit({ method: 'bm25', fallback: true });
+    expect(retrievalMethod(fallback, null, 'zh').note).toBe('（语义模型未加载）');
+    expect(retrievalMethod(fallback, null, 'en').note).toBe(' (semantic model not loaded)');
+    expect(retrievalMethod(unit({ method: 'bm25', fallback: false }), null, 'en').note).toBeUndefined();
+    const html = judgmentChainHtml(fallback, {}, 'zh');
+    expect(html).toContain(
+      '<span class="jc-retrieval" data-kind="keyword_fallback">关键词检索<span class="jc-retrieval-note">（语义模型未加载）</span></span>',
+    );
   });
 
   it('prefers the sentence, then the pass-wide preview field, then an older record field', () => {
@@ -58,8 +69,11 @@ describe('retrieval method actually run', () => {
   it('shows the method on the technical record of the check, without expanding it', () => {
     const html = judgmentChainHtml(unit({ method: 'rrf', fallback: false }), {}, 'zh');
     expect(html).toMatch(
-      /<summary>取回候选原文 · 0<span class="jc-retrieval" data-kind="fused"> · 语义检索 \+ 关键词检索融合<\/span><\/summary>/,
+      /<summary><span class="jc-hits-count">取回候选原文 0 段<\/span><span class="jc-retrieval" data-kind="fused">语义检索 \+ 关键词检索融合<\/span><svg class="jc-chev" aria-hidden="true" width="12" height="12"[^>]*><path d="m6 9 6 6 6-6"\/><\/svg><\/summary>/,
     );
+    const en = judgmentChainHtml(unit({ method: 'dense' }), {}, 'en');
+    expect(en).toContain('<span class="jc-hits-count">0 retrieved passages</span>');
+    expect(en.match(/<summary>[\s\S]*?<\/summary>/)?.[0]).not.toContain('·');
     const none = judgmentChainHtml(
       unit(),
       { retrieval: { method: null, fallback: false } } as never,

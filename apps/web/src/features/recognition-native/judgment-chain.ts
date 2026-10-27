@@ -8,6 +8,9 @@ import { retrievalMethod } from './actual-method';
 import './judgment-chain.css';
 export { leadingProbability } from './check-presentation';
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+// Lucide chevron-down, 12px; it turns 180° when the passages open.
+const CHEVRON =
+  '<svg class="jc-chev" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
 const number = (n: number) =>
   `<span class="jc-number" data-value="${n}" title="${n}">${n.toFixed(3)}</span>`;
 export function judgmentChainHtml(
@@ -42,7 +45,7 @@ export function judgmentChainHtml(
       : '';
   const hits = (unit.top ?? []).filter((h) => typeof h.quote === 'string');
   const retrieval = retrievalMethod(unit, preview, language);
-  const candidates = `<details class="jc-hits"><summary>${t('取回候选原文', 'Retrieved passages')} · ${hits.length}<span class="jc-retrieval" data-kind="${retrieval.kind}"> · ${esc(retrieval.label)}</span></summary>${unit.evidence ? `<p>${t('本次选中的原文', 'Passage selected for this check')}</p><blockquote>${esc(unit.evidence)}</blockquote>` : `<p>${t('选中的原文未记录', 'The selected passage was not saved')}</p>`}${hits
+  const candidates = `<details class="jc-hits"><summary><span class="jc-hits-count">${t(`取回候选原文 ${hits.length} 段`, `${hits.length} retrieved ${hits.length === 1 ? 'passage' : 'passages'}`)}</span><span class="jc-retrieval" data-kind="${retrieval.kind}">${esc(retrieval.label)}${retrieval.note ? `<span class="jc-retrieval-note">${esc(retrieval.note)}</span>` : ''}</span>${CHEVRON}</summary>${unit.evidence ? `<p>${t('本次选中的原文', 'Passage selected for this check')}</p><blockquote>${esc(unit.evidence)}</blockquote>` : `<p>${t('选中的原文未记录', 'The selected passage was not saved')}</p>`}${hits
     .map(
       (h) =>
         `<blockquote>${esc(h.quote)}</blockquote><p>${[
