@@ -141,7 +141,7 @@ describe('saved settings beside what tests actually use', () => {
         3,
       )?.text,
     ).toBe(
-      "Tests actually use: Daily index · Real-time sync isn't funded yet (3 developer-days approved)",
+      "Tests actually use: Daily index · Real-time sync isn't funded yet (3 person-days approved)",
     );
   });
 
@@ -193,7 +193,7 @@ describe('saved settings beside what tests actually use', () => {
     });
     setPreference('en');
     expect(configUse(v2, 3)?.text).toBe(
-      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 developer-days approved)",
+      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 person-days approved)",
     );
   });
 
@@ -213,7 +213,7 @@ describe('saved settings beside what tests actually use', () => {
         3,
       )?.text,
     ).toBe(
-      "Tests actually use: Daily index, no hand-off to a person · Real-time sync isn't funded yet (3 developer-days approved); human hand-off isn't in the plan",
+      "Tests actually use: Daily index, no hand-off to a person · Real-time sync isn't funded yet (3 person-days approved); human hand-off isn't in the plan",
     );
   });
 

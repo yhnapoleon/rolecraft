@@ -82,6 +82,20 @@ describe('answer chain markup', () => {
     expect(render({}, { inspect: false })).not.toContain('chain-inspect');
   });
 
+  it('puts the reason on its own line and the keys under it, the toggle with a turning chevron', () => {
+    const html = render();
+    expect(html.indexOf('class="ac-reason"')).toBeLessThan(html.indexOf('class="ac-keys"'));
+    expect(html).not.toContain('ac-foot');
+    expect(html).toMatch(
+      /data-action="chain-steps"[^>]*><svg class="ac-chev"[^>]*>.*?<\/svg><span class="ac-key-label">Show each step<\/span>/,
+    );
+  });
+
+  it('marks a flagged outdated source as handled', () => {
+    expect(render({ status: 'answered_with_warning' })).toContain('data-handled=""');
+    expect(render()).not.toContain('data-handled');
+  });
+
   it('keeps the compact form for the evaluation desk', () => {
     const html = answerChainHtml(answerChain(input(), 'en'), 'run-1', {
       language: 'en',

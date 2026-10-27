@@ -83,6 +83,7 @@ import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
 import { testSetView, testSetPreview, caseState, testRunView } from './test-set-view.js';
 import {
+  answerModeLabel,
   answerModeLine,
   assistantText,
   generatorField,
@@ -108,8 +109,9 @@ import {
 import './pilot-config.css';
 import './document-motion.css';
 import { markdownHtml } from './markdown';
+import { assessedName, chainText } from '../features/answer-chain/copy';
 import { answerChain, fromWorkbenchRun } from '../features/answer-chain/model';
-import { answerChainHtml } from '../features/answer-chain/view';
+import { answerChainHtml, chevron } from '../features/answer-chain/view';
 import { holdsStageUnderDocument, selectSettled } from '../features/answer-chain/arrival';
 import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
@@ -264,6 +266,8 @@ const ui = {
   menu: null,
   scopeAll: false,
   benchAll: false,
+  // The question Daniel took, while the bench is opened from his report to run it again.
+  benchTarget: null,
   reviewFor: null,
   notesCache: [],
   behaviorStepsOpen: new Set(),
@@ -3616,44 +3620,111 @@ function groupRuns(a) {
 function runGroup(a, runs) {
   const r = runs[0];
   const comparison = comparisonFor(r, a.tests);
-  const paired = comparison.referenced ? [r, ...(comparison.previous ? [comparison.previous] : [])] : runs.slice(0, 2);
+  // Latest, the run it is compared with, and the first run of the question: up to three columns.
+  const second = comparison.referenced ? comparison.previous : runs[1];
+  const first = runs.length > 2 ? runs[runs.length - 1] : null;
+  const paired = [r, second, first].filter((x, i, list) => x && list.indexOf(x) === i);
   const ordinal = (x) => a.tests.findIndex((t) => t.id === x.id) + 1;
   // `stale` is the server's own flag: the cited version differs from the current source.
   const old = (x) => (x.stale !== undefined ? !!x.stale : x.indexVersion < x.policyVersion);
   const tk = r.taskId && a.tasks.find((t) => t.id === r.taskId);
-  return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}" id="run-${esc(r.id)}">
+  const caption = (x, i) =>
+    i === 0
+      ? T('最新', 'Latest')
+      : x === first
+        ? T('第一次', 'First')
+        : comparison.referenced
+          ? T('识别基准', 'Recognition baseline')
+          : T('上一次', 'Previous');
+  // "Rerun needed" only while the latest run predates the policy; after a rerun the chain's own
+  // reason says what is still out of date.
+  const age = r.policyVersion < a.world.policyVersion ? testAgeText(r, a.world.policyVersion, locale()) : '';
+  const cols = paired.length === 3 ? 'three' : paired.length === 2 ? 'two' : '';
+  return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}${ui.benchTarget === r.question.trim() ? ' is-target' : ''}" id="run-${esc(r.id)}">
     <header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(r.question)}>${esc(r.question)}</h3>${runs.length > 1 ? `<span class="meta">${T(runs.length + ' 次', runs.length + ' runs')}</span>` : ''}${tk && ui.route !== 'task' ? `<button type="button" class="run-task" data-action="open-task" data-id="${tk.id}">${icon('note', 'i-xs')}${esc(taskTitle(tk))}</button>` : ''}</header>
     ${r.expectation ? `<p class="run-expect">${icon('eye', 'i-xs')}<span${zhAttr(r.expectation)}>${esc(r.expectation)}</span></p>` : ''}
-    ${testAgeText(r, a.world.policyVersion, locale()) ? `<p class="rc-test-age">${esc(testAgeText(r, a.world.policyVersion, locale()))}</p>` : ''}
-    <div class="run-cols ${paired.length > 1 ? 'two' : ''}">${paired
+    ${age ? `<p class="rc-test-age">${esc(age)}</p>` : ''}
+    <div class="run-cols ${cols}">${paired
       .map(
         (
           x,
           i,
-        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${(i === 0 ? T('最新', 'Latest') : comparison.referenced ? T('识别基准', 'Recognition baseline') : T('上一次', 'Previous')) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
-      <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
-      ${runChain(a, x, i === 0)}
+        ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${caption(x, i) + T(` · 第 ${ordinal(x)} 次测试`, ` · Run ${ordinal(x)}`)}</p>` : ''}
+      <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${runModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
+      ${runChain(a, x)}
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
-    ${testMomentHtml(r, a.tests, locale(), materialNameOf(a))}
-    <div class="run-lens">${runSignals(a, r)}${paired[1] ? `<details class="run-baseline-signals"><summary>${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, paired[1])}</details>` : ''}</div>
+    ${namedRecordLinks(testMomentHtml(r, a.tests, locale(), materialNameOf(a)), r)}
+    <div class="run-lens">${runSignals(a, r)}${second ? `<details class="run-baseline-signals"><summary>${chevron('down')}${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, second)}</details>` : ''}</div>
     ${comparison.referenced && !comparison.previous ? `<p class="meta">${T('识别记录指定的比较对象未载入；没有用上一次测试代替。', 'The recorded comparison baseline is not loaded; the previous run has not been substituted.')}</p>` : ''}
-    ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
     <div class="run-actions">${btn(icon('layers', 'i-xs') + T('看依据', 'Check sources'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;
 }
 
-// Which of the assistant's five steps this run passed and where it stopped. Only the latest
-// column carries its recognition cards on the page, so only it links to them.
-function runChain(a, x, latest) {
+// The tests last handed to Daniel, per practice: kept so his report can lead back to them.
+const handedTests = new Map();
+function rememberHanded(sessionId, ids) {
+  handedTests.set(sessionId, [...ids]);
+  try {
+    localStorage.setItem(`rc-handed:${sessionId}`, JSON.stringify(ids));
+  } catch {}
+}
+function handedRun(a) {
+  let ids = handedTests.get(a.id);
+  if (!ids)
+    try {
+      ids = JSON.parse(localStorage.getItem(`rc-handed:${a.id}`) || '[]');
+    } catch {
+      ids = [];
+    }
+  // The latest run of the first handed question that is still on the bench.
+  const handed = (a.tests || []).find((t) => ids.includes(t.id));
+  if (!handed) return null;
+  const q = handed.question.trim();
+  return a.tests.filter((t) => t.question.trim() === q).at(-1) ?? handed;
+}
+/** Bring the target card into view and put focus on its "Run again", once it is drawn. */
+function focusRerun(a, target, tries = 20) {
+  requestAnimationFrame(() => {
+    const latest = a.tests.filter((t) => t.question.trim() === target.question.trim()).at(-1) ?? target;
+    const card = document.getElementById(`run-${latest.id}`);
+    const key = card?.querySelector('[data-action="rerun"]');
+    if (!key) {
+      if (tries > 0) setTimeout(() => focusRerun(a, target, tries - 1), 50);
+      return;
+    }
+    card.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    key.focus({ preventScroll: true });
+  });
+}
+
+// A question stopped before an answer reads "Not answered"; the chain says where and why.
+function runModeLine(x) {
+  if (answerModeLabel(x).mode !== 'gate') return answerModeLine(x);
+  return `<p class="answer-mode" data-answer-mode="gate">${esc(chainText(locale(), 'not_answered'))}</p>`;
+}
+// Each record link under the card names what it judged ("How scope was assessed"), in the order
+// testMomentHtml draws the records; the cards and their opening are unchanged.
+function namedRecordLinks(html, run) {
+  const tasks = (run.recognition || []).map((x) => x.task).filter((t) => ['scope', 'retrieval', 'drift'].includes(t));
+  let i = 0;
+  return html.replace(/(<button type="button" class="rc-signature"[^>]*>[\s\S]*?<\/svg>)(系统如何判断|How this was assessed)/g, (_, head, label) => {
+    const task = tasks[i++];
+    return head + (task ? esc(assessedName(task, locale())) : label);
+  });
+}
+
+// Which of the assistant's five steps this run passed and where it stopped. The record links
+// under the card open each step's record, so the expanded steps carry no links of their own.
+function runChain(a, x) {
   const handover =
     !!L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && roleOf(a.id) === 'pm' && !sealedSession(a);
+  const currentVersions = Object.fromEntries(E.getMaterials(a).map((m) => [m.id, m.version]));
   return answerChainHtml(
-    answerChain(fromWorkbenchRun(x), locale()),
+    answerChain({ ...fromWorkbenchRun(x), currentVersions }, locale()),
     x.id,
-    { language: locale(), handover, inspect: latest, fresh: x.id === ui.lastRun },
-    (x.recognition || []).map((r) => r.task),
+    { language: locale(), handover, fresh: x.id === ui.lastRun },
   );
 }
 
@@ -5834,6 +5905,7 @@ function resetAttemptUi() {
     menu: null,
     scopeAll: false,
     benchAll: false,
+    benchTarget: null,
     reviewFor: null,
     pendingRequestId: null,
     lastUndo: null,
@@ -6406,6 +6478,7 @@ async function act(el, ev = new Event('rc-action')) {
           colleague: {
             taskId: routeTask(a)?.id ?? null,
             done: async (ticket) => {
+              rememberHanded(a.id, ticket.origin?.test_ids ?? ticket.target_tests?.map((t) => t.test_id) ?? []);
               const failed = await colleagueReported(L.gatewayTransport(a), a.id, ticket, () =>
                 L.load(a),
               ).catch((e) => e?.message || String(e));
@@ -6629,6 +6702,7 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     }
     case 'rerun': {
+      ui.benchTarget = null;
       const r = a.tests.find((x) => x.id === id);
       if (r) await runQuestion(r.question, r.expectation);
       break;
@@ -7140,8 +7214,14 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     case 'open-bench': {
       const t = task();
+      // Opened from Daniel's report ("Rerun on the test bench"), not from a button on the page:
+      // land on the question he took, ready to run again.
+      const target = el.isConnected ? null : handedRun(a);
+      ui.benchTarget = target ? target.question.trim() : null;
+      if (target && t && target.taskId !== t.id) ui.benchAll = true;
       if (t) setObj({ type: 'bench' });
       else go('bench', { transition: true });
+      if (target) focusRerun(a, target);
       break;
     }
     case 'pick-doc': {

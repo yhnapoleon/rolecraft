@@ -48,6 +48,9 @@ export type ChainInput = {
   indexedVersions: Record<string, number>;
   /** The configuration this run executed with. */
   config: ChainConfig | null;
+  /** Each document's version now, when the page knows it: a run whose source has changed since
+   * reads "the current version at the time". */
+  currentVersions?: Record<string, number>;
   recognition: RecognitionRecord[];
 };
 /** passed: walked through; stop: decided the result; warn: outdated source (amber);
@@ -62,6 +65,8 @@ export type ChainStage = {
   sr: string;
   /** The recognition record behind "How the system judged", when this run has one. */
   inspect: 'scope' | 'retrieval' | 'drift' | null;
+  /** Up to date? on an answer given with a warning: the problem was flagged, not left as is. */
+  handled: boolean;
 };
 export type ChainView = {
   stages: ChainStage[];
@@ -139,12 +144,17 @@ function reasonFor(input: ChainInput, w: ReturnType<typeof walk>, language: Lang
       cur: input.sourceVersions[w.outdated.id] ?? '',
       n: w.outdated.version,
     });
-  else if (input.citations.length)
-    reason = t('reason_answered_current', {
-      title: input.citations[0].title || input.citations[0].id,
-      n: input.citations[0].version,
-    });
-  else reason = t('reason_answered_uncited');
+  else if (input.citations.length) {
+    const cited = input.citations[0];
+    const now = input.currentVersions?.[cited.id];
+    reason = t(
+      num(now) && now > cited.version ? 'reason_answered_then_current' : 'reason_answered_current',
+      {
+        title: cited.title || cited.id,
+        n: cited.version,
+      },
+    );
+  } else reason = t('reason_answered_uncited');
   // A step that stopped the run before an answer, with no human to take it over.
   if (input.status === 'failed' && w.stopAt <= 2)
     reason += (language === 'zh' ? '' : ' ') + t('reason_no_fallback');
@@ -176,6 +186,7 @@ function stateWord(
     case 'fresh':
       if (code === 'manual_verification_required') return t('state_manual');
       if (code === 'stale_source_guard') return t('state_stale_guard');
+      if (state === 'warn' && input.status === 'answered_with_warning') return t('state_warned');
       if (state === 'warn') return t('state_outdated');
       return input.citations.length ? t('state_current') : t('state_no_citation');
     case 'answer':
@@ -332,6 +343,7 @@ export function answerChain(input: ChainInput, language: Language): ChainView {
       state,
       sr: '',
       inspect: task && recordFor(input, task) ? task : null,
+      handled: state === 'warn' && input.status === 'answered_with_warning' && !w.code,
     };
   });
   const words = stages.map((stage, i) => stateWord(i, stage.state, input, w, language));

@@ -160,6 +160,8 @@ describe('answer chain: where each run stops and why', () => {
       '作答并提醒：用的是旧版本资料，回答前加了「资料可能已更新」。',
     );
     expect(view.stages[2].state).toBe('warn');
+    expect(view.stages[2].handled).toBe(true);
+    expect(view.stages[2].sr).toBe('Up to date?: warned');
     expect(view.tone).toBe('warn');
   });
 
@@ -319,6 +321,30 @@ describe('answer chain: where each run stops and why', () => {
     expect(handover(refused('no_retrieval_hit'))).toBe(true);
     expect(handover(refused('manual_verification_required'))).toBe(true);
     expect(handover(run())).toBe(false);
+  });
+});
+
+describe('answer chain: flagged or left as is, then and now', () => {
+  it('fills the Up to date? ring only when the outdated source was flagged', () => {
+    const left = answerChain(run({ sourceVersions: { policy: 2 } }), 'en');
+    expect(left.stages[2].state).toBe('warn');
+    expect(left.stages[2].handled).toBe(false);
+    expect(left.stages[2].sr).toBe('Up to date?: source out of date');
+    const guard = answerChain(refused('stale_source_guard'), 'en');
+    expect(guard.stages[2].handled).toBe(false);
+  });
+
+  it('says "the current version at the time" once the source has changed since the run', () => {
+    const then = run({ currentVersions: { policy: 2 } });
+    expect(answerChain(then, 'en').reason).toBe(
+      'Answered from Expense notice: travel lodging v1, the current version at the time.',
+    );
+    expect(answerChain(then, 'zh').reason).toBe(
+      '作答：引用《Expense notice: travel lodging》v1，当时的现行版本。',
+    );
+    expect(answerChain(run({ currentVersions: { policy: 1 } }), 'en').reason).toBe(
+      'Answered from Expense notice: travel lodging v1, the current version.',
+    );
   });
 });
 
