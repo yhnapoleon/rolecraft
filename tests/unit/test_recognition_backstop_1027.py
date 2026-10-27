@@ -2,16 +2,20 @@
 
 1. The stored relation record says which retrieval method each sentence actually ran, and
    the retrieval record names the method and whether it fell back to BM25.
+2. The work replay keeps questions asked at the same business point in the order they were
+   asked (asking does not advance the point; the store lists objects by id).
 """
 
 from __future__ import annotations
+
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
 from career_lab.contracts.v2.core import EvidenceRefV2, VersionPoint, digest
 from career_lab.contracts.v2.evaluation import CandidateEvidenceV2, EvidencePackageV2
-from career_lab.recognition import judge, retrieval
+from career_lab.recognition import behavior, judge, retrieval
 from career_lab.recognition.base import FALLBACK_REVISION
 
 
@@ -117,3 +121,86 @@ def test_sentences_with_no_candidates_name_no_method() -> None:
     )
     assert retrieval_record["revision"] == "rrf"
     assert retrieval_record["outputs"]["method"] is None
+
+
+# 2. same-point questions in storage order
+
+
+def role_turn(object_id: str, seq: int, revision: int, role: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        ref=SimpleNamespace(kind="role_turn", object_id=object_id),
+        created_storage_revision=revision,
+        content={
+            "input": {"role_id": role, "text": f"{role} question {object_id}"},
+            "as_of": {"business_seq": seq},
+            "executor": {"kind": "human"},
+        },
+    )
+
+
+def event(seq: int, kind: str, **data) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=f"ev-{seq}-{kind}",
+        seq=seq,
+        type=kind,
+        data=data,
+        refs=(),
+        executor=SimpleNamespace(kind="human"),
+    )
+
+
+class ReplayView:
+    """The parts of a session view ``symbols`` reads: public events and stored objects."""
+
+    def __init__(self, objects, events=()):
+        self.objects = list(objects)
+        self.events = list(events)
+        self.state = SimpleNamespace(business_seq=max((e.seq for e in self.events), default=0))
+
+    def public_history(self, page, auth):
+        found = [e for e in self.events if e.seq > page.since_seq]
+        return SimpleNamespace(events=found, next_seq=self.state.business_seq)
+
+
+def questions(view) -> list[str]:
+    return [row["question"] for row in behavior.symbols(view, None) if "question" in row]
+
+
+def test_questions_at_one_business_point_replay_in_storage_order() -> None:
+    # Stored Chen, Chen, Daniel, Daniel, Grace, Grace; listed by object id.
+    stored = [
+        role_turn("t-a", 0, 15, "daniel"),
+        role_turn("t-b", 0, 19, "grace"),
+        role_turn("t-c", 0, 17, "daniel"),
+        role_turn("t-d", 0, 21, "grace"),
+        role_turn("t-e", 0, 9, "chen"),
+        role_turn("t-f", 0, 13, "chen"),
+    ]
+    order = [row["symbol"].split(":")[1] for row in behavior.symbols(ReplayView(stored), None)]
+    assert order == ["chen", "chen", "daniel", "daniel", "grace", "grace"]
+
+
+def test_questions_still_sit_just_after_the_event_of_their_business_point() -> None:
+    stored = [
+        role_turn("t-late", 2, 30, "grace"),
+        role_turn("t-y", 1, 12, "daniel"),
+        role_turn("t-first", 0, 3, "chen"),
+        role_turn("t-x", 1, 8, "chen"),
+    ]
+    events = [event(1, "material_read", material_id="brief"), event(2, "submitted")]
+    rows = behavior.symbols(ReplayView(stored, events), None)
+    assert [row["symbol"].split(":")[0] for row in rows] == [
+        "ask",
+        "read",
+        "ask",
+        "ask",
+        "submit",
+        "ask",
+    ]
+    assert [row["seq"] for row in rows] == [0, 1, 1, 1, 2, 2]
+    assert questions(ReplayView(stored, events)) == [
+        "chen question t-first",
+        "chen question t-x",
+        "daniel question t-y",
+        "grace question t-late",
+    ]
