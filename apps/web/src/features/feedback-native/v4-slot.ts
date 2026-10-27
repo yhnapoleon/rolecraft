@@ -426,7 +426,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
           !object(row.author)
         )
           throw Error('Invalid work version');
-        return row as unknown as FeedbackNativeState['products'][number];
+        return { ...row, title: row.title || (row.kind === 'plan' ? (state.workLanguage === 'en' ? 'Pilot PRD' : '试点 PRD') : '') } as unknown as FeedbackNativeState['products'][number];
       });
       const saved = submissions.map((row) => {
         if (

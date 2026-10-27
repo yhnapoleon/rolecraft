@@ -64,6 +64,8 @@ describe('delivery panel attachments and stamp', () => {
     expect(attachmentLine({ ...product, title: 'Pilot decision draft' }, 'en')).toBe(
       '“Pilot decision draft” · version 2 · Pilot decision',
     );
+    expect(attachmentLine({ ...product, purpose: 'plan' }, 'zh')).toContain('方案');
+    expect(attachmentLine({ ...product, purpose: 'plan' }, 'en')).toContain('Plan');
   });
   it('keeps an unknown purpose as written and leaves out a missing one', () => {
     expect(attachmentLine({ title: 'A', version: 1, purpose: '路线图' }, 'zh')).toBe(

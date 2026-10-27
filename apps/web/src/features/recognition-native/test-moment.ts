@@ -16,7 +16,12 @@ export function retrievalHit(run: MomentRun) {
 /** Stale metadata is not a drift inference. No historical result is overwritten. */
 export function testAgeText(run: MomentRun, policyVersion: number, language: Language) {
   const t = (zh: string, en: string) => language === 'zh' ? zh : en;
-  if (run.policyVersion < policyVersion) return t('早于政策变化，待重测 · 版本核对', 'Predates the policy change; rerun needed · version check');
+  if (run.policyVersion < policyVersion) {
+    const affected = run.citations?.some((citation) => citation.id === 'policy' && typeof citation.version === 'number' && citation.version < policyVersion);
+    return affected
+      ? t('引用了旧政策，待重测 · 版本核对', 'Cites the previous policy; rerun needed · version check')
+      : t('早于政策变化；是否受影响尚未核实 · 版本核对', 'Predates the policy change; impact not established · version check');
+  }
   if (run.stale || run.indexVersion < run.policyVersion) return t('本次索引落后于政策，待重测 · 版本核对', 'This run used an index behind the policy; rerun needed · version check');
   return '';
 }

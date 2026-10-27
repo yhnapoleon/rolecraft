@@ -50,6 +50,7 @@ export const VERBS: Record<string, Verb> = {
   'engineer.reproduce': act('复现了', 'Reproduced'),
   'engineer.trial': act('试跑了', 'Ran a trial on'),
   'engineer.code.run': act('运行了代码用例', 'Ran the code cases on'),
+  'engineer.code.read': read('读了公开代码练习', 'Read the public coding exercise for'),
   'feedback.responses.create': handBack('回应了反馈', 'Replied to feedback'),
   'work_products.create': handBack('交回了', 'Handed back'),
   'work_products.versions.create': handBack('交回了新版本', 'Handed back a new version of'),

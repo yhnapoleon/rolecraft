@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from career_lab.contracts import v2 as C
+from career_lab.rubrics.v4.claim_status import claim_status_guide
 from career_lab.runtime.model_audit import audit_scope, audited, complete, phase
 from career_lab.storage.reference_graph import references
 from career_lab.storage.v2_store import Mutation, ObjectWrite
@@ -67,6 +68,7 @@ SYSTEM = {
         'Output JSON only: {"items":[{"id","mark","note","citation_ids"}]}.'
     ),
 }
+SYSTEM = {language: prompt + claim_status_guide(language) for language, prompt in SYSTEM.items()}
 
 
 class _CoverageOutcome:

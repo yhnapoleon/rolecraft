@@ -86,6 +86,7 @@ describe('agent activity feed', () => {
     for (const tool of NEVER_GRANTED) expect(input.allowed_actions).not.toContain(tool);
     expect(input.allowed_actions).toContain('materials.list');
     expect(input.allowed_actions).toContain('engineer.trial');
+    expect(input.allowed_actions).toContain('engineer.code.read');
     expect(refusal('version_conflict').tell[1]).toMatch(/versions\.list/);
     // One code, two refusals: the tool tells them apart, and neither sentence hedges.
     const stale = refusal('lifecycle_permission_unavailable', 'work_products.versions.create');

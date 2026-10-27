@@ -1249,7 +1249,7 @@ describe('batch 1 server authority and legacy recovery', () => {
       tests: [{ ...testRecord(), citations: [{ material_id: 'policy', version: 1 }] }],
     });
     expect(a.tests[0].citations).toEqual([
-      { id: 'policy', version: 1, title: '费用管理通知：差旅住宿标准' },
+      { id: 'policy', version: 1, title: '差旅住宿与交通政策' },
     ]);
   });
   it('keeps legacy local questions, task links and observed times when fields are missing or null', async () => {

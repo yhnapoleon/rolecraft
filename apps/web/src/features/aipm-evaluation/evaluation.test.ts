@@ -268,6 +268,40 @@ describe('run, judgement and plan-only cases stay apart', () => {
 });
 
 describe('installAipmEvaluation', () => {
+  it('does not attach a late read to another practice after switching', async () => {
+    let sessionId = 'first';
+    let finish: (value: unknown) => void = () => {};
+    const host = fakeHost({
+      getSessionContext: () => ({ sessionId, workLanguage: 'en', readOnly: false }),
+      readContent: () => new Promise((resolve) => { finish = resolve; }),
+    });
+    const installed = installAipmEvaluation(host), first = installed.state;
+    const loading = installed.load();
+    sessionId = 'second';
+    finish(content.en);
+    await loading;
+    expect(first.content).toBeNull();
+    expect(installed.state.content).toBeNull();
+    expect(installed.state).not.toBe(first);
+  });
+  it('binds language and draft state to the mounted practice, including a switch after installation', async () => {
+    let language: 'zh' | 'en' = 'zh';
+    const host = fakeHost({
+      getSessionContext: () => ({ sessionId: language, workLanguage: language, readOnly: false }),
+      readContent: async () => content[language],
+    });
+    const installed = installAipmEvaluation(host);
+    await installed.load();
+    const chinese = installed.state;
+    expect(installed.feature.render()).toContain('评测、监控与回退');
+    language = 'en';
+    await installed.load();
+    expect(installed.state).not.toBe(chinese);
+    expect(installed.feature.render()).toContain('Evaluation, monitoring and rollback');
+    expect(installed.feature.render()).not.toContain('评测、监控与回退');
+    language = 'zh';
+    expect(installed.state).toBe(chinese);
+  });
   it('registers the evaluation feature and loads the saved design and batch', async () => {
     const register = vi.fn(() => () => undefined);
     const host: EvaluationHost = {

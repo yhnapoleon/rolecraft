@@ -6,6 +6,7 @@ describe('AIPM route history', () => {
   const screens: AipmScreen[] = [
     { kind: 'workbench' },
     { kind: 'worksheet', sheet: 'need' },
+    { kind: 'worksheet', sheet: 'assurance', feature: 'evaluation' },
     { kind: 'worksheet', sheet: 'need', material: 'SD-120' },
     {
       kind: 'review',

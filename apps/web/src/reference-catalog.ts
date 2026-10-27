@@ -38,9 +38,8 @@ function page(value: unknown): Row {
   return {};
 }
 
-/** A document's name everywhere in the workbench (board, activity, evidence, reader): the formal
- * title of its current version, the same rule in both languages. A document published only in
- * Chinese keeps its Chinese title; the version number, not the name, tells versions apart. */
+/** A supplied document version's formal title. Historical references keep their recorded
+ * version's name; a document published only in Chinese keeps its Chinese title. */
 export function documentName(title: unknown): string | undefined {
   // Earlier scenario packages appended the version stage to the title; the version shows it.
   const name = typeof title === 'string' ? title.replace(/(初始版|更新版)$/, '').trim() : '';
@@ -120,7 +119,8 @@ export function readCatalog(
 }
 
 /** A document's name: the formal title of its current (latest readable) version. */
-export function catalogMaterialTitle(catalog: ReferenceCatalog, id: string): string | undefined {
+export function catalogMaterialTitle(catalog: ReferenceCatalog, id: string, version?: number): string | undefined {
+  if (version !== undefined) return documentName(catalog.materialTitles[`${id}:${version}`]);
   const latest = Object.keys(catalog.materialTitles)
     .filter((key) => key.startsWith(`${id}:`))
     .sort((a, b) => Number(b.slice(id.length + 1)) - Number(a.slice(id.length + 1)))[0];
@@ -165,7 +165,7 @@ export function referenceLabel(
     v = ref.version;
   switch (ref.kind) {
     case 'material': {
-      const title = catalogMaterialTitle(catalog, id);
+      const title = catalogMaterialTitle(catalog, id, v);
       return title
         ? named(`${title} · v${v}`, `${clip(title)} · v${v}`)
         : named(say(`资料 · v${v}`, `Document · v${v}`));

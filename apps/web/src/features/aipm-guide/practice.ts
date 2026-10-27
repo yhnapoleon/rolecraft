@@ -465,12 +465,12 @@ export function createAipmPractice(deps: PracticeDeps) {
       const attach = attachPrd ?? (!!prd && !deps.prdSharedWith(colleague, prd));
       deps.prefillColleague(colleague, prefill, attach, detail);
     },
-    // Phase-1 callers: the design panel is a worksheet now, the evaluation desk is sheet ⑥.
+    // The evaluation desk keeps its own screen and saved batches beside sheet ⑥.
     openFeature(id) {
       const a = deps.current(),
         s = a && stateOf(a);
       if (!a || !s) return;
-      if (id === 'evaluation') host.openWorksheet('assurance');
+      if (id === 'evaluation') show({ kind: 'worksheet', sheet: 'assurance', feature: 'evaluation' });
       else if (id === 'review') host.openReview(s.progress?.focus ?? 'business');
       else host.openWorksheet(s.progress?.focus ?? 'business');
     },
@@ -641,6 +641,7 @@ export function createAipmPractice(deps: PracticeDeps) {
     const en = s.guide.language === 'en';
     let id: AipmFeatureId | null;
     if (screen.kind === 'review') id = registry.get('review') ? 'review' : null;
+    else if (screen.feature === 'evaluation') id = registry.get('evaluation') ? 'evaluation' : null;
     else if (registry.get('worksheet')) id = 'worksheet';
     else if (screen.sheet === 'assurance' && registry.get('evaluation')) id = 'evaluation';
     else id = registry.get('design') ? 'design' : null;
