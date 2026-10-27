@@ -65,6 +65,8 @@ def hotel_question(query, locale):
             "国内出差住宿每晚的报销上限",
             "出差住宿报销一晚能报多少",
             "住宿报销金额",
+            # The AIPM evaluation desk's policy-change regression question.
+            "国内出差住宿每晚能报多少",
             # it_ticket_pilot: the same dynamic-policy question about the P2 SLA.
             "p2工单的响应时限是多少",
             "p2工单的响应时限",
@@ -76,6 +78,8 @@ def hotel_question(query, locale):
             "whatisthehotelreimbursementlimitpernight",
             "whatisthehotelreimbursementlimit",
             "whatisthemaximumhotelreimbursementpernight",
+            # The AIPM evaluation desk's policy-change regression question.
+            "howmuchcaniclaimpernightforadomesticbusiness-triphotel",
             "whatisthep2ticketresponsetime",
             "whatistheresponsetimeforp2tickets",
         )

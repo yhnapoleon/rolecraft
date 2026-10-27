@@ -674,3 +674,15 @@ def test_an_off_topic_question_after_the_update_leaves_the_retest_decidable(
     else:
         assert after["dynamic_classification_complete"] is False
         assert retest.source == "pending"
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_the_evaluation_desks_regression_question_is_a_checkable_hotel_question(language):
+    """The policy-change regression case the AIPM evaluation desk offers asks the hotel
+    question, so a run of it can be checked against the current fact, as the bench's is."""
+    from career_lab.scenarios.v2.evaluation_facts import hotel_question
+
+    content = ROOT / f"scenarios/pm_pilot/aipm-phase1/public/evaluation.{language}.json"
+    query = json.loads(content.read_text(encoding="utf-8"))["regression"]["query"]
+    assert hotel_question(query, language)
+    assert not hotel_question(query, "en" if language == "zh" else "zh")
