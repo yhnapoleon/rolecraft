@@ -49,7 +49,8 @@ export type ChainInput = {
   /** The configuration this run executed with. */
   config: ChainConfig | null;
   /** Each document's version now, when the page knows it: a run whose source has changed since
-   * reads "the current version at the time". */
+   * reads "the current version at the time". Without it, "current" is said only of the run's
+   * own moment, never of now. */
   currentVersions?: Record<string, number>;
   recognition: RecognitionRecord[];
 };
@@ -95,6 +96,14 @@ const STATUSES = new Set<RunStatus>(['answered', 'answered_with_warning', 'fallb
 
 const num = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
+
+/** The first cited version against today's: still current, current only then, or not checked. */
+function currency(input: ChainInput): 'now' | 'then' | 'unchecked' {
+  const cited = input.citations[0];
+  const now = cited && input.currentVersions?.[cited.id];
+  if (!cited || !num(now)) return 'unchecked';
+  return now > cited.version ? 'then' : 'now';
+}
 const three = (value: number) => value.toFixed(3);
 
 /** Which step decided the result, and what each step looked like. */
@@ -141,19 +150,22 @@ function reasonFor(input: ChainInput, w: ReturnType<typeof walk>, language: Lang
   else if (w.outdated)
     reason = t('reason_answered_stale', {
       title: w.outdated.title || w.outdated.id,
-      cur: input.sourceVersions[w.outdated.id] ?? '',
+      // The newer of the version when it ran and today's, when the page knows it.
+      cur:
+        Math.max(
+          input.sourceVersions[w.outdated.id] ?? 0,
+          input.currentVersions?.[w.outdated.id] ?? 0,
+        ) || '',
       n: w.outdated.version,
     });
   else if (input.citations.length) {
     const cited = input.citations[0];
-    const now = input.currentVersions?.[cited.id];
-    reason = t(
-      num(now) && now > cited.version ? 'reason_answered_then_current' : 'reason_answered_current',
-      {
-        title: cited.title || cited.id,
-        n: cited.version,
-      },
-    );
+    const key = {
+      now: 'reason_answered_current',
+      then: 'reason_answered_then_current',
+      unchecked: 'reason_answered_unchecked',
+    } as const;
+    reason = t(key[currency(input)], { title: cited.title || cited.id, n: cited.version });
   } else reason = t('reason_answered_uncited');
   // A step that stopped the run before an answer, with no human to take it over.
   if (input.status === 'failed' && w.stopAt <= 2)
@@ -188,7 +200,8 @@ function stateWord(
       if (code === 'stale_source_guard') return t('state_stale_guard');
       if (state === 'warn' && input.status === 'answered_with_warning') return t('state_warned');
       if (state === 'warn') return t('state_outdated');
-      return input.citations.length ? t('state_current') : t('state_no_citation');
+      if (!input.citations.length) return t('state_no_citation');
+      return currency(input) === 'now' ? t('state_current') : t('state_current_then');
     case 'answer':
       if (state === 'stop')
         return code === 'assistant_insufficient_sources'

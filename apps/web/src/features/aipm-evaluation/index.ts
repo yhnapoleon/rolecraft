@@ -294,10 +294,15 @@ export function createEvaluationDesk(
         const workspace = (context as { timeline?: { workspace?: Loose } } | null)?.timeline
           ?.workspace;
         const titles = (workspace?.material_titles ?? {}) as Record<string, string>;
+        // Today's document versions, so a chain says "current" only when it still is.
+        const current = workspace?.source_versions as Record<string, number> | undefined;
         const tests = (listed as { tests?: C.TestResultV2[] } | null)?.tests ?? [];
         const runs = { ...state.runs };
         for (const test of tests)
-          runs[test.id] = { answer: test.answer ?? '', chain: fromTestResult(test, titles) };
+          runs[test.id] = {
+            answer: test.answer ?? '',
+            chain: { ...fromTestResult(test, titles), currentVersions: current },
+          };
         state.runs = runs;
         paint();
       } catch {

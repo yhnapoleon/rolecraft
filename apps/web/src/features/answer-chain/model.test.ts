@@ -47,6 +47,7 @@ const run = (over: Partial<ChainInput> = {}): ChainInput => ({
   indexedVersions: { policy: 1, faq: 1 },
   config,
   recognition: [scope('in'), retrieval()],
+  currentVersions: { policy: 1, faq: 1 },
   ...over,
 });
 const states = (input: ChainInput) => answerChain(input, 'en').stages.map((s) => s.state);
@@ -142,7 +143,7 @@ describe('answer chain: where each run stops and why', () => {
     );
     expect(view.handover).toBe(true);
     expect(view.rows[2]).toBe(
-      'Up to date? · updates: Daily · when outdated: no action · Expense notice: travel lodging now v2, index v1',
+      'Up to date? · updates: Daily · when outdated: no action · Expense notice: travel lodging at run time v2, index v1',
     );
   });
 
@@ -332,6 +333,18 @@ describe('answer chain: flagged or left as is, then and now', () => {
     expect(left.stages[2].sr).toBe('Up to date?: source out of date');
     const guard = answerChain(refused('stale_source_guard'), 'en');
     expect(guard.stages[2].handled).toBe(false);
+  });
+
+  it('does not call a version current when today’s versions were not read', () => {
+    const unchecked = answerChain(run({ currentVersions: undefined }), 'en');
+    expect(unchecked.reason).toBe(
+      'Answered from Expense notice: travel lodging v1, current when it ran; whether it is still current was not checked.',
+    );
+    expect(unchecked.reason).not.toContain('the current version.');
+    expect(unchecked.stages[2].sr).toBe('Up to date?: current when it ran');
+    expect(answerChain(run({ currentVersions: undefined }), 'zh').reason).toBe(
+      '作答：引用《Expense notice: travel lodging》v1，运行时是现行版本；现在是否仍是最新没有核对。',
+    );
   });
 
   it('says "the current version at the time" once the source has changed since the run', () => {

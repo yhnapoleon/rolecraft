@@ -66,6 +66,8 @@ const ZH = {
   reason_answered_stale: '作答，但资料过期：《{title}》现行是 v{cur}，回答引用了 v{n}。',
   reason_answered_current: '作答：引用《{title}》v{n}，与现行版本一致。',
   reason_answered_then_current: '作答：引用《{title}》v{n}，当时的现行版本。',
+  reason_answered_unchecked:
+    '作答：引用《{title}》v{n}，运行时是现行版本；现在是否仍是最新没有核对。',
   reason_answered_uncited: '作答：这次回答没有附引用。',
   reason_no_fallback: '没开人工兜底，所以这次失败。',
   reason_generation_failed: '找到了资料，但模型生成没有通过校验，没有回答。',
@@ -85,6 +87,7 @@ const ZH = {
   state_found: '找到了相关段落',
   state_not_found: '没找到足够相关的段落',
   state_current: '与现行版本一致',
+  state_current_then: '运行时是现行版本',
   state_outdated: '资料过期',
   state_warned: '已提醒',
   state_no_citation: '没有引用，无法核对版本',
@@ -108,7 +111,7 @@ const ZH = {
   row_found_missing: '这条记录没有记下这一步',
   row_update: '更新方式：{value}',
   row_guard: '过期处理：{value}',
-  row_versions: '《{title}》现行 v{cur}，索引 v{idx}',
+  row_versions: '《{title}》运行时现行 v{cur}，索引 v{idx}',
   // Controls.
   path_label: '这一题走了哪条路',
   show_steps: '展开每一步',
@@ -180,6 +183,8 @@ const EN: Record<ChainCopyKey, string> = {
     'Answered from an outdated source: {title} is now v{cur}, but the answer cites v{n}.',
   reason_answered_current: 'Answered from {title} v{n}, the current version.',
   reason_answered_then_current: 'Answered from {title} v{n}, the current version at the time.',
+  reason_answered_unchecked:
+    'Answered from {title} v{n}, current when it ran; whether it is still current was not checked.',
   reason_answered_uncited: 'Answered without a citation.',
   reason_no_fallback: 'Human fallback is off, so this run failed.',
   reason_generation_failed:
@@ -200,6 +205,7 @@ const EN: Record<ChainCopyKey, string> = {
   state_found: 'relevant passages found',
   state_not_found: 'nothing relevant enough found',
   state_current: 'matches the current version',
+  state_current_then: 'current when it ran',
   state_outdated: 'source out of date',
   state_warned: 'warned',
   state_no_citation: 'no citation, so the version cannot be checked',
@@ -222,7 +228,7 @@ const EN: Record<ChainCopyKey, string> = {
   row_found_missing: 'This record does not cover this step',
   row_update: 'updates: {value}',
   row_guard: 'when outdated: {value}',
-  row_versions: '{title} now v{cur}, index v{idx}',
+  row_versions: '{title} at run time v{cur}, index v{idx}',
   path_label: 'Path this question took',
   show_steps: 'Show each step',
   hide_steps: 'Hide steps',
