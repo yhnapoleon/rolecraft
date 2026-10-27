@@ -278,6 +278,8 @@ export interface Handover {
     };
   }[];
   readonly skipped?: readonly { readonly rule: string; readonly code: string }[];
+  /** How many handed-over questions Daniel's re-execution answered as recorded. */
+  readonly reproduced?: { readonly matched: number; readonly total: number };
   readonly review_id?: string;
   readonly review_status?: string;
   readonly failed_reason?: string;

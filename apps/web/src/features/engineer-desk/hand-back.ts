@@ -69,7 +69,11 @@ function checkedLead(r: ReviewResult & { check: TargetCheck }): string {
 }
 
 /** The line under a colleague's headline: what the rule check cannot tell, and what can. */
-export function targetNote(r: ReviewResult, colleague: boolean): string {
+export function targetNote(
+  r: ReviewResult,
+  colleague: boolean,
+  reproduced?: { readonly matched: number; readonly total: number },
+): string {
   if (!colleague) return '';
   if (r.check)
     return T(
@@ -77,6 +81,11 @@ export function targetNote(r: ReviewResult, colleague: boolean): string {
       "Whether the answer's content is right is beyond a rule check: judge it with a regression case on the evaluation bench.",
     );
   if (r.target !== 'unknown') return '';
+  if (reproduced && reproduced.matched < reproduced.total)
+    return T(
+      'Daniel 在原快照上重跑交来的题，结果和你测到的不一样，规则核实不了它原来的问题；目标是否修好，用评测台的回归题来判。',
+      'Daniel re-ran the handed-over questions on their original snapshot and got a different result from yours, so no rule can check their original failure; judge whether the target is fixed with a regression case on the evaluation bench.',
+    );
   return T(
     '交来的题没有你写的期望，也没有规则能核实的失败（如过期引用、检索不到）；目标是否修好，用评测台的回归题来判。',
     'The handed-over questions carry no expectation of yours and no failure a rule can check (such as an outdated citation or nothing found); judge whether the target is fixed with a regression case on the evaluation bench.',

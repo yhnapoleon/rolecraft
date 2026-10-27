@@ -99,7 +99,7 @@ export function openHandBackSheet(options: {
         fromAgent: agent === 'external_agent' || agent === 'reference_agent',
         clean: outcomeClean(result),
         title: outcomeSentence(result),
-        note: targetNote(result, !!colleague),
+        note: targetNote(result, !!colleague, h?.reproduced),
         caution: outcomeCaution(result),
         details: reviewDetails(record, T('zh', 'en') as 'zh' | 'en', check),
         newFailures: result.newFailures,

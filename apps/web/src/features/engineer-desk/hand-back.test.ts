@@ -344,5 +344,10 @@ describe('Daniel’s report · the target read from his rule check (QA S-3)', ()
     expect(targetNote(unknown, true)).toContain('judge whether the target is fixed with a regression case');
     // The engineer's own report has no note.
     expect(targetNote(unknown, false)).toBe('');
+    // Daniel's re-execution answered differently (say, retrieved nothing): no rule check, and
+    // the note says why rather than claiming the failure is gone.
+    expect(targetNote(unknown, true, { matched: 0, total: 1 })).toBe(
+      'Daniel re-ran the handed-over questions on their original snapshot and got a different result from yours, so no rule can check their original failure; judge whether the target is fixed with a regression case on the evaluation bench.',
+    );
   });
 });

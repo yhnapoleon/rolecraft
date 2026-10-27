@@ -132,6 +132,39 @@ def test_daniel_reproduces_tries_and_signs_by_rule_under_his_own_name(eng: Eng) 
     assert refused.status_code == 409 and "learner_role_cannot_sign" in refused.text
 
 
+def test_a_failure_daniel_cannot_reproduce_is_not_verified_by_rule(
+    eng: Eng, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QA S-3, found on the real stack: a handed-over question Daniel's re-execution answers
+    differently (it retrieved nothing) must never read as its failure cleared."""
+    from career_lab.engineer.session import EngineerService
+
+    original = EngineerService.reproduce
+
+    def differs(self: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        out = original(self, *args, **kwargs)
+        for row in out["reproduction"]["rows"]:
+            row["matches_record"] = False
+            row["reproduced"] = {
+                **row["reproduced"],
+                "status": "fallback",
+                "error_code": "no_retrieval_hit",
+                "citations": [],
+            }
+        out["reproduction"]["counts"] = {"matched": 0, "changed": 1, "total": 1}
+        return out
+
+    monkeypatch.setattr(EngineerService, "reproduce", differs)
+    eng.ok(role(eng, "pm"))
+    ids = pm_tests(eng)
+    body = {"from": "tests", "test_ids": ids, "assignee": "colleague"}
+    handover = eng.ok(eng.call(TICKETS, CREATE, body, "daniel-differs"))["ticket"]["handover"]
+    assert handover["state"] == "reported"
+    assert handover["rule"]["target"] is None
+    assert all(t["target"] is None for t in handover["tried"])
+    assert handover["reproduced"] == {"matched": 0, "total": 1}
+
+
 def test_daniels_trials_carry_the_settings_not_in_effect(eng: Eng) -> None:
     """A learner who already requested real-time updates without the person-days: Daniel's
     real-time candidate changes nothing, and his record says real-time is not in effect."""

@@ -548,7 +548,9 @@ class EngineerService:
         run = f"{request_id}-daniel-{len(ticket.get('handover', {}).get('runs', []))}"
         try:
             self.handover_state(sid, ticket_id, state="reproducing", started_at=now())
-            self.reproduce(store, TicketTarget(ticket_id=ticket_id), auth, run + "-reproduce")
+            reproduction = self.reproduce(
+                store, TicketTarget(ticket_id=ticket_id), auth, run + "-reproduce"
+            )["reproduction"]
             index, pack_files = verified_pack(
                 store,
                 module,
@@ -563,22 +565,22 @@ class EngineerService:
             if not rules:
                 return self.daniel_failed(module, sid, ticket_id, "no_rule")
             # The failure each handed-over question showed, checked again in every trial. The
-            # trials run on the reproduced snapshot, so the targets' source versions hold.
+            # trials run on the reproduced snapshot, so the targets' source versions hold. Only a
+            # failure Daniel's own reproduction shows again counts: a question his re-execution
+            # answers differently (say, retrieves nothing) cannot be verified by rule.
             sources: dict[str, int] = {}
             for test in targets:
                 for key, version in test.execution.source_versions.items():
                     sources[key] = max(version, sources.get(key, version))
+
+            def failure(behavior: dict[str, Any]) -> str | None:
+                cited = [(c["object_id"], c["version"]) for c in behavior["citations"]]
+                return failure_of(behavior["status"], behavior["error_code"], cited, sources)
+
             failing = {
-                summary(test.query, QUERY_SUMMARY): failure
-                for test in targets
-                if (
-                    failure := failure_of(
-                        test.status,
-                        test.error_code,
-                        [(ref.object_id, ref.version) for ref in test.citations],
-                        sources,
-                    )
-                )
+                row["query"]: shown
+                for row in reproduction["rows"]
+                if (shown := failure(row["recorded"])) and failure(row["reproduced"]) == shown
             }
             self.handover_state(sid, ticket_id, state="trying")
             tried, skipped = [], []
@@ -679,6 +681,11 @@ class EngineerService:
                     for r, t in tried
                 ],
                 skipped=skipped,
+                # How many handed-over questions his re-execution answered as recorded.
+                reproduced={
+                    "matched": reproduction["counts"]["matched"],
+                    "total": reproduction["counts"]["total"],
+                },
                 review_id=signed["signoff"]["review_id"],
                 review_status=signed["review"]["status"],
                 reported_at=now(),
