@@ -166,14 +166,11 @@ export function deltaLine(
   return head + parts.join(' · ');
 }
 
-/** The server's staleness, or the learner's own edit since this version. */
-export function staleNote(
-  review: SectionReview,
-  language: Language,
-  currentPrdVersion?: number | null,
-  /** The progress sheet's `edited_since_review`. */
-  edited = false,
-) {
+/** The server's staleness, read with the review itself. "Edited" means this section's own text,
+ * quotes or choice changed since; another section's save moves the shared PRD version but not
+ * this. A progress snapshot is not used: read before a new review lands, it still describes the
+ * previous one, and a review just made would say "you have edited since" (QA G-11). */
+export function staleNote(review: SectionReview, language: Language) {
   const v = review.prd_ref.version;
   if (review.stale?.reason === 'source_changed' || review.stale?.reason === 'policy_changed')
     return {
@@ -184,11 +181,7 @@ export function staleNote(
         `This review predates a source or policy update (${review.stale.detail}); check it again.`,
       ),
     };
-  if (
-    edited ||
-    review.stale?.reason === 'edited' ||
-    (currentPrdVersion != null && currentPrdVersion !== v)
-  )
+  if (review.stale?.reason === 'edited')
     return {
       kind: 'edited' as const,
       text: text(

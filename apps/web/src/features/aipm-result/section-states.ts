@@ -9,12 +9,13 @@ import './section-states.css';
 
 type Status = SectionReview['status'];
 type Item = SectionReviewPage['items'][number];
-export type ReviewPoint = { status: Status; version: number; ref: ObjectRef };
+/** `carried`: the review is of an earlier version and this section has not changed since. */
+export type ReviewPoint = { status: Status; version: number; ref: ObjectRef; carried?: boolean };
 export type SectionState = {
   step: StepId;
-  /** The section's earliest review, only when it was on an earlier PRD version. */
+  /** The section's earliest review, when it is not the one that holds for the delivered text. */
   first: ReviewPoint | null;
-  /** The newest review of the delivered version. */
+  /** The newest review whose section inputs equal the delivered version's (its own version shows). */
   delivered: ReviewPoint | null;
   /** What a click opens: the delivered review, else the earliest one; null when never reviewed. */
   open: ObjectRef | null;
@@ -29,26 +30,29 @@ export function deliveredVersion(submission: Pick<SubmissionV2, 'products'>, prd
   return submission.products.find((p) => p.object_id === prdId)?.version ?? null;
 }
 
-/** Items arrive newest first. A review's own `stale: edited` flag only says a later PRD version
- * exists, which is true of every earlier review here, so it does not drop the review. */
+/** Items arrive newest first, with staleness judged against the delivered version V. A review
+ * still holds for V when this section's text, quotes and choice are unchanged since, however
+ * often other sections moved the shared PRD version (QA S-1); the compass uses the same rule. */
 export function sectionStates(items: readonly Item[], version: number): SectionState[] {
   return STEPS.map((step) => {
     const mine = items.filter((i) => i.review.step_id === step && i.review.prd_ref.version <= version);
     const point = (i: Item | undefined): ReviewPoint | null =>
       i ? { status: shownStatus(i.review), version: i.review.prd_ref.version, ref: i.ref } : null;
-    const delivered = point(mine.find((i) => i.review.prd_ref.version === version));
-    const earliest = point(mine.at(-1));
-    const first = earliest && earliest.version < version ? earliest : null;
-    return { step, first, delivered, open: (delivered ?? earliest)?.ref ?? null };
+    const holding = mine.find((i) => i.review.stale?.reason !== 'edited');
+    const delivered = point(holding);
+    if (delivered && delivered.version < version) delivered.carried = true;
+    const earliest = mine.at(-1);
+    const first = earliest && earliest !== holding ? point(earliest) : null;
+    return { step, first, delivered, open: (delivered ?? first)?.ref ?? null };
   });
 }
 
 /** Reads every page; the server returns at most 20 a page, newest first. */
-export async function readAllReviews(client: Pick<AipmClient, 'sectionReviews'>) {
+export async function readAllReviews(client: Pick<AipmClient, 'sectionReviews'>, prdVersion?: number) {
   const items: Item[] = [];
   let cursor: number | null = 0;
   for (let n = 0; cursor !== null && n < MAX_PAGES; n++) {
-    const page: SectionReviewPage = await client.sectionReviews(undefined, cursor, PAGE);
+    const page: SectionReviewPage = await client.sectionReviews(undefined, cursor, PAGE, prdVersion);
     items.push(...page.items);
     cursor = page.next_cursor;
   }
@@ -63,12 +67,15 @@ const esc = (value: unknown) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
   );
 const versionName = (n: number, language: Language) => text(language, `第 ${n} 版`, `v${n}`);
+/** "第 2 版" or, when the delivered text is unchanged since that review, "第 2 版起未改". */
+const pointVersion = (p: ReviewPoint, language: Language) =>
+  p.carried ? text(language, `第 ${p.version} 版起未改`, `unchanged since v${p.version}`) : versionName(p.version, language);
 /** "草稿（第 3 版）", read aloud the same way it reads on screen. */
 const pointText = (p: ReviewPoint, language: Language) =>
   text(
     language,
-    `${statusName(p.status, language)}（${versionName(p.version, language)}）`,
-    `${statusName(p.status, language)} (${versionName(p.version, language)})`,
+    `${statusName(p.status, language)}（${pointVersion(p, language)}）`,
+    `${statusName(p.status, language)} (${pointVersion(p, language)})`,
   );
 const RANK: Readonly<Record<Status, number>> = { draft: 0, based: 1, solid: 2 };
 /** The delivered review stands higher than the first one: the improvement the data shows. */
@@ -76,7 +83,7 @@ export const rose = (s: SectionState) =>
   !!s.first && !!s.delivered && RANK[s.delivered.status] > RANK[s.first.status];
 const tag = (p: ReviewPoint, language: Language, rise = false) =>
   `<span class="aipm-states__tag" data-status="${p.status}"${rise ? ' data-rise="true"' : ''}>${esc(statusName(p.status, language))}</span>` +
-  `<span class="aipm-states__ver">${esc(versionName(p.version, language))}</span>`;
+  `<span class="aipm-states__ver">${esc(pointVersion(p, language))}</span>`;
 const ARROW =
   '<svg class="aipm-states__arrow" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const NOT_REVIEWED = (language: Language) =>
@@ -212,7 +219,7 @@ export async function mountSectionStates(el: Host, options: SectionStatesOptions
   let read = pending.get(key);
   if (!read) {
     const client = options.client;
-    read = readAllReviews(client).then((items) => ({
+    read = readAllReviews(client, version).then((items) => ({
       states: sectionStates(items, version),
       at: Date.now(),
       running: items.some((i) => i.review.model_status === 'running'),

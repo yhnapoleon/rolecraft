@@ -110,12 +110,29 @@ const singular = (en: string) =>
 export function refusal(code: string | null | undefined, tool = ''): { why: Pair; tell: Pair } {
   const lifecycle = tool === 'work_products.remove' || tool === 'work_products.restore';
   switch (code) {
+    // The command's own version point, for any tool (QA G-4): not a work product's head.
     case 'version_conflict':
+      return {
+        why: ['它读过之后，这一局又有了新变化。', 'The practice moved on after your agent read it.'],
+        tell: [
+          '先调用 observation，把命令里的 expected_version 和 expected_workspace_revision 换成最新值，payload 不变，再交回。',
+          'Call observation, put the latest expected_version and expected_workspace_revision in the command, keep the payload, then hand it back again.',
+        ],
+      };
+    case 'object_version_conflict':
       return {
         why: ['它读过之后，这份作品又改过了。', 'The work changed after your agent read it.'],
         tell: [
           '先用 work_products.versions.list 读最新版本，再把 expected_head 设成它，重新交回。',
           'Read the latest version with work_products.versions.list, set expected_head to it, then hand it back again.',
+        ],
+      };
+    case 'aipm_draft_revision_conflict':
+      return {
+        why: ['这份草稿已经有更新的版本。', 'This draft already has a newer revision.'],
+        tell: [
+          '从 aipm-progress 的 pending_agent_drafts 读这份草稿的当前版本，把 payload 的 expected_revision 设成它（新草稿用 0），再交回。',
+          'Read this draft’s current version from pending_agent_drafts in aipm-progress, set the payload’s expected_revision to it (0 for a new draft), then hand it back again.',
         ],
       };
     case 'capability_forbidden':

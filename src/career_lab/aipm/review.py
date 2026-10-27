@@ -333,21 +333,98 @@ def reviews_of(objects, step=None):
     return rows
 
 
-def stale(view, review, latest):
-    """Why a stored review no longer matches the current inputs, if it does not."""
+# The part of the design each step's own sheet writes (its single choice, ③'s metric, ④'s rows).
+STEP_DESIGN = {
+    "business": "business",
+    "stakeholders": "stakeholders",
+    "need": "needs",
+    "boundary": "rows",
+    "solution": "solution",
+    "assurance": None,
+    "decision": "intended_decision",
+}
+
+
+def section_inputs(prd_content, design_content, step):
+    """What a section review read of the learner's own work: the section's text, its quotes and
+    the part of the design its sheet writes. The whole PRD shares one version number, so saving
+    another section moves the version without changing any of this (QA S-1)."""
+    sections = ((prd_content or {}).get("structured_payload") or {}).get("sections") or {}
+    design = design_content or {}
+    own = STEP_DESIGN[step]
+    return C.digest(
+        [
+            "aipm-section-inputs-v1",
+            str(sections.get(step) or "").strip(),
+            (design.get("section_refs") or {}).get(step) or [],
+            design.get(own) if own else None,
+        ]
+    )
+
+
+def _design_at(view, object_id, prd_version=None):
+    """The design as it stood: its head, or its last version before the PRD moved past
+    ``prd_version`` (every sheet save writes the PRD first, then the design pointing at it)."""
+    found = None
+    for row in view.objects:
+        if row.ref.kind != "aipm_design" or row.ref.object_id != object_id:
+            continue
+        named = (row.content.get("prd_ref") or {}).get("version") or 0
+        if prd_version is not None and named > prd_version:
+            continue
+        if found is None or row.ref.version > found.ref.version:
+            found = row
+    return found
+
+
+def _inputs_changed(view, review, version, pinned):
+    """Whether this section's inputs at PRD ``version`` differ from the ones the review read."""
+    step, prd = review["step_id"], review["prd_ref"]
+    named = review.get("design_ref")
+    try:
+        then = view.get(C.ObjectRef.model_validate(prd))
+        now = view.get(C.ObjectRef.model_validate({**prd, "version": version}))
+        then_design = view.get(C.ObjectRef.model_validate(named)) if named else None
+    except C.ProtocolError:
+        return True  # an input it read is no longer visible: never claim it still holds
+    now_design = (
+        _design_at(view, named["object_id"], version if pinned else None) if named else None
+    )
+    used = review.get("decision_used")
+    if (
+        used is not None
+        and (now_design.content if now_design else {}).get("intended_decision") != used
+    ):
+        return True
+    return section_inputs(
+        then.content, then_design.content if then_design else None, step
+    ) != section_inputs(now.content, now_design.content if now_design else None, step)
+
+
+def stale(view, review, latest, prd_version=None):
+    """Why a stored review no longer matches the current inputs, if it does not.
+
+    With ``prd_version`` the learner's own work is compared at that PRD version (a delivered one)
+    instead of the head. An edit of this section comes first: the review no longer applies
+    whatever else changed."""
+    prd = review["prd_ref"]
+    head = latest.get(("product", prd["object_id"]))
+    version = prd_version if prd_version is not None else (head.ref.version if head else None)
+    if (
+        version is not None
+        and version >= prd["version"]
+        and _inputs_changed(view, review, version, pinned=prd_version is not None)
+    ):
+        return ReviewStale(reason="edited", detail=f"v{prd['version']} -> v{version}")
     private = view.private_scenario_state
-    for key, version in sorted(review.get("basis", {}).items()):
+    for key, read_at in sorted(review.get("basis", {}).items()):
         if not key.startswith("material:") or private is None:
             continue
         material = key.removeprefix("material:")
         current = private.source_versions.get(material)
-        if current is not None and str(current) != version:
+        if current is not None and str(current) != read_at:
             reason = "policy_changed" if material in POLICY_MATERIALS else "source_changed"
-            return ReviewStale(reason=reason, detail=f"{material} v{version} -> v{current}")
-    prd = review["prd_ref"]
-    head = latest.get(("product", prd["object_id"]))
-    if head is not None and head.ref.version > prd["version"]:
-        return ReviewStale(reason="edited", detail=f"v{prd['version']} -> v{head.ref.version}")
+            return ReviewStale(reason=reason, detail=f"{material} v{read_at} -> v{current}")
     return None
 
 
@@ -499,7 +576,7 @@ def create(view, auth, content, body: SectionReviewInput, rule_check, model="not
     return Mutation(writes=(write,), result={"ref": ref.model_dump(mode="json"), "review": stored})
 
 
-def page(view, auth, step=None, cursor=0, limit=10):
+def page(view, auth, step=None, cursor=0, limit=10, prd_version=None):
     from .projection import scoped
 
     objects = scoped(view, auth)
@@ -507,7 +584,7 @@ def page(view, auth, step=None, cursor=0, limit=10):
     rows = reviews_of(objects, step)
     items = []
     for row in rows[cursor : cursor + limit]:
-        current = stale(view, row.content, latest)
+        current = stale(view, row.content, latest, prd_version)
         review = dict(row.content, stale=current.model_dump(mode="json") if current else None)
         items.append({"ref": row.ref.model_dump(mode="json"), "review": review})
     more = cursor + limit < len(rows)

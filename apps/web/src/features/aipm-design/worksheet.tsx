@@ -15,6 +15,7 @@ import type {
 import { copy } from './copy';
 import { patterns } from '../aipm-guide/content';
 import { DESIGN_ID, type DesignRead, DiagramBlock, type DraftItem, Triage } from './desk';
+import { sheetDraftKey } from './unsaved';
 import { type AgentDraft, type Language, failure, findRef, mergeDraft, nextDesign } from './model';
 import {
   type Block,
@@ -73,7 +74,7 @@ const NAME: Record<Role, string> = { manager: 'Grace', business: 'Chen', technic
 /** Attribution in the sheet's language: 《title》v1 in Chinese, "title" v1 in English. */
 export const sourceLabel = (language: Language, title: string, version: number) =>
   language === 'zh' ? `《${title}》v${version}` : `“${title}” v${version}`;
-const draftKey = (step: StepId) => `aipm-sheet:${step}`;
+const draftKey = sheetDraftKey;
 const notFound = (e: unknown) =>
   (e as { code?: string })?.code === 'object_not_found' ||
   (e as { status?: number })?.status === 404 ||
@@ -100,6 +101,63 @@ export function PatternCards({ language }: { language: Language }) {
   </aside>;
 }
 
+/** The PRD as the server holds it now: its latest version. */
+async function readPrd(host: WorksheetHost, ref: ObjectRef | null): Promise<Prd | null> {
+  const data = host.getDataHost();
+  if (!ref || !data) return null;
+  const page = await data.query('work_products.versions.list', {
+    product_id: ref.object_id,
+    limit: 100,
+  });
+  const latest = [...page.items].sort((a, b) => b.version - a.version)[0];
+  const payload = latest?.structured_payload as
+    | { sections?: Partial<Record<StepId, string>> }
+    | undefined;
+  return latest
+    ? { ref: { ...ref, version: latest.version }, title: latest.title, sections: payload?.sections ?? {} }
+    : null;
+}
+/** The design as the server holds it now; null before the first save. */
+async function readDesign(host: WorksheetHost): Promise<DesignRead | null> {
+  const client = host.getClient();
+  if (!client) return null;
+  try {
+    return await client.readDesign<DesignRead>(DESIGN_ID);
+  } catch (e) {
+    if (notFound(e)) return null;
+    throw e;
+  }
+}
+/** The part of the design each sheet writes itself (its choice, ③'s metric, ④'s rows); the
+ * server judges a section review against the same part. */
+const OWN: Partial<Record<StepId, keyof SheetDesign>> = {
+  business: 'business',
+  stakeholders: 'stakeholders',
+  need: 'needs',
+  boundary: 'rows',
+  solution: 'solution',
+  decision: 'intended_decision',
+};
+/** This sheet's own design part from the sheet, everything else as the server holds it now. */
+export function withOwnPart(step: StepId, latest: SheetDesign, sheet: SheetDesign): SheetDesign {
+  const key = OWN[step];
+  return key ? { ...latest, [key]: sheet[key] } : latest;
+}
+/** Saving a design version against an older one: another write landed first. */
+const MOVED = new Set(['version_conflict', 'aipm_design_revision_conflict']);
+
+/** Agent drafts awaiting the learner; null when they cannot be read (drafts are optional). */
+async function readDrafts(host: WorksheetHost): Promise<DraftItem[] | null> {
+  try {
+    const listed = (await host.getClient()?.listDrafts?.()) as { items?: DraftItem[] } | undefined;
+    return (listed?.items ?? [])
+      .filter((d) => d.draft.status === 'pending_owner_review')
+      .map((d) => ({ ...d, draft: { ...d.draft, revision: d.ref.version } }));
+  } catch {
+    return null;
+  }
+}
+
 async function loadSheet(host: WorksheetHost, step: StepId): Promise<Loaded> {
   const client = host.getClient();
   const content = (await host.readContent('design')) as DesignContent;
@@ -109,30 +167,9 @@ async function loadSheet(host: WorksheetHost, step: StepId): Promise<Loaded> {
   } catch (e) {
     if (!notFound(e)) throw e;
   }
-  let prd: Prd | null = null;
-  const ref = saved?.design.prd_ref;
+  const prd = await readPrd(host, saved?.design.prd_ref ?? null);
   const data = host.getDataHost();
-  if (ref && data) {
-    const page = await data.query('work_products.versions.list', {
-      product_id: ref.object_id,
-      limit: 100,
-    });
-    const latest = [...page.items].sort((a, b) => b.version - a.version)[0];
-    const payload = latest?.structured_payload as
-      | { sections?: Partial<Record<StepId, string>> }
-      | undefined;
-    if (latest)
-      prd = { ref: { ...ref, version: latest.version }, title: latest.title, sections: payload?.sections ?? {} };
-  }
-  let drafts: DraftItem[] = [];
-  try {
-    const listed = (await client?.listDrafts?.()) as { items?: DraftItem[] } | undefined;
-    drafts = (listed?.items ?? [])
-      .filter((d) => d.draft.status === 'pending_owner_review')
-      .map((d) => ({ ...d, draft: { ...d.draft, revision: d.ref.version } }));
-  } catch {
-    // Drafts are optional.
-  }
+  const drafts = (await readDrafts(host)) ?? [];
   const titles: Record<string, string> = {};
   try {
     const page = data ? await data.query('materials.list', { limit: 200 }) : null;
@@ -236,6 +273,23 @@ export function Worksheet({
     if (preload) apply(preload);
     else void reload();
   }, [preload, apply, reload]);
+  /** Drafts only, leaving the writing alone: an agent may hand one back while the sheet is open
+   * (the session's version point moves), and an adopted or declined one must leave (QA S-4). */
+  const refreshDrafts = useCallback(async () => {
+    const drafts = await readDrafts(host);
+    if (drafts) setLoaded((l) => (l ? { ...l, drafts } : l));
+  }, [host]);
+  useEffect(() => {
+    const data = host.getDataHost();
+    if (!data) return;
+    let point = JSON.stringify(data.snapshot().asOf);
+    return data.subscribe(() => {
+      const next = JSON.stringify(data.snapshot().asOf);
+      if (next === point) return;
+      point = next;
+      void refreshDrafts();
+    });
+  }, [host, refreshDrafts]);
 
   const edit = (next: SheetDraft) => {
     setSheet(next);
@@ -272,20 +326,29 @@ export function Worksheet({
   const sheetName = c.section(step);
   const version = prd?.ref.version;
 
-  /** PRD version first, then the design that points at it (spec §5.3). */
-  const saveVersion = async (state: SheetDraft, base: SheetDesign) => {
+  /** PRD version first, then the design that points at it (spec §5.3). Both go on top of what
+   * the server holds now, not what this sheet read when it opened: another sheet, a review or an
+   * adopted draft may have saved since, and a save against an older version is refused, the PRD
+   * one before anything is sent (QA G-13). Only this section's text, quotes and own design part
+   * come from the sheet; `build` puts that part on the latest design. */
+  const saveVersion = async (state: SheetDraft, build: (latest: SheetDesign) => SheetDesign) => {
     if (!loaded) return null;
-    const sections = { ...(prd?.sections ?? {}), [step]: toText(state.blocks) };
-    const section_refs = { ...(base.section_refs ?? {}), [step]: quoteRefs(state.blocks) };
-    const evidence_refs = Object.values(section_refs).flat() as EvidenceRefV2[];
+    let current = await readDesign(host);
+    const head = (await readPrd(host, current?.design.prd_ref ?? prd?.ref ?? null)) ?? prd;
+    const quotesHere = quoteRefs(state.blocks);
+    const sections = { ...(head?.sections ?? {}), [step]: toText(state.blocks) };
+    const evidence_refs = Object.values({
+      ...(current?.design.section_refs ?? {}),
+      [step]: quotesHere,
+    }).flat() as EvidenceRefV2[];
     const payload = { type: 'plan' as const, sections };
     const work = await host.createWorkVersion(
-      prd
+      head
         ? {
             kind: 'plan',
-            product_id: prd.ref.object_id,
-            expected_head: prd.ref.version,
-            title: prd.title || c.t('试点 PRD', 'Pilot PRD'),
+            product_id: head.ref.object_id,
+            expected_head: head.ref.version,
+            title: head.title || c.t('试点 PRD', 'Pilot PRD'),
             structured_payload: payload,
             purpose: 'plan',
             evidence_refs,
@@ -300,16 +363,28 @@ export function Worksheet({
     );
     const prdRef = findRef(work, 'product');
     if (!prdRef || failure(work)) throw new Error('prd');
-    const next = writeChoice(step, { ...base, prd_ref: prdRef, section_refs }, state.choice);
-    const result = await host.command('aipm.design.save', {
-      design: nextDesign(next, loaded.saved?.design ?? null),
-      expected_revision: loaded.saved?.design.revision ?? 0,
-    });
-    if (failure(result)) throw Object.assign(new Error('choice'), { prdRef });
+    // A colleague's reply or a model review can move the version point between the read and the
+    // write; one more try on the design the server now holds.
+    let result: unknown;
+    for (let attempt = 0; ; attempt += 1) {
+      const latest = (current?.design as SheetDesign | undefined) ?? baseDesign(loaded, host);
+      const built = build(latest);
+      const section_refs = { ...(latest.section_refs ?? {}), [step]: quotesHere };
+      const next = writeChoice(step, { ...built, prd_ref: prdRef, section_refs }, state.choice);
+      result = await host.command('aipm.design.save', {
+        design: nextDesign(next, current?.design ?? null),
+        expected_revision: current?.design.revision ?? 0,
+      });
+      const code = failure(result);
+      if (!code) break;
+      if (attempt > 0 || !MOVED.has(code)) throw Object.assign(new Error('choice'), { prdRef });
+      current = await readDesign(host);
+    }
     void host.getDataHost()?.keepDraft('workspace', draftKey(step), undefined);
     await reload();
     return { prdRef, designRef: findRef(result, 'aipm_design') };
   };
+  const mine = (latest: SheetDesign) => (design ? withOwnPart(step, latest, design) : latest);
   const run = async (task: () => Promise<void>) => {
     setBusy(true);
     setNote('');
@@ -335,14 +410,14 @@ export function Worksheet({
   };
   const save = () =>
     run(async () => {
-      if (design && dirty) await saveVersion(sheet, design);
+      if (design && dirty) await saveVersion(sheet, mine);
     });
   const review = () =>
     run(async () => {
       let prdRef = prd?.ref ?? null;
       let designRef = loaded?.saved?.ref ?? null;
       if (design && (dirty || !prdRef)) {
-        const out = await saveVersion(sheet, design);
+        const out = await saveVersion(sheet, mine);
         prdRef = out?.prdRef ?? prdRef;
         designRef = out?.designRef ?? designRef;
       }
@@ -385,7 +460,7 @@ export function Worksheet({
       const blocks = text ? fromText(text, item.draft.section_refs?.[step] ?? []) : sheet.blocks;
       const out = await saveVersion(
         { blocks, choice: sheet.choice },
-        mergeDraft(design, item.draft) as SheetDesign,
+        (latest) => mergeDraft(latest, item.draft) as SheetDesign,
       );
       // The PRD keeps the learner as author; the draft record carries the agent's part (L4).
       const resolved = await host.command('aipm.design_drafts.resolve', {
@@ -395,6 +470,7 @@ export function Worksheet({
         adopted_design_ref: out?.designRef,
         adopted_prd_ref: out?.prdRef,
       });
+      await refreshDrafts();
       setNote(
         failure(resolved)
           ? c.t('已采用，但草稿状态没更新。', 'Adopted, but the draft status was not updated.')

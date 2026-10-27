@@ -141,7 +141,7 @@ def install_aipm(app, contents=None):
 
     def review_read(view, query, auth):
         enrolled(view, auth, catalog)
-        page = review.page(view, auth, query.step_id, query.cursor, query.limit)
+        page = review.page(view, auth, query.step_id, query.cursor, query.limit, query.prd_version)
         for item in page["items"]:
             stored = item["review"]
             if stored.get("model_status") == "running" and not reviewer.in_flight(stored["id"]):

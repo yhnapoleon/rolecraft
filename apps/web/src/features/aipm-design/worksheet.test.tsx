@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { StepId } from '../../aipm/types';
 import type { DesignContent } from './sheet-model';
 import { newRow } from './model';
-import { PatternCards, sendQuote, Worksheet, type WorksheetHost } from './worksheet';
+import { PatternCards, sendQuote, withOwnPart, Worksheet, type WorksheetHost } from './worksheet';
 
 const content = (language: 'zh' | 'en') =>
   JSON.parse(
@@ -167,5 +167,33 @@ describe('worksheet', () => {
       );
       expect(/[一-鿿]/.test(page), step).toBe(false);
     }
+  });
+});
+
+describe('saving on top of what the server holds (QA G-13)', () => {
+  /** FAKE DATA for unit tests only. */
+  const latest = {
+    id: 'aipm-design',
+    session_id: 's',
+    revision: 5,
+    rows: [newRow('saved-by-boundary')],
+    intended_decision: 'launch_narrow',
+    needs: [{ id: 'need-main', claim_status: 'supported' }],
+  } as never;
+  const sheet = {
+    id: 'aipm-design',
+    session_id: 's',
+    revision: 2,
+    rows: [],
+    needs: [{ id: 'need-main', claim_status: 'hypothesis' }],
+  } as never;
+  it('takes only this sheet’s own part from the sheet', () => {
+    const need = withOwnPart('need', latest, sheet) as unknown as Record<string, unknown>;
+    expect(need.needs).toEqual([{ id: 'need-main', claim_status: 'hypothesis' }]);
+    expect(need.rows).toEqual((latest as { rows: unknown }).rows);
+    expect(need.intended_decision).toBe('launch_narrow');
+    expect(need.revision).toBe(5);
+    // ⑥ writes nothing of its own into the design.
+    expect(withOwnPart('assurance', latest, sheet)).toBe(latest);
   });
 });
