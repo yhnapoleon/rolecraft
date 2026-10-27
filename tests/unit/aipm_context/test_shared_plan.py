@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.workspace import PlanPayload
-from career_lab.runtime.context_v2 import shared_work
 from career_lab.runtime.roles_v2 import _readable_source
+from career_lab.storage.shared_work import shared_work
 
 
 def plan(content=""):

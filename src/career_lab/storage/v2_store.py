@@ -54,6 +54,7 @@ from .reference_graph import (
 from .reference_graph import (
     reference_values as reference_values,
 )
+from .shared_work import receipt_texts
 from .v2_jobs import JobStoreMixin
 from .v2_tables import *
 from .v2_tables import v2_credentials
@@ -1346,14 +1347,8 @@ class V2Store(JobStoreMixin):
                         for k in ("business_seq", "workspace_revision", "storage_revision")
                     ):
                         raise ProtocolError("role_share_receipt_invalid", status=409)
-                    text = canonical(
-                        {
-                            k: product.content[k]
-                            for k in ("title", "content", "purpose", "structured_payload")
-                        }
-                    )
                     if (
-                        receipt.fragment.text != text
+                        receipt.fragment.text not in receipt_texts(product.content)
                         or receipt.fragment.ref.observed_at_seq != receipt.received_at.business_seq
                     ):
                         raise ProtocolError("role_share_receipt_invalid", status=409)
