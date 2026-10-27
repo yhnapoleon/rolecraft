@@ -284,14 +284,6 @@
   .run-cols:is(.two, .three) .ac-who {
     display: none;
   }
-  /* Columns run in time order; the latest, on the right, carries the emphasis. */
-  .run-cols:is(.two, .three) > .run-col.is-latest > .col-cap {
-    color: var(--ink);
-    font-weight: 600;
-  }
-  .run-cols:is(.two, .three) > .run-col:not(.is-latest) .answer-body {
-    color: var(--ink-2);
-  }
   /* Small multiples share one legend: the step names show under the first (leftmost) column and
      keep their height elsewhere, so the dots stay level. Each dot keeps its sr-only sentence. */
   .run-cols:is(.two, .three) > .run-col:not(:first-child) .ac-name {
@@ -333,6 +325,14 @@
   .run-col > .run-meta {
     grid-row: 7;
     align-self: start;
+  }
+  /* Columns run in time order; the latest, on the right, carries the emphasis. */
+  .run-cols:is(.two, .three) > .run-col.is-latest > .col-cap {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .run-cols:is(.two, .three) > .run-col:not(.is-latest) .answer-body {
+    color: var(--ink-2);
   }
 }
 @media (max-width: 720px) {
