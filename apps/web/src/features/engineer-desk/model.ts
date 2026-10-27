@@ -256,6 +256,8 @@ export interface Handover {
     readonly rule: string;
     readonly trial_id: string;
     readonly changes: Readonly<Record<string, { before: unknown; after: unknown }>>;
+    /** Requested settings the trial's configuration could not put into effect, and why. */
+    readonly effective_differences?: Readonly<Record<string, string>>;
     readonly counts: {
       readonly passed: number;
       readonly failed: number;

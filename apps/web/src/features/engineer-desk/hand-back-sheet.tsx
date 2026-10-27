@@ -64,6 +64,8 @@ export interface ColleagueRun {
   readonly tried: readonly {
     rule: string;
     changes: string;
+    /** Why the setting this fix changes was not in effect in its trial (a server code), or null. */
+    notInEffect: string | null;
     passed: number;
     total: number;
     chosen: boolean;
@@ -82,9 +84,10 @@ const SAME_LOAD: Pair = ['不变', 'Unchanged'];
 /** What each of Daniel's candidate fixes costs, by rule id: the same for every practice. */
 export const FIXES: Record<
   string,
-  { name: Pair; step: Pair; days: () => string; staff: Pair; load: Pair }
+  { field: string; name: Pair; step: Pair; days: () => string; staff: Pair; load: Pair }
 > = {
   freshness_warn: {
+    field: 'freshness_guard',
     name: ['索引落后时提醒', 'Warn when the index lags'],
     step: ['资料新不新', 'Up to date?'],
     days: () => t2(NO_WORK),
@@ -95,6 +98,7 @@ export const FIXES: Record<
     load: SAME_LOAD,
   },
   realtime_index: {
+    field: 'update_strategy',
     name: ['源文件一变就重建索引', 'Rebuild the index on every source change'],
     step: ['资料新不新 · 离线', 'Up to date? · offline'],
     days: () =>
@@ -103,6 +107,7 @@ export const FIXES: Record<
     load: SAME_LOAD,
   },
   freshness_fallback: {
+    field: 'freshness_guard',
     name: ['索引落后时转人工', 'Hand over when the index lags'],
     step: ['资料新不新 → 答不了谁接', 'Up to date? → Who takes over'],
     days: () => t2(NO_WORK),
@@ -113,6 +118,7 @@ export const FIXES: Record<
     ],
   },
   lower_min_score: {
+    field: 'min_score',
     name: ['降低最低相关分', 'Lower the minimum relevance score'],
     step: ['找到什么', 'Found'],
     days: () => t2(NO_WORK),
@@ -124,6 +130,16 @@ export const FIXES: Record<
   },
 };
 export const ruleName = (id: string) => (FIXES[id] ? t2(FIXES[id].name) : id);
+
+/** A trial whose setting was requested but not in effect: what it would take. */
+export function notInEffectText(code: string): string {
+  if (code === 'realtime_sync_not_provisioned')
+    return T(
+      `还没生效：实时同步要 ${WORK_COST.realtime} 人日`,
+      `Not in effect: real-time sync needs ${WORK_COST.realtime} person-days`,
+    );
+  return T('还没生效：这项设置还没批到', 'Not in effect: this setting is not approved yet');
+}
 
 /** Why a candidate was not tried, from the server's error code. */
 export function skippedText(code: string): string {
@@ -147,6 +163,7 @@ export function colleagueRun(
     tried: (h.tried ?? []).map((t) => ({
       rule: t.rule,
       changes: said(t.changes),
+      notInEffect: t.effective_differences?.[FIXES[t.rule]?.field ?? ''] ?? null,
       passed: t.counts.passed,
       total: t.counts.passed + t.counts.failed + t.counts.errors,
       chosen: t.rule === h.rule?.id,
@@ -165,6 +182,8 @@ interface FixRow {
   /** A tried candidate that changed nothing: the settings already request its value. */
   readonly note: string;
   readonly skipped: boolean;
+  /** Its setting was not in effect in the trial, so staff would see what they see now. */
+  readonly inert: boolean;
 }
 
 function fixRows(run: ColleagueRun): FixRow[] {
@@ -173,10 +192,13 @@ function fixRows(run: ColleagueRun): FixRow[] {
       rule: t.rule,
       chosen: t.chosen,
       trial: T(`公开检查 ${t.passed}/${t.total}`, `Public checks ${t.passed}/${t.total}`),
-      note: t.changes
-        ? ''
-        : T('没有改动：设置里已经请求了这个值', 'No change: the settings already request this value'),
+      note: t.notInEffect
+        ? notInEffectText(t.notInEffect)
+        : t.changes
+          ? ''
+          : T('没有改动：设置里已经请求了这个值', 'No change: the settings already request this value'),
       skipped: false,
+      inert: !!t.notInEffect,
     })),
     ...run.skipped.map((x) => ({
       rule: x.rule,
@@ -184,6 +206,7 @@ function fixRows(run: ColleagueRun): FixRow[] {
       trial: skippedText(x.code),
       note: '',
       skipped: true,
+      inert: false,
     })),
   ];
 }
@@ -205,6 +228,9 @@ export function FixTable({ run }: { run: ColleagueRun }) {
     const f = fix(r);
     return f ? pick(f) : '—';
   };
+  // A fix whose setting was not in effect left the answers as they are now.
+  const staff = (r: FixRow) =>
+    r.inert ? T('和现在一样：这项改动还没生效', 'Same as now: this change is not in effect') : cell(r, (f) => t2(f.staff));
   const head = [
     T('修法', 'Fix'),
     T('改哪一环', 'Changes'),
@@ -256,7 +282,7 @@ export function FixTable({ run }: { run: ColleagueRun }) {
               </th>
               <td className={td}>{cell(r, (f) => t2(f.step))}</td>
               <td className={td}>{cell(r, (f) => f.days())}</td>
-              <td className={td}>{cell(r, (f) => t2(f.staff))}</td>
+              <td className={td}>{staff(r)}</td>
               <td className={td}>{cell(r, (f) => t2(f.load))}</td>
               <td className={`${td} tw:text-right tw:tabular-nums`}>
                 {r.trial}
@@ -288,7 +314,7 @@ export function FixTable({ run }: { run: ColleagueRun }) {
               {[
                 [head[1], cell(r, (f) => t2(f.step))],
                 [head[2], cell(r, (f) => f.days())],
-                [head[3], cell(r, (f) => t2(f.staff))],
+                [head[3], staff(r)],
                 [head[4], cell(r, (f) => t2(f.load))],
               ].map(([k, v]) => (
                 <div key={k} className="tw:grid tw:gap-0.5">

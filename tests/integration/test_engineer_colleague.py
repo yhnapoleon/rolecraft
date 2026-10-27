@@ -125,6 +125,47 @@ def test_daniel_reproduces_tries_and_signs_by_rule_under_his_own_name(eng: Eng) 
     assert refused.status_code == 409 and "learner_role_cannot_sign" in refused.text
 
 
+def test_daniels_trials_carry_the_settings_not_in_effect(eng: Eng) -> None:
+    """A learner who already requested real-time updates without the person-days: Daniel's
+    real-time candidate changes nothing, and his record says real-time is not in effect."""
+    eng.ok(role(eng, "pm"))
+    eng.advance_world()
+    workspace = eng.ok(eng.read("/workbench"))["result"]["timeline"]["workspace"]
+    config = workspace["config"]
+    base = {
+        "schema_version": 2,
+        "session_id": config["session_id"],
+        "kind": "config",
+        "object_id": config["id"],
+        "version": config["version"],
+        "config_version": config["config_version"],
+    }
+    eng.ok(
+        eng.call(
+            "/configuration",
+            "configuration.apply",
+            {"base": base, "settings": {"update_strategy": "realtime"}},
+            "request-realtime",
+        )
+    )
+    made = eng.ok(
+        eng.call(
+            "/tests",
+            "tests.create",
+            {"query": TARGET_QUERY[eng.language], "config_version": eng.state()["config_version"]},
+            "pm-test-realtime",
+        )
+    )
+    body = {"from": "tests", "test_ids": [made["test"]["id"]], "assignee": "colleague"}
+    ticket = eng.ok(eng.call(TICKETS, CREATE, body, "daniel-realtime"))["ticket"]
+    tried = {t["rule"]: t for t in ticket["handover"]["tried"]}
+    assert tried["realtime_index"]["changes"] == {}
+    assert tried["realtime_index"]["effective_differences"] == {
+        "update_strategy": "realtime_sync_not_provisioned"
+    }
+    assert "freshness_guard" not in tried["freshness_warn"]["effective_differences"]
+
+
 def test_the_product_manager_decides_and_apply_is_their_own_configuration_apply(eng: Eng) -> None:
     eng.ok(role(eng, "pm"))
     ids = pm_tests(eng)
