@@ -134,9 +134,10 @@ def symbols(view, auth) -> list[dict[str, Any]]:
                 },
             )
         )
-    for stored in view.objects:
-        if stored.ref.kind != "role_turn":
-            continue
+    # Asking does not advance the business point and the store lists objects by id, so
+    # same-point questions keep their order only when read in storage order.
+    turns = [stored for stored in view.objects if stored.ref.kind == "role_turn"]
+    for stored in sorted(turns, key=lambda stored: stored.created_storage_revision):
         content = stored.content
         turn = content.get("input") or {}
         text = str(turn.get("text") or "")
