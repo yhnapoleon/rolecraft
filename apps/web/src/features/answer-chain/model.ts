@@ -98,11 +98,11 @@ const num = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
 /** The first cited version against today's: still current, current only then, or not checked. */
-function currency(input: ChainInput): 'now' | 'then' | 'unchecked' {
+function currency(input: ChainInput): 'current' | 'superseded' | 'unchecked' {
   const cited = input.citations[0];
   const now = cited && input.currentVersions?.[cited.id];
   if (!cited || !num(now)) return 'unchecked';
-  return now > cited.version ? 'then' : 'now';
+  return now > cited.version ? 'superseded' : 'current';
 }
 const three = (value: number) => value.toFixed(3);
 
@@ -161,8 +161,8 @@ function reasonFor(input: ChainInput, w: ReturnType<typeof walk>, language: Lang
   else if (input.citations.length) {
     const cited = input.citations[0];
     const key = {
-      now: 'reason_answered_current',
-      then: 'reason_answered_then_current',
+      current: 'reason_answered_current',
+      superseded: 'reason_answered_then_current',
       unchecked: 'reason_answered_unchecked',
     } as const;
     reason = t(key[currency(input)], { title: cited.title || cited.id, n: cited.version });
@@ -201,7 +201,7 @@ function stateWord(
       if (state === 'warn' && input.status === 'answered_with_warning') return t('state_warned');
       if (state === 'warn') return t('state_outdated');
       if (!input.citations.length) return t('state_no_citation');
-      return currency(input) === 'now' ? t('state_current') : t('state_current_then');
+      return currency(input) === 'current' ? t('state_current') : t('state_current_then');
     case 'answer':
       if (state === 'stop')
         return code === 'assistant_insufficient_sources'

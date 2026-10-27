@@ -217,7 +217,8 @@ export function createEvaluationDesk(
     const ref = (view.batch as { plan_ref?: ObjectRef }).plan_ref;
     const data = host.getDataHost?.();
     if (!ref || !data?.query) return;
-    questions ??= (async () => {
+    if (questions) return;
+    questions = (async () => {
       try {
         const plan = await data.query?.('objects.read', {
           kind: ref.kind,
