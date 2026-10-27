@@ -164,6 +164,8 @@ describe('answer chain: where each run stops and why', () => {
     expect(view.stages[2].handled).toBe(true);
     expect(view.stages[2].sr).toBe('Up to date?: warned');
     expect(view.tone).toBe('warn');
+    // The warning is the fix at work: only an outdated source left as is goes to Daniel.
+    expect(view.handover).toBe(false);
   });
 
   it('answered without a citation', () => {
@@ -262,7 +264,7 @@ describe('answer chain: where each run stops and why', () => {
   it('writes the expanded rows from the record', () => {
     const view = answerChain(run(), 'en');
     expect(view.rows[0]).toBe(
-      'In scope? · out-of-scope detection: in scope (distance 1.234, threshold 2.800) · scope filter on',
+      'In scope? · out-of-scope detection: in scope (distance 1.23, threshold 2.80) · scope filter on',
     );
     expect(view.rows[1]).toBe(
       'Found · Semantic + keyword retrieval (fused): 3 passages cleared 0.35; top 3 used',
@@ -272,7 +274,7 @@ describe('answer chain: where each run stops and why', () => {
     const zh = answerChain(run(), 'zh');
     expect(zh.rows[1]).toBe('找到什么 · 语义检索 + 关键词检索融合：3 段过了阈值 0.35，取前 3 段');
     expect(zh.rows[0]).toBe(
-      '能不能答 · 范围外检测：在范围内（距离 1.234，阈值 2.800） · 范围过滤：开',
+      '能不能答 · 范围外检测：在范围内（距离 1.23，阈值 2.80） · 范围过滤：开',
     );
   });
 
@@ -322,6 +324,7 @@ describe('answer chain: where each run stops and why', () => {
     expect(handover(refused('no_retrieval_hit'))).toBe(true);
     expect(handover(refused('manual_verification_required'))).toBe(true);
     expect(handover(run())).toBe(false);
+    expect(handover(run({ sourceVersions: { policy: 2 } }))).toBe(true);
   });
 });
 
