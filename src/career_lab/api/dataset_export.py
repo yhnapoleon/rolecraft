@@ -132,6 +132,7 @@ class AuthorizedSnapshotPort:
             source_reader=source.source,
             rule_provider=source.rules,
             submission_rule_provider=source.submission_rules,
+            work_language=self.module.work_language,
         )
         assembler = EvidenceAssemblerV2(reader, work_language=self.module.work_language)
         for row in raw.objects:

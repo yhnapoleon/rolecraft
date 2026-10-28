@@ -40,7 +40,7 @@ from career_lab.contracts.v2 import (
     WorkProductVersion,
     read_file,
 )
-from career_lab.evidence.v2.assembler import product_text
+from career_lab.evidence.v2.assembler import product_texts
 from career_lab.recognition.assistant import with_drift
 from career_lab.recognition.registry import root as recognizer_root
 from career_lab.runtime.model_adapter import ModelAdapter
@@ -251,16 +251,22 @@ class ScenarioModule:
             )
             record = view.get(bare)
             if ref.quote is not None:
-                text = (
-                    product_text(WorkProductVersion.model_validate(record.content))
+                # The evidence reader projects work in the same fixed language.
+                texts = (
+                    product_texts(
+                        WorkProductVersion.model_validate(record.content),
+                        work_language=self.work_language,
+                    )
                     if ref.kind == "product"
-                    else record.content.get("content", record.content.get("answer"))
+                    else (record.content.get("content", record.content.get("answer")),)
                 )
                 if (
-                    not isinstance(text, str)
-                    or ref.span_start is None
+                    ref.span_start is None
                     or ref.span_end is None
-                    or text[ref.span_start : ref.span_end] != ref.quote
+                    or not any(
+                        isinstance(text, str) and text[ref.span_start : ref.span_end] == ref.quote
+                        for text in texts
+                    )
                 ):
                     raise ProtocolError("reference_span_forbidden", status=403)
         return True

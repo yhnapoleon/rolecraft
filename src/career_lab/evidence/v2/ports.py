@@ -70,6 +70,9 @@ class SourceRecord:
     # Model-generated answer text is a recorded output awaiting verification, never a
     # rule-verified source excerpt.
     origin: Literal["record", "model_generated"] = "record"
+    # Earlier projections of the same record that stored quotes may still point into
+    # (``assembler.product_texts``); never used as the record's own text.
+    earlier_texts: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
